@@ -1,0 +1,64 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+
+    function bookingDoc(bookingId) {
+      return firestore.get(/databases/$(database)/documents/bookings/$(bookingId));
+    }
+    function bookingExists(bookingId) {
+      return firestore.exists(/databases/$(database)/documents/bookings/$(bookingId));
+    }
+    function bookingData(bookingId) {
+      return bookingDoc(bookingId).data;
+    }
+    function isBookingParticipant(bookingId) {
+      return signedIn()
+        && bookingExists(bookingId)
+        && (bookingData(bookingId).customerId == request.auth.uid
+            || bookingData(bookingId).providerId == request.auth.uid);
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    function smallEnough(maxBytes) {
+      return request.resource.size < maxBytes;
+    }
+
+    // Public service images
+    // Path: /public/services/{serviceId}/{filename}
+    match /public/services/{serviceId}/{filename} {
+      allow read: if true;
+      allow write: if isAdmin() || (
+        signedIn()
+        && isImage()
+        && smallEnough(5 * 1024 * 1024)
+        && firestore.exists(/databases/$(database)/documents/services/$(serviceId))
+        && firestore.get(/databases/$(database)/documents/services/$(serviceId)).data.providerId == request.auth.uid
+      );
+    }
+
+    // User avatars (private)
+    // Path: /private/users/{uid}/avatar/{filename}
+    match /private/users/{uid}/avatar/{filename} {
+      allow read: if isAdmin() || isSelf(uid);
+      allow write: if isAdmin() || (isSelf(uid) && isImage() && smallEnough(5 * 1024 * 1024));
+    }
+
+    // Booking attachments (private to participants)
+    // Path: /private/bookings/{bookingId}/attachments/{filename}
+    match /private/bookings/{bookingId}/attachments/{filename} {
+      allow read: if isAdmin() || isBookingParticipant(bookingId);
+      allow write: if isAdmin() || (isBookingParticipant(bookingId) && smallEnough(20 * 1024 * 1024));
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

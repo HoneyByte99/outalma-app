@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helpers ----------
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+
+    function bookingRef(bookingId) {
+      return /databases/$(database)/documents/bookings/$(bookingId);
+    }
+    function bookingDoc(bookingId) { return get(bookingRef(bookingId)); }
+    function bookingExists(bookingId) { return exists(bookingRef(bookingId)); }
+    function bookingData(bookingId) { return bookingDoc(bookingId).data; }
+
+    function isBookingParticipant(bookingId) {
+      return signedIn()
+        && bookingExists(bookingId)
+        && (bookingData(bookingId).customerId == request.auth.uid
+            || bookingData(bookingId).providerId == request.auth.uid);
+    }
+
+    function isBookingProvider(bookingId) {
+      return signedIn()
+        && bookingExists(bookingId)
+        && bookingData(bookingId).providerId == request.auth.uid;
+    }
+
+    function bookingAccepted(bookingId) {
+      return bookingExists(bookingId) && bookingData(bookingId).status == "accepted";
+    }
+
+    // ---------- USERS (private) ----------
+    match /users/{uid} {
+      allow read: if isAdmin() || isSelf(uid);
+      allow create: if isAdmin() || isSelf(uid);
+      allow update: if isAdmin() || isSelf(uid);
+      allow delete: if isAdmin();
+    }
+
+    // ---------- PROVIDERS (public read, owner write) ----------
+    match /providers/{uid} {
+      allow read: if true;
+      allow create: if isAdmin() || isSelf(uid);
+      allow update: if isAdmin() || isSelf(uid);
+      allow delete: if isAdmin();
+    }
+
+    // ---------- SERVICES (public read) ----------
+    match /services/{serviceId} {
+      allow read: if true;
+
+      // Create by owner provider
+      allow create: if isAdmin()
+        || (signedIn() && request.resource.data.providerId == request.auth.uid);
+
+      // Update by owner; providerId immutable
+      allow update: if isAdmin()
+        || (signedIn()
+            && resource.data.providerId == request.auth.uid
+            && request.resource.data.providerId == resource.data.providerId);
+
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.providerId == request.auth.uid);
+    }
+
+    // ---------- BOOKINGS (private) ----------
+    match /bookings/{bookingId} {
+      allow read: if isAdmin() || isBookingParticipant(bookingId);
+
+      // Create: customer creates
+      allow create: if isAdmin()
+        || (signedIn() && request.resource.data.customerId == request.auth.uid);
+
+      // Update: participants but ownership immutable
+      // NOTE: keep status transitions server-authoritative in Cloud Functions.
+      // We only allow provider to set 'accepted' (minimum viable gate).
+      allow update: if isAdmin()
+        || (isBookingParticipant(bookingId)
+            && request.resource.data.customerId == resource.data.customerId
+            && request.resource.data.providerId == resource.data.providerId
+            && request.resource.data.serviceId == resource.data.serviceId
+            && (
+              request.resource.data.status == resource.data.status
+              || (request.resource.data.status == "accepted" && isBookingProvider(bookingId))
+              || (request.resource.data.status != "accepted")
+            ));
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- CHATS (private to participants) ----------
+    match /chats/{chatId} {
+      function isChatParticipant() {
+        return signedIn()
+          && (request.auth.uid in resource.data.participantIds);
+      }
+
+      allow read: if isAdmin() || isChatParticipant();
+
+      // Create only by server/admin (recommended)
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isAdmin() || isChatParticipant();
+
+        // Create: only participants; senderId must match
+        allow create: if isAdmin()
+          || (isChatParticipant()
+              && request.resource.data.senderId == request.auth.uid
+              && request.resource.data.createdAt is timestamp
+              && request.resource.data.text is string);
+
+        // Integrity: no edits; admin moderation only
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
+      }
+    }
+
+    // ---------- PHONE SHARE (unlock after accept) ----------
+    match /bookings/{bookingId}/phoneShares/{uid} {
+      allow read: if isAdmin() || (isBookingParticipant(bookingId) && bookingAccepted(bookingId));
+
+      allow create: if isAdmin()
+        || (isBookingParticipant(bookingId)
+            && isSelf(uid)
+            && bookingAccepted(bookingId)
+            && request.resource.data.phone is string
+            && request.resource.data.createdAt is timestamp);
+
+      allow update: if isAdmin()
+        || (isBookingParticipant(bookingId)
+            && isSelf(uid)
+            && bookingAccepted(bookingId)
+            && request.resource.data.phone is string);
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- REPORTS (participants can create) ----------
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    // ---------- Default deny ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
