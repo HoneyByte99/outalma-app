@@ -54,9 +54,12 @@ class ChatMediaService {
 
   Future<String> _uploadFile(String chatId, XFile file, String prefix) async {
     final bytes = await file.readAsBytes();
-    final ext = file.path.split('.').last.toLowerCase();
+    // On web, file.path is a blob URL (blob:http://...) — extract extension
+    // from mimeType instead, or default to jpg for images.
+    final rawExt = file.path.split('.').last.toLowerCase();
+    final ext = rawExt.length > 5 || rawExt.contains('/') ? 'jpg' : rawExt;
     final ts = DateTime.now().millisecondsSinceEpoch;
-    final contentType = _mimeType(ext);
+    final contentType = file.mimeType ?? _mimeType(ext);
     final ref =
         _storage.ref('private/chats/$chatId/media/${ts}_$prefix.$ext');
     await ref.putData(bytes, SettableMetadata(contentType: contentType));
