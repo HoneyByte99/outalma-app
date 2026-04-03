@@ -34,13 +34,14 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       body: NestedScrollView(
         headerSliverBuilder: (context, _) => [
           SliverAppBar(
             floating: true,
-            backgroundColor: AppColors.background,
+            backgroundColor: oc.background,
             surfaceTintColor: Colors.transparent,
             title: Text(
               'Missions',
@@ -48,12 +49,6 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
             ),
             bottom: TabBar(
               controller: _tabController,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.secondaryText,
-              indicatorColor: AppColors.primary,
-              labelStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.primary,
-                  ),
               tabs: const [
                 Tab(text: 'Demandes'),
                 Tab(text: 'En cours'),
@@ -142,6 +137,7 @@ class _InboxCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final serviceAsync = ref.watch(serviceDetailProvider(booking.serviceId));
     final serviceTitle = serviceAsync.valueOrNull?.title ?? '---';
 
@@ -150,9 +146,9 @@ class _InboxCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: oc.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: oc.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,13 +159,13 @@ class _InboxCard extends ConsumerWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
+                    color: oc.primary.withValues(alpha: 0.08),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.person_outline,
                     size: 20,
-                    color: AppColors.primary,
+                    color: oc.primary,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -188,7 +184,7 @@ class _InboxCard extends ConsumerWidget {
                       Text(
                         _formatDate(booking.createdAt),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.secondaryText,
+                              color: oc.secondaryText,
                             ),
                       ),
                     ],
@@ -196,9 +192,9 @@ class _InboxCard extends ConsumerWidget {
                 ),
                 _StatusChip(status: booking.status),
                 const SizedBox(width: 4),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
-                  color: AppColors.icons,
+                  color: oc.icons,
                   size: 20,
                 ),
               ],
@@ -208,7 +204,7 @@ class _InboxCard extends ConsumerWidget {
               Text(
                 booking.requestMessage,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.secondaryText,
+                      color: oc.secondaryText,
                       height: 1.4,
                     ),
                 maxLines: 2,
@@ -226,16 +222,16 @@ class _InboxCard extends ConsumerWidget {
                 onTap: () => context.push(AppRoutes.chat(booking.chatId!)),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.chat_bubble_outline_rounded,
                       size: 16,
-                      color: AppColors.primary,
+                      color: oc.primary,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'Ouvrir le chat',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.primary,
+                            color: oc.primary,
                             fontWeight: FontWeight.w500,
                           ),
                     ),
@@ -261,13 +257,14 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final (label, color) = switch (status) {
-      BookingStatus.requested => ('En attente', AppColors.warning),
-      BookingStatus.accepted => ('Acceptée', AppColors.primary),
+      BookingStatus.requested => ('En attente', oc.warning),
+      BookingStatus.accepted => ('Acceptée', oc.primary),
       BookingStatus.inProgress => ('En cours', const Color(0xFF7B2FBE)),
-      BookingStatus.done => ('Terminée', AppColors.success),
-      BookingStatus.rejected => ('Refusée', AppColors.secondaryText),
-      BookingStatus.cancelled => ('Annulée', AppColors.secondaryText),
+      BookingStatus.done => ('Terminée', oc.success),
+      BookingStatus.rejected => ('Refusée', oc.secondaryText),
+      BookingStatus.cancelled => ('Annulée', oc.secondaryText),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -310,6 +307,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -321,7 +319,7 @@ class _EmptyState extends StatelessWidget {
                   ? Icons.hourglass_empty_outlined
                   : Icons.inbox_outlined,
               size: 56,
-              color: AppColors.icons,
+              color: oc.icons,
             ),
             const SizedBox(height: 16),
             Text(
@@ -339,7 +337,7 @@ class _EmptyState extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: AppColors.secondaryText),
+                  ?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),
@@ -359,7 +357,7 @@ class _ErrorState extends StatelessWidget {
         style: Theme.of(context)
             .textTheme
             .bodySmall
-            ?.copyWith(color: AppColors.secondaryText),
+            ?.copyWith(color: context.oc.secondaryText),
       ),
     );
   }

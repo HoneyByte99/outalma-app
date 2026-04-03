@@ -26,6 +26,7 @@ dependencies:
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
   google_fonts: ^6.2.1
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:
@@ -47,13 +48,15 @@ flutter_launcher_icons:
     theme_color: "#1B3A4B"
 
 flutter_native_splash:
-  color: "#FFFFFF"
+  color: "#F4F7F9"
   image: assets/images/logo_outalma.png
-  color_dark: "#1B3A4B"
+  color_dark: "#0A1A24"
   image_dark: assets/images/logo_outalma.png
   android_12:
-    color: "#FFFFFF"
+    color: "#F4F7F9"
     image: assets/images/logo_outalma.png
+    color_dark: "#0A1A24"
+    image_dark: assets/images/logo_outalma.png
   web: false
 
 flutter:

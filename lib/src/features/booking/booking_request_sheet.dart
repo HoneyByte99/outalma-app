@@ -93,16 +93,16 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
             content: Text(
               e.message ?? 'Une erreur est survenue. Réessayez.',
             ),
-            backgroundColor: AppColors.error,
+            backgroundColor: context.oc.error,
           ),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Une erreur est survenue. Réessayez.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Une erreur est survenue. Réessayez.'),
+            backgroundColor: context.oc.error,
           ),
         );
       }
@@ -113,13 +113,14 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: oc.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SafeArea(
@@ -136,7 +137,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: oc.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -160,7 +161,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
               Text(
                 widget.serviceTitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.secondaryText,
+                      color: oc.secondaryText,
                     ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -202,12 +203,12 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                         : ElevatedButton(
                             onPressed: _loading ? null : _submit,
                             child: _loading
-                                ? const SizedBox(
+                                ? SizedBox(
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: AppColors.surface,
+                                      color: oc.surface,
                                     ),
                                   )
                                 : const Text('Envoyer la demande'),
@@ -251,6 +252,7 @@ class _StepIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(total, (i) {
@@ -260,7 +262,7 @@ class _StepIndicator extends StatelessWidget {
           height: 8,
           margin: const EdgeInsets.only(left: 4),
           decoration: BoxDecoration(
-            color: isActive ? AppColors.primary : AppColors.border,
+            color: isActive ? oc.primary : oc.border,
             borderRadius: BorderRadius.circular(4),
           ),
         );
@@ -294,7 +296,7 @@ class _StepMessage extends StatelessWidget {
           style: Theme.of(context)
               .textTheme
               .bodySmall
-              ?.copyWith(color: AppColors.secondaryText),
+              ?.copyWith(color: context.oc.secondaryText),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -338,7 +340,7 @@ class _StepSchedule extends StatelessWidget {
           style: Theme.of(context)
               .textTheme
               .bodySmall
-              ?.copyWith(color: AppColors.secondaryText),
+              ?.copyWith(color: context.oc.secondaryText),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -380,7 +382,7 @@ class _StepAddress extends StatelessWidget {
           style: Theme.of(context)
               .textTheme
               .bodySmall
-              ?.copyWith(color: AppColors.secondaryText),
+              ?.copyWith(color: context.oc.secondaryText),
         ),
         const SizedBox(height: 12),
         TextFormField(

@@ -110,9 +110,9 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impossible d\'envoyer l\'avis.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Impossible d\'envoyer l\'avis.'),
+            backgroundColor: context.oc.error,
           ),
         );
       }
@@ -123,15 +123,16 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final targetLabel = widget.reviewerRole == ReviewerRole.client
         ? 'le prestataire'
         : 'le client';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       appBar: AppBar(
         title: const Text('Laisser un avis'),
-        backgroundColor: AppColors.surface,
+        backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
@@ -150,7 +151,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: AppColors.secondaryText),
+                  ?.copyWith(color: oc.secondaryText),
             ),
             const SizedBox(height: 32),
 
@@ -158,7 +159,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             Text(
               'Note',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: AppColors.secondaryText,
+                    color: oc.secondaryText,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -173,7 +174,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             Text(
               'Commentaire (optionnel)',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: AppColors.secondaryText,
+                    color: oc.secondaryText,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -192,12 +193,12 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             ElevatedButton(
               onPressed: _submitting ? null : _submit,
               child: _submitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 22,
                       width: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.surface,
+                        color: oc.surface,
                       ),
                     )
                   : const Text('Envoyer l\'avis'),
@@ -221,6 +222,7 @@ class _StarRating extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Row(
       children: List.generate(5, (i) {
         final filled = i < value;
@@ -231,7 +233,7 @@ class _StarRating extends StatelessWidget {
             child: Icon(
               filled ? Icons.star_rounded : Icons.star_outline_rounded,
               size: 40,
-              color: filled ? AppColors.warning : AppColors.border,
+              color: filled ? oc.warning : oc.border,
             ),
           ),
         );

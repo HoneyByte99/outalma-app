@@ -41,33 +41,34 @@ class _ServiceDetailContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final priceLabel = service.priceType == PriceType.hourly
         ? '${(service.price / 100).toStringAsFixed(0)} €/h'
         : '${(service.price / 100).toStringAsFixed(0)} € (forfait)';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       body: CustomScrollView(
         slivers: [
           // ---- Collapsible hero header ----
           SliverAppBar(
             expandedHeight: 240,
             pinned: true,
-            backgroundColor: AppColors.surface,
+            backgroundColor: oc.surface,
             leading: Padding(
               padding: const EdgeInsets.all(8),
               child: CircleAvatar(
-                backgroundColor: AppColors.surface.withValues(alpha: 0.9),
+                backgroundColor: oc.surface.withValues(alpha: 0.9),
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                  color: AppColors.primaryText,
+                  color: oc.primaryText,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                color: AppColors.border,
+                color: oc.border,
                 child: Center(
                   child: Image.asset(
                     'assets/images/logo_outalma.png',
@@ -101,7 +102,7 @@ class _ServiceDetailContent extends ConsumerWidget {
                   Text(
                     priceLabel,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppColors.primary,
+                          color: oc.primary,
                         ),
                   ),
                   const SizedBox(height: 20),
@@ -127,10 +128,10 @@ class _ServiceDetailContent extends ConsumerWidget {
                       service.serviceArea!.isNotEmpty) ...[
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.location_on_outlined,
                           size: 16,
-                          color: AppColors.secondaryText,
+                          color: oc.secondaryText,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -138,7 +139,7 @@ class _ServiceDetailContent extends ConsumerWidget {
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
-                              ?.copyWith(color: AppColors.secondaryText),
+                              ?.copyWith(color: oc.secondaryText),
                         ),
                       ],
                     ),
@@ -167,16 +168,17 @@ class _CategoryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
+        color: oc.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         _label(categoryId),
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColors.primary,
+              color: oc.primary,
               fontWeight: FontWeight.w600,
             ),
       ),
@@ -209,14 +211,15 @@ class _ProviderRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     // For MVP we show a minimal provider row without a separate provider name
     // lookup — a full provider profile page is Phase 4.
     return Row(
       children: [
-        const CircleAvatar(
+        CircleAvatar(
           radius: 20,
-          backgroundColor: AppColors.border,
-          child: Icon(Icons.person_outline, color: AppColors.icons),
+          backgroundColor: oc.border,
+          child: Icon(Icons.person_outline, color: oc.icons),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -226,13 +229,13 @@ class _ProviderRow extends ConsumerWidget {
               Text(
                 'Prestataire',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.secondaryText,
+                      color: oc.secondaryText,
                     ),
               ),
               Text(
                 'Voir le profil',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.primaryText,
+                      color: oc.primaryText,
                       fontWeight: FontWeight.w500,
                     ),
               ),
@@ -263,6 +266,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -271,7 +275,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
           maxLines: _expanded ? null : _maxLines,
           overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.secondaryText,
+                color: oc.secondaryText,
                 height: 1.5,
               ),
         ),
@@ -282,7 +286,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
             child: Text(
               _expanded ? 'Voir moins' : 'Voir plus',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.primary,
+                    color: oc.primary,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -304,12 +308,13 @@ class _BookingBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPadding),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: oc.surface,
+        border: Border(top: BorderSide(color: oc.border)),
       ),
       child: ElevatedButton(
         onPressed: () => _openBookingSheet(context),
@@ -341,25 +346,23 @@ class _ServiceDetailLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       body: Column(
         children: [
-          Container(height: 240, color: AppColors.border),
+          Container(height: 240, color: oc.border),
           const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                    height: 16, width: 80, color: AppColors.border),
+                Container(height: 16, width: 80, color: oc.border),
                 const SizedBox(height: 12),
-                Container(
-                    height: 24, width: 200, color: AppColors.border),
+                Container(height: 24, width: 200, color: oc.border),
                 const SizedBox(height: 8),
-                Container(
-                    height: 20, width: 100, color: AppColors.border),
+                Container(height: 20, width: 100, color: oc.border),
               ],
             ),
           ),
@@ -379,13 +382,13 @@ class _ServiceDetailError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.oc.background,
       appBar: AppBar(),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 56, color: AppColors.icons),
+            Icon(Icons.error_outline, size: 56, color: context.oc.icons),
             const SizedBox(height: 16),
             Text(
               'Service introuvable',

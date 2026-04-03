@@ -16,16 +16,17 @@ class ProviderDashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final profileAsync = ref.watch(currentProviderProfileProvider);
     final servicesAsync = ref.watch(providerServicesProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             floating: true,
-            backgroundColor: AppColors.background,
+            backgroundColor: oc.background,
             surfaceTintColor: Colors.transparent,
             title: Text(
               'Tableau de bord',
@@ -115,7 +116,7 @@ class ProviderDashboardPage extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push(AppRoutes.serviceNew),
-        backgroundColor: AppColors.primary,
+        backgroundColor: oc.primary,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
     );
@@ -129,6 +130,7 @@ class ProviderDashboardPage extends ConsumerWidget {
 class _OnboardingBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       child: Container(
@@ -136,13 +138,13 @@ class _OnboardingBanner extends ConsumerWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.success.withValues(alpha: 0.12),
-              AppColors.success.withValues(alpha: 0.04),
+              oc.success.withValues(alpha: 0.12),
+              oc.success.withValues(alpha: 0.04),
             ],
           ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppColors.success.withValues(alpha: 0.3),
+            color: oc.success.withValues(alpha: 0.3),
           ),
         ),
         child: Row(
@@ -151,12 +153,12 @@ class _OnboardingBanner extends ConsumerWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.15),
+                color: oc.success.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.rocket_launch_outlined,
-                color: AppColors.success,
+                color: oc.success,
                 size: 24,
               ),
             ),
@@ -168,7 +170,7 @@ class _OnboardingBanner extends ConsumerWidget {
                   Text(
                     'Activez votre profil',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppColors.success,
+                          color: oc.success,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -176,7 +178,7 @@ class _OnboardingBanner extends ConsumerWidget {
                   Text(
                     'Quelques infos pour commencer à recevoir des demandes.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.secondaryText,
+                          color: oc.secondaryText,
                         ),
                   ),
                 ],
@@ -187,7 +189,7 @@ class _OnboardingBanner extends ConsumerWidget {
               onPressed: () =>
                   GoRouter.of(context).push(AppRoutes.providerOnboarding),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
+                backgroundColor: oc.success,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -218,14 +220,15 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: oc.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: oc.border),
         ),
         child: Row(
           children: [
@@ -233,12 +236,12 @@ class _ProfileCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.1),
+                color: oc.success.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.verified_outlined,
-                color: AppColors.success,
+                color: oc.success,
                 size: 22,
               ),
             ),
@@ -252,18 +255,18 @@ class _ProfileCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: profile.active
-                              ? AppColors.success
-                              : AppColors.secondaryText,
+                              ? oc.success
+                              : oc.secondaryText,
                         ),
                   ),
                   if (profile.serviceArea != null) ...[
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.location_on_outlined,
                           size: 14,
-                          color: AppColors.secondaryText,
+                          color: oc.secondaryText,
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -272,7 +275,7 @@ class _ProfileCard extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
-                                ?.copyWith(color: AppColors.secondaryText),
+                                ?.copyWith(color: oc.secondaryText),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -284,10 +287,10 @@ class _ProfileCard extends StatelessWidget {
               ),
             ),
             IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.edit_outlined,
                 size: 20,
-                color: AppColors.secondaryText,
+                color: oc.secondaryText,
               ),
               onPressed: () =>
                   GoRouter.of(context).push(AppRoutes.providerOnboarding),
@@ -310,6 +313,7 @@ class _ServiceTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final priceLabel = service.priceType.name == 'hourly'
         ? '${(service.price / 100).toStringAsFixed(0)} €/h'
         : '${(service.price / 100).toStringAsFixed(0)} € (forfait)';
@@ -317,9 +321,9 @@ class _ServiceTile extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: oc.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: oc.border),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -327,13 +331,13 @@ class _ServiceTile extends ConsumerWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: oc.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             _categoryIcon(service.categoryId),
             size: 22,
-            color: AppColors.primary,
+            color: oc.primary,
           ),
         ),
         title: Text(
@@ -349,7 +353,7 @@ class _ServiceTile extends ConsumerWidget {
             Text(
               priceLabel,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.primary,
+                    color: oc.primary,
                     fontWeight: FontWeight.w500,
                   ),
             ),
@@ -362,9 +366,9 @@ class _ServiceTile extends ConsumerWidget {
           children: [
             _PublishedDot(published: service.published),
             const SizedBox(width: 4),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
-              color: AppColors.icons,
+              color: oc.icons,
               size: 20,
             ),
           ],
@@ -402,16 +406,17 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: AppColors.border,
+        color: oc.border,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         _labels[categoryId] ?? '',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.secondaryText,
+              color: oc.secondaryText,
             ),
       ),
     );
@@ -425,6 +430,7 @@ class _PublishedDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Tooltip(
       message: published ? 'Publié' : 'Non publié',
       child: Container(
@@ -432,7 +438,7 @@ class _PublishedDot extends StatelessWidget {
         height: 8,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: published ? AppColors.success : AppColors.border,
+          color: published ? oc.success : oc.border,
         ),
       ),
     );
@@ -447,15 +453,16 @@ class _EmptyServices extends StatelessWidget {
   const _EmptyServices();
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
       child: Center(
         child: Column(
           children: [
-            const Icon(
+            Icon(
               Icons.add_box_outlined,
               size: 56,
-              color: AppColors.icons,
+              color: oc.icons,
             ),
             const SizedBox(height: 16),
             Text(
@@ -469,7 +476,7 @@ class _EmptyServices extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: AppColors.secondaryText),
+                  ?.copyWith(color: oc.secondaryText),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -496,7 +503,7 @@ class _ErrorState extends StatelessWidget {
         child: Text(
           message,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.secondaryText,
+                color: context.oc.secondaryText,
               ),
           textAlign: TextAlign.center,
         ),

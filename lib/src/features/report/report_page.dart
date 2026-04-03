@@ -61,9 +61,9 @@ class _ReportPageState extends ConsumerState<ReportPage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impossible d\'envoyer le signalement.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Impossible d\'envoyer le signalement.'),
+            backgroundColor: context.oc.error,
           ),
         );
       }
@@ -74,11 +74,12 @@ class _ReportPageState extends ConsumerState<ReportPage> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       appBar: AppBar(
         title: const Text('Signaler'),
-        backgroundColor: AppColors.surface,
+        backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
       ),
       body: Padding(
@@ -96,7 +97,7 @@ class _ReportPageState extends ConsumerState<ReportPage> {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: AppColors.secondaryText),
+                  ?.copyWith(color: oc.secondaryText),
             ),
             const SizedBox(height: 28),
 
@@ -117,13 +118,11 @@ class _ReportPageState extends ConsumerState<ReportPage> {
                       ),
                       decoration: BoxDecoration(
                         color: selected
-                            ? AppColors.primary.withValues(alpha: 0.06)
-                            : AppColors.surface,
+                            ? oc.primary.withValues(alpha: 0.06)
+                            : oc.surface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: selected
-                              ? AppColors.primary
-                              : AppColors.border,
+                          color: selected ? oc.primary : oc.border,
                           width: selected ? 1.5 : 1,
                         ),
                       ),
@@ -137,8 +136,8 @@ class _ReportPageState extends ConsumerState<ReportPage> {
                                   .bodyMedium
                                   ?.copyWith(
                                     color: selected
-                                        ? AppColors.primary
-                                        : AppColors.primaryText,
+                                        ? oc.primary
+                                        : oc.primaryText,
                                     fontWeight: selected
                                         ? FontWeight.w600
                                         : FontWeight.w400,
@@ -146,9 +145,9 @@ class _ReportPageState extends ConsumerState<ReportPage> {
                             ),
                           ),
                           if (selected)
-                            const Icon(
+                            Icon(
                               Icons.check_circle_rounded,
-                              color: AppColors.primary,
+                              color: oc.primary,
                               size: 20,
                             ),
                         ],
@@ -164,15 +163,15 @@ class _ReportPageState extends ConsumerState<ReportPage> {
             ElevatedButton(
               onPressed: (_selectedReason == null || _submitting) ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
+                backgroundColor: oc.error,
               ),
               child: _submitting
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 22,
                       width: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.surface,
+                        color: oc.surface,
                       ),
                     )
                   : const Text('Envoyer le signalement'),

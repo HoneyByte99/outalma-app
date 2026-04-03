@@ -73,11 +73,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final oc = context.oc;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        backgroundColor: AppColors.surface,
+        backgroundColor: oc.surface,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -95,7 +96,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                 Text(
                   'Connectez-vous pour accéder à vos services.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.secondaryText,
+                    color: oc.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -120,13 +121,13 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     TextSpan(
                       text: "Pas de compte ? ",
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.secondaryText,
+                        color: oc.secondaryText,
                       ),
                       children: [
                         TextSpan(
                           text: "S'inscrire",
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppColors.primary,
+                            color: oc.primary,
                             fontWeight: FontWeight.w600,
                           ),
                           recognizer: TapGestureRecognizer()
@@ -195,7 +196,7 @@ class _PasswordField extends StatelessWidget {
         suffixIcon: IconButton(
           icon: Icon(
             obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-            color: AppColors.icons,
+            color: context.oc.icons,
           ),
           onPressed: onToggle,
         ),

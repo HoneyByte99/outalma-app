@@ -112,9 +112,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impossible d\'enregistrer. Réessayez.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Impossible d\'enregistrer. Réessayez.'),
+            backgroundColor: context.oc.error,
           ),
         );
       }
@@ -125,8 +125,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       appBar: AppBar(
         title: Text(_isEdit ? 'Modifier le service' : 'Nouveau service'),
         leading: IconButton(
@@ -244,9 +245,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: oc.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: oc.border),
                 ),
                 child: Row(
                   children: [
@@ -264,7 +265,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                           Text(
                             'Visible par les clients',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.secondaryText,
+                                  color: oc.secondaryText,
                                 ),
                           ),
                         ],
@@ -273,8 +274,8 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                     Switch(
                       value: _published,
                       onChanged: (v) => setState(() => _published = v),
-                      activeThumbColor: AppColors.success,
-                      activeTrackColor: AppColors.success.withValues(alpha: 0.4),
+                      activeThumbColor: oc.success,
+                      activeTrackColor: oc.success.withValues(alpha: 0.4),
                     ),
                   ],
                 ),
@@ -323,6 +324,7 @@ class _CategorySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Wrap(
       spacing: 8,
       children: CategoryId.values.map((c) {
@@ -330,9 +332,9 @@ class _CategorySelector extends StatelessWidget {
         return ChoiceChip(
           label: Text(_labels[c]!),
           selected: selected,
-          selectedColor: AppColors.primary.withValues(alpha: 0.12),
+          selectedColor: oc.primary.withValues(alpha: 0.12),
           labelStyle: TextStyle(
-            color: selected ? AppColors.primary : AppColors.primaryText,
+            color: selected ? oc.primary : oc.primaryText,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
           onSelected: (_) => onChanged(c),

@@ -34,18 +34,13 @@ class _BookingListPageState extends ConsumerState<BookingListPage>
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       appBar: AppBar(
         title: const Text('Mes réservations'),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.secondaryText,
-          indicatorColor: AppColors.primary,
-          labelStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppColors.primary,
-              ),
           tabs: const [
             Tab(text: 'En cours'),
             Tab(text: 'Terminées'),
@@ -129,6 +124,7 @@ class _BookingCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final serviceAsync =
         ref.watch(serviceDetailProvider(booking.serviceId));
 
@@ -140,14 +136,14 @@ class _BookingCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: oc.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-          boxShadow: const [
+          border: Border.all(color: oc.border),
+          boxShadow: [
             BoxShadow(
-              color: AppColors.shadow,
+              color: oc.shadow,
               blurRadius: 8,
-              offset: Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -173,7 +169,7 @@ class _BookingCard extends ConsumerWidget {
             Text(
               'Demande du $dateLabel',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.secondaryText,
+                    color: oc.secondaryText,
                   ),
             ),
             if (booking.requestMessage.isNotEmpty) ...[
@@ -181,7 +177,7 @@ class _BookingCard extends ConsumerWidget {
               Text(
                 booking.requestMessage,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.secondaryText,
+                      color: oc.secondaryText,
                     ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -227,7 +223,8 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = _statusStyle(status);
+    final oc = context.oc;
+    final (label, color) = _statusStyle(status, oc);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -245,20 +242,20 @@ class _StatusChip extends StatelessWidget {
     );
   }
 
-  (String, Color) _statusStyle(BookingStatus s) {
+  (String, Color) _statusStyle(BookingStatus s, OutalmaColors oc) {
     switch (s) {
       case BookingStatus.requested:
-        return ('En attente', AppColors.warning);
+        return ('En attente', oc.warning);
       case BookingStatus.accepted:
-        return ('Acceptée', AppColors.primary);
+        return ('Acceptée', oc.primary);
       case BookingStatus.inProgress:
         return ('En cours', const Color(0xFF7B2FBE));
       case BookingStatus.done:
-        return ('Terminée', AppColors.success);
+        return ('Terminée', oc.success);
       case BookingStatus.rejected:
-        return ('Refusée', AppColors.secondaryText);
+        return ('Refusée', oc.secondaryText);
       case BookingStatus.cancelled:
-        return ('Annulée', AppColors.secondaryText);
+        return ('Annulée', oc.secondaryText);
     }
   }
 }
@@ -272,6 +269,7 @@ class _BookingListLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       itemCount: 4,
@@ -279,7 +277,7 @@ class _BookingListLoading extends StatelessWidget {
       itemBuilder: (_, __) => Container(
         height: 90,
         decoration: BoxDecoration(
-          color: AppColors.border,
+          color: oc.border,
           borderRadius: BorderRadius.circular(16),
         ),
       ),
@@ -298,6 +296,7 @@ class _BookingListEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -309,7 +308,7 @@ class _BookingListEmpty extends StatelessWidget {
                   ? Icons.calendar_today_outlined
                   : Icons.history_outlined,
               size: 56,
-              color: AppColors.icons,
+              color: oc.icons,
             ),
             const SizedBox(height: 16),
             Text(
@@ -318,7 +317,7 @@ class _BookingListEmpty extends StatelessWidget {
                   : 'Aucune réservation terminée',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.secondaryText,
+                    color: oc.secondaryText,
                   ),
             ),
           ],
@@ -335,11 +334,12 @@ class _BookingListError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.wifi_off_outlined, size: 56, color: AppColors.icons),
+          Icon(Icons.wifi_off_outlined, size: 56, color: oc.icons),
           const SizedBox(height: 16),
           Text(
             'Erreur de chargement',

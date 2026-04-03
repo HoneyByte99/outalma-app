@@ -17,13 +17,14 @@ class ChatsListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final chatsAsync = ref.watch(userChatsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       appBar: AppBar(
         title: const Text('Chats'),
-        backgroundColor: AppColors.surface,
+        backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
         actions: const [BellIconButton()],
       ),
@@ -35,7 +36,7 @@ class ChatsListPage extends ConsumerWidget {
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
-                ?.copyWith(color: AppColors.secondaryText),
+                ?.copyWith(color: oc.secondaryText),
           ),
         ),
         data: (chats) {
@@ -67,6 +68,7 @@ class _ChatTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final authState = ref.watch(authNotifierProvider).valueOrNull;
     final myUid =
         authState is AuthAuthenticated ? authState.user.id : null;
@@ -91,12 +93,12 @@ class _ChatTile extends ConsumerWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
+                color: oc.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.person_outline_rounded,
-                color: AppColors.primary,
+                color: oc.primary,
                 size: 26,
               ),
             ),
@@ -118,8 +120,8 @@ class _ChatTile extends ConsumerWidget {
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: hasUnread
-                                        ? AppColors.primary
-                                        : AppColors.icons,
+                                        ? oc.primary
+                                        : oc.icons,
                                     fontWeight: hasUnread
                                         ? FontWeight.w600
                                         : FontWeight.w400,
@@ -142,8 +144,8 @@ class _ChatTile extends ConsumerWidget {
                         Container(
                           width: 10,
                           height: 10,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
+                          decoration: BoxDecoration(
+                            color: oc.primary,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -195,9 +197,6 @@ class _ServiceName extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch service detail via booking's serviceId using the bookingDetailProvider
-    // We display the serviceId as a fallback — the service detail provider
-    // isn't imported here to avoid circular deps; a future refactor can add it.
     return Text(
       'Réservation', // sufficient for MVP — service title shown in chat AppBar
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -226,11 +225,12 @@ class _LastMessagePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     if (message == null) {
       return Text(
         'Démarrez la conversation',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.secondaryText,
+              color: oc.secondaryText,
               fontStyle: FontStyle.italic,
             ),
         maxLines: 1,
@@ -245,7 +245,7 @@ class _LastMessagePreview extends StatelessWidget {
     return Text(
       '$prefix$text',
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: hasUnread ? AppColors.primaryText : AppColors.secondaryText,
+            color: hasUnread ? oc.primaryText : oc.secondaryText,
             fontWeight: hasUnread ? FontWeight.w500 : FontWeight.w400,
           ),
       maxLines: 1,
@@ -263,16 +263,17 @@ class _EmptyChats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.chat_bubble_outline_rounded,
               size: 64,
-              color: AppColors.icons,
+              color: oc.icons,
             ),
             const SizedBox(height: 16),
             Text(
@@ -286,7 +287,7 @@ class _EmptyChats extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: AppColors.secondaryText),
+                  ?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),

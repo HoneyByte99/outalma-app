@@ -82,9 +82,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impossible d\'envoyer le message.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Impossible d\'envoyer le message.'),
+            backgroundColor: context.oc.error,
           ),
         );
         _controller.text = text;
@@ -96,16 +96,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final messagesAsync = ref.watch(chatMessagesProvider(widget.chatId));
     final authState = ref.watch(authNotifierProvider).valueOrNull;
     final myUid =
         authState is AuthAuthenticated ? authState.user.id : null;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       appBar: AppBar(
         title: const Text('Chat'),
-        backgroundColor: AppColors.surface,
+        backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
@@ -130,7 +131,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
-                      ?.copyWith(color: AppColors.secondaryText),
+                      ?.copyWith(color: oc.secondaryText),
                 ),
               ),
               data: (messages) {
@@ -190,10 +191,9 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isMe
-        ? AppColors.primary
-        : AppColors.surface;
-    final fg = isMe ? AppColors.surface : AppColors.primaryText;
+    final oc = context.oc;
+    final bg = isMe ? oc.primary : oc.surface;
+    final fg = isMe ? oc.surface : oc.primaryText;
     final align =
         isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final radius = BorderRadius.only(
@@ -213,13 +213,13 @@ class _MessageBubble extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.border,
+              color: oc.border,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               message.text ?? '',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.secondaryText,
+                    color: oc.secondaryText,
                   ),
             ),
           ),
@@ -244,7 +244,7 @@ class _MessageBubble extends StatelessWidget {
             decoration: BoxDecoration(
               color: bg,
               borderRadius: radius,
-              border: isMe ? null : Border.all(color: AppColors.border),
+              border: isMe ? null : Border.all(color: oc.border),
             ),
             child: Text(
               message.text ?? '',
@@ -262,7 +262,7 @@ class _MessageBubble extends StatelessWidget {
                 _formatTime(message.createdAt),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 11,
-                      color: AppColors.icons,
+                      color: oc.icons,
                     ),
               ),
               if (isMe) ...[
@@ -270,7 +270,7 @@ class _MessageBubble extends StatelessWidget {
                 Icon(
                   isRead ? Icons.done_all : Icons.done,
                   size: 14,
-                  color: isRead ? AppColors.primary : AppColors.icons,
+                  color: isRead ? oc.primary : oc.icons,
                 ),
               ],
             ],
@@ -298,12 +298,13 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + bottomPadding),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: oc.surface,
+        border: Border(top: BorderSide(color: oc.border)),
       ),
       child: Row(
         children: [
@@ -318,15 +319,14 @@ class _InputBar extends StatelessWidget {
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 filled: true,
-                fillColor: AppColors.inputFill,
+                fillColor: oc.inputFill,
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: oc.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide:
-                      const BorderSide(color: AppColors.primary, width: 1.5),
+                  borderSide: BorderSide(color: oc.primary, width: 1.5),
                 ),
               ),
             ),
@@ -338,22 +338,20 @@ class _InputBar extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: sending
-                    ? AppColors.border
-                    : AppColors.primary,
+                color: sending ? oc.border : oc.primary,
                 shape: BoxShape.circle,
               ),
               child: sending
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
+                  ? Padding(
+                      padding: const EdgeInsets.all(12),
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.surface,
+                        color: oc.surface,
                       ),
                     )
-                  : const Icon(
+                  : Icon(
                       Icons.send_rounded,
-                      color: AppColors.surface,
+                      color: oc.surface,
                       size: 20,
                     ),
             ),
@@ -371,16 +369,17 @@ class _InputBar extends StatelessWidget {
 class _EmptyChat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.chat_bubble_outline_rounded,
               size: 56,
-              color: AppColors.icons,
+              color: oc.icons,
             ),
             const SizedBox(height: 16),
             Text(
@@ -394,7 +393,7 @@ class _EmptyChat extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: AppColors.secondaryText),
+                  ?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),

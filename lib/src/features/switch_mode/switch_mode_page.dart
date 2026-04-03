@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/app_theme.dart';
 import '../../application/auth/auth_providers.dart';
+import '../../application/theme/theme_provider.dart';
 import '../../application/user/user_providers.dart';
 import '../../domain/enums/active_mode.dart';
 
@@ -42,7 +43,9 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final activeMode = ref.watch(activeModeProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -55,11 +58,12 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
       body: SafeArea(
         child: _saving
             ? const Center(child: CircularProgressIndicator())
-            : Padding(
+            : SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // --- Mode section ---
                     Text(
                       'Votre mode actif',
                       style: Theme.of(context).textTheme.headlineSmall,
@@ -68,7 +72,7 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
                     Text(
                       'Passez du mode client au mode prestataire à tout moment.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.secondaryText,
+                            color: oc.secondaryText,
                           ),
                     ),
                     const SizedBox(height: 32),
@@ -79,7 +83,7 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
                       title: 'Mode Client',
                       subtitle:
                           'Recherchez et réservez des services à domicile.',
-                      accentColor: AppColors.primary,
+                      accentColor: oc.primary,
                       onTap: () => _selectMode(ActiveMode.client),
                     ),
                     const SizedBox(height: 16),
@@ -89,8 +93,53 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
                       icon: Icons.handyman_rounded,
                       title: 'Mode Prestataire',
                       subtitle: 'Proposez vos services et gérez vos missions.',
-                      accentColor: AppColors.success,
+                      accentColor: oc.success,
                       onTap: () => _selectMode(ActiveMode.provider),
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // --- Appearance section ---
+                    Text(
+                      'Apparence',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Choisissez le thème de l\'application.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: oc.secondaryText,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    _ThemeOption(
+                      label: 'Système',
+                      subtitle: 'Suit les préférences de votre appareil',
+                      icon: Icons.brightness_auto_outlined,
+                      selected: themeMode == ThemeMode.system,
+                      onTap: () => ref
+                          .read(themeModeProvider.notifier)
+                          .setThemeMode(ThemeMode.system),
+                    ),
+                    const SizedBox(height: 10),
+                    _ThemeOption(
+                      label: 'Clair',
+                      subtitle: 'Toujours en mode clair',
+                      icon: Icons.light_mode_outlined,
+                      selected: themeMode == ThemeMode.light,
+                      onTap: () => ref
+                          .read(themeModeProvider.notifier)
+                          .setThemeMode(ThemeMode.light),
+                    ),
+                    const SizedBox(height: 10),
+                    _ThemeOption(
+                      label: 'Sombre',
+                      subtitle: 'Toujours en mode sombre',
+                      icon: Icons.dark_mode_outlined,
+                      selected: themeMode == ThemeMode.dark,
+                      onTap: () => ref
+                          .read(themeModeProvider.notifier)
+                          .setThemeMode(ThemeMode.dark),
                     ),
                   ],
                 ),
@@ -99,6 +148,10 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Mode card
+// ---------------------------------------------------------------------------
 
 class _ModeCard extends StatelessWidget {
   const _ModeCard({
@@ -121,6 +174,7 @@ class _ModeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -129,10 +183,10 @@ class _ModeCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isActive
               ? accentColor.withValues(alpha: 0.06)
-              : AppColors.surface,
+              : oc.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isActive ? accentColor : AppColors.border,
+            color: isActive ? accentColor : oc.border,
             width: isActive ? 2 : 1,
           ),
         ),
@@ -155,9 +209,7 @@ class _ModeCard extends StatelessWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: isActive
-                              ? accentColor
-                              : AppColors.primaryText,
+                          color: isActive ? accentColor : oc.primaryText,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -165,7 +217,7 @@ class _ModeCard extends StatelessWidget {
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.secondaryText,
+                          color: oc.secondaryText,
                         ),
                   ),
                 ],
@@ -175,7 +227,78 @@ class _ModeCard extends StatelessWidget {
             if (isActive)
               Icon(Icons.check_circle_rounded, color: accentColor, size: 24)
             else
-              const Icon(Icons.circle_outlined, color: AppColors.border, size: 24),
+              Icon(Icons.circle_outlined, color: oc.border, size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Theme option tile
+// ---------------------------------------------------------------------------
+
+class _ThemeOption extends StatelessWidget {
+  const _ThemeOption({
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String subtitle;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? oc.primary.withValues(alpha: 0.06) : oc.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? oc.primary : oc.border,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon,
+                size: 22,
+                color: selected ? oc.primary : oc.icons),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: selected ? oc.primary : oc.primaryText,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.secondaryText,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_circle_rounded,
+                  color: oc.primary, size: 20),
           ],
         ),
       ),

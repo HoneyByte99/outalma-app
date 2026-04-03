@@ -55,9 +55,9 @@ class _ProviderOnboardingPageState
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impossible d\'activer le profil. Réessayez.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Impossible d\'activer le profil. Réessayez.'),
+            backgroundColor: context.oc.error,
           ),
         );
       }
@@ -68,8 +68,9 @@ class _ProviderOnboardingPageState
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       appBar: AppBar(
         title: const Text('Devenir prestataire'),
         leading: IconButton(
@@ -90,13 +91,13 @@ class _ProviderOnboardingPageState
                   width: double.infinity,
                   height: 160,
                   decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.08),
+                    color: oc.success.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.handyman_rounded,
                     size: 72,
-                    color: AppColors.success,
+                    color: oc.success,
                   ),
                 ),
                 const SizedBox(height: 28),
@@ -112,7 +113,7 @@ class _ProviderOnboardingPageState
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
-                      ?.copyWith(color: AppColors.secondaryText, height: 1.5),
+                      ?.copyWith(color: oc.secondaryText, height: 1.5),
                 ),
                 const SizedBox(height: 32),
 
@@ -155,7 +156,7 @@ class _ProviderOnboardingPageState
                   child: ElevatedButton(
                     onPressed: _saving ? null : _activate,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
+                      backgroundColor: oc.success,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),

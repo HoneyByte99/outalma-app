@@ -28,6 +28,7 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final authAsync = ref.watch(authNotifierProvider);
     final activeMode = ref.watch(activeModeProvider);
 
@@ -36,7 +37,7 @@ class HomePage extends ConsumerWidget {
         : '';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       appBar: AppBar(
         title: const Text('Outalma'),
         actions: [
@@ -72,7 +73,7 @@ class HomePage extends ConsumerWidget {
             child: Text(
               'Que recherchez-vous ?',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.secondaryText,
+                    color: oc.secondaryText,
                   ),
             ),
           ),
@@ -142,22 +143,23 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : AppColors.surface,
+          color: isActive ? oc.primary : oc.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive ? AppColors.primary : AppColors.border,
+            color: isActive ? oc.primary : oc.border,
           ),
         ),
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: isActive ? AppColors.surface : AppColors.primaryText,
+                color: isActive ? oc.surface : oc.primaryText,
                 fontWeight: FontWeight.w600,
               ),
         ),
@@ -223,6 +225,7 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final priceLabel = service.priceType.name == 'hourly'
         ? '${(service.price / 100).toStringAsFixed(0)} €/h'
         : '${(service.price / 100).toStringAsFixed(0)} €';
@@ -231,14 +234,14 @@ class _ServiceCard extends StatelessWidget {
       onTap: () => context.push(AppRoutes.serviceDetail(service.id)),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: oc.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-          boxShadow: const [
+          border: Border.all(color: oc.border),
+          boxShadow: [
             BoxShadow(
-              color: AppColors.shadow,
+              color: oc.shadow,
               blurRadius: 8,
-              offset: Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -253,11 +256,11 @@ class _ServiceCard extends StatelessWidget {
               child: Container(
                 height: 110,
                 width: double.infinity,
-                color: AppColors.primary.withValues(alpha: 0.06),
+                color: oc.primary.withValues(alpha: 0.06),
                 child: Icon(
                   _categoryIcon(service.categoryId),
                   size: 36,
-                  color: AppColors.primary.withValues(alpha: 0.4),
+                  color: oc.primary.withValues(alpha: 0.4),
                 ),
               ),
             ),
@@ -271,13 +274,13 @@ class _ServiceCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
+                      color: oc.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       _categoryLabel(service.categoryId),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppColors.primary,
+                            color: oc.primary,
                             fontWeight: FontWeight.w600,
                           ),
                     ),
@@ -293,7 +296,7 @@ class _ServiceCard extends StatelessWidget {
                   Text(
                     priceLabel,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.primary,
+                          color: oc.primary,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -342,6 +345,7 @@ class _ServiceGridLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -353,7 +357,7 @@ class _ServiceGridLoading extends StatelessWidget {
       itemCount: 6,
       itemBuilder: (_, __) => Container(
         decoration: BoxDecoration(
-          color: AppColors.border,
+          color: oc.border,
           borderRadius: BorderRadius.circular(16),
         ),
       ),
@@ -370,23 +374,24 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.search_off_outlined,
               size: 56,
-              color: AppColors.icons,
+              color: oc.icons,
             ),
             const SizedBox(height: 16),
             Text(
               'Aucun service disponible\npour le moment',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.secondaryText,
+                    color: oc.secondaryText,
                   ),
             ),
           ],
@@ -403,16 +408,17 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.wifi_off_outlined,
               size: 56,
-              color: AppColors.icons,
+              color: oc.icons,
             ),
             const SizedBox(height: 16),
             Text(
@@ -443,9 +449,10 @@ class _ModeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final isClient = activeMode == ActiveMode.client;
     final label = isClient ? 'Client' : 'Prestataire';
-    final color = isClient ? AppColors.primary : AppColors.success;
+    final color = isClient ? oc.primary : oc.success;
 
     return GestureDetector(
       onTap: onTap,

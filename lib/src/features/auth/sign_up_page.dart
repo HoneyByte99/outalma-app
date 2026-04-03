@@ -105,11 +105,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final oc = context.oc;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        backgroundColor: AppColors.surface,
+        backgroundColor: oc.surface,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -127,7 +128,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 Text(
                   'Rejoignez Outalma et accédez à des services à domicile.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.secondaryText,
+                    color: oc.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -151,9 +152,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Téléphone (optionnel) — ex : +33612345678',
-                    prefixIcon: Icon(Icons.phone_outlined, color: AppColors.icons),
+                    prefixIcon: Icon(Icons.phone_outlined, color: oc.icons),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -168,7 +169,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: AppColors.icons,
+                        color: oc.icons,
                       ),
                       onPressed: () => setState(
                           () => _obscurePassword = !_obscurePassword),
@@ -188,13 +189,13 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     TextSpan(
                       text: 'Déjà un compte ? ',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.secondaryText,
+                        color: oc.secondaryText,
                       ),
                       children: [
                         TextSpan(
                           text: 'Se connecter',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppColors.primary,
+                            color: oc.primary,
                             fontWeight: FontWeight.w600,
                           ),
                           recognizer: TapGestureRecognizer()

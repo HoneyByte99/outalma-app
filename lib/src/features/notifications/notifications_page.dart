@@ -14,6 +14,7 @@ class NotificationsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final notifAsync = ref.watch(notificationsProvider);
     final db = ref.read(firestoreProvider);
     final authState = ref.watch(authNotifierProvider).valueOrNull;
@@ -21,10 +22,10 @@ class NotificationsPage extends ConsumerWidget {
         authState is AuthAuthenticated ? authState.user.id : null;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       appBar: AppBar(
         title: const Text('Notifications'),
-        backgroundColor: AppColors.surface,
+        backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
         actions: [
           notifAsync.maybeWhen(
@@ -52,10 +53,10 @@ class NotificationsPage extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.wifi_off_outlined,
                   size: 56,
-                  color: AppColors.icons,
+                  color: oc.icons,
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -64,7 +65,7 @@ class NotificationsPage extends ConsumerWidget {
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
-                      ?.copyWith(color: AppColors.secondaryText),
+                      ?.copyWith(color: oc.secondaryText),
                 ),
               ],
             ),
@@ -138,13 +139,14 @@ class _NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final isUnread = !notification.read;
 
     return InkWell(
       onTap: onTap,
       child: Container(
         color: isUnread
-            ? AppColors.primary.withValues(alpha: 0.04)
+            ? oc.primary.withValues(alpha: 0.04)
             : Colors.transparent,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
@@ -155,13 +157,13 @@ class _NotificationTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _iconColor(notification.type).withValues(alpha: 0.12),
+                color: _iconColor(notification.type, oc).withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 _notifIcon(notification.type),
                 size: 22,
-                color: _iconColor(notification.type),
+                color: _iconColor(notification.type, oc),
               ),
             ),
             const SizedBox(width: 12),
@@ -192,9 +194,9 @@ class _NotificationTile extends StatelessWidget {
                           width: 8,
                           height: 8,
                           margin: const EdgeInsets.only(left: 8),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: AppColors.primary,
+                            color: oc.primary,
                           ),
                         ),
                     ],
@@ -211,7 +213,7 @@ class _NotificationTile extends StatelessWidget {
                     _relativeTime(notification.createdAt),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 11,
-                          color: AppColors.icons,
+                          color: oc.icons,
                         ),
                   ),
                 ],
@@ -231,16 +233,17 @@ class _NotificationTile extends StatelessWidget {
 class _EmptyNotifications extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.notifications_none_rounded,
               size: 56,
-              color: AppColors.icons,
+              color: oc.icons,
             ),
             const SizedBox(height: 16),
             Text(
@@ -254,7 +257,7 @@ class _EmptyNotifications extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: AppColors.secondaryText),
+                  ?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),
@@ -278,14 +281,14 @@ IconData _notifIcon(String type) {
   };
 }
 
-Color _iconColor(String type) {
+Color _iconColor(String type, OutalmaColors oc) {
   return switch (type) {
-    'booking_accepted' => AppColors.success,
-    'booking_rejected' => AppColors.error,
-    'booking_in_progress' => AppColors.warning,
-    'booking_done' => AppColors.success,
-    'new_message' => AppColors.primary,
-    _ => AppColors.icons,
+    'booking_accepted' => oc.success,
+    'booking_rejected' => oc.error,
+    'booking_in_progress' => oc.warning,
+    'booking_done' => oc.success,
+    'new_message' => oc.primary,
+    _ => oc.icons,
   };
 }
 

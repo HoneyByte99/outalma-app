@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/notification/notification_service.dart';
+import '../application/theme/theme_provider.dart';
 import 'app_theme.dart';
 import 'connectivity_banner.dart';
 import 'router.dart';
@@ -25,10 +26,13 @@ class _OutlamaAppState extends ConsumerState<OutlamaApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'Outalma',
       theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: themeMode,
       routerConfig: router,
       scaffoldMessengerKey: _messengerKey,
       debugShowCheckedModeBanner: false,

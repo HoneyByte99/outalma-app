@@ -46,6 +46,7 @@ class _DetailContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final serviceAsync =
         ref.watch(serviceDetailProvider(booking.serviceId));
     final serviceTitle = serviceAsync.valueOrNull?.title ?? '---';
@@ -73,7 +74,7 @@ class _DetailContent extends ConsumerWidget {
         : booking.customerId;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: oc.background,
       appBar: AppBar(
         title: const Text('Détail de la réservation'),
         actions: [
@@ -109,7 +110,7 @@ class _DetailContent extends ConsumerWidget {
                   ? booking.requestMessage
                   : 'Aucun message',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.secondaryText,
+                    color: oc.secondaryText,
                     height: 1.5,
                   ),
             ),
@@ -202,6 +203,7 @@ class _ContactSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final sharesAsync = ref.watch(phoneSharesProvider(bookingId));
     final hasSharedAsync = ref.watch(hasSharedPhoneProvider(bookingId));
 
@@ -222,9 +224,9 @@ class _ContactSection extends ConsumerWidget {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: oc.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: oc.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,7 +234,7 @@ class _ContactSection extends ConsumerWidget {
               Text(
                 'Contact',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: AppColors.secondaryText,
+                      color: oc.secondaryText,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -245,13 +247,13 @@ class _ContactSection extends ConsumerWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
+                      color: oc.primary.withValues(alpha: 0.08),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.phone_outlined,
                       size: 18,
-                      color: AppColors.primary,
+                      color: oc.primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -259,8 +261,8 @@ class _ContactSection extends ConsumerWidget {
                     otherShare?.phone ?? 'Numéro non encore partagé',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: otherShare != null
-                              ? AppColors.primaryText
-                              : AppColors.secondaryText,
+                              ? oc.primaryText
+                              : oc.secondaryText,
                           fontWeight: otherShare != null
                               ? FontWeight.w500
                               : FontWeight.w400,
@@ -284,7 +286,7 @@ class _ContactSection extends ConsumerWidget {
                 Text(
                   'Ajoutez votre numéro dans votre profil pour le partager.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.secondaryText,
+                        color: oc.secondaryText,
                       ),
                 ),
               ],
@@ -293,16 +295,16 @@ class _ContactSection extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.check_circle_outline_rounded,
                       size: 14,
-                      color: AppColors.success,
+                      color: oc.success,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'Votre numéro est partagé',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.success,
+                            color: oc.success,
                           ),
                     ),
                   ],
@@ -345,9 +347,9 @@ class _SharePhoneButtonState extends ConsumerState<_SharePhoneButton> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impossible de partager le numéro.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Impossible de partager le numéro.'),
+            backgroundColor: context.oc.error,
           ),
         );
       }
@@ -358,17 +360,18 @@ class _SharePhoneButtonState extends ConsumerState<_SharePhoneButton> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
         onPressed: _sharing ? null : _share,
         icon: _sharing
-            ? const SizedBox(
+            ? SizedBox(
                 height: 14,
                 width: 14,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.primary,
+                  color: oc.primary,
                 ),
               )
             : const Icon(Icons.phone_outlined, size: 16),
@@ -416,6 +419,7 @@ class _ReviewSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
     final hasReviewedAsync = ref.watch(hasReviewedProvider(bookingId));
 
     return hasReviewedAsync.when(
@@ -426,24 +430,24 @@ class _ReviewSection extends ConsumerWidget {
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.successAccent,
+              color: oc.successAccent,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppColors.success.withValues(alpha: 0.3),
+                color: oc.success.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.check_circle_outline_rounded,
-                  color: AppColors.success,
+                  color: oc.success,
                   size: 20,
                 ),
                 const SizedBox(width: 10),
                 Text(
                   'Avis envoyé — merci !',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.success,
+                        color: oc.success,
                         fontWeight: FontWeight.w500,
                       ),
                 ),
@@ -525,7 +529,8 @@ class _TimelineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? AppColors.primary : AppColors.border;
+    final oc = context.oc;
+    final color = isActive ? oc.primary : oc.border;
     final dateLabel = date != null ? _formatDateTime(date!) : '';
 
     return IntrinsicHeight(
@@ -552,7 +557,7 @@ class _TimelineRow extends StatelessWidget {
                     child: Container(
                       width: 2,
                       margin: const EdgeInsets.symmetric(vertical: 2),
-                      color: AppColors.border,
+                      color: oc.border,
                     ),
                   ),
               ],
@@ -572,8 +577,8 @@ class _TimelineRow extends StatelessWidget {
                           fontWeight:
                               isActive ? FontWeight.w500 : FontWeight.w400,
                           color: isActive
-                              ? AppColors.primaryText
-                              : AppColors.secondaryText,
+                              ? oc.primaryText
+                              : oc.secondaryText,
                         ),
                   ),
                   if (dateLabel.isNotEmpty) ...[
@@ -581,7 +586,7 @@ class _TimelineRow extends StatelessWidget {
                     Text(
                       dateLabel,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.secondaryText,
+                            color: oc.secondaryText,
                           ),
                     ),
                   ],
@@ -607,12 +612,13 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: oc.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: oc.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,7 +626,7 @@ class _Section extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.secondaryText,
+                  color: oc.secondaryText,
                   fontWeight: FontWeight.w600,
                 ),
           ),
@@ -642,7 +648,7 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: AppColors.secondaryText),
+        Icon(icon, size: 18, color: context.oc.secondaryText),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -700,16 +706,16 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.message ?? 'Erreur lors de l\'acceptation.'),
-            backgroundColor: AppColors.error,
+            backgroundColor: context.oc.error,
           ),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erreur lors de l\'acceptation.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Erreur lors de l\'acceptation.'),
+            backgroundColor: context.oc.error,
           ),
         );
       }
@@ -732,16 +738,16 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.message ?? 'Erreur lors du refus.'),
-            backgroundColor: AppColors.error,
+            backgroundColor: context.oc.error,
           ),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erreur lors du refus.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Erreur lors du refus.'),
+            backgroundColor: context.oc.error,
           ),
         );
       }
@@ -752,14 +758,15 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final busy = _loadingAccept || _loadingReject;
 
     return Container(
       padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPadding),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: oc.surface,
+        border: Border(top: BorderSide(color: oc.border)),
       ),
       child: Row(
         children: [
@@ -767,16 +774,16 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
             child: OutlinedButton(
               onPressed: busy ? null : _reject,
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.error,
-                side: const BorderSide(color: AppColors.error),
+                foregroundColor: oc.error,
+                side: BorderSide(color: oc.error),
               ),
               child: _loadingReject
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 18,
                       width: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.error,
+                        color: oc.error,
                       ),
                     )
                   : const Text('Refuser'),
@@ -787,12 +794,12 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
             child: ElevatedButton(
               onPressed: busy ? null : _accept,
               child: _loadingAccept
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 18,
                       width: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.surface,
+                        color: oc.surface,
                       ),
                     )
                   : const Text('Accepter'),
@@ -836,16 +843,16 @@ class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.message ?? 'Erreur.'),
-            backgroundColor: AppColors.error,
+            backgroundColor: context.oc.error,
           ),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erreur lors du démarrage.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Erreur lors du démarrage.'),
+            backgroundColor: context.oc.error,
           ),
         );
       }
@@ -856,22 +863,23 @@ class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPadding),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: oc.surface,
+        border: Border(top: BorderSide(color: oc.border)),
       ),
       child: ElevatedButton(
         onPressed: _loading ? null : _markInProgress,
         child: _loading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.surface,
+                  color: oc.surface,
                 ),
               )
             : const Text('Démarrer le service'),
@@ -932,16 +940,16 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.message ?? 'Erreur.'),
-            backgroundColor: AppColors.error,
+            backgroundColor: context.oc.error,
           ),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erreur lors de la confirmation.'),
-            backgroundColor: AppColors.error,
+          SnackBar(
+            content: const Text('Erreur lors de la confirmation.'),
+            backgroundColor: context.oc.error,
           ),
         );
       }
@@ -952,25 +960,26 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPadding),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: oc.surface,
+        border: Border(top: BorderSide(color: oc.border)),
       ),
       child: ElevatedButton(
         onPressed: _loading ? null : _confirmDone,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.success,
+          backgroundColor: oc.success,
         ),
         child: _loading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.surface,
+                  color: oc.surface,
                 ),
               )
             : const Text('Confirmer la fin du service'),
@@ -1006,7 +1015,7 @@ class _DetailError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 56, color: AppColors.icons),
+            Icon(Icons.error_outline, size: 56, color: context.oc.icons),
             const SizedBox(height: 16),
             Text(
               'Réservation introuvable',
