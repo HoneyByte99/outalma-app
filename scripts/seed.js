@@ -127,44 +127,51 @@ const users = [
 function services(providerUids) {
   const [marie, ahmed, pierre, fatou] = providerUids;
 
+  // Axe Paris–Orléans (~130 km) pour tester le filtrage progressif :
+  //   Paris       — 48.8566, 2.3522  (0 km)
+  //   Évry        — 48.6244, 2.4263  (~30 km)
+  //   Étampes     — 48.4369, 2.1614  (~55 km)
+  //   Pithiviers  — 48.1717, 2.2519  (~85 km)
+  //   Orléans     — 47.9029, 1.9090  (~130 km)
+
   return [
-    // ---- Marie Leclerc — Ménage ----
+    // ---- Paris (0 km) — Marie ----
     {
       providerId: marie,
       categoryId: 'menage',
       title: 'Ménage complet appartement',
       description:
-        'Nettoyage en profondeur de votre appartement : sols, sanitaires, cuisine, poussières. Produits fournis. Disponible du lundi au samedi.',
+        'Nettoyage en profondeur de votre appartement : sols, sanitaires, cuisine, poussières. Produits fournis.',
       priceType: 'hourly',
-      price: 2500, // 25 €/h en centimes
+      price: 2500,
       published: true,
       serviceZones: [{ label: 'Paris 11e', lat: 48.8584, lng: 2.3808, radiusKm: 10 }],
       photos: [],
     },
     {
       providerId: marie,
-      categoryId: 'menage',
-      title: 'Nettoyage de printemps',
+      categoryId: 'gardeEnfants',
+      title: 'Garde d\'enfants à domicile',
       description:
-        'Grand ménage saisonnier : vitres, placards, four, réfrigérateur, terrasse. Idéal avant ou après un déménagement.',
-      priceType: 'fixed',
-      price: 18000, // 180 € forfait
+        'Garde d\'enfants de 2 à 12 ans. Aide aux devoirs incluse. Expérience 5 ans, diplômée BAFA.',
+      priceType: 'hourly',
+      price: 1500,
       published: true,
-      serviceZones: [{ label: 'Paris', lat: 48.8566, lng: 2.3522, radiusKm: 30 }],
+      serviceZones: [{ label: 'Paris 5e', lat: 48.8462, lng: 2.3449, radiusKm: 15 }],
       photos: [],
     },
 
-    // ---- Ahmed Sow — Jardinage ----
+    // ---- Évry (~30 km) — Ahmed ----
     {
       providerId: ahmed,
       categoryId: 'jardinage',
       title: 'Tonte de pelouse & entretien',
       description:
-        'Tonte, ramassage des tontes, désherbage des bordures. Matériel professionnel fourni. Résultat impeccable garanti.',
+        'Tonte, ramassage, désherbage des bordures. Matériel professionnel fourni. Résultat impeccable.',
       priceType: 'hourly',
-      price: 3000, // 30 €/h
+      price: 3000,
       published: true,
-      serviceZones: [{ label: 'Dakar', lat: 14.6928, lng: -17.4467, radiusKm: 20 }],
+      serviceZones: [{ label: 'Évry-Courcouronnes', lat: 48.6244, lng: 2.4263, radiusKm: 15 }],
       photos: [],
     },
     {
@@ -174,9 +181,75 @@ function services(providerUids) {
       description:
         'Taille soignée de haies, arbustes et petits arbres. Ramassage et évacuation des déchets verts inclus.',
       priceType: 'fixed',
-      price: 8000, // 80 €
+      price: 8000,
       published: true,
-      serviceZones: [{ label: 'Dakar', lat: 14.6928, lng: -17.4467, radiusKm: 30 }, { label: 'Rufisque', lat: 14.7167, lng: -17.2667, radiusKm: 10 }],
+      serviceZones: [{ label: 'Évry-Courcouronnes', lat: 48.6244, lng: 2.4263, radiusKm: 20 }],
+      photos: [],
+    },
+
+    // ---- Étampes (~55 km) — Pierre ----
+    {
+      providerId: pierre,
+      categoryId: 'plomberie',
+      title: 'Réparation fuite robinet & tuyauterie',
+      description:
+        'Intervention rapide pour fuites, robinetterie défectueuse, joints. Devis gratuit. Disponible en urgence.',
+      priceType: 'hourly',
+      price: 6500,
+      published: true,
+      serviceZones: [{ label: 'Étampes', lat: 48.4369, lng: 2.1614, radiusKm: 10 }],
+      photos: [],
+    },
+    {
+      providerId: pierre,
+      categoryId: 'electricite',
+      title: 'Dépannage électrique urgent',
+      description:
+        'Panne de courant, disjoncteur, remplacement de prises et interrupteurs. Intervention rapide.',
+      priceType: 'hourly',
+      price: 7000,
+      published: true,
+      serviceZones: [{ label: 'Étampes', lat: 48.4369, lng: 2.1614, radiusKm: 25 }],
+      photos: [],
+    },
+
+    // ---- Pithiviers (~85 km) — Fatou ----
+    {
+      providerId: fatou,
+      categoryId: 'menage',
+      title: 'Entretien maison & repassage',
+      description:
+        'Ménage hebdomadaire ou ponctuel, repassage linge, rangement. Sérieuse et discrète.',
+      priceType: 'hourly',
+      price: 2000,
+      published: true,
+      serviceZones: [{ label: 'Pithiviers', lat: 48.1717, lng: 2.2519, radiusKm: 15 }],
+      photos: [],
+    },
+    {
+      providerId: fatou,
+      categoryId: 'peinture',
+      title: 'Peinture intérieure',
+      description:
+        'Mise en peinture murs et plafonds. Préparation des surfaces, application soignée, protection du mobilier.',
+      priceType: 'fixed',
+      price: 15000,
+      published: true,
+      serviceZones: [{ label: 'Pithiviers', lat: 48.1717, lng: 2.2519, radiusKm: 20 }],
+      photos: [],
+    },
+
+    // ---- Orléans (~130 km) — Pierre + Ahmed ----
+    {
+      providerId: pierre,
+      categoryId: 'plomberie',
+      title: 'Installation équipement sanitaire',
+      description:
+        'Pose de lavabo, WC, douche, baignoire, mitigeur. Travail soigné avec finitions propres.',
+      priceType: 'fixed',
+      price: 25000,
+      published: true,
+      serviceZones: [{ label: 'Orléans', lat: 47.9029, lng: 1.9090, radiusKm: 15 }],
       photos: [],
     },
     {
@@ -184,89 +257,23 @@ function services(providerUids) {
       categoryId: 'jardinage',
       title: 'Création et aménagement jardin',
       description:
-        'Conception et mise en place d\'espaces verts : plantation, allées, massifs fleuris. Devis gratuit sur place.',
+        'Conception et mise en place d\'espaces verts : plantation, allées, massifs fleuris. Devis gratuit.',
       priceType: 'fixed',
-      price: 35000, // 350 €
+      price: 35000,
       published: true,
-      serviceZones: [{ label: 'Dakar', lat: 14.6928, lng: -17.4467, radiusKm: 50 }],
+      serviceZones: [{ label: 'Orléans', lat: 47.9029, lng: 1.9090, radiusKm: 30 }],
       photos: [],
     },
-
-    // ---- Pierre Dubois — Plomberie ----
-    {
-      providerId: pierre,
-      categoryId: 'plomberie',
-      title: 'Réparation fuite robinet & tuyauterie',
-      description:
-        'Intervention rapide pour fuites, robinetterie défectueuse, joints. Devis gratuit avant intervention. Disponible en urgence.',
-      priceType: 'hourly',
-      price: 6500, // 65 €/h
-      published: true,
-      serviceZones: [{ label: 'Lyon centre', lat: 45.7640, lng: 4.8357, radiusKm: 10 }],
-      photos: [],
-    },
-    {
-      providerId: pierre,
-      categoryId: 'plomberie',
-      title: 'Débouchage canalisation',
-      description:
-        'Débouchage lavabo, évier, WC, douche. Utilisation de furet électrique. Garantie 30 jours sur l\'intervention.',
-      priceType: 'fixed',
-      price: 9000, // 90 €
-      published: true,
-      serviceZones: [{ label: 'Lyon', lat: 45.7640, lng: 4.8357, radiusKm: 25 }],
-      photos: [],
-    },
-    {
-      providerId: pierre,
-      categoryId: 'plomberie',
-      title: 'Installation équipement sanitaire',
-      description:
-        'Pose de lavabo, WC, douche, baignoire, mitigeur. Travail soigné avec finitions propres. Évacuation ancien matériel.',
-      priceType: 'fixed',
-      price: 25000, // 250 €
-      published: true,
-      serviceZones: [{ label: 'Lyon', lat: 45.7640, lng: 4.8357, radiusKm: 30 }],
-      photos: [],
-    },
-
-    // ---- Fatou Ndiaye — Ménage + Autre ----
-    {
-      providerId: fatou,
-      categoryId: 'menage',
-      title: 'Entretien maison & repassage',
-      description:
-        'Ménage hebdomadaire ou ponctuel, repassage linge, rangement. Sérieuse et discrète. Références disponibles.',
-      priceType: 'hourly',
-      price: 2000, // 20 €/h
-      published: true,
-      serviceZones: [{ label: 'Dakar, Mermoz', lat: 14.7055, lng: -17.4686, radiusKm: 15 }],
-      photos: [],
-    },
-    {
-      providerId: fatou,
-      categoryId: 'gardeEnfants',
-      title: 'Garde d\'enfants à domicile',
-      description:
-        'Garde d\'enfants de 2 à 12 ans. Aide aux devoirs incluse pour les scolaires. Expérience 5 ans, diplômée BAFA.',
-      priceType: 'hourly',
-      price: 1500, // 15 €/h
-      published: true,
-      serviceZones: [{ label: 'Dakar centre', lat: 14.6928, lng: -17.4467, radiusKm: 10 }],
-      photos: [],
-    },
-
-    // ---- Bricolage ----
     {
       providerId: pierre,
       categoryId: 'bricolage',
       title: 'Montage de meubles',
       description:
-        'Montage de tous types de meubles (IKEA, But, Conforama…). Rapide et soigné. À partir de 2 meubles, déplacement offert.',
+        'Montage de tous types de meubles (IKEA, But, Conforama…). Rapide et soigné.',
       priceType: 'fixed',
-      price: 5000, // 50 €
+      price: 5000,
       published: true,
-      serviceZones: [{ label: 'Lyon', lat: 45.7640, lng: 4.8357, radiusKm: 20 }],
+      serviceZones: [{ label: 'Orléans centre', lat: 47.9029, lng: 1.9090, radiusKm: 10 }],
       photos: [],
     },
   ];
@@ -316,22 +323,22 @@ async function main() {
     {
       uid: marie,
       bio: 'Agent d\'entretien professionnelle depuis 8 ans. Sérieuse, ponctuelle et minutieuse. Je prends soin de votre chez-vous comme si c\'était le mien.',
-      serviceZones: [{ label: 'Paris 11e', lat: 48.8584, lng: 2.3808, radiusKm: 10 }],
+      serviceArea: 'Paris',
     },
     {
       uid: ahmed,
-      bio: 'Jardinier paysagiste avec 10 ans d\'expérience. Spécialisé dans les jardins tropicaux et méditerranéens. Passionné par les plantes.',
-      serviceArea: 'Dakar et banlieue',
+      bio: 'Jardinier paysagiste avec 10 ans d\'expérience. Spécialisé dans l\'entretien et la création de jardins. Passionné par les plantes.',
+      serviceArea: 'Évry / Orléans',
     },
     {
       uid: pierre,
       bio: 'Plombier certifié, 12 ans de métier. Interventions rapides et propres. Tous travaux sanitaires, chauffage, climatisation.',
-      serviceZones: [{ label: 'Lyon', lat: 45.7640, lng: 4.8357, radiusKm: 25 }],
+      serviceArea: 'Étampes / Orléans',
     },
     {
       uid: fatou,
-      bio: 'Aide à domicile polyvalente : ménage, repassage, garde d\'enfants. Travail soigné, références vérifiables. Disponible en semaine et week-end.',
-      serviceArea: 'Dakar centre et Mermoz',
+      bio: 'Aide à domicile polyvalente : ménage, repassage, peinture. Travail soigné, références vérifiables. Disponible en semaine et week-end.',
+      serviceArea: 'Pithiviers',
     },
   ];
 
@@ -366,9 +373,9 @@ async function main() {
   console.log(`  Sophie Martin  → client1@outalma.test`);
   console.log(`  Mamadou Diallo → client2@outalma.test`);
   console.log('\nPRESTATAIRES');
-  console.log(`  Marie Leclerc  → provider1@outalma.test  (Ménage, Paris)`);
-  console.log(`  Ahmed Sow      → provider2@outalma.test  (Jardinage, Dakar)`);
-  console.log(`  Pierre Dubois  → provider3@outalma.test  (Plomberie, Lyon)`);
+  console.log(`  Marie Leclerc  → provider1@outalma.test  (Ménage+Garde, Paris)`);
+  console.log(`  Ahmed Sow      → provider2@outalma.test  (Jardinage, Évry+Orléans)`);
+  console.log(`  Pierre Dubois  → provider3@outalma.test  (Plomberie+Élec+Bricolage, Étampes+Orléans)`);
   console.log(`  Fatou Ndiaye   → provider4@outalma.test  (Ménage/Autre, Dakar)`);
   console.log('─'.repeat(60) + '\n');
 
