@@ -12,6 +12,7 @@ import '../../application/user/user_providers.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/models/service.dart';
+import '../shared/user_avatar.dart';
 
 // ---------------------------------------------------------------------------
 // Category filter state — local to this page subtree
@@ -212,14 +213,16 @@ class _ServiceGrid extends ConsumerWidget {
 // Service card
 // ---------------------------------------------------------------------------
 
-class _ServiceCard extends StatelessWidget {
+class _ServiceCard extends ConsumerWidget {
   const _ServiceCard({required this.service});
 
   final Service service;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final providerUser =
+        ref.watch(userByIdProvider(service.providerId)).valueOrNull;
     final priceLabel = service.priceType.name == 'hourly'
         ? '${(service.price / 100).toStringAsFixed(0)} €/h'
         : '${(service.price / 100).toStringAsFixed(0)} €';
@@ -242,9 +245,9 @@ class _ServiceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image — 65% of card height
+            // Image — 60% of card height
             Expanded(
-              flex: 65,
+              flex: 60,
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
@@ -309,29 +312,59 @@ class _ServiceCard extends StatelessWidget {
               ),
             ),
 
-            // Info section — 35% of card height
+            // Info section — 40% of card height
             Expanded(
-              flex: 35,
+              flex: 40,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      service.title,
-                      style: Theme.of(context).textTheme.titleSmall,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      priceLabel,
-                      style:
-                          Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    // Title + price
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          service.title,
+                          style: Theme.of(context).textTheme.titleSmall,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          priceLabel,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
                                 color: oc.primary,
                                 fontWeight: FontWeight.w700,
                               ),
+                        ),
+                      ],
+                    ),
+                    // Provider row
+                    Row(
+                      children: [
+                        UserAvatar(
+                          displayName: providerUser?.displayName ?? '',
+                          photoPath: providerUser?.photoPath,
+                          radius: 10,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            providerUser?.displayName ?? '—',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: oc.secondaryText),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
