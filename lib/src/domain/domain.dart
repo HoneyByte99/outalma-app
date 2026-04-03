@@ -4,7 +4,6 @@ export 'enums/category_id.dart';
 export 'enums/message_type.dart';
 export 'enums/price_type.dart';
 export 'enums/reviewer_role.dart';
-export 'enums/service_status.dart';
 export 'enums/user_role.dart';
 
 export 'models/app_user.dart';
