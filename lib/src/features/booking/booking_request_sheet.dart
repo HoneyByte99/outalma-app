@@ -8,6 +8,7 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/booking/booking_providers.dart';
 import '../../application/provider/provider_providers.dart';
+import '../../data/services/geocoding_service.dart';
 
 class BookingRequestSheet extends ConsumerStatefulWidget {
   const BookingRequestSheet({
@@ -561,14 +562,39 @@ class _PickerButton extends StatelessWidget {
 // Step 3 — Address
 // ---------------------------------------------------------------------------
 
-class _StepAddress extends StatelessWidget {
+class _StepAddress extends ConsumerStatefulWidget {
   const _StepAddress({required this.controller, required this.focus});
 
   final TextEditingController controller;
   final FocusNode focus;
 
   @override
+  ConsumerState<_StepAddress> createState() => _StepAddressState();
+}
+
+class _StepAddressState extends ConsumerState<_StepAddress> {
+  List<PlaceSuggestion> _suggestions = [];
+
+  Future<void> _onChanged(String input) async {
+    if (input.trim().length < 3) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    try {
+      final geocoding = ref.read(geocodingServiceProvider);
+      final results = await geocoding.autocomplete(input);
+      if (mounted) setState(() => _suggestions = results);
+    } catch (_) {}
+  }
+
+  void _selectSuggestion(PlaceSuggestion s) {
+    widget.controller.text = s.description;
+    setState(() => _suggestions = []);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -578,22 +604,68 @@ class _StepAddress extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Où souhaitez-vous que le prestataire intervienne ? (optionnel)',
+          'O\u00f9 souhaitez-vous que le prestataire intervienne ? (optionnel)',
           style: Theme.of(context)
               .textTheme
               .bodySmall
-              ?.copyWith(color: context.oc.secondaryText),
+              ?.copyWith(color: oc.secondaryText),
         ),
         const SizedBox(height: 12),
         TextFormField(
-          controller: controller,
-          focusNode: focus,
+          controller: widget.controller,
+          focusNode: widget.focus,
           autofocus: true,
           textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Ex: 12 rue de la Paix, Paris 75001',
+            prefixIcon: Icon(Icons.location_on_outlined,
+                size: 20, color: oc.icons),
           ),
+          onChanged: _onChanged,
         ),
+        if (_suggestions.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 150),
+            decoration: BoxDecoration(
+              color: oc.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: oc.border),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: _suggestions.length,
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: oc.border.withValues(alpha: 0.5)),
+              itemBuilder: (_, i) {
+                final s = _suggestions[i];
+                return InkWell(
+                  onTap: () => _selectSuggestion(s),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_on_outlined,
+                            size: 14, color: oc.secondaryText),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            s.description,
+                            style: Theme.of(context).textTheme.bodySmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ],
     );
   }
