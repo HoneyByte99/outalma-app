@@ -39,6 +39,8 @@ abstract final class AppRoutes {
   static String bookingDetail(String bookingId) => '/bookings/$bookingId';
   static String serviceEdit(String serviceId) =>
       '/provider/services/$serviceId/edit';
+  static String providerBookingDetail(String bookingId) =>
+      '/provider/inbox/bookings/$bookingId';
 }
 
 // ---------------------------------------------------------------------------

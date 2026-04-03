@@ -46,18 +46,27 @@ class _DetailContent extends ConsumerWidget {
         ref.watch(serviceDetailProvider(booking.serviceId));
     final serviceTitle = serviceAsync.valueOrNull?.title ?? '---';
 
-    // Show accept/reject bar only when the current user is the provider
-    // and the booking is still in requested status.
     final authState = ref.watch(authNotifierProvider).valueOrNull;
-    final isProvider = authState is AuthAuthenticated &&
-        authState.user.id == booking.providerId &&
-        booking.status == BookingStatus.requested;
+    final uid = authState is AuthAuthenticated ? authState.user.id : null;
+
+    // Bottom bar logic — mutually exclusive based on role + status.
+    Widget? bottomBar;
+    if (uid == booking.providerId) {
+      if (booking.status == BookingStatus.requested) {
+        bottomBar = _ProviderActionBar(booking: booking);
+      } else if (booking.status == BookingStatus.accepted) {
+        bottomBar = _MarkInProgressBar(booking: booking);
+      }
+    } else if (uid == booking.customerId) {
+      if (booking.status == BookingStatus.inProgress) {
+        bottomBar = _ConfirmDoneBar(booking: booking);
+      }
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Détail de la réservation')),
-      bottomNavigationBar:
-          isProvider ? _ProviderActionBar(booking: booking) : null,
+      bottomNavigationBar: bottomBar,
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         children: [
@@ -460,6 +469,181 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Provider: mark in progress bar
+// ---------------------------------------------------------------------------
+
+class _MarkInProgressBar extends ConsumerStatefulWidget {
+  const _MarkInProgressBar({required this.booking});
+  final Booking booking;
+
+  @override
+  ConsumerState<_MarkInProgressBar> createState() =>
+      _MarkInProgressBarState();
+}
+
+class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
+  bool _loading = false;
+
+  Future<void> _markInProgress() async {
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(markInProgressUseCaseProvider)
+          .call(widget.booking.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Service démarré')),
+        );
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? 'Erreur.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur lors du démarrage.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPadding),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: ElevatedButton(
+        onPressed: _loading ? null : _markInProgress,
+        child: _loading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.surface,
+                ),
+              )
+            : const Text('Démarrer le service'),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Client: confirm done bar
+// ---------------------------------------------------------------------------
+
+class _ConfirmDoneBar extends ConsumerStatefulWidget {
+  const _ConfirmDoneBar({required this.booking});
+  final Booking booking;
+
+  @override
+  ConsumerState<_ConfirmDoneBar> createState() => _ConfirmDoneBarState();
+}
+
+class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
+  bool _loading = false;
+
+  Future<void> _confirmDone() async {
+    // Ask for confirmation before marking as done.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmer la fin ?'),
+        content: const Text(
+          'En confirmant, le service sera marqué comme terminé. '
+          'Vous pourrez ensuite laisser un avis.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _loading = true);
+    try {
+      await ref.read(confirmDoneUseCaseProvider).call(widget.booking.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Service terminé !')),
+        );
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? 'Erreur.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur lors de la confirmation.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPadding),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: ElevatedButton(
+        onPressed: _loading ? null : _confirmDone,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.success,
+        ),
+        child: _loading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.surface,
+                ),
+              )
+            : const Text('Confirmer la fin du service'),
       ),
     );
   }

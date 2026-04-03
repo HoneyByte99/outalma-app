@@ -68,7 +68,7 @@ class _InboxCard extends ConsumerWidget {
     final serviceTitle = serviceAsync.valueOrNull?.title ?? '---';
 
     return GestureDetector(
-      onTap: () => context.push(AppRoutes.bookingDetail(booking.id)),
+      onTap: () => context.push(AppRoutes.providerBookingDetail(booking.id)),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
