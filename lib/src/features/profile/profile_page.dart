@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/app_theme.dart';
+import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/review/review_providers.dart';
@@ -955,7 +957,9 @@ class _ReviewTile extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          GestureDetector(
+            onTap: () => context.push(AppRoutes.providerProfile(review.reviewerId)),
+            child: Row(
             children: [
               UserAvatar(
                 displayName: reviewer?.displayName ?? '',
@@ -972,6 +976,7 @@ class _ReviewTile extends ConsumerWidget {
                       ?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
+              Icon(Icons.chevron_right_rounded, size: 16, color: oc.icons),
               Row(
                 children: List.generate(
                   5,
@@ -985,6 +990,7 @@ class _ReviewTile extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
           ),
           if (review.comment != null && review.comment!.isNotEmpty) ...[
             const SizedBox(height: 8),
