@@ -231,6 +231,7 @@ class _ServiceCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: oc.surface,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: oc.border.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
               color: oc.shadow,
