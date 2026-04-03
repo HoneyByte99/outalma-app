@@ -107,7 +107,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
-  Future<void> _sendMedia(MessageType type, String url) async {
+  // Pending image preview — WhatsApp-style: preview + caption before send
+  String? _pendingImageUrl;
+
+  Future<void> _sendMedia(MessageType type, String url, {String? caption}) async {
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
@@ -121,6 +124,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               type: type,
               createdAt: DateTime.now().toUtc(),
               mediaUrl: url,
+              text: caption != null && caption.isNotEmpty ? caption : null,
             ),
           );
       if (mounted) {
@@ -144,43 +148,30 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Future<void> _pickImage() async {
     final media = ref.read(chatMediaServiceProvider);
     final url = await media.pickImageFromGallery(widget.chatId);
-    if (url != null && mounted) await _sendMedia(MessageType.image, url);
+    if (url != null && mounted) {
+      setState(() => _pendingImageUrl = url);
+    }
   }
 
   Future<void> _takePhoto() async {
     final media = ref.read(chatMediaServiceProvider);
     final url = await media.takePhoto(widget.chatId);
-    if (url != null && mounted) await _sendMedia(MessageType.image, url);
+    if (url != null && mounted) {
+      setState(() => _pendingImageUrl = url);
+    }
   }
 
-  void _showMediaPicker() {
-    final oc = context.oc;
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.photo_library_outlined, color: oc.primary),
-              title: const Text('Galerie'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage();
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.camera_alt_outlined, color: oc.primary),
-              title: const Text('Photo'),
-              onTap: () {
-                Navigator.pop(context);
-                _takePhoto();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+  void _sendPendingImage() {
+    if (_pendingImageUrl == null) return;
+    final caption = _controller.text.trim();
+    _controller.clear();
+    final url = _pendingImageUrl!;
+    setState(() => _pendingImageUrl = null);
+    _sendMedia(MessageType.image, url, caption: caption);
+  }
+
+  void _cancelPendingImage() {
+    setState(() => _pendingImageUrl = null);
   }
 
   Future<void> _startRecording() async {
@@ -320,16 +311,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
 
           // ---- Input bar ----
-          _InputBar(
-            controller: _controller,
-            sending: _sending,
-            recording: _recording,
-            onSend: _send,
-            onMediaPicker: _showMediaPicker,
-            onStartRecording: _startRecording,
-            onStopRecording: _stopAndSendRecording,
-            onCancelRecording: _cancelRecording,
-          ),
+          // Image preview overlay (WhatsApp-style)
+          if (_pendingImageUrl != null)
+            _ImagePreviewBar(
+              imageUrl: _pendingImageUrl!,
+              captionController: _controller,
+              sending: _sending,
+              onSend: _sendPendingImage,
+              onCancel: _cancelPendingImage,
+            )
+          else
+            _InputBar(
+              controller: _controller,
+              sending: _sending,
+              recording: _recording,
+              onSend: _send,
+              onPickGallery: _pickImage,
+              onTakePhoto: _takePhoto,
+              onStartRecording: _startRecording,
+              onStopRecording: _stopAndSendRecording,
+              onCancelRecording: _cancelRecording,
+            ),
         ],
       ),
     );
@@ -661,13 +663,140 @@ class _VoicePlayerState extends State<_VoicePlayer> {
 // Input bar
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Image preview bar — WhatsApp-style caption before sending
+// ---------------------------------------------------------------------------
+
+class _ImagePreviewBar extends StatelessWidget {
+  const _ImagePreviewBar({
+    required this.imageUrl,
+    required this.captionController,
+    required this.sending,
+    required this.onSend,
+    required this.onCancel,
+  });
+
+  final String imageUrl;
+  final TextEditingController captionController;
+  final bool sending;
+  final VoidCallback onSend;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(12, 8, 12, 8 + bottomPadding),
+      decoration: BoxDecoration(
+        color: oc.surface,
+        border: Border(top: BorderSide(color: oc.border)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Preview + cancel
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  imageUrl,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 64,
+                    height: 64,
+                    color: oc.border,
+                    child: Icon(Icons.image, color: oc.icons),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: captionController,
+                  minLines: 1,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Ajouter un message\u2026',
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    filled: true,
+                    fillColor: oc.inputFill,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(color: oc.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(color: oc.primary, width: 1.5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Column(
+                children: [
+                  GestureDetector(
+                    onTap: onCancel,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: oc.error.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.close, size: 18, color: oc.error),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: sending ? null : onSend,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: sending ? oc.border : oc.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: sending
+                          ? Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: oc.surface,
+                              ),
+                            )
+                          : Icon(Icons.send_rounded,
+                              size: 16, color: oc.surface),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Input bar — WhatsApp-style layout
+// ---------------------------------------------------------------------------
+
 class _InputBar extends StatefulWidget {
   const _InputBar({
     required this.controller,
     required this.sending,
     required this.recording,
     required this.onSend,
-    required this.onMediaPicker,
+    required this.onPickGallery,
+    required this.onTakePhoto,
     required this.onStartRecording,
     required this.onStopRecording,
     required this.onCancelRecording,
@@ -677,7 +806,8 @@ class _InputBar extends StatefulWidget {
   final bool sending;
   final bool recording;
   final VoidCallback onSend;
-  final VoidCallback onMediaPicker;
+  final VoidCallback onPickGallery;
+  final VoidCallback onTakePhoto;
   final VoidCallback onStartRecording;
   final VoidCallback onStopRecording;
   final VoidCallback onCancelRecording;
@@ -711,13 +841,14 @@ class _InputBarState extends State<_InputBar> {
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    // Recording mode — show recording indicator
+    // Recording mode
     if (widget.recording) {
       return Container(
         padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + bottomPadding),
         decoration: BoxDecoration(
           color: oc.error.withValues(alpha: 0.06),
-          border: Border(top: BorderSide(color: oc.error.withValues(alpha: 0.3))),
+          border: Border(
+              top: BorderSide(color: oc.error.withValues(alpha: 0.3))),
         ),
         child: Row(
           children: [
@@ -747,7 +878,8 @@ class _InputBarState extends State<_InputBar> {
                   color: oc.error,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.stop_rounded, color: oc.surface, size: 24),
+                child:
+                    Icon(Icons.stop_rounded, color: oc.surface, size: 24),
               ),
             ),
           ],
@@ -755,24 +887,27 @@ class _InputBarState extends State<_InputBar> {
       );
     }
 
-    // Normal mode
+    // Normal mode — WhatsApp layout:
+    // [gallery] [______message______] [camera] [mic/send]
     return Container(
-      padding: EdgeInsets.fromLTRB(8, 10, 8, 10 + bottomPadding),
+      padding: EdgeInsets.fromLTRB(6, 8, 6, 8 + bottomPadding),
       decoration: BoxDecoration(
         color: oc.surface,
         border: Border(top: BorderSide(color: oc.border)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Media picker button
+          // Gallery button (left)
           IconButton(
-            onPressed: widget.sending ? null : widget.onMediaPicker,
-            icon: Icon(Icons.add_circle_outline,
-                color: oc.primary, size: 26),
-            tooltip: 'Photo / Image',
+            onPressed: widget.sending ? null : widget.onPickGallery,
+            icon: Icon(Icons.photo_outlined, color: oc.icons, size: 24),
+            tooltip: 'Galerie',
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            padding: EdgeInsets.zero,
           ),
 
-          // Text input
+          // Text input with camera inside
           Expanded(
             child: TextField(
               controller: widget.controller,
@@ -782,9 +917,15 @@ class _InputBarState extends State<_InputBar> {
               decoration: InputDecoration(
                 hintText: 'Message\u2026',
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 filled: true,
                 fillColor: oc.inputFill,
+                suffixIcon: IconButton(
+                  onPressed: widget.sending ? null : widget.onTakePhoto,
+                  icon: Icon(Icons.camera_alt_outlined,
+                      color: oc.icons, size: 22),
+                  tooltip: 'Photo',
+                ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide(color: oc.border),
@@ -796,9 +937,9 @@ class _InputBarState extends State<_InputBar> {
               ),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
 
-          // Send (if text) or Mic (if empty)
+          // Mic or Send button (right)
           if (widget.sending)
             Container(
               width: 44,
@@ -825,7 +966,8 @@ class _InputBarState extends State<_InputBar> {
                   color: oc.primary,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.send_rounded, color: oc.surface, size: 20),
+                child:
+                    Icon(Icons.send_rounded, color: oc.surface, size: 20),
               ),
             )
           else
@@ -838,7 +980,8 @@ class _InputBarState extends State<_InputBar> {
                   color: oc.primary,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.mic_rounded, color: oc.surface, size: 22),
+                child:
+                    Icon(Icons.mic_rounded, color: oc.surface, size: 22),
               ),
             ),
         ],
