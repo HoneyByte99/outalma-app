@@ -49,7 +49,11 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         await userRepo.upsert(appUser);
       }
       return AuthAuthenticated(appUser);
-    } catch (_) {
+    } catch (e, st) {
+      // Log the error so we can diagnose auth issues instead of silently
+      // treating every failure as "unauthenticated".
+      // ignore: avoid_print
+      print('[AuthNotifier] _resolveState error: $e\n$st');
       return const AuthUnauthenticated();
     }
   }

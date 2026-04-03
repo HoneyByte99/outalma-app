@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -190,6 +191,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
   final _controller = TextEditingController();
   List<PlaceSuggestion> _suggestions = [];
   late double _radiusKm;
+  Timer? _radiusDebounce;
 
   @override
   void initState() {
@@ -203,6 +205,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
 
   @override
   void dispose() {
+    _radiusDebounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -297,11 +300,14 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
 
   void _updateRadius(double value) {
     setState(() => _radiusKm = value);
-    final current = ref.read(locationFilterProvider);
-    if (current != null) {
-      ref.read(locationFilterProvider.notifier).state =
-          current.copyWith(radiusKm: value);
-    }
+    _radiusDebounce?.cancel();
+    _radiusDebounce = Timer(const Duration(milliseconds: 300), () {
+      final current = ref.read(locationFilterProvider);
+      if (current != null) {
+        ref.read(locationFilterProvider.notifier).state =
+            current.copyWith(radiusKm: value);
+      }
+    });
   }
 
   @override

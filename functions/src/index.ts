@@ -101,9 +101,17 @@ export const createBooking = onCall(async (request) => {
   const schedule = request.data?.schedule ?? null;
   const addressSnapshot = request.data?.addressSnapshot ?? null;
   const scheduledAtRaw = request.data?.scheduledAt ?? null;
-  const scheduledAt = scheduledAtRaw
-    ? admin.firestore.Timestamp.fromDate(new Date(scheduledAtRaw))
-    : null;
+  let scheduledAt: admin.firestore.Timestamp | null = null;
+  if (scheduledAtRaw) {
+    const parsed = new Date(scheduledAtRaw);
+    if (isNaN(parsed.getTime())) {
+      throw new HttpsError('invalid-argument', 'scheduledAt is not a valid date.');
+    }
+    if (parsed.getTime() < Date.now()) {
+      throw new HttpsError('invalid-argument', 'scheduledAt must be in the future.');
+    }
+    scheduledAt = admin.firestore.Timestamp.fromDate(parsed);
+  }
 
   const bookingRef = db.collection('bookings').doc();
   await bookingRef.set({

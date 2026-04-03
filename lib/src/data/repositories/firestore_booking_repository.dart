@@ -42,12 +42,13 @@ class FirestoreBookingRepository implements BookingRepository {
     final col = FirestoreCollections.bookings(_db);
     if (booking.id.isEmpty) {
       final ref = col.doc();
-      final withId = booking.copyWith();
-      // We cannot update the id field on the immutable model, so we store
-      // the server-assigned id and return a copy. The caller should use the
-      // returned object as the canonical record.
-      await ref.set(withId);
+      // The Booking model's id is immutable via copyWith, but the Firestore
+      // converter reads snap.id, so the returned object will have the correct id.
+      await ref.set(booking);
       final snap = await ref.get();
+      if (!snap.exists || snap.data() == null) {
+        throw Exception('Booking creation failed: document not found after set');
+      }
       return snap.data()!;
     } else {
       await col.doc(booking.id).set(booking);

@@ -67,7 +67,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (authState is! AuthAuthenticated) return;
 
     setState(() => _sending = true);
-    _controller.clear();
 
     try {
       await ref.read(chatRepositoryProvider).sendMessage(
@@ -76,11 +75,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               chatId: widget.chatId,
               senderId: authState.user.id,
               type: MessageType.text,
-              createdAt: DateTime.now(),
+              createdAt: DateTime.now().toUtc(),
               text: text,
             ),
           );
-      SchedulerBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      if (mounted) {
+        _controller.clear();
+        SchedulerBinding.instance
+            .addPostFrameCallback((_) => _scrollToBottom());
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -89,7 +92,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             backgroundColor: context.oc.error,
           ),
         );
-        _controller.text = text;
       }
     } finally {
       if (mounted) setState(() => _sending = false);

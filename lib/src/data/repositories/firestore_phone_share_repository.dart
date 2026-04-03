@@ -25,7 +25,7 @@ class FirestorePhoneShareRepository implements PhoneShareRepository {
     final ref = FirestoreCollections.phoneShares(db: _db, bookingId: bookingId)
         .doc(uid);
     await ref.set(
-      PhoneShare(uid: uid, phone: phone, createdAt: DateTime.now()),
+      PhoneShare(uid: uid, phone: phone, createdAt: DateTime.now().toUtc()),
       SetOptions(merge: true),
     );
   }

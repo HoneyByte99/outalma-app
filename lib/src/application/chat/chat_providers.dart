@@ -26,26 +26,27 @@ final chatMessagesProvider =
       .watchMessages(chatId: chatId, limit: 50);
 });
 
-/// Watches all chats for the currently authenticated user, sorted by activity.
-final userChatsProvider = StreamProvider<List<Chat>>((ref) {
-  final authState = ref.watch(authNotifierProvider).valueOrNull;
-  if (authState is! AuthAuthenticated) return const Stream.empty();
-  return ref.watch(chatRepositoryProvider).watchForUser(authState.user.id);
+/// Stable UID — avoids transient null during auth re-evaluation.
+final _stableChatUidProvider = Provider<String?>((ref) {
+  final auth = ref.watch(authNotifierProvider).valueOrNull;
+  if (auth is AuthAuthenticated) return auth.user.id;
+  return null;
 });
 
-/// Watches chats filtered to the user's active mode:
-/// - client mode  → chats where user is customerId
-/// - provider mode → chats where user is providerId
-///
-/// Falls back to showing all chats when customerId/providerId is empty
-/// (legacy documents created before the schema update).
+/// Watches all chats for the currently authenticated user, sorted by activity.
+final userChatsProvider = StreamProvider<List<Chat>>((ref) {
+  final uid = ref.watch(_stableChatUidProvider);
+  if (uid == null) return const Stream.empty();
+  return ref.watch(chatRepositoryProvider).watchForUser(uid);
+});
+
+/// Watches chats filtered to the user's active mode.
 final chatsForModeProvider = Provider<AsyncValue<List<Chat>>>((ref) {
   final chatsAsync = ref.watch(userChatsProvider);
-  final authState = ref.watch(authNotifierProvider).valueOrNull;
+  final uid = ref.watch(_stableChatUidProvider);
   final mode = ref.watch(activeModeProvider);
 
-  if (authState is! AuthAuthenticated) return const AsyncValue.data([]);
-  final uid = authState.user.id;
+  if (uid == null) return const AsyncValue.data([]);
 
   return chatsAsync.whenData((chats) {
     return chats.where((c) {

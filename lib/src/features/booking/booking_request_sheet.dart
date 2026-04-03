@@ -158,12 +158,12 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       return;
     }
 
-    // Check provider's existing bookings for this day
+    // Invalidate to force fresh data, then read
+    final dateKey = (providerId: widget.providerId, date: dt);
+    ref.invalidate(providerBookingsForDateProvider(dateKey));
+
     final bookingsAsync = ref.read(
-      providerBookingsForDateProvider((
-        providerId: widget.providerId,
-        date: dt,
-      )),
+      providerBookingsForDateProvider(dateKey),
     );
 
     final blockedAsync = ref.read(
