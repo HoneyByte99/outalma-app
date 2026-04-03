@@ -54,6 +54,8 @@ class _ProviderCalendarPageState
           // Calendar
           TableCalendar<Object>(
             locale: 'fr_FR',
+            calendarFormat: CalendarFormat.month,
+            availableCalendarFormats: const {CalendarFormat.month: 'Mois'},
             firstDay: DateTime.now().subtract(const Duration(days: 365)),
             lastDay: DateTime.now().add(const Duration(days: 365)),
             focusedDay: _focusedDay,
