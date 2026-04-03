@@ -149,28 +149,10 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 class _Logo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(Icons.home_repair_service_rounded,
-              color: Colors.white, size: 22),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          'Outalma',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.primaryText,
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-      ],
+    return Image.asset(
+      'assets/images/logo_outalma.png',
+      height: 72,
+      alignment: Alignment.centerLeft,
     );
   }
 }
