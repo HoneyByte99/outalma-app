@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
+import '../../application/auth/auth_providers.dart';
+import '../../application/auth/auth_state.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../domain/enums/category_id.dart';
@@ -46,6 +48,12 @@ class _ServiceDetailContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final uid = ref.watch(authNotifierProvider).valueOrNull is AuthAuthenticated
+        ? (ref.watch(authNotifierProvider).valueOrNull as AuthAuthenticated)
+            .user
+            .id
+        : null;
+    final isOwner = uid != null && uid == service.providerId;
     final priceLabel = service.priceType == PriceType.hourly
         ? '${(service.price / 100).toStringAsFixed(0)} €/h'
         : '${(service.price / 100).toStringAsFixed(0)} € (forfait)';
@@ -156,7 +164,9 @@ class _ServiceDetailContent extends ConsumerWidget {
       ),
 
       // ---- Sticky bottom bar ----
-      bottomNavigationBar: _BookingBottomBar(service: service),
+      bottomNavigationBar: isOwner
+          ? _EditBottomBar(serviceId: service.id)
+          : _BookingBottomBar(service: service),
     );
   }
 
@@ -373,6 +383,34 @@ class _BookingBottomBar extends StatelessWidget {
         serviceId: service.id,
         providerId: service.providerId,
         serviceTitle: service.title,
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Owner edit bottom bar
+// ---------------------------------------------------------------------------
+
+class _EditBottomBar extends StatelessWidget {
+  const _EditBottomBar({required this.serviceId});
+
+  final String serviceId;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPadding),
+      decoration: BoxDecoration(
+        color: oc.surface,
+        border: Border(top: BorderSide(color: oc.border)),
+      ),
+      child: ElevatedButton.icon(
+        onPressed: () => context.push(AppRoutes.serviceEdit(serviceId)),
+        icon: const Icon(Icons.edit_outlined, size: 18),
+        label: const Text('Modifier cette annonce'),
       ),
     );
   }
