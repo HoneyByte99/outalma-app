@@ -6,6 +6,8 @@ import '../../app/app_shell.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
+import '../../application/user/user_providers.dart';
+import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/models/provider_profile.dart';
 import '../../domain/models/service.dart';
@@ -18,6 +20,7 @@ class ProviderDashboardPage extends ConsumerWidget {
     final oc = context.oc;
     final profileAsync = ref.watch(currentProviderProfileProvider);
     final servicesAsync = ref.watch(providerServicesProvider);
+    final activeMode = ref.watch(activeModeProvider);
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -32,6 +35,10 @@ class ProviderDashboardPage extends ConsumerWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             actions: [
+              _ModeBadge(
+                activeMode: activeMode,
+                onTap: () => context.go(AppRoutes.profile),
+              ),
               IconButton(
                 icon: const Icon(Icons.person_outline),
                 onPressed: () => context.push(AppRoutes.providerOnboarding),
@@ -495,6 +502,52 @@ class _ErrorState extends StatelessWidget {
                 color: context.oc.secondaryText,
               ),
           textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mode badge — AppBar shortcut to profile/switch tab
+// ---------------------------------------------------------------------------
+
+class _ModeBadge extends StatelessWidget {
+  const _ModeBadge({required this.activeMode, required this.onTap});
+
+  final ActiveMode activeMode;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final isClient = activeMode == ActiveMode.client;
+    final label = isClient ? 'Client' : 'Prestataire';
+    final color = isClient ? oc.primary : oc.success;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.swap_horiz_rounded, size: 14, color: color),
+          ],
         ),
       ),
     );
