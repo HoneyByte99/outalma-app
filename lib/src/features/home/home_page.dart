@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
+import '../../data/services/geocoding_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/models/service.dart';
@@ -16,10 +19,51 @@ import '../shared/category_icon.dart';
 import '../shared/user_avatar.dart';
 
 // ---------------------------------------------------------------------------
-// Category filter state — local to this page subtree
+// Filter state — local to this page subtree
 // ---------------------------------------------------------------------------
 
 final _selectedCategoryProvider = StateProvider<CategoryId?>((ref) => null);
+
+/// Location search filter: place label, lat/lng, and search radius.
+class _LocationFilter {
+  const _LocationFilter({
+    required this.label,
+    required this.lat,
+    required this.lng,
+    required this.radiusKm,
+  });
+  final String label;
+  final double lat;
+  final double lng;
+  final double radiusKm;
+}
+
+final _locationFilterProvider = StateProvider<_LocationFilter?>((ref) => null);
+
+/// Haversine distance in km between two lat/lng points.
+double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
+  const r = 6371.0; // Earth radius in km
+  final dLat = _deg2rad(lat2 - lat1);
+  final dLng = _deg2rad(lng2 - lng1);
+  final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+      math.cos(_deg2rad(lat1)) *
+          math.cos(_deg2rad(lat2)) *
+          math.sin(dLng / 2) *
+          math.sin(dLng / 2);
+  return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+}
+
+double _deg2rad(double deg) => deg * (math.pi / 180);
+
+/// Returns true if any of the service's zones overlaps with the search circle.
+bool _serviceMatchesLocation(Service service, _LocationFilter filter) {
+  for (final zone in service.serviceZones) {
+    if (zone.latitude == 0 && zone.longitude == 0) continue; // legacy
+    final dist = _haversineKm(filter.lat, filter.lng, zone.latitude, zone.longitude);
+    if (dist <= filter.radiusKm + zone.radiusKm) return true;
+  }
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 // HomePage
@@ -73,6 +117,9 @@ class HomePage extends ConsumerWidget {
                   ),
             ),
           ),
+          // Location search bar
+          const _LocationSearchBar(),
+          const SizedBox(height: 8),
           // Category chips
           const _CategoryChipsRow(),
           const SizedBox(height: 8),
@@ -118,6 +165,242 @@ class _CategoryChipsRow extends ConsumerWidget {
                 .state = value,
           );
         },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Location search bar — Uber-style
+// ---------------------------------------------------------------------------
+
+class _LocationSearchBar extends ConsumerStatefulWidget {
+  const _LocationSearchBar();
+
+  @override
+  ConsumerState<_LocationSearchBar> createState() => _LocationSearchBarState();
+}
+
+class _LocationSearchBarState extends ConsumerState<_LocationSearchBar> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+  List<PlaceSuggestion> _suggestions = [];
+  double _radiusKm = 30;
+  bool _expanded = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onSearchChanged(String input) async {
+    if (input.trim().length < 2) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    try {
+      final geocoding = ref.read(geocodingServiceProvider);
+      final results = await geocoding.autocomplete(input);
+      if (mounted) setState(() => _suggestions = results);
+    } catch (_) {}
+  }
+
+  Future<void> _selectSuggestion(PlaceSuggestion suggestion) async {
+    _controller.text = suggestion.description;
+    setState(() => _suggestions = []);
+    _focusNode.unfocus();
+
+    final geocoding = ref.read(geocodingServiceProvider);
+    final coords = await geocoding.getPlaceLatLng(suggestion.placeId);
+    if (coords == null || !mounted) return;
+
+    ref.read(_locationFilterProvider.notifier).state = _LocationFilter(
+      label: suggestion.description,
+      lat: coords.lat,
+      lng: coords.lng,
+      radiusKm: _radiusKm,
+    );
+  }
+
+  void _updateRadius(double value) {
+    setState(() => _radiusKm = value);
+    final current = ref.read(_locationFilterProvider);
+    if (current != null) {
+      ref.read(_locationFilterProvider.notifier).state = _LocationFilter(
+        label: current.label,
+        lat: current.lat,
+        lng: current.lng,
+        radiusKm: value,
+      );
+    }
+  }
+
+  void _clear() {
+    _controller.clear();
+    setState(() {
+      _suggestions = [];
+      _expanded = false;
+    });
+    ref.read(_locationFilterProvider.notifier).state = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final filter = ref.watch(_locationFilterProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Search field
+          GestureDetector(
+            onTap: () => setState(() => _expanded = true),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: oc.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: oc.border),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.location_on_outlined, size: 20, color: oc.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _expanded || filter != null
+                        ? TextField(
+                            controller: _controller,
+                            focusNode: _focusNode,
+                            decoration: const InputDecoration(
+                              hintText: 'Où cherchez-vous ?',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding:
+                                  EdgeInsets.symmetric(vertical: 12),
+                              isDense: true,
+                            ),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            onChanged: _onSearchChanged,
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Text(
+                              'Où cherchez-vous ?',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(color: oc.secondaryText),
+                            ),
+                          ),
+                  ),
+                  if (filter != null)
+                    GestureDetector(
+                      onTap: _clear,
+                      child: Icon(Icons.close, size: 18, color: oc.secondaryText),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // Suggestions dropdown
+          if (_suggestions.isNotEmpty)
+            Container(
+              constraints: const BoxConstraints(maxHeight: 180),
+              margin: const EdgeInsets.only(top: 4),
+              decoration: BoxDecoration(
+                color: oc.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: oc.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: oc.shadow,
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: _suggestions.length,
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  color: oc.border.withValues(alpha: 0.5),
+                ),
+                itemBuilder: (_, i) {
+                  final s = _suggestions[i];
+                  return InkWell(
+                    onTap: () => _selectSuggestion(s),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      child: Row(
+                        children: [
+                          Icon(Icons.location_on_outlined,
+                              size: 16, color: oc.secondaryText),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              s.description,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+          // Radius slider — visible when a location is selected
+          if (filter != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.radar_outlined, size: 16, color: oc.secondaryText),
+                const SizedBox(width: 6),
+                Text(
+                  'Rayon',
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(color: oc.secondaryText),
+                ),
+                Expanded(
+                  child: Slider(
+                    value: _radiusKm,
+                    min: 5,
+                    max: 200,
+                    divisions: 39,
+                    activeColor: oc.primary,
+                    inactiveColor: oc.border,
+                    onChanged: _updateRadius,
+                  ),
+                ),
+                SizedBox(
+                  width: 48,
+                  child: Text(
+                    '${_radiusKm.round()} km',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: oc.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -171,6 +454,7 @@ class _ServiceGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedCategory = ref.watch(_selectedCategoryProvider);
+    final locationFilter = ref.watch(_locationFilterProvider);
     final servicesAsync = ref.watch(serviceListProvider);
 
     return servicesAsync.when(
@@ -179,11 +463,17 @@ class _ServiceGrid extends ConsumerWidget {
         onRetry: () => ref.invalidate(serviceListProvider),
       ),
       data: (services) {
-        final filtered = selectedCategory == null
+        var filtered = selectedCategory == null
             ? services
             : services
                 .where((s) => s.categoryId == selectedCategory)
                 .toList();
+
+        if (locationFilter != null) {
+          filtered = filtered
+              .where((s) => _serviceMatchesLocation(s, locationFilter))
+              .toList();
+        }
 
         if (filtered.isEmpty) {
           return const _EmptyState();
