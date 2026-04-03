@@ -135,26 +135,31 @@ class _ServiceDetailContent extends ConsumerWidget {
                     const SizedBox(height: 20),
                   ],
 
-                  // Service area
-                  if (service.serviceArea != null &&
-                      service.serviceArea!.isNotEmpty) ...[
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 16,
-                          color: oc.secondaryText,
+                  // Service zones
+                  if (service.serviceZones.isNotEmpty) ...[
+                    for (final zone in service.serviceZones)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 16,
+                              color: oc.secondaryText,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              zone.radiusKm > 0
+                                  ? '${zone.label}, ${zone.radiusKm} km'
+                                  : zone.label,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: oc.secondaryText),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          service.serviceArea!,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: oc.secondaryText),
-                        ),
-                      ],
-                    ),
+                      ),
                   ],
                 ],
               ),

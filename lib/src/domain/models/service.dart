@@ -1,5 +1,6 @@
 import '../enums/category_id.dart';
 import '../enums/price_type.dart';
+import 'service_zone.dart';
 
 class Service {
   const Service({
@@ -14,7 +15,7 @@ class Service {
     required this.createdAt,
     required this.updatedAt,
     this.description,
-    this.serviceArea,
+    this.serviceZones = const [],
   });
 
   final String id;
@@ -26,7 +27,7 @@ class Service {
   final PriceType priceType;
   final int price;
   final bool published;
-  final String? serviceArea;
+  final List<ServiceZone> serviceZones;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -39,7 +40,7 @@ class Service {
     PriceType? priceType,
     int? price,
     bool? published,
-    String? serviceArea,
+    List<ServiceZone>? serviceZones,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -53,7 +54,7 @@ class Service {
       priceType: priceType ?? this.priceType,
       price: price ?? this.price,
       published: published ?? this.published,
-      serviceArea: serviceArea ?? this.serviceArea,
+      serviceZones: serviceZones ?? this.serviceZones,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

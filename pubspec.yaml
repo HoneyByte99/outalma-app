@@ -24,6 +24,7 @@ dependencies:
 
   # Maps
   google_maps_flutter: ^2.10.0
+  http: ^1.2.2
 
   # App
   go_router: ^14.2.7

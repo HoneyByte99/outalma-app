@@ -138,7 +138,7 @@ function services(providerUids) {
       priceType: 'hourly',
       price: 2500, // 25 €/h en centimes
       published: true,
-      serviceArea: 'Paris 11e, 12e, 20e',
+      serviceZones: [{ label: 'Paris 11e', lat: 48.8584, lng: 2.3808, radiusKm: 10 }],
       photos: [],
     },
     {
@@ -150,7 +150,7 @@ function services(providerUids) {
       priceType: 'fixed',
       price: 18000, // 180 € forfait
       published: true,
-      serviceArea: 'Paris et proche banlieue',
+      serviceZones: [{ label: 'Paris', lat: 48.8566, lng: 2.3522, radiusKm: 30 }],
       photos: [],
     },
 
@@ -164,7 +164,7 @@ function services(providerUids) {
       priceType: 'hourly',
       price: 3000, // 30 €/h
       published: true,
-      serviceArea: 'Dakar, Almadies, Plateau',
+      serviceZones: [{ label: 'Dakar', lat: 14.6928, lng: -17.4467, radiusKm: 20 }],
       photos: [],
     },
     {
@@ -176,7 +176,7 @@ function services(providerUids) {
       priceType: 'fixed',
       price: 8000, // 80 €
       published: true,
-      serviceArea: 'Dakar, Rufisque',
+      serviceZones: [{ label: 'Dakar', lat: 14.6928, lng: -17.4467, radiusKm: 30 }, { label: 'Rufisque', lat: 14.7167, lng: -17.2667, radiusKm: 10 }],
       photos: [],
     },
     {
@@ -188,7 +188,7 @@ function services(providerUids) {
       priceType: 'fixed',
       price: 35000, // 350 €
       published: true,
-      serviceArea: 'Région dakaroise',
+      serviceZones: [{ label: 'Dakar', lat: 14.6928, lng: -17.4467, radiusKm: 50 }],
       photos: [],
     },
 
@@ -202,7 +202,7 @@ function services(providerUids) {
       priceType: 'hourly',
       price: 6500, // 65 €/h
       published: true,
-      serviceArea: 'Lyon 1er, 2e, 6e, 7e',
+      serviceZones: [{ label: 'Lyon centre', lat: 45.7640, lng: 4.8357, radiusKm: 10 }],
       photos: [],
     },
     {
@@ -214,7 +214,7 @@ function services(providerUids) {
       priceType: 'fixed',
       price: 9000, // 90 €
       published: true,
-      serviceArea: 'Lyon et agglomération',
+      serviceZones: [{ label: 'Lyon', lat: 45.7640, lng: 4.8357, radiusKm: 25 }],
       photos: [],
     },
     {
@@ -226,7 +226,7 @@ function services(providerUids) {
       priceType: 'fixed',
       price: 25000, // 250 €
       published: true,
-      serviceArea: 'Lyon et banlieue',
+      serviceZones: [{ label: 'Lyon', lat: 45.7640, lng: 4.8357, radiusKm: 30 }],
       photos: [],
     },
 
@@ -240,7 +240,7 @@ function services(providerUids) {
       priceType: 'hourly',
       price: 2000, // 20 €/h
       published: true,
-      serviceArea: 'Dakar, Mermoz, Sacré-Cœur',
+      serviceZones: [{ label: 'Dakar, Mermoz', lat: 14.7055, lng: -17.4686, radiusKm: 15 }],
       photos: [],
     },
     {
@@ -252,7 +252,7 @@ function services(providerUids) {
       priceType: 'hourly',
       price: 1500, // 15 €/h
       published: true,
-      serviceArea: 'Dakar centre',
+      serviceZones: [{ label: 'Dakar centre', lat: 14.6928, lng: -17.4467, radiusKm: 10 }],
       photos: [],
     },
 
@@ -266,7 +266,7 @@ function services(providerUids) {
       priceType: 'fixed',
       price: 5000, // 50 €
       published: true,
-      serviceArea: 'Lyon',
+      serviceZones: [{ label: 'Lyon', lat: 45.7640, lng: 4.8357, radiusKm: 20 }],
       photos: [],
     },
   ];
@@ -316,7 +316,7 @@ async function main() {
     {
       uid: marie,
       bio: 'Agent d\'entretien professionnelle depuis 8 ans. Sérieuse, ponctuelle et minutieuse. Je prends soin de votre chez-vous comme si c\'était le mien.',
-      serviceArea: 'Paris 11e, 12e, 20e',
+      serviceZones: [{ label: 'Paris 11e', lat: 48.8584, lng: 2.3808, radiusKm: 10 }],
     },
     {
       uid: ahmed,
@@ -326,7 +326,7 @@ async function main() {
     {
       uid: pierre,
       bio: 'Plombier certifié, 12 ans de métier. Interventions rapides et propres. Tous travaux sanitaires, chauffage, climatisation.',
-      serviceArea: 'Lyon et agglomération',
+      serviceZones: [{ label: 'Lyon', lat: 45.7640, lng: 4.8357, radiusKm: 25 }],
     },
     {
       uid: fatou,

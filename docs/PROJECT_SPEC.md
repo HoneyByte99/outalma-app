@@ -143,7 +143,7 @@ Lecture publique.
 | `priceType` | String | "hourly" ou "fixed" |
 | `price` | int | En centimes |
 | `published` | bool | Seuls les services publiés sont visibles |
-| `serviceArea` | String? | Ville ou zone |
+| `serviceZones` | Array\<Map\> | Zones d'intervention `[{label, lat, lng, radiusKm}]` |
 | `createdAt` | Timestamp | UTC |
 | `updatedAt` | Timestamp | UTC |
 

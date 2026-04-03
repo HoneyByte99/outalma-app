@@ -16,6 +16,7 @@ import '../../domain/models/provider_profile.dart';
 import '../../domain/models/report.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
+import '../../domain/models/service_zone.dart';
 import 'firestore_serialization.dart';
 
 /// Central place for Firestore collection paths and typed collection refs.
@@ -169,7 +170,7 @@ class FirestoreCollections {
       ),
       price: (data['price'] as int?) ?? 0,
       published: (data['published'] as bool?) ?? false,
-      serviceArea: data['serviceArea'] as String?,
+      serviceZones: _serviceZonesFromFirestore(data),
       createdAt: dateTimeFromFirestore(data['createdAt']),
       updatedAt: dateTimeFromFirestore(data['updatedAt']),
     );
@@ -185,10 +186,31 @@ class FirestoreCollections {
       'priceType': service.priceType.name,
       'price': service.price,
       'published': service.published,
-      'serviceArea': service.serviceArea,
+      'serviceZones': service.serviceZones.map(serviceZoneToMap).toList(),
       'createdAt': dateTimeToFirestore(service.createdAt),
       'updatedAt': dateTimeToFirestore(service.updatedAt),
     };
+  }
+
+  /// Backward-compatible zone reader: prefers `serviceZones` array, falls back
+  /// to legacy `serviceArea` string (synthesised as a single zone with no coords).
+  static List<ServiceZone> _serviceZonesFromFirestore(
+      Map<String, dynamic> data) {
+    final raw = data['serviceZones'];
+    if (raw is List && raw.isNotEmpty) {
+      return raw
+          .cast<Map<String, dynamic>>()
+          .map(serviceZoneFromMap)
+          .toList();
+    }
+    // Legacy fallback
+    final legacy = data['serviceArea'] as String?;
+    if (legacy != null && legacy.isNotEmpty) {
+      return [
+        ServiceZone(label: legacy, latitude: 0, longitude: 0, radiusKm: 0)
+      ];
+    }
+    return const [];
   }
 
   // ---- Booking ----

@@ -15,6 +15,7 @@ export 'models/provider_profile.dart';
 export 'models/report.dart';
 export 'models/review.dart';
 export 'models/service.dart';
+export 'models/service_zone.dart';
 
 export 'repositories/booking_repository.dart';
 export 'repositories/chat_repository.dart';

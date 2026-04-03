@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../domain/models/service_zone.dart';
+
 /// Minimal, defensive helpers for Firestore <-> Domain conversions.
 ///
 /// Domain models generally use `DateTime` (UTC). Firestore may store timestamps
@@ -14,3 +16,25 @@ DateTime dateTimeFromFirestore(Object? raw) {
 }
 
 Object dateTimeToFirestore(DateTime value) => Timestamp.fromDate(value.toUtc());
+
+// ---------------------------------------------------------------------------
+// ServiceZone
+// ---------------------------------------------------------------------------
+
+ServiceZone serviceZoneFromMap(Map<String, dynamic> m) {
+  return ServiceZone(
+    label: (m['label'] as String?) ?? '',
+    latitude: (m['lat'] as num?)?.toDouble() ?? 0.0,
+    longitude: (m['lng'] as num?)?.toDouble() ?? 0.0,
+    radiusKm: (m['radiusKm'] as num?)?.toInt() ?? 0,
+  );
+}
+
+Map<String, Object?> serviceZoneToMap(ServiceZone z) {
+  return {
+    'label': z.label,
+    'lat': z.latitude,
+    'lng': z.longitude,
+    'radiusKm': z.radiusKm,
+  };
+}

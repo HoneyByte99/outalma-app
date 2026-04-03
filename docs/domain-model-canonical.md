@@ -88,7 +88,7 @@ Firestore collection: `services/{serviceId}` (public read)
 | `priceType` | String | "hourly" or "fixed" |
 | `price` | int | Price in smallest currency unit (centimes) |
 | `published` | bool | Only published services are discoverable |
-| `serviceArea` | String? | City or zone |
+| `serviceZones` | List\<Map\> | `[{label, lat, lng, radiusKm}]` — intervention zones |
 | `createdAt` | Timestamp | UTC |
 | `updatedAt` | Timestamp | UTC |
 
