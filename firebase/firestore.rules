@@ -105,11 +105,19 @@ service cloud.firestore {
       allow delete: if isAdmin();
 
       match /messages/{messageId} {
-        allow read: if isAdmin() || isChatParticipant();
+        // isChatParticipant() uses resource which refers to the message doc (not the chat).
+        // For messages we must get() the parent chat document explicitly.
+        function isParticipantViaChat() {
+          return signedIn()
+            && (request.auth.uid in
+                get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
+        }
+
+        allow read: if isAdmin() || isParticipantViaChat();
 
         // Create: only participants; senderId must match auth uid
         allow create: if isAdmin()
-          || (isChatParticipant()
+          || (isParticipantViaChat()
               && request.resource.data.senderId == request.auth.uid
               && request.resource.data.createdAt is timestamp
               && request.resource.data.text is string);
