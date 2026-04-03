@@ -323,17 +323,18 @@ class _ServiceTile extends ConsumerWidget {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: oc.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            _categoryIcon(service.categoryId),
-            size: 22,
-            color: oc.primary,
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: 52,
+            height: 52,
+            child: service.photos.isNotEmpty
+                ? Image.network(
+                    service.photos.first,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _iconFallback(oc),
+                  )
+                : _iconFallback(oc),
           ),
         ),
         title: Text(
@@ -371,6 +372,13 @@ class _ServiceTile extends ConsumerWidget {
         ),
         onTap: () => context.push(AppRoutes.serviceEdit(service.id)),
       ),
+    );
+  }
+
+  Widget _iconFallback(dynamic oc) {
+    return Container(
+      color: oc.primary.withValues(alpha: 0.08),
+      child: Icon(_categoryIcon(service.categoryId), size: 22, color: oc.primary),
     );
   }
 
