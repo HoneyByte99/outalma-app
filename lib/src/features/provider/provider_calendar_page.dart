@@ -647,11 +647,10 @@ class _BlockSlotSheet extends StatefulWidget {
 
 class _BlockSlotSheetState extends State<_BlockSlotSheet> {
   late DateTime _startDate;
-  DateTime? _endDate; // null = single day
-  TimeOfDay? _startTime;
-  TimeOfDay? _endTime;
+  int _durationDays = 1; // 1 = single day, >1 = multi-day
   bool _fullDay = true;
-  bool _multiDay = false;
+  int _startHour = 8;
+  int _endHour = 18;
   final _reasonController = TextEditingController();
 
   @override
@@ -666,43 +665,25 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
     super.dispose();
   }
 
-  Future<void> _pickStartDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _startDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) {
-      setState(() {
-        _startDate = picked;
-        if (_endDate != null && _endDate!.isBefore(picked)) {
-          _endDate = picked;
-        }
-      });
-    }
-  }
+  void _addDay() => setState(() =>
+      _startDate = _startDate.add(const Duration(days: 1)));
 
-  Future<void> _pickEndDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _endDate ?? _startDate,
-      firstDate: _startDate,
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) setState(() => _endDate = picked);
+  void _subtractDay() {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    if (_startDate.isAfter(tomorrow)) {
+      setState(() => _startDate = _startDate.subtract(const Duration(days: 1)));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    final dateFmt = DateFormat('EEE d MMM yyyy', 'fr_FR');
+    final dateFmt = DateFormat('EEE d MMM', 'fr_FR');
+    final endDate = _startDate.add(Duration(days: _durationDays - 1));
 
     return Padding(
       padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
+        left: 20, right: 20, top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: SingleChildScrollView(
@@ -710,169 +691,173 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: oc.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Bloquer un cr\u00e9neau',
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 20),
+
+            // Date navigation — no showDatePicker (crashes on web)
+            Text('Date', style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: oc.border,
-                borderRadius: BorderRadius.circular(2),
+                color: oc.inputFill,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: oc.border),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Bloquer un cr\u00e9neau',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
-
-          // Start date
-          Text('Date de d\u00e9but',
-              style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: 4),
-          GestureDetector(
-            onTap: _pickStartDate,
-            child: _DateRow(label: dateFmt.format(_startDate), oc: oc),
-          ),
-          const SizedBox(height: 12),
-
-          // Multi-day toggle
-          Row(
-            children: [
-              Expanded(
-                child: Text('Plusieurs jours',
-                    style: Theme.of(context).textTheme.bodyMedium),
-              ),
-              Switch(
-                value: _multiDay,
-                onChanged: (v) => setState(() {
-                  _multiDay = v;
-                  if (v) _endDate ??= _startDate;
-                }),
-                activeThumbColor: oc.primary,
-              ),
-            ],
-          ),
-
-          if (_multiDay) ...[
-            Text('Date de fin',
-                style: Theme.of(context).textTheme.labelMedium),
-            const SizedBox(height: 4),
-            GestureDetector(
-              onTap: _pickEndDate,
-              child: _DateRow(
-                label: _endDate != null
-                    ? dateFmt.format(_endDate!)
-                    : 'Choisir',
-                oc: oc,
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-
-          // Full day toggle (only for single day)
-          if (!_multiDay) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Text('Journ\u00e9e enti\u00e8re',
-                      style: Theme.of(context).textTheme.bodyMedium),
-                ),
-                Switch(
-                  value: _fullDay,
-                  onChanged: (v) => setState(() => _fullDay = v),
-                  activeThumbColor: oc.primary,
-                ),
-              ],
-            ),
-            if (!_fullDay) ...[
-              const SizedBox(height: 8),
-              Row(
+              child: Row(
                 children: [
-                  Expanded(
-                    child: _TimeButton(
-                      label: _startTime != null
-                          ? '${_startTime!.hour.toString().padLeft(2, '0')}h${_startTime!.minute.toString().padLeft(2, '0')}'
-                          : 'D\u00e9but',
-                      onTap: () async {
-                        final t = await showTimePicker(
-                          context: context,
-                          initialTime:
-                              _startTime ?? const TimeOfDay(hour: 8, minute: 0),
-                        );
-                        if (t != null) setState(() => _startTime = t);
-                      },
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text('\u2013',
-                        style: Theme.of(context).textTheme.titleMedium),
+                  IconButton(
+                    onPressed: _subtractDay,
+                    icon: Icon(Icons.chevron_left, color: oc.primary),
                   ),
                   Expanded(
-                    child: _TimeButton(
-                      label: _endTime != null
-                          ? '${_endTime!.hour.toString().padLeft(2, '0')}h${_endTime!.minute.toString().padLeft(2, '0')}'
-                          : 'Fin',
-                      onTap: () async {
-                        final t = await showTimePicker(
-                          context: context,
-                          initialTime:
-                              _endTime ?? const TimeOfDay(hour: 18, minute: 0),
-                        );
-                        if (t != null) setState(() => _endTime = t);
-                      },
+                    child: Text(
+                      dateFmt.format(_startDate),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
+                  ),
+                  IconButton(
+                    onPressed: _addDay,
+                    icon: Icon(Icons.chevron_right, color: oc.primary),
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 16),
+
+            // Duration
+            Text('Dur\u00e9e', style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [1, 2, 3, 5, 7].map((d) {
+                final active = _durationDays == d;
+                final label = d == 1 ? '1 jour' : '$d jours';
+                return ChoiceChip(
+                  label: Text(label),
+                  selected: active,
+                  selectedColor: oc.primary.withValues(alpha: 0.12),
+                  labelStyle: TextStyle(
+                    color: active ? oc.primary : oc.primaryText,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                  onSelected: (_) => setState(() => _durationDays = d),
+                );
+              }).toList(),
+            ),
+            if (_durationDays > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '${dateFmt.format(_startDate)} \u2192 ${dateFmt.format(endDate)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: oc.secondaryText,
+                      ),
+                ),
+              ),
+            const SizedBox(height: 16),
+
+            // Full day toggle (only for single day)
+            if (_durationDays == 1) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Journ\u00e9e enti\u00e8re',
+                        style: Theme.of(context).textTheme.bodyMedium),
+                  ),
+                  Switch(
+                    value: _fullDay,
+                    onChanged: (v) => setState(() => _fullDay = v),
+                    activeThumbColor: oc.primary,
+                  ),
+                ],
+              ),
+              if (!_fullDay) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HourSelector(
+                        label: 'D\u00e9but',
+                        value: _startHour,
+                        onChanged: (h) => setState(() => _startHour = h),
+                        oc: oc,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('\u2013',
+                          style: Theme.of(context).textTheme.titleMedium),
+                    ),
+                    Expanded(
+                      child: _HourSelector(
+                        label: 'Fin',
+                        value: _endHour,
+                        onChanged: (h) => setState(() => _endHour = h),
+                        oc: oc,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 12),
             ],
+
+            // Reason
+            TextField(
+              controller: _reasonController,
+              decoration: const InputDecoration(
+                hintText: 'Raison (optionnel)',
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _save,
+                child: const Text('Bloquer'),
+              ),
+            ),
           ],
-          const SizedBox(height: 12),
-
-          // Reason
-          TextField(
-            controller: _reasonController,
-            decoration: const InputDecoration(
-              hintText: 'Raison (optionnel)',
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _save,
-              child: const Text('Bloquer'),
-            ),
-          ),
-        ],
         ),
       ),
     );
   }
 
   void _save() {
-    DateTime startDt;
-    DateTime? endDt;
     final reason = _reasonController.text.trim().isEmpty
         ? null
         : _reasonController.text.trim();
 
-    if (_multiDay) {
+    DateTime startDt;
+    DateTime? endDt;
+
+    if (_durationDays > 1) {
       startDt = DateTime(_startDate.year, _startDate.month, _startDate.day);
-      final ed = _endDate ?? _startDate;
+      final ed = _startDate.add(Duration(days: _durationDays - 1));
       endDt = DateTime(ed.year, ed.month, ed.day, 23, 59);
     } else if (_fullDay) {
       startDt = DateTime(_startDate.year, _startDate.month, _startDate.day);
     } else {
-      final st = _startTime ?? const TimeOfDay(hour: 8, minute: 0);
-      final et = _endTime ?? const TimeOfDay(hour: 18, minute: 0);
       startDt = DateTime(
-          _startDate.year, _startDate.month, _startDate.day, st.hour, st.minute);
+          _startDate.year, _startDate.month, _startDate.day, _startHour, 0);
       endDt = DateTime(
-          _startDate.year, _startDate.month, _startDate.day, et.hour, et.minute);
+          _startDate.year, _startDate.month, _startDate.day, _endHour, 0);
     }
 
     Navigator.of(context).pop(BlockedSlot(
@@ -884,51 +869,39 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
   }
 }
 
-class _DateRow extends StatelessWidget {
-  const _DateRow({required this.label, required this.oc});
+/// Simple hour selector — no showTimePicker overlay (crashes on web).
+class _HourSelector extends StatelessWidget {
+  const _HourSelector({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    required this.oc,
+  });
+
   final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
   final dynamic oc;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: oc.inputFill,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: oc.border),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.calendar_today_outlined, size: 18, color: oc.primary),
-          const SizedBox(width: 10),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimeButton extends StatelessWidget {
-  const _TimeButton({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final oc = context.oc;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: oc.inputFill,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: oc.border),
-        ),
-        child: Center(
-          child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: value,
+          isExpanded: true,
+          isDense: true,
+          items: List.generate(24, (i) => DropdownMenuItem(
+            value: i,
+            child: Text('${i.toString().padLeft(2, '0')}h00'),
+          )),
+          onChanged: (v) { if (v != null) onChanged(v); },
         ),
       ),
     );
