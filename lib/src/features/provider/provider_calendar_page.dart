@@ -26,6 +26,7 @@ class _ProviderCalendarPageState
     extends ConsumerState<ProviderCalendarPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  int _refreshKey = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +53,7 @@ class _ProviderCalendarPageState
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
+            key: ValueKey(_refreshKey),
             child: TableCalendar<Object>(
             locale: 'fr_FR',
             calendarFormat: CalendarFormat.month,
@@ -245,15 +247,8 @@ class _ProviderCalendarPageState
           await ref
               .read(providerRepositoryProvider)
               .addBlockedSlot(authState.user.id, result);
-          // Invalidate stream + nudge focusedDay to force TableCalendar
-          // to re-run eventLoader for the current month.
           ref.invalidate(providerBlockedSlotsProvider);
-          if (mounted) {
-            final saved = _focusedDay;
-            setState(() => _focusedDay = saved.add(const Duration(days: 32)));
-            await Future<void>.delayed(const Duration(milliseconds: 50));
-            if (mounted) setState(() => _focusedDay = saved);
-          }
+          if (mounted) setState(() => _refreshKey++);
           messenger.showSnackBar(
             const SnackBar(content: Text('Cr\u00e9neau bloqu\u00e9')),
           );
