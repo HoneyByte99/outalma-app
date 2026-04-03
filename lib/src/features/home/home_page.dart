@@ -9,9 +9,11 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/home/location_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../data/services/geocoding_service.dart';
+import '../../data/services/saved_locations_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/models/service.dart';
@@ -24,25 +26,9 @@ import '../shared/user_avatar.dart';
 
 final _selectedCategoryProvider = StateProvider<CategoryId?>((ref) => null);
 
-/// Location search filter: place label, lat/lng, and search radius.
-class _LocationFilter {
-  const _LocationFilter({
-    required this.label,
-    required this.lat,
-    required this.lng,
-    required this.radiusKm,
-  });
-  final String label;
-  final double lat;
-  final double lng;
-  final double radiusKm;
-}
-
-final _locationFilterProvider = StateProvider<_LocationFilter?>((ref) => null);
-
 /// Haversine distance in km between two lat/lng points.
 double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
-  const r = 6371.0; // Earth radius in km
+  const r = 6371.0;
   final dLat = _deg2rad(lat2 - lat1);
   final dLng = _deg2rad(lng2 - lng1);
   final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
@@ -55,11 +41,11 @@ double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
 
 double _deg2rad(double deg) => deg * (math.pi / 180);
 
-/// Returns true if any of the service's zones overlaps with the search circle.
-bool _serviceMatchesLocation(Service service, _LocationFilter filter) {
+bool _serviceMatchesLocation(Service service, LocationFilter filter) {
   for (final zone in service.serviceZones) {
-    if (zone.latitude == 0 && zone.longitude == 0) continue; // legacy
-    final dist = _haversineKm(filter.lat, filter.lng, zone.latitude, zone.longitude);
+    if (zone.latitude == 0 && zone.longitude == 0) continue;
+    final dist =
+        _haversineKm(filter.lat, filter.lng, zone.latitude, zone.longitude);
     if (dist <= filter.radiusKm + zone.radiusKm) return true;
   }
   return false;
@@ -85,7 +71,8 @@ class HomePage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Outalma'),
+        titleSpacing: 0,
+        title: const _LocationPill(),
         actions: [
           _ModeBadge(
             activeMode: activeMode,
@@ -100,32 +87,484 @@ class HomePage extends ConsumerWidget {
         children: [
           // Greeting
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
             child: Text(
-              displayName.isNotEmpty
-                  ? 'Bonjour $displayName'
-                  : 'Bonjour',
+              displayName.isNotEmpty ? 'Bonjour $displayName' : 'Bonjour',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text(
               'Que recherchez-vous ?',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: oc.secondaryText,
-                  ),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: oc.secondaryText),
             ),
           ),
-          // Location search bar
-          const _LocationSearchBar(),
-          const SizedBox(height: 8),
           // Category chips
           const _CategoryChipsRow(),
           const SizedBox(height: 8),
           // Service grid
           const Expanded(child: _ServiceGrid()),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Location pill — compact AppBar location indicator
+// ---------------------------------------------------------------------------
+
+class _LocationPill extends ConsumerWidget {
+  const _LocationPill();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
+    final filter = ref.watch(locationFilterProvider);
+    final label = filter != null
+        ? '${filter.label}, ${filter.radiusKm.round()} km'
+        : 'Toute la France';
+
+    return GestureDetector(
+      onTap: () => _showLocationSheet(context, ref),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: oc.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.location_on, size: 16, color: oc.primary),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: oc.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                size: 18, color: oc.primary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLocationSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.oc.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const _LocationSheet(),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Location bottom sheet — search + radius + favorites
+// ---------------------------------------------------------------------------
+
+class _LocationSheet extends ConsumerStatefulWidget {
+  const _LocationSheet();
+
+  @override
+  ConsumerState<_LocationSheet> createState() => _LocationSheetState();
+}
+
+class _LocationSheetState extends ConsumerState<_LocationSheet> {
+  final _controller = TextEditingController();
+  List<PlaceSuggestion> _suggestions = [];
+  late double _radiusKm;
+
+  @override
+  void initState() {
+    super.initState();
+    final filter = ref.read(locationFilterProvider);
+    _radiusKm = filter?.radiusKm ?? 30;
+    if (filter != null) {
+      _controller.text = filter.label;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onSearchChanged(String input) async {
+    if (input.trim().length < 2) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    try {
+      final geocoding = ref.read(geocodingServiceProvider);
+      final results = await geocoding.autocomplete(input);
+      if (mounted) setState(() => _suggestions = results);
+    } catch (_) {}
+  }
+
+  Future<void> _selectSuggestion(PlaceSuggestion suggestion) async {
+    _controller.text = suggestion.description;
+    setState(() => _suggestions = []);
+
+    final geocoding = ref.read(geocodingServiceProvider);
+    final coords = await geocoding.getPlaceLatLng(suggestion.placeId);
+    if (coords == null || !mounted) return;
+
+    ref.read(locationFilterProvider.notifier).state = LocationFilter(
+      label: suggestion.description,
+      lat: coords.lat,
+      lng: coords.lng,
+      radiusKm: _radiusKm,
+    );
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  void _applyFavorite(SavedLocation loc) {
+    ref.read(locationFilterProvider.notifier).state = LocationFilter(
+      label: loc.address,
+      lat: loc.lat,
+      lng: loc.lng,
+      radiusKm: loc.radiusKm,
+    );
+    Navigator.of(context).pop();
+  }
+
+  void _clearFilter() {
+    ref.read(locationFilterProvider.notifier).state = null;
+    Navigator.of(context).pop();
+  }
+
+  void _saveCurrentLocation() {
+    final filter = ref.read(locationFilterProvider);
+    if (filter == null) return;
+
+    final nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nom de l\'adresse'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Ex: Maison, Bureau...',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              if (name.isEmpty) return;
+              ref.read(savedLocationsProvider.notifier).add(SavedLocation(
+                    label: name,
+                    address: filter.label,
+                    lat: filter.lat,
+                    lng: filter.lng,
+                    radiusKm: filter.radiusKm,
+                  ));
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('"$name" enregistr\u00e9')),
+              );
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _updateRadius(double value) {
+    setState(() => _radiusKm = value);
+    final current = ref.read(locationFilterProvider);
+    if (current != null) {
+      ref.read(locationFilterProvider.notifier).state =
+          current.copyWith(radiusKm: value);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final filter = ref.watch(locationFilterProvider);
+    final savedLocations = ref.watch(savedLocationsProvider);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (_, scrollController) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: oc.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Title row
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Localisation',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                if (filter != null)
+                  IconButton(
+                    onPressed: _saveCurrentLocation,
+                    icon: Icon(Icons.star_outline_rounded,
+                        color: oc.warning, size: 24),
+                    tooltip: 'Enregistrer cette adresse',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Search field
+            TextField(
+              controller: _controller,
+              autofocus: false,
+              decoration: InputDecoration(
+                hintText: 'Ville ou adresse',
+                prefixIcon:
+                    Icon(Icons.search_rounded, size: 20, color: oc.icons),
+                suffixIcon: filter != null
+                    ? IconButton(
+                        onPressed: () {
+                          _controller.clear();
+                          _clearFilter();
+                        },
+                        icon: Icon(Icons.close, size: 18, color: oc.icons),
+                      )
+                    : null,
+              ),
+              onChanged: _onSearchChanged,
+            ),
+            const SizedBox(height: 4),
+
+            // Suggestions
+            if (_suggestions.isNotEmpty)
+              Container(
+                constraints: const BoxConstraints(maxHeight: 160),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: oc.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: oc.border),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
+                  itemCount: _suggestions.length,
+                  separatorBuilder: (_, __) =>
+                      Divider(height: 1, color: oc.border.withValues(alpha: 0.5)),
+                  itemBuilder: (_, i) {
+                    final s = _suggestions[i];
+                    return InkWell(
+                      onTap: () => _selectSuggestion(s),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        child: Row(
+                          children: [
+                            Icon(Icons.location_on_outlined,
+                                size: 16, color: oc.secondaryText),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                s.description,
+                                style: Theme.of(context).textTheme.bodySmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+            // Radius slider
+            if (filter != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.radar_outlined, size: 16, color: oc.secondaryText),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Rayon',
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelMedium
+                        ?.copyWith(color: oc.secondaryText),
+                  ),
+                  Expanded(
+                    child: Slider(
+                      value: _radiusKm,
+                      min: 5,
+                      max: 200,
+                      divisions: 39,
+                      activeColor: oc.primary,
+                      inactiveColor: oc.border,
+                      onChanged: _updateRadius,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 48,
+                    child: Text(
+                      '${_radiusKm.round()} km',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: oc.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 12),
+
+            // "Toute la France" button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _clearFilter,
+                icon: const Icon(Icons.public_outlined, size: 18),
+                label: const Text('Toute la France'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  side: BorderSide(color: oc.border),
+                ),
+              ),
+            ),
+
+            // Saved locations
+            if (savedLocations.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                'Mes adresses',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.separated(
+                  controller: scrollController,
+                  itemCount: savedLocations.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  itemBuilder: (_, i) {
+                    final loc = savedLocations[i];
+                    return _SavedLocationTile(
+                      location: loc,
+                      onTap: () => _applyFavorite(loc),
+                      onDelete: () =>
+                          ref.read(savedLocationsProvider.notifier).remove(i),
+                    );
+                  },
+                ),
+              ),
+            ] else
+              const Spacer(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SavedLocationTile extends StatelessWidget {
+  const _SavedLocationTile({
+    required this.location,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  final SavedLocation location;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: oc.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: oc.border),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.star_rounded, size: 18, color: oc.warning),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    location.label,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    '${location.address}, ${location.radiusKm.round()} km',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: oc.secondaryText),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: onDelete,
+              child: Icon(Icons.close, size: 16, color: oc.secondaryText),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -160,247 +599,10 @@ class _CategoryChipsRow extends ConsumerWidget {
           return _CategoryChip(
             label: label,
             isActive: isActive,
-            onTap: () => ref
-                .read(_selectedCategoryProvider.notifier)
-                .state = value,
+            onTap: () =>
+                ref.read(_selectedCategoryProvider.notifier).state = value,
           );
         },
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Location search bar — Uber-style
-// ---------------------------------------------------------------------------
-
-class _LocationSearchBar extends ConsumerStatefulWidget {
-  const _LocationSearchBar();
-
-  @override
-  ConsumerState<_LocationSearchBar> createState() => _LocationSearchBarState();
-}
-
-class _LocationSearchBarState extends ConsumerState<_LocationSearchBar> {
-  final _controller = TextEditingController();
-  final _focusNode = FocusNode();
-  List<PlaceSuggestion> _suggestions = [];
-  double _radiusKm = 30;
-  bool _expanded = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  Future<void> _onSearchChanged(String input) async {
-    if (input.trim().length < 2) {
-      setState(() => _suggestions = []);
-      return;
-    }
-    try {
-      final geocoding = ref.read(geocodingServiceProvider);
-      final results = await geocoding.autocomplete(input);
-      if (mounted) setState(() => _suggestions = results);
-    } catch (_) {}
-  }
-
-  Future<void> _selectSuggestion(PlaceSuggestion suggestion) async {
-    _controller.text = suggestion.description;
-    setState(() => _suggestions = []);
-    _focusNode.unfocus();
-
-    final geocoding = ref.read(geocodingServiceProvider);
-    final coords = await geocoding.getPlaceLatLng(suggestion.placeId);
-    if (coords == null || !mounted) return;
-
-    ref.read(_locationFilterProvider.notifier).state = _LocationFilter(
-      label: suggestion.description,
-      lat: coords.lat,
-      lng: coords.lng,
-      radiusKm: _radiusKm,
-    );
-  }
-
-  void _updateRadius(double value) {
-    setState(() => _radiusKm = value);
-    final current = ref.read(_locationFilterProvider);
-    if (current != null) {
-      ref.read(_locationFilterProvider.notifier).state = _LocationFilter(
-        label: current.label,
-        lat: current.lat,
-        lng: current.lng,
-        radiusKm: value,
-      );
-    }
-  }
-
-  void _clear() {
-    _controller.clear();
-    setState(() {
-      _suggestions = [];
-      _expanded = false;
-    });
-    ref.read(_locationFilterProvider.notifier).state = null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final oc = context.oc;
-    final filter = ref.watch(_locationFilterProvider);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Search field
-          GestureDetector(
-            onTap: () => setState(() => _expanded = true),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: oc.surface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: oc.border),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.location_on_outlined, size: 20, color: oc.primary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _expanded || filter != null
-                        ? TextField(
-                            controller: _controller,
-                            focusNode: _focusNode,
-                            decoration: const InputDecoration(
-                              hintText: 'Où cherchez-vous ?',
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              contentPadding:
-                                  EdgeInsets.symmetric(vertical: 12),
-                              isDense: true,
-                            ),
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            onChanged: _onSearchChanged,
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: Text(
-                              'Où cherchez-vous ?',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(color: oc.secondaryText),
-                            ),
-                          ),
-                  ),
-                  if (filter != null)
-                    GestureDetector(
-                      onTap: _clear,
-                      child: Icon(Icons.close, size: 18, color: oc.secondaryText),
-                    ),
-                ],
-              ),
-            ),
-          ),
-
-          // Suggestions dropdown
-          if (_suggestions.isNotEmpty)
-            Container(
-              constraints: const BoxConstraints(maxHeight: 180),
-              margin: const EdgeInsets.only(top: 4),
-              decoration: BoxDecoration(
-                color: oc.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: oc.border),
-                boxShadow: [
-                  BoxShadow(
-                    color: oc.shadow,
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                itemCount: _suggestions.length,
-                separatorBuilder: (_, __) => Divider(
-                  height: 1,
-                  color: oc.border.withValues(alpha: 0.5),
-                ),
-                itemBuilder: (_, i) {
-                  final s = _suggestions[i];
-                  return InkWell(
-                    onTap: () => _selectSuggestion(s),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                      child: Row(
-                        children: [
-                          Icon(Icons.location_on_outlined,
-                              size: 16, color: oc.secondaryText),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              s.description,
-                              style: Theme.of(context).textTheme.bodySmall,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-          // Radius slider — visible when a location is selected
-          if (filter != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.radar_outlined, size: 16, color: oc.secondaryText),
-                const SizedBox(width: 6),
-                Text(
-                  'Rayon',
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(color: oc.secondaryText),
-                ),
-                Expanded(
-                  child: Slider(
-                    value: _radiusKm,
-                    min: 5,
-                    max: 200,
-                    divisions: 39,
-                    activeColor: oc.primary,
-                    inactiveColor: oc.border,
-                    onChanged: _updateRadius,
-                  ),
-                ),
-                SizedBox(
-                  width: 48,
-                  child: Text(
-                    '${_radiusKm.round()} km',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: oc.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                    textAlign: TextAlign.end,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
       ),
     );
   }
@@ -454,7 +656,7 @@ class _ServiceGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedCategory = ref.watch(_selectedCategoryProvider);
-    final locationFilter = ref.watch(_locationFilterProvider);
+    final locationFilter = ref.watch(locationFilterProvider);
     final servicesAsync = ref.watch(serviceListProvider);
 
     return servicesAsync.when(
@@ -512,8 +714,8 @@ class _ServiceCard extends ConsumerWidget {
     final providerUser =
         ref.watch(userByIdProvider(service.providerId)).valueOrNull;
     final priceLabel = service.priceType.name == 'hourly'
-        ? '${(service.price / 100).toStringAsFixed(0)} €/h'
-        : '${(service.price / 100).toStringAsFixed(0)} €';
+        ? '${(service.price / 100).toStringAsFixed(0)} \u20ac/h'
+        : '${(service.price / 100).toStringAsFixed(0)} \u20ac';
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.serviceDetail(service.id)),
@@ -533,13 +735,12 @@ class _ServiceCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image — 60% of card height
+            // Image
             Expanded(
               flex: 60,
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
-                ),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -548,11 +749,10 @@ class _ServiceCard extends ConsumerWidget {
                             service.photos.first,
                             fit: BoxFit.cover,
                             alignment: Alignment.center,
-                            errorBuilder: (_, __, ___) => _iconPlaceholder(oc),
+                            errorBuilder: (_, __, ___) =>
+                                _iconPlaceholder(oc),
                           )
                         : _iconPlaceholder(oc),
-
-                    // Soft bottom fade into card surface
                     Positioned(
                       left: 0,
                       right: 0,
@@ -572,8 +772,6 @@ class _ServiceCard extends ConsumerWidget {
                         ),
                       ),
                     ),
-
-                    // Category badge top-left
                     Positioned(
                       top: 10,
                       left: 10,
@@ -585,7 +783,7 @@ class _ServiceCard extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          _categoryLabel(service.categoryId),
+                          service.categoryId.label,
                           style: Theme.of(context)
                               .textTheme
                               .labelSmall
@@ -600,8 +798,7 @@ class _ServiceCard extends ConsumerWidget {
                 ),
               ),
             ),
-
-            // Info section — 40% of card height
+            // Info
             Expanded(
               flex: 40,
               child: Padding(
@@ -610,7 +807,6 @@ class _ServiceCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Title + price
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -633,7 +829,6 @@ class _ServiceCard extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    // Provider row
                     Row(
                       children: [
                         UserAvatar(
@@ -644,7 +839,7 @@ class _ServiceCard extends ConsumerWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            providerUser?.displayName ?? '—',
+                            providerUser?.displayName ?? '\u2014',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
@@ -670,17 +865,13 @@ class _ServiceCard extends ConsumerWidget {
       color: oc.primary.withValues(alpha: 0.08),
       child: Center(
         child: Icon(
-          _categoryIcon(service.categoryId),
+          service.categoryId.icon,
           size: 40,
           color: oc.primary.withValues(alpha: 0.35),
         ),
       ),
     );
   }
-
-  String _categoryLabel(CategoryId id) => id.label;
-
-  IconData _categoryIcon(CategoryId id) => id.icon;
 }
 
 // ---------------------------------------------------------------------------
@@ -726,18 +917,15 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.search_off_outlined,
-              size: 56,
-              color: oc.icons,
-            ),
+            Icon(Icons.search_off_outlined, size: 56, color: oc.icons),
             const SizedBox(height: 16),
             Text(
               'Aucun service disponible\npour le moment',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: oc.secondaryText,
-                  ),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),
@@ -747,7 +935,7 @@ class _EmptyState extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Mode badge — AppBar shortcut to profile/switch tab
+// Mode badge
 // ---------------------------------------------------------------------------
 
 class _ModeBadge extends StatelessWidget {
@@ -806,11 +994,7 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.wifi_off_outlined,
-              size: 56,
-              color: oc.icons,
-            ),
+            Icon(Icons.wifi_off_outlined, size: 56, color: oc.icons),
             const SizedBox(height: 16),
             Text(
               'Erreur de chargement',
@@ -819,7 +1003,7 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 8),
             TextButton(
               onPressed: onRetry,
-              child: const Text('Réessayer'),
+              child: const Text('R\u00e9essayer'),
             ),
           ],
         ),
@@ -827,4 +1011,3 @@ class _ErrorState extends StatelessWidget {
     );
   }
 }
-
