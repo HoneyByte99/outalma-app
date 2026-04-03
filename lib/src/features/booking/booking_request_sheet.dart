@@ -1,8 +1,10 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/app_theme.dart';
+import '../../app/router.dart';
 import '../../application/booking/booking_providers.dart';
 
 class BookingRequestSheet extends ConsumerStatefulWidget {
@@ -35,7 +37,16 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   final _addressFocus = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+    _messageController.addListener(_onMessageChanged);
+  }
+
+  void _onMessageChanged() => setState(() {});
+
+  @override
   void dispose() {
+    _messageController.removeListener(_onMessageChanged);
     _messageController.dispose();
     _scheduleController.dispose();
     _addressController.dispose();
@@ -70,10 +81,10 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         address: _addressController.text.trim(),
       );
       if (mounted) {
-        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Demande envoyée avec succès')),
+          const SnackBar(content: Text('Demande envoyée avec succès ✓')),
         );
+        context.go(AppRoutes.bookings);
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
