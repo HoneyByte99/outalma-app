@@ -651,53 +651,63 @@ class _PhotoSection extends StatelessWidget {
 
   Widget _buildContent(BuildContext context, dynamic oc) {
     if (uploading) {
-      return Container(
-        color: context.oc.border,
-        child: const Center(child: CircularProgressIndicator()),
+      return SizedBox.expand(
+        child: ColoredBox(
+          color: context.oc.border,
+          child: const Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
     if (photos.isNotEmpty) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.network(
-            photos.first,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            loadingBuilder: (ctx, child, progress) {
-              if (progress == null) return child;
-              return Container(
-                color: ctx.oc.border,
-                child: const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
+      return SizedBox.expand(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              photos.first,
+              fit: BoxFit.cover,
+              frameBuilder: (_, child, frame, loaded) {
+                if (loaded) return child;
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    child,
+                    if (frame == null)
+                      ColoredBox(
+                        color: context.oc.border,
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                  ],
+                );
+              },
+              errorBuilder: (_, __, ___) => _Placeholder(onTap: onPick),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: GestureDetector(
+                onTap: onRemove,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    shape: BoxShape.circle,
+                  ),
+                  child:
+                      const Icon(Icons.close, color: Colors.white, size: 16),
                 ),
-              );
-            },
-            errorBuilder: (_, __, ___) => _Placeholder(onTap: onPick),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: GestureDetector(
-              onTap: onRemove,
-              child: Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.close, color: Colors.white, size: 16),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
-    return _Placeholder(onTap: onPick);
+    return SizedBox.expand(child: _Placeholder(onTap: onPick));
   }
 }
 
@@ -712,8 +722,6 @@ class _Placeholder extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: double.infinity,
-        height: double.infinity,
         decoration: BoxDecoration(
           color: oc.surface,
           border: Border.all(
