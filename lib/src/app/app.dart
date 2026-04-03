@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class OutlamaApp extends StatelessWidget {
+import 'app_theme.dart';
+import 'router.dart';
+
+class OutlamaApp extends ConsumerWidget {
   const OutlamaApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Outlama',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0B5FFF)),
-        useMaterial3: true,
-      ),
-      home: const Placeholder(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
+      title: 'Outalma',
+      theme: AppTheme.light(),
+      routerConfig: router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
