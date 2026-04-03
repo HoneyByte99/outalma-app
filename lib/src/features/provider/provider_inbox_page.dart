@@ -6,55 +6,133 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
+import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
 
-class ProviderInboxPage extends ConsumerWidget {
+class ProviderInboxPage extends ConsumerStatefulWidget {
   const ProviderInboxPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final inboxAsync = ref.watch(providerInboxProvider);
+  ConsumerState<ProviderInboxPage> createState() => _ProviderInboxPageState();
+}
 
+class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
+      body: NestedScrollView(
+        headerSliverBuilder: (context, _) => [
           SliverAppBar(
             floating: true,
             backgroundColor: AppColors.background,
             surfaceTintColor: Colors.transparent,
             title: Text(
-              'Demandes reçues',
+              'Missions',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-          ),
-          inboxAsync.when(
-            loading: () => const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (_, __) => SliverFillRemaining(
-              child: _ErrorState(),
-            ),
-            data: (bookings) => bookings.isEmpty
-                ? SliverFillRemaining(child: _EmptyInbox())
-                : SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, i) => _InboxCard(booking: bookings[i]),
-                        childCount: bookings.length,
-                      ),
-                    ),
+            bottom: TabBar(
+              controller: _tabController,
+              labelColor: AppColors.primary,
+              unselectedLabelColor: AppColors.secondaryText,
+              indicatorColor: AppColors.primary,
+              labelStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.primary,
                   ),
+              tabs: const [
+                Tab(text: 'Demandes'),
+                Tab(text: 'En cours'),
+              ],
+            ),
           ),
         ],
+        body: TabBarView(
+          controller: _tabController,
+          children: const [
+            _RequestsTab(),
+            _ActiveTab(),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Inbox card
+// Tab: pending requests (status = requested)
+// ---------------------------------------------------------------------------
+
+class _RequestsTab extends ConsumerWidget {
+  const _RequestsTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final inboxAsync = ref.watch(providerInboxProvider);
+
+    return inboxAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const _ErrorState(),
+      data: (bookings) {
+        if (bookings.isEmpty) return const _EmptyState(isActive: false);
+        final sorted = [...bookings]
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          itemCount: sorted.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, i) => _InboxCard(booking: sorted[i]),
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tab: active bookings (status = accepted | in_progress)
+// ---------------------------------------------------------------------------
+
+class _ActiveTab extends ConsumerWidget {
+  const _ActiveTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeAsync = ref.watch(providerActiveBookingsProvider);
+
+    return activeAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const _ErrorState(),
+      data: (bookings) {
+        if (bookings.isEmpty) return const _EmptyState(isActive: true);
+        final sorted = [...bookings]
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          itemCount: sorted.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, i) => _InboxCard(booking: sorted[i]),
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Booking card
 // ---------------------------------------------------------------------------
 
 class _InboxCard extends ConsumerWidget {
@@ -70,7 +148,6 @@ class _InboxCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () => context.push(AppRoutes.providerBookingDetail(booking.id)),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -102,10 +179,9 @@ class _InboxCard extends ConsumerWidget {
                     children: [
                       Text(
                         serviceTitle,
-                        style:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -118,6 +194,8 @@ class _InboxCard extends ConsumerWidget {
                     ],
                   ),
                 ),
+                _StatusChip(status: booking.status),
+                const SizedBox(width: 4),
                 const Icon(
                   Icons.chevron_right_rounded,
                   color: AppColors.icons,
@@ -137,28 +215,73 @@ class _InboxCard extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            if (booking.schedule != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_today_outlined,
-                    size: 14,
-                    color: AppColors.secondaryText,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    booking.schedule!['description'] as String? ??
-                        'Créneau non précisé',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.secondaryText,
-                        ),
-                  ),
-                ],
+            // Chat shortcut for accepted/in_progress bookings
+            if (booking.chatId != null &&
+                (booking.status == BookingStatus.accepted ||
+                    booking.status == BookingStatus.inProgress)) ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => context.push(AppRoutes.chat(booking.chatId!)),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Ouvrir le chat',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Status chip
+// ---------------------------------------------------------------------------
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.status});
+
+  final BookingStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (status) {
+      BookingStatus.requested => ('En attente', AppColors.warning),
+      BookingStatus.accepted => ('Acceptée', AppColors.primary),
+      BookingStatus.inProgress => ('En cours', const Color(0xFF7B2FBE)),
+      BookingStatus.done => ('Terminée', AppColors.success),
+      BookingStatus.rejected => ('Refusée', AppColors.secondaryText),
+      BookingStatus.cancelled => ('Annulée', AppColors.secondaryText),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
       ),
     );
   }
@@ -180,7 +303,11 @@ String _formatDate(DateTime dt) {
 // Empty + error states
 // ---------------------------------------------------------------------------
 
-class _EmptyInbox extends StatelessWidget {
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.isActive});
+
+  final bool isActive;
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -189,19 +316,25 @@ class _EmptyInbox extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.inbox_outlined,
+            Icon(
+              isActive
+                  ? Icons.hourglass_empty_outlined
+                  : Icons.inbox_outlined,
               size: 56,
               color: AppColors.icons,
             ),
             const SizedBox(height: 16),
             Text(
-              'Aucune demande en attente',
+              isActive
+                  ? 'Aucune mission en cours'
+                  : 'Aucune demande en attente',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Les demandes des clients apparaîtront ici\ndès qu\'ils auront réservé un de vos services.',
+              isActive
+                  ? 'Les missions acceptées apparaîtront ici.'
+                  : 'Les nouvelles demandes clients apparaîtront ici.',
               textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme
@@ -216,14 +349,17 @@ class _EmptyInbox extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
+  const _ErrorState();
+
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        'Impossible de charger les demandes.',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.secondaryText,
-            ),
+        'Impossible de charger les données.',
+        style: Theme.of(context)
+            .textTheme
+            .bodySmall
+            ?.copyWith(color: AppColors.secondaryText),
       ),
     );
   }

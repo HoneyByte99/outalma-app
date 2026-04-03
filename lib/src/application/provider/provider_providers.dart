@@ -45,6 +45,20 @@ final providerInboxProvider = StreamProvider<List<Booking>>((ref) {
           .toList());
 });
 
+/// Active bookings for the current provider (accepted + in_progress).
+final providerActiveBookingsProvider = StreamProvider<List<Booking>>((ref) {
+  final authState = ref.watch(authNotifierProvider).valueOrNull;
+  if (authState is! AuthAuthenticated) return const Stream.empty();
+  return ref
+      .watch(bookingRepositoryProvider)
+      .watchForProvider(authState.user.id)
+      .map((list) => list
+          .where((b) =>
+              b.status == BookingStatus.accepted ||
+              b.status == BookingStatus.inProgress)
+          .toList());
+});
+
 /// All bookings the current user has received as provider (full history).
 final providerBookingHistoryProvider = StreamProvider<List<Booking>>((ref) {
   final authState = ref.watch(authNotifierProvider).valueOrNull;
