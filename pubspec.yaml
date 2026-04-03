@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # Firebase
   firebase_core: ^3.1.0
@@ -26,7 +28,7 @@ dependencies:
   google_maps_flutter: ^2.10.0
   http: ^1.2.2
   table_calendar: ^3.1.2
-  intl: ^0.19.0
+  intl: ^0.20.2
 
   # App
   go_router: ^14.2.7

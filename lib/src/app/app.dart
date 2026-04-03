@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/notification/notification_service.dart';
@@ -46,6 +47,13 @@ class _OutlamaAppState extends ConsumerState<OutlamaApp> {
       routerConfig: router,
       scaffoldMessengerKey: _messengerKey,
       debugShowCheckedModeBanner: false,
+      locale: const Locale('fr'),
+      supportedLocales: const [Locale('fr')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       builder: (context, child) => ConnectivityBanner(
         child: child ?? const SizedBox.shrink(),
       ),
