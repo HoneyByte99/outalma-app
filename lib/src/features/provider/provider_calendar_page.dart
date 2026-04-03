@@ -52,6 +52,9 @@ class _ProviderCalendarPageState
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
+            // Key forces rebuild when data changes — TableCalendar caches
+            // eventLoader results and doesn't re-query on stream updates.
+            key: ValueKey('cal_${bookings.length}_${blockedSlots.length}'),
             child: TableCalendar<Object>(
             locale: 'fr_FR',
             calendarFormat: CalendarFormat.month,
