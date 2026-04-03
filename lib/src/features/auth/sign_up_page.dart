@@ -18,6 +18,7 @@ class SignUpPage extends ConsumerStatefulWidget {
 class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _loading = false;
@@ -26,6 +27,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -33,14 +35,20 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   Future<void> _signUp() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
     final password = _passwordController.text;
 
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      _showError('Veuillez remplir tous les champs.');
+      _showError('Veuillez remplir tous les champs obligatoires.');
       return;
     }
     if (password.length < 6) {
       _showError('Le mot de passe doit contenir au moins 6 caractères.');
+      return;
+    }
+    if (phone.isNotEmpty && !_isValidE164(phone)) {
+      _showError(
+          'Format de téléphone invalide. Utilisez le format international : +33612345678');
       return;
     }
 
@@ -60,6 +68,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
             uid: uid,
             displayName: name,
             email: email,
+            phoneE164: phone.isEmpty ? null : phone,
           );
 
       // GoRouter redirect handles navigation.
@@ -70,6 +79,11 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  bool _isValidE164(String phone) {
+    // Must start with + followed by 7–15 digits
+    return RegExp(r'^\+\d{7,15}$').hasMatch(phone);
   }
 
   void _showError(String message) {
@@ -131,6 +145,16 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   autocorrect: false,
                   decoration:
                       const InputDecoration(hintText: 'Adresse email'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    hintText: 'Téléphone (optionnel) — ex : +33612345678',
+                    prefixIcon: Icon(Icons.phone_outlined, color: AppColors.icons),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(

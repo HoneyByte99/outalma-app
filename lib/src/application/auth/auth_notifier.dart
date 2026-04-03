@@ -83,11 +83,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String uid,
     required String displayName,
     required String email,
+    String? phoneE164,
   }) async {
     final user = AppUser(
       id: uid,
       displayName: displayName,
       email: email,
+      phoneE164: phoneE164,
       country: 'FR',
       activeMode: ActiveMode.client,
       createdAt: DateTime.now(),
