@@ -40,7 +40,10 @@ class AvatarUploadService {
     final ref = _storage.ref('private/users/$_uid/avatar/profile.jpg');
     await ref.putData(bytes, SettableMetadata(contentType: contentType));
 
-    return ref.getDownloadURL();
+    final url = await ref.getDownloadURL();
+    // ignore: avoid_print
+    print('[AvatarUpload] download URL: $url');
+    return url;
   }
 
   String _mimeType(String path) {
