@@ -70,7 +70,9 @@ class _DetailContent extends ConsumerWidget {
         bottomBar = _MarkInProgressBar(booking: booking);
       }
     } else if (uid == booking.customerId) {
-      if (booking.status == BookingStatus.inProgress) {
+      if (booking.status == BookingStatus.requested) {
+        bottomBar = _CancelBookingBar(booking: booking);
+      } else if (booking.status == BookingStatus.inProgress) {
         bottomBar = _ConfirmDoneBar(booking: booking);
       }
     }
@@ -899,6 +901,92 @@ class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
                 ),
               )
             : const Text('Démarrer le service'),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Client: cancel booking bar (status == requested)
+// ---------------------------------------------------------------------------
+
+class _CancelBookingBar extends ConsumerStatefulWidget {
+  const _CancelBookingBar({required this.booking});
+  final Booking booking;
+
+  @override
+  ConsumerState<_CancelBookingBar> createState() => _CancelBookingBarState();
+}
+
+class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
+  bool _loading = false;
+
+  Future<void> _cancel() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Annuler la demande ?'),
+        content: const Text('Cette action est irr\u00e9versible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Non'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: context.oc.error,
+              minimumSize: Size.zero,
+            ),
+            child: const Text('Oui, annuler'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(cancelBookingUseCaseProvider)
+          .call(widget.booking.id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Impossible d\'annuler. R\u00e9essayez.'),
+            backgroundColor: context.oc.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+        child: OutlinedButton(
+          onPressed: _loading ? null : _cancel,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: oc.error,
+            side: BorderSide(color: oc.error),
+          ),
+          child: _loading
+              ? SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: oc.error,
+                  ),
+                )
+              : const Text('Annuler la demande'),
+        ),
       ),
     );
   }
