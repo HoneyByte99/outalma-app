@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -36,13 +34,26 @@ class AvatarUploadService {
 
     if (file == null) return null;
 
+    final bytes = await file.readAsBytes();
+    final contentType = _mimeType(file.path);
+
     final ref = _storage.ref('private/users/$_uid/avatar/profile.jpg');
-    await ref.putFile(
-      File(file.path),
-      SettableMetadata(contentType: 'image/jpeg'),
-    );
+    await ref.putData(bytes, SettableMetadata(contentType: contentType));
 
     return ref.getDownloadURL();
+  }
+
+  String _mimeType(String path) {
+    switch (path.split('.').last.toLowerCase()) {
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/jpeg'; // covers jpg, jpeg, heic (converted by picker)
+    }
   }
 
   /// Deletes the stored avatar file. Ignores errors if the file does not exist.
