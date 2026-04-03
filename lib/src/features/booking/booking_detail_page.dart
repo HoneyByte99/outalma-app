@@ -2,6 +2,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
@@ -14,6 +15,12 @@ import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
+
+String _formatSchedule(DateTime dt) {
+  final dateFmt = DateFormat('EEE d MMMM yyyy', 'fr_FR');
+  final timeFmt = DateFormat('HH:mm', 'fr_FR');
+  return '${dateFmt.format(dt)} \u00e0 ${timeFmt.format(dt)}';
+}
 
 class BookingDetailPage extends ConsumerWidget {
   const BookingDetailPage({super.key, required this.bookingId});
@@ -118,13 +125,22 @@ class _DetailContent extends ConsumerWidget {
           const SizedBox(height: 16),
 
           // ---- Schedule ----
-          if (booking.schedule != null) ...[
+          if (booking.scheduledAt != null) ...[
+            _Section(
+              title: 'Créneau',
+              child: _InfoRow(
+                icon: Icons.calendar_today_outlined,
+                label: _formatSchedule(booking.scheduledAt!),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ] else if (booking.schedule != null) ...[
             _Section(
               title: 'Créneau',
               child: _InfoRow(
                 icon: Icons.calendar_today_outlined,
                 label: booking.schedule!['description'] as String? ??
-                    'Non précisé',
+                    'Non pr\u00e9cis\u00e9',
               ),
             ),
             const SizedBox(height: 16),
