@@ -8,8 +8,10 @@ import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/chat/chat_providers.dart';
+import '../../application/user/user_providers.dart';
 import '../../domain/enums/message_type.dart';
 import '../../domain/models/chat_message.dart';
+import '../shared/user_avatar.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key, required this.chatId});
@@ -158,6 +160,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     );
                   },
                 );
+
               },
             ),
           ),
@@ -178,7 +181,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 // Message bubble
 // ---------------------------------------------------------------------------
 
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends ConsumerWidget {
   const _MessageBubble({
     required this.message,
     required this.isMe,
@@ -190,7 +193,7 @@ class _MessageBubble extends StatelessWidget {
   final String? myUid;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
     final bg = isMe ? oc.primary : oc.surface;
     final fg = isMe ? oc.surface : oc.primaryText;
@@ -231,50 +234,78 @@ class _MessageBubble extends StatelessWidget {
     final bool isRead =
         isMe && message.readBy.any((uid) => uid != myUid);
 
+    // For received messages, resolve sender profile for the avatar.
+    final senderAsync = !isMe
+        ? ref.watch(userByIdProvider(message.senderId))
+        : null;
+    final sender = senderAsync?.valueOrNull;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: align,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.72,
+          // Sender avatar — only for received messages
+          if (!isMe) ...[
+            UserAvatar(
+              displayName: sender?.displayName ?? '',
+              photoPath: sender?.photoPath,
+              radius: 14,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: radius,
-              border: isMe ? null : Border.all(color: oc.border),
-            ),
-            child: Text(
-              message.text ?? '',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: fg,
-                    height: 1.4,
-                  ),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+            const SizedBox(width: 8),
+          ],
+
+          // Bubble + timestamp
+          Column(
+            crossAxisAlignment: align,
             children: [
-              Text(
-                _formatTime(message.createdAt),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      color: oc.icons,
-                    ),
-              ),
-              if (isMe) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  isRead ? Icons.done_all : Icons.done,
-                  size: 14,
-                  color: isRead ? oc.primary : oc.icons,
+              Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.65,
                 ),
-              ],
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: radius,
+                  border: isMe ? null : Border.all(color: oc.border),
+                ),
+                child: Text(
+                  message.text ?? '',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: fg,
+                        height: 1.4,
+                      ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTime(message.createdAt),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                          color: oc.icons,
+                        ),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      isRead ? Icons.done_all : Icons.done,
+                      size: 14,
+                      color: isRead ? oc.primary : oc.icons,
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
+
+          // Spacer on the right for sent messages to keep timestamp aligned
+          if (isMe) const SizedBox(width: 36),
         ],
       ),
     );

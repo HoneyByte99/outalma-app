@@ -9,8 +9,10 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/booking/booking_providers.dart';
 import '../../application/chat/chat_providers.dart';
+import '../../application/user/user_providers.dart';
 import '../../domain/models/chat.dart';
 import '../../domain/models/chat_message.dart';
+import '../shared/user_avatar.dart';
 
 class ChatsListPage extends ConsumerWidget {
   const ChatsListPage({super.key});
@@ -82,6 +84,13 @@ class _ChatTile extends ConsumerWidget {
         lastMsg.senderId != myUid &&
         !lastMsg.readBy.contains(myUid);
 
+    // Resolve the other participant's profile.
+    final otherUid = chat.participantIds
+        .firstWhere((id) => id != myUid, orElse: () => '');
+    final otherUserAsync =
+        otherUid.isNotEmpty ? ref.watch(userByIdProvider(otherUid)) : null;
+    final otherUser = otherUserAsync?.valueOrNull;
+
     return InkWell(
       onTap: () => context.push(AppRoutes.chat(chat.id)),
       child: Padding(
@@ -89,18 +98,10 @@ class _ChatTile extends ConsumerWidget {
         child: Row(
           children: [
             // Avatar
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: oc.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.person_outline_rounded,
-                color: oc.primary,
-                size: 26,
-              ),
+            UserAvatar(
+              displayName: otherUser?.displayName ?? '',
+              photoPath: otherUser?.photoPath,
+              radius: 26,
             ),
             const SizedBox(width: 14),
 

@@ -77,6 +77,36 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
+  /// Updates mutable profile fields for the current user.
+  /// Performs an optimistic local update and reverts on failure.
+  Future<void> updateProfile({
+    required String displayName,
+    String? phoneE164,
+    String? country,
+    String? photoPath,
+  }) async {
+    final current = state.valueOrNull;
+    if (current is! AuthAuthenticated) return;
+
+    final updated = current.user.copyWith(
+      displayName: displayName,
+      phoneE164: phoneE164 ?? current.user.phoneE164,
+      country: country ?? current.user.country,
+      photoPath: photoPath ?? current.user.photoPath,
+    );
+
+    // Optimistic local update.
+    state = AsyncData(AuthAuthenticated(updated));
+
+    try {
+      await ref.read(userRepositoryProvider).upsert(updated);
+    } catch (_) {
+      // Revert on failure.
+      state = AsyncData(current);
+      rethrow;
+    }
+  }
+
   /// Persist a user doc immediately after FirebaseAuth account creation,
   /// so displayName is set before authStateChanges fires.
   Future<void> createUserDoc({

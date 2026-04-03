@@ -6,8 +6,10 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../application/user/user_providers.dart';
+import '../../data/services/avatar_upload_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_user.dart';
+import '../shared/user_avatar.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -32,12 +34,18 @@ class ProfilePage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (user != null) _UserHeader(user: user),
+            if (user != null) _EditableUserHeader(user: user),
             const SizedBox(height: 28),
             const _SectionLabel(label: 'Mode actif'),
             const SizedBox(height: 12),
             const _ModeToggle(),
             const SizedBox(height: 28),
+            if (user != null) ...[
+              const _SectionLabel(label: 'Informations'),
+              const SizedBox(height: 12),
+              _ProfileForm(user: user),
+              const SizedBox(height: 28),
+            ],
             const _SectionLabel(label: 'Apparence'),
             const SizedBox(height: 12),
             const _ThemeSelector(),
@@ -53,18 +61,55 @@ class ProfilePage extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// User header
+// Editable user header (avatar tap-to-change)
 // ---------------------------------------------------------------------------
 
-class _UserHeader extends StatelessWidget {
-  const _UserHeader({required this.user});
+class _EditableUserHeader extends ConsumerStatefulWidget {
+  const _EditableUserHeader({required this.user});
 
   final AppUser user;
 
   @override
+  ConsumerState<_EditableUserHeader> createState() =>
+      _EditableUserHeaderState();
+}
+
+class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
+  bool _uploading = false;
+
+  Future<void> _pickAvatar() async {
+    final service = ref.read(avatarUploadServiceProvider);
+    if (service == null) return;
+
+    setState(() => _uploading = true);
+    try {
+      final url = await service.pickAndUpload();
+      if (url == null) return; // user cancelled
+
+      await ref
+          .read(authNotifierProvider.notifier)
+          .updateProfile(
+            displayName: widget.user.displayName,
+            photoPath: url,
+          );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Impossible de mettre à jour la photo.'),
+            backgroundColor: context.oc.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    final initials = _initials(user.displayName);
+    final user = widget.user;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -75,23 +120,50 @@ class _UserHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: oc.primary,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initials,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
+          // Tappable avatar with camera overlay
+          GestureDetector(
+            onTap: _uploading ? null : _pickAvatar,
+            child: Stack(
+              children: [
+                _uploading
+                    ? SizedBox(
+                        width: 60,
+                        height: 60,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: oc.primary,
+                        ),
+                      )
+                    : UserAvatar(
+                        displayName: user.displayName,
+                        photoPath: user.photoPath,
+                        radius: 30,
+                      ),
+                if (!_uploading)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: oc.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: oc.surface, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        size: 11,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
+              ],
             ),
           ),
+
           const SizedBox(width: 16),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,11 +213,321 @@ class _UserHeader extends StatelessWidget {
   }
 }
 
-String _initials(String name) {
-  final parts = name.trim().split(' ');
-  if (parts.isEmpty) return '?';
-  if (parts.length == 1) return parts[0][0].toUpperCase();
-  return '${parts[0][0]}${parts.last[0]}'.toUpperCase();
+// ---------------------------------------------------------------------------
+// Profile edit form
+// ---------------------------------------------------------------------------
+
+class _ProfileForm extends ConsumerStatefulWidget {
+  const _ProfileForm({required this.user});
+
+  final AppUser user;
+
+  @override
+  ConsumerState<_ProfileForm> createState() => _ProfileFormState();
+}
+
+class _ProfileFormState extends ConsumerState<_ProfileForm> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _phoneCtrl;
+  late String _country;
+  bool _saving = false;
+
+  static const _countries = [
+    ('FR', 'France'),
+    ('SN', 'Sénégal'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.user.displayName);
+    _phoneCtrl = TextEditingController(text: widget.user.phoneE164 ?? '');
+    _country = widget.user.country;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(authNotifierProvider.notifier).updateProfile(
+            displayName: _nameCtrl.text.trim(),
+            phoneE164:
+                _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+            country: _country,
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil mis à jour.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Impossible de sauvegarder. Réessayez.'),
+            backgroundColor: context.oc.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return Container(
+      decoration: BoxDecoration(
+        color: oc.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: oc.border),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Email — read-only
+            _ReadOnlyField(
+              label: 'Email',
+              value: widget.user.email,
+              icon: Icons.lock_outline_rounded,
+            ),
+            const SizedBox(height: 14),
+
+            // Display name
+            TextFormField(
+              controller: _nameCtrl,
+              textCapitalization: TextCapitalization.words,
+              decoration: _inputDecoration(
+                context,
+                label: 'Nom complet',
+                icon: Icons.person_outline_rounded,
+              ),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Champ requis' : null,
+            ),
+            const SizedBox(height: 14),
+
+            // Phone
+            TextFormField(
+              controller: _phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: _inputDecoration(
+                context,
+                label: 'Téléphone (optionnel)',
+                icon: Icons.phone_outlined,
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Country picker
+            _CountryPicker(
+              selected: _country,
+              countries: _countries,
+              onChanged: (v) => setState(() => _country = v),
+            ),
+            const SizedBox(height: 20),
+
+            // Save button
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              style: FilledButton.styleFrom(
+                backgroundColor: oc.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: _saving
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Enregistrer',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReadOnlyField extends StatelessWidget {
+  const _ReadOnlyField({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: oc.secondaryText,
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            color: oc.surfaceVariant,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: oc.border),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: oc.icons),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: oc.secondaryText,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CountryPicker extends StatelessWidget {
+  const _CountryPicker({
+    required this.selected,
+    required this.countries,
+    required this.onChanged,
+  });
+
+  final String selected;
+  final List<(String, String)> countries;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pays',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: oc.secondaryText,
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: countries.map((entry) {
+            final (code, label) = entry;
+            final isSelected = code == selected;
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: code == countries.last.$1 ? 0 : 8,
+                ),
+                child: GestureDetector(
+                  onTap: () => onChanged(code),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? oc.primary.withValues(alpha: 0.08)
+                          : oc.surfaceVariant,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected ? oc.primary : oc.border,
+                        width: isSelected ? 1.5 : 1,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: isSelected ? oc.primary : oc.primaryText,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                          ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+InputDecoration _inputDecoration(
+  BuildContext context, {
+  required String label,
+  required IconData icon,
+}) {
+  final oc = context.oc;
+  return InputDecoration(
+    labelText: label,
+    prefixIcon: Icon(icon, size: 18, color: oc.icons),
+    filled: true,
+    fillColor: oc.inputFill,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: oc.border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: oc.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: oc.primary, width: 1.5),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: oc.error),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: oc.error, width: 1.5),
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------

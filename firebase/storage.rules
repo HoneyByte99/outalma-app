@@ -42,10 +42,12 @@ service firebase.storage {
       );
     }
 
-    // User avatars (private)
+    // User avatars
     // Path: /private/users/{uid}/avatar/{filename}
+    // Read is open to any authenticated user so chat participants can display
+    // each other's profile photos. Write is restricted to the owner.
     match /private/users/{uid}/avatar/{filename} {
-      allow read: if isAdmin() || isSelf(uid);
+      allow read: if signedIn();
       allow write: if isAdmin() || (isSelf(uid) && isImage() && smallEnough(5 * 1024 * 1024));
     }
 
