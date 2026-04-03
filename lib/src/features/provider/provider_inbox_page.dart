@@ -47,6 +47,13 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
               'Missions',
               style: Theme.of(context).textTheme.titleLarge,
             ),
+            actions: [
+              IconButton(
+                onPressed: () => context.push(AppRoutes.providerCalendar),
+                icon: const Icon(Icons.calendar_month_outlined),
+                tooltip: 'Mon calendrier',
+              ),
+            ],
             bottom: TabBar(
               controller: _tabController,
               tabs: const [

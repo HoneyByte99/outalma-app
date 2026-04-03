@@ -10,6 +10,7 @@ import '../domain/enums/active_mode.dart';
 import '../features/auth/sign_in_page.dart';
 import '../features/auth/sign_up_page.dart';
 import '../features/booking/booking_detail_page.dart';
+import '../features/provider/provider_calendar_page.dart';
 import '../features/booking/booking_list_page.dart';
 import '../features/chat/chat_page.dart';
 import '../features/chat/chats_list_page.dart';
@@ -40,6 +41,7 @@ abstract final class AppRoutes {
   static const providerInbox = '/provider/inbox';
   static const providerOnboarding = '/provider/onboarding';
   static const serviceNew = '/provider/services/new';
+  static const providerCalendar = '/provider/calendar';
 
   static String serviceDetail(String serviceId) => '/service/$serviceId';
   static String bookingDetail(String bookingId) => '/bookings/$bookingId';
@@ -168,6 +170,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.providerOnboarding,
         name: 'provider-onboarding',
         builder: (_, __) => const ProviderOnboardingPage(),
+      ),
+
+      // ---- Provider calendar (outside shell) ----
+      GoRoute(
+        path: AppRoutes.providerCalendar,
+        name: 'provider-calendar',
+        builder: (_, __) => const ProviderCalendarPage(),
       ),
 
       // ---- Service form — new (outside shell) ----
