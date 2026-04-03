@@ -72,5 +72,7 @@
 		<string>Utilisé pour choisir votre photo de profil.</string>
 		<key>NSCameraUsageDescription</key>
 		<string>Utilisé pour prendre une photo de profil.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Utilisé pour afficher les services près de vous.</string>
 	</dict>
 </plist>
