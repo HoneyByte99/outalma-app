@@ -19,6 +19,22 @@ class FirestoreChatRepository implements ChatRepository {
   }
 
   @override
+  Stream<List<Chat>> watchForUser(String uid) {
+    return FirestoreCollections.chats(_db)
+        .where('participantIds', arrayContains: uid)
+        .snapshots()
+        .map((qs) {
+      final list = qs.docs.map((d) => d.data()).toList();
+      list.sort((a, b) {
+        final aTime = a.lastMessageAt ?? a.createdAt;
+        final bTime = b.lastMessageAt ?? b.createdAt;
+        return bTime.compareTo(aTime);
+      });
+      return list;
+    });
+  }
+
+  @override
   Stream<List<ChatMessage>> watchMessages({
     required String chatId,
     int limit = 50,

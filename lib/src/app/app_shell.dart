@@ -12,41 +12,49 @@ import 'app_theme.dart';
 
 /// Shell scaffold with mode-aware bottom navigation.
 ///
-/// Client mode  → Tab 0: Accueil  | Tab 1: Réservations
-/// Provider mode → Tab 0: Tableau de bord | Tab 1: Demandes
+/// Client mode   → Tab 0: Accueil | Tab 1: Réservations | Tab 2: Chats
+/// Provider mode → Tab 0: Dashboard | Tab 1: Missions  | Tab 2: Chats
 ///
-/// The router has 4 branches (0=home, 1=bookings, 2=provider, 3=inbox).
-/// In client mode we expose branches 0+1; in provider mode branches 2+3.
+/// Branch layout in the router:
+///   0 = client home, 1 = client bookings,
+///   2 = provider dashboard, 3 = provider inbox,
+///   4 = chats (shared)
+///
+/// Logical tab → branch index mapping:
+///   Client:   0→0, 1→1, 2→4
+///   Provider: 0→2, 1→3, 2→4
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
 
+  // Maps logical tab index to router branch index per mode.
+  static const _clientBranches = [0, 1, 4];
+  static const _providerBranches = [2, 3, 4];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Initialize FCM token registration (no-op if not yet authenticated).
     ref.watch(notificationInitProvider);
 
-    final isProvider =
-        ref.watch(activeModeProvider) == ActiveMode.provider;
+    final isProvider = ref.watch(activeModeProvider) == ActiveMode.provider;
+    final branches = isProvider ? _providerBranches : _clientBranches;
 
-    // Badge counts
-    final providerInboxCount =
-        ref.watch(providerInboxProvider).valueOrNull?.length ?? 0;
-    final clientActiveCount =
-        ref.watch(clientActiveBookingsCountProvider);
-
-    // Map logical tab (0/1) to actual branch index.
-    final branchOffset = isProvider ? 2 : 0;
-    final currentLogical = (shell.currentIndex - branchOffset).clamp(0, 1);
+    // Find which logical tab corresponds to the current branch.
+    final currentBranch = shell.currentIndex;
+    final currentLogical = branches.indexOf(currentBranch).clamp(0, 2);
 
     void onTap(int logicalIndex) {
-      final branchIndex = logicalIndex + branchOffset;
+      final branchIndex = branches[logicalIndex];
       shell.goBranch(
         branchIndex,
         initialLocation: branchIndex == shell.currentIndex,
       );
     }
+
+    // Badge counts
+    final providerInboxCount =
+        ref.watch(providerInboxProvider).valueOrNull?.length ?? 0;
+    final clientActiveCount = ref.watch(clientActiveBookingsCountProvider);
 
     final items = isProvider
         ? _providerNavItems(providerInboxCount)
@@ -85,15 +93,14 @@ List<BottomNavigationBarItem> _clientNavItems(int activeCount) {
       label: 'Accueil',
     ),
     BottomNavigationBarItem(
-      icon: _BadgedIcon(
-        count: activeCount,
-        icon: Icons.calendar_today_outlined,
-      ),
-      activeIcon: _BadgedIcon(
-        count: activeCount,
-        icon: Icons.calendar_today_rounded,
-      ),
+      icon: _BadgedIcon(count: activeCount, icon: Icons.calendar_today_outlined),
+      activeIcon: _BadgedIcon(count: activeCount, icon: Icons.calendar_today_rounded),
       label: 'Réservations',
+    ),
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.chat_bubble_outline_rounded),
+      activeIcon: Icon(Icons.chat_bubble_rounded),
+      label: 'Chats',
     ),
   ];
 }
@@ -103,18 +110,17 @@ List<BottomNavigationBarItem> _providerNavItems(int inboxCount) {
     const BottomNavigationBarItem(
       icon: Icon(Icons.dashboard_outlined),
       activeIcon: Icon(Icons.dashboard_rounded),
-      label: 'Tableau de bord',
+      label: 'Dashboard',
     ),
     BottomNavigationBarItem(
-      icon: _BadgedIcon(
-        count: inboxCount,
-        icon: Icons.inbox_outlined,
-      ),
-      activeIcon: _BadgedIcon(
-        count: inboxCount,
-        icon: Icons.inbox_rounded,
-      ),
-      label: 'Demandes',
+      icon: _BadgedIcon(count: inboxCount, icon: Icons.inbox_outlined),
+      activeIcon: _BadgedIcon(count: inboxCount, icon: Icons.inbox_rounded),
+      label: 'Missions',
+    ),
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.chat_bubble_outline_rounded),
+      activeIcon: Icon(Icons.chat_bubble_rounded),
+      label: 'Chats',
     ),
   ];
 }
@@ -133,10 +139,7 @@ class _BadgedIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return Badge(
       isLabelVisible: count > 0,
-      label: Text(
-        '$count',
-        style: const TextStyle(fontSize: 10),
-      ),
+      label: Text('$count', style: const TextStyle(fontSize: 10)),
       child: Icon(icon),
     );
   }
@@ -157,10 +160,7 @@ class BellIconButton extends ConsumerWidget {
       onPressed: () => context.push('/notifications'),
       icon: Badge(
         isLabelVisible: unreadCount > 0,
-        label: Text(
-          '$unreadCount',
-          style: const TextStyle(fontSize: 10),
-        ),
+        label: Text('$unreadCount', style: const TextStyle(fontSize: 10)),
         child: const Icon(Icons.notifications_outlined),
       ),
     );

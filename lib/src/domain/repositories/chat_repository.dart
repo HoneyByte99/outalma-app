@@ -4,6 +4,9 @@ import '../models/chat_message.dart';
 abstract interface class ChatRepository {
   Stream<Chat?> watchChat(String chatId);
 
+  /// Watches all chats where [uid] is a participant, ordered by lastMessageAt.
+  Stream<List<Chat>> watchForUser(String uid);
+
   Stream<List<ChatMessage>> watchMessages({
     required String chatId,
     int limit = 50,

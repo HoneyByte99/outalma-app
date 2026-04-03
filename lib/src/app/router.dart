@@ -12,6 +12,7 @@ import '../features/auth/sign_up_page.dart';
 import '../features/booking/booking_detail_page.dart';
 import '../features/booking/booking_list_page.dart';
 import '../features/chat/chat_page.dart';
+import '../features/chat/chats_list_page.dart';
 import '../features/home/home_page.dart';
 import '../features/provider/provider_dashboard_page.dart';
 import '../features/provider/provider_inbox_page.dart';
@@ -48,6 +49,7 @@ abstract final class AppRoutes {
 
   // Parameterised helpers
   static const notifications = '/notifications';
+  static const chatsList = '/chats';
 
   static String chat(String chatId) => '/chat/$chatId';
   static String review(String bookingId) => '/review/$bookingId';
@@ -96,11 +98,13 @@ class RouterNotifier extends ChangeNotifier {
               loc == AppRoutes.home || loc == AppRoutes.bookings;
           final isProviderTab = loc == AppRoutes.providerHome ||
               loc == AppRoutes.providerInbox;
+          // /chats is shared between modes — never redirect away from it.
+          final isSharedTab = loc == AppRoutes.chatsList;
 
-          if (mode == ActiveMode.provider && isClientTab) {
+          if (!isSharedTab && mode == ActiveMode.provider && isClientTab) {
             return AppRoutes.providerHome;
           }
-          if (mode == ActiveMode.client && isProviderTab) {
+          if (!isSharedTab && mode == ActiveMode.client && isProviderTab) {
             return AppRoutes.home;
           }
         }
@@ -165,7 +169,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // ---- App shell with bottom nav (4 branches) ----
+      // ---- App shell with bottom nav (5 branches) ----
+      // Branch indices: 0=client home, 1=client bookings, 2=provider dashboard,
+      // 3=provider inbox, 4=chats (shared between modes).
+      // AppShell maps logical tab index to branch index per mode.
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
@@ -227,6 +234,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+
+          // Branch 4 — Chats (shared between client and provider modes)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.chatsList,
+                name: 'chats-list',
+                builder: (_, __) => const ChatsListPage(),
               ),
             ],
           ),
