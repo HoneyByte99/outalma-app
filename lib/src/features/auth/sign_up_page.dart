@@ -8,6 +8,7 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
+import '../shared/phone_field.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
@@ -19,8 +20,8 @@ class SignUpPage extends ConsumerStatefulWidget {
 class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _phone; // E.164 from PhoneField
   bool _obscurePassword = true;
   bool _loading = false;
 
@@ -28,7 +29,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -36,7 +36,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   Future<void> _signUp() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    final phone = _phoneController.text.trim();
     final password = _passwordController.text;
 
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
@@ -45,11 +44,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     }
     if (password.length < 6) {
       _showError('Le mot de passe doit contenir au moins 6 caractères.');
-      return;
-    }
-    if (phone.isNotEmpty && !_isValidE164(phone)) {
-      _showError(
-          'Format de téléphone invalide. Utilisez le format international : +33612345678');
       return;
     }
 
@@ -66,7 +60,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
             uid: credential.user!.uid,
             displayName: name,
             email: email,
-            phoneE164: phone.isEmpty ? null : phone,
+            phoneE164: _phone,
           );
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e.code));
@@ -76,9 +70,6 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       if (mounted) setState(() => _loading = false);
     }
   }
-
-  bool _isValidE164(String phone) =>
-      RegExp(r'^\+\d{7,15}$').hasMatch(phone);
 
   void _showError(String message) {
     if (!mounted) return;
@@ -163,14 +154,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
+                PhoneField(
+                  onChanged: (v) => _phone = v,
                   textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    hintText: 'Téléphone (optionnel) — ex : +33612345678',
-                    prefixIcon: Icon(Icons.phone_outlined, size: 20, color: oc.icons),
-                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(

@@ -13,6 +13,7 @@ import '../../data/services/avatar_upload_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_user.dart';
 import '../../domain/models/review.dart';
+import '../shared/phone_field.dart';
 import '../shared/user_avatar.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -247,7 +248,7 @@ class _ProfileForm extends ConsumerStatefulWidget {
 class _ProfileFormState extends ConsumerState<_ProfileForm> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
-  late final TextEditingController _phoneCtrl;
+  late String? _phone; // E.164 from PhoneField
   late String _country;
   bool _saving = false;
 
@@ -260,14 +261,13 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.user.displayName);
-    _phoneCtrl = TextEditingController(text: widget.user.phoneE164 ?? '');
+    _phone = widget.user.phoneE164;
     _country = widget.user.country;
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _phoneCtrl.dispose();
     super.dispose();
   }
 
@@ -277,8 +277,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
     try {
       await ref.read(authNotifierProvider.notifier).updateProfile(
             displayName: _nameCtrl.text.trim(),
-            phoneE164:
-                _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+            phoneE164: _phone,
             country: _country,
           );
       if (mounted) {
@@ -338,14 +337,9 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
             const SizedBox(height: 14),
 
             // Phone
-            TextFormField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              decoration: _inputDecoration(
-                context,
-                label: 'Téléphone (optionnel)',
-                icon: Icons.phone_outlined,
-              ),
+            PhoneField(
+              initialValue: _phone,
+              onChanged: (v) => _phone = v,
             ),
             const SizedBox(height: 14),
 
