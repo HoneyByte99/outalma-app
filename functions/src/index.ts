@@ -246,6 +246,8 @@ export const onMessageCreate = onDocumentCreated(
     const message = event.data?.data() as {
       senderId?: string;
       text?: string;
+      type?: string;
+      mediaUrl?: string;
     } | undefined;
 
     if (!message) return;
@@ -268,7 +270,15 @@ export const onMessageCreate = onDocumentCreated(
     // Notify all participants except the sender
     const recipients = participants.filter(uid => uid !== message.senderId);
     const notifTitle = 'Nouveau message';
-    const notifBody = message.text ?? 'Message reçu';
+    const msgType = message.type as string | undefined;
+    let notifBody: string;
+    if (msgType === 'image') {
+      notifBody = 'A envoy\u00e9 une image \ud83d\udcf7';
+    } else if (msgType === 'voice') {
+      notifBody = 'A envoy\u00e9 un message vocal \ud83c\udfa4';
+    } else {
+      notifBody = (message.text as string | undefined) ?? 'Message re\u00e7u';
+    }
 
     await sendPushToUsers(recipients, {
       title: notifTitle,

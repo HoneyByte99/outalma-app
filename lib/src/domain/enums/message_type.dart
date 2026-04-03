@@ -1,6 +1,7 @@
 enum MessageType {
   text,
   image,
+  voice,
   system;
 
   static MessageType fromString(String value) {

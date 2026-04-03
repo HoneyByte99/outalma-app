@@ -54,6 +54,24 @@ service firebase.storage {
       allow write: if isAdmin() || (isSelf(uid) && isImage() && smallEnough(5 * 1024 * 1024));
     }
 
+    // Chat media (images + voice messages)
+    // Path: /private/chats/{chatId}/media/{filename}
+    match /private/chats/{chatId}/media/{filename} {
+      function isChatParticipant() {
+        return signedIn()
+          && request.auth.uid in
+             firestore.get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
+      }
+
+      allow read: if isAdmin() || isChatParticipant();
+      allow write: if isAdmin() || (
+        isChatParticipant()
+        && (request.resource.contentType.matches('image/.*')
+            || request.resource.contentType.matches('audio/.*'))
+        && smallEnough(20 * 1024 * 1024)
+      );
+    }
+
     // Booking attachments (private to participants)
     // Path: /private/bookings/{bookingId}/attachments/{filename}
     match /private/bookings/{bookingId}/attachments/{filename} {

@@ -134,11 +134,13 @@ service cloud.firestore {
         allow read: if isAdmin() || isParticipantViaChat();
 
         // Create: only participants; senderId must match auth uid
+        // text OR mediaUrl must be present (supports image/voice messages)
         allow create: if isAdmin()
           || (isParticipantViaChat()
               && request.resource.data.senderId == request.auth.uid
               && request.resource.data.createdAt is timestamp
-              && request.resource.data.text is string);
+              && (request.resource.data.text is string
+                  || request.resource.data.mediaUrl is string));
 
         // Read receipt update: participants may only append their own uid to readBy.
         allow update: if isAdmin()
