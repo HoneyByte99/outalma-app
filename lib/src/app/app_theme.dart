@@ -520,13 +520,13 @@ abstract final class AppTheme {
       labelMedium: GoogleFonts.inter(
           fontSize: 13, fontWeight: FontWeight.w500, color: oc.secondaryText),
       labelSmall: GoogleFonts.inter(
-          fontSize: 12, fontWeight: FontWeight.w500, color: oc.secondaryText),
+          fontSize: 13, fontWeight: FontWeight.w500, color: oc.secondaryText),
       bodyLarge: GoogleFonts.inter(
           fontSize: 16, fontWeight: FontWeight.w400, color: oc.primaryText),
       bodyMedium: GoogleFonts.inter(
           fontSize: 14, fontWeight: FontWeight.w400, color: oc.primaryText),
       bodySmall: GoogleFonts.inter(
-          fontSize: 12, fontWeight: FontWeight.w400, color: oc.secondaryText),
+          fontSize: 13, fontWeight: FontWeight.w400, color: oc.secondaryText),
     );
   }
 }

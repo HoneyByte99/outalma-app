@@ -148,7 +148,56 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 4),
+
+                // ---- Forgot password ----
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () async {
+                      final email = _emailController.text.trim();
+                      if (email.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                                'Saisissez votre email pour r\u00e9initialiser.'),
+                            backgroundColor: oc.error,
+                          ),
+                        );
+                        return;
+                      }
+                      try {
+                        await FirebaseAuth.instance
+                            .sendPasswordResetEmail(email: email);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Email de r\u00e9initialisation envoy\u00e9.'),
+                            ),
+                          );
+                        }
+                      } catch (_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                  'Impossible d\'envoyer l\'email. V\u00e9rifiez l\'adresse.'),
+                              backgroundColor: oc.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: Text(
+                      'Mot de passe oubli\u00e9 ?',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: oc.primary,
+                          ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
 
                 // ---- CTA ----
                 _loading

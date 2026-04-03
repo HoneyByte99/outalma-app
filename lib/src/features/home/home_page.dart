@@ -75,10 +75,7 @@ class HomePage extends ConsumerWidget {
         titleSpacing: 0,
         title: const _LocationPill(),
         actions: [
-          _ModeBadge(
-            activeMode: activeMode,
-            onTap: () => context.go(AppRoutes.profile),
-          ),
+          _ModeBadge(activeMode: activeMode),
           const BellIconButton(),
           const SizedBox(width: 4),
         ],
@@ -587,9 +584,9 @@ class _CategoryChipsRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(_selectedCategoryProvider);
 
-    final items = <(String label, CategoryId? value)>[
-      ('Tout', null),
-      ...CategoryId.values.map((c) => (c.label, c)),
+    final items = <(String label, IconData icon, CategoryId? value)>[
+      ('Tout', Icons.apps_outlined, null),
+      ...CategoryId.values.map((c) => (c.label, c.icon, c)),
     ];
 
     return SizedBox(
@@ -600,9 +597,10 @@ class _CategoryChipsRow extends ConsumerWidget {
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
-          final (label, value) = items[i];
+          final (label, icon, value) = items[i];
           final isActive = selected == value;
           return _CategoryChip(
+            icon: icon,
             label: label,
             isActive: isActive,
             onTap: () =>
@@ -616,11 +614,13 @@ class _CategoryChipsRow extends ConsumerWidget {
 
 class _CategoryChip extends StatelessWidget {
   const _CategoryChip({
+    required this.icon,
     required this.label,
     required this.isActive,
     required this.onTap,
   });
 
+  final IconData icon;
   final String label;
   final bool isActive;
   final VoidCallback onTap;
@@ -628,11 +628,12 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final color = isActive ? oc.surface : oc.primaryText;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isActive ? oc.primary : oc.surface,
           borderRadius: BorderRadius.circular(20),
@@ -640,12 +641,19 @@ class _CategoryChip extends StatelessWidget {
             color: isActive ? oc.primary : oc.border,
           ),
         ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: isActive ? oc.surface : oc.primaryText,
-                fontWeight: FontWeight.w600,
-              ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
         ),
       ),
     );
@@ -944,21 +952,31 @@ class _EmptyState extends StatelessWidget {
 // Mode badge
 // ---------------------------------------------------------------------------
 
-class _ModeBadge extends StatelessWidget {
-  const _ModeBadge({required this.activeMode, required this.onTap});
+class _ModeBadge extends ConsumerWidget {
+  const _ModeBadge({required this.activeMode});
 
   final ActiveMode activeMode;
-  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
     final isClient = activeMode == ActiveMode.client;
     final label = isClient ? 'Client' : 'Prestataire';
     final color = isClient ? oc.primary : oc.success;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        final newMode =
+            isClient ? ActiveMode.provider : ActiveMode.client;
+        ref.read(authNotifierProvider.notifier).switchMode(newMode);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(newMode == ActiveMode.client
+                ? 'Mode client activ\u00e9'
+                : 'Mode prestataire activ\u00e9'),
+          ),
+        );
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

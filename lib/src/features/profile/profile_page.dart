@@ -797,7 +797,34 @@ class _AccountSection extends ConsumerWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => ref.read(authNotifierProvider.notifier).signOut(),
+        onTap: () async {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Se d\u00e9connecter ?'),
+              content: const Text(
+                  'Voulez-vous vraiment vous d\u00e9connecter ?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('Annuler'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.oc.error,
+                    foregroundColor: Colors.white,
+                    minimumSize: Size.zero,
+                  ),
+                  child: const Text('D\u00e9connexion'),
+                ),
+              ],
+            ),
+          );
+          if (confirmed == true) {
+            ref.read(authNotifierProvider.notifier).signOut();
+          }
+        },
         child: Padding(
           padding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
