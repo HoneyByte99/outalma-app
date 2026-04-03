@@ -2,10 +2,12 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/booking/booking_providers.dart';
+import '../../application/provider/provider_providers.dart';
 
 class BookingRequestSheet extends ConsumerStatefulWidget {
   const BookingRequestSheet({
@@ -25,16 +27,17 @@ class BookingRequestSheet extends ConsumerStatefulWidget {
 }
 
 class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
-  int _step = 0; // 0-based: 0=message, 1=schedule, 2=address
+  int _step = 0; // 0=message, 1=schedule, 2=address
   bool _loading = false;
 
   final _messageController = TextEditingController();
-  final _scheduleController = TextEditingController();
   final _addressController = TextEditingController();
-
   final _messageFocus = FocusNode();
-  final _scheduleFocus = FocusNode();
   final _addressFocus = FocusNode();
+
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+  String? _scheduleConflict; // warning message if slot is busy
 
   @override
   void initState() {
@@ -48,12 +51,22 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   void dispose() {
     _messageController.removeListener(_onMessageChanged);
     _messageController.dispose();
-    _scheduleController.dispose();
     _addressController.dispose();
     _messageFocus.dispose();
-    _scheduleFocus.dispose();
     _addressFocus.dispose();
     super.dispose();
+  }
+
+  DateTime? get _scheduledAt {
+    if (_selectedDate == null) return null;
+    final time = _selectedTime ?? const TimeOfDay(hour: 9, minute: 0);
+    return DateTime(
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+      time.hour,
+      time.minute,
+    );
   }
 
   bool get _canAdvance {
@@ -77,7 +90,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         providerId: widget.providerId,
         serviceId: widget.serviceId,
         requestMessage: _messageController.text.trim(),
-        schedule: _scheduleController.text.trim(),
+        scheduledAt: _scheduledAt,
         address: _addressController.text.trim(),
       );
       if (mounted) {
@@ -109,6 +122,88 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 90)),
+      locale: const Locale('fr'),
+    );
+    if (picked != null && mounted) {
+      setState(() => _selectedDate = picked);
+      _checkConflict();
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? const TimeOfDay(hour: 9, minute: 0),
+    );
+    if (picked != null && mounted) {
+      setState(() => _selectedTime = picked);
+      _checkConflict();
+    }
+  }
+
+  void _checkConflict() {
+    final dt = _scheduledAt;
+    if (dt == null) {
+      setState(() => _scheduleConflict = null);
+      return;
+    }
+
+    // Check provider's existing bookings for this day
+    final bookingsAsync = ref.read(
+      providerBookingsForDateProvider((
+        providerId: widget.providerId,
+        date: dt,
+      )),
+    );
+
+    final blockedAsync = ref.read(
+      blockedSlotsForProviderProvider(widget.providerId),
+    );
+
+    String? conflict;
+
+    // Check bookings
+    final bookings = bookingsAsync.valueOrNull ?? [];
+    for (final b in bookings) {
+      if (b.scheduledAt != null) {
+        final diff = (b.scheduledAt!.difference(dt).inMinutes).abs();
+        if (diff < 120) {
+          conflict = 'Le prestataire a d\u00e9j\u00e0 un RDV pr\u00e9vu \u00e0 cette heure.';
+          break;
+        }
+      }
+    }
+
+    // Check blocked slots
+    if (conflict == null) {
+      final slots = blockedAsync.valueOrNull ?? [];
+      for (final slot in slots) {
+        if (slot.isFullDay &&
+            slot.date.year == dt.year &&
+            slot.date.month == dt.month &&
+            slot.date.day == dt.day) {
+          conflict = 'Le prestataire est indisponible ce jour.';
+          break;
+        }
+        if (slot.endDate != null &&
+            dt.isAfter(slot.date) &&
+            dt.isBefore(slot.endDate!)) {
+          conflict = 'Le prestataire est indisponible sur ce cr\u00e9neau.';
+          break;
+        }
+      }
+    }
+
+    setState(() => _scheduleConflict = conflict);
   }
 
   @override
@@ -230,7 +325,12 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         return _StepMessage(controller: _messageController, focus: _messageFocus);
       case 1:
         return _StepSchedule(
-            controller: _scheduleController, focus: _scheduleFocus);
+          selectedDate: _selectedDate,
+          selectedTime: _selectedTime,
+          conflictMessage: _scheduleConflict,
+          onPickDate: _pickDate,
+          onPickTime: _pickTime,
+        );
       case 2:
         return _StepAddress(
             controller: _addressController, focus: _addressFocus);
@@ -320,39 +420,139 @@ class _StepMessage extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _StepSchedule extends StatelessWidget {
-  const _StepSchedule({required this.controller, required this.focus});
+  const _StepSchedule({
+    required this.selectedDate,
+    required this.selectedTime,
+    required this.conflictMessage,
+    required this.onPickDate,
+    required this.onPickTime,
+  });
 
-  final TextEditingController controller;
-  final FocusNode focus;
+  final DateTime? selectedDate;
+  final TimeOfDay? selectedTime;
+  final String? conflictMessage;
+  final VoidCallback onPickDate;
+  final VoidCallback onPickTime;
 
   @override
   Widget build(BuildContext context) {
+    final oc = context.oc;
+    final dateFmt = DateFormat('EEE d MMMM yyyy', 'fr_FR');
+    final dateLabel = selectedDate != null
+        ? dateFmt.format(selectedDate!)
+        : 'Choisir une date';
+    final timeLabel = selectedTime != null
+        ? '${selectedTime!.hour.toString().padLeft(2, '0')}h${selectedTime!.minute.toString().padLeft(2, '0')}'
+        : 'Choisir une heure';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Créneau souhaité',
+          'Date et heure souhaitées',
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 4),
         Text(
-          'Indiquez vos disponibilités (optionnel).',
+          'Sélectionnez un créneau (optionnel).',
           style: Theme.of(context)
               .textTheme
               .bodySmall
-              ?.copyWith(color: context.oc.secondaryText),
+              ?.copyWith(color: oc.secondaryText),
         ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: controller,
-          focusNode: focus,
-          autofocus: true,
-          textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(
-            hintText: 'Ex: Lundi matin, semaine du 15 avril',
+        const SizedBox(height: 16),
+
+        // Date picker button
+        _PickerButton(
+          icon: Icons.calendar_today_outlined,
+          label: dateLabel,
+          filled: selectedDate != null,
+          onTap: onPickDate,
+        ),
+        const SizedBox(height: 10),
+
+        // Time picker button
+        _PickerButton(
+          icon: Icons.access_time_outlined,
+          label: timeLabel,
+          filled: selectedTime != null,
+          onTap: onPickTime,
+        ),
+
+        // Conflict warning
+        if (conflictMessage != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: oc.warning.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: oc.warning.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, size: 18, color: oc.warning),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    conflictMessage!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.warning,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _PickerButton extends StatelessWidget {
+  const _PickerButton({
+    required this.icon,
+    required this.label,
+    required this.filled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool filled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: filled ? oc.primary.withValues(alpha: 0.06) : oc.inputFill,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: filled ? oc.primary.withValues(alpha: 0.3) : oc.border,
           ),
         ),
-      ],
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: filled ? oc.primary : oc.icons),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: filled ? oc.primary : oc.secondaryText,
+                    fontWeight: filled ? FontWeight.w500 : FontWeight.w400,
+                  ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

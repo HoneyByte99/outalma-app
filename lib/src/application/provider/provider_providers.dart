@@ -92,3 +92,24 @@ final blockedSlotsForProviderProvider =
     StreamProvider.family<List<BlockedSlot>, String>((ref, uid) {
   return ref.watch(providerRepositoryProvider).watchBlockedSlots(uid);
 });
+
+/// Bookings for a specific provider on a specific date (accepted/in_progress).
+final providerBookingsForDateProvider = StreamProvider.family<List<Booking>,
+    ({String providerId, DateTime date})>((ref, params) {
+  return ref
+      .watch(bookingRepositoryProvider)
+      .watchForProvider(params.providerId)
+      .map((list) => list.where((b) {
+            if (b.scheduledAt == null) {
+              return false;
+            }
+            if (b.status != BookingStatus.accepted &&
+                b.status != BookingStatus.inProgress &&
+                b.status != BookingStatus.requested) {
+              return false;
+            }
+            return b.scheduledAt!.year == params.date.year &&
+                b.scheduledAt!.month == params.date.month &&
+                b.scheduledAt!.day == params.date.day;
+          }).toList());
+});
