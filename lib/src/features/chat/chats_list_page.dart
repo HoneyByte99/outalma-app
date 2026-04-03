@@ -10,31 +10,59 @@ import '../../application/auth/auth_state.dart';
 import '../../application/booking/booking_providers.dart';
 import '../../application/chat/chat_providers.dart';
 import '../../application/user/user_providers.dart';
+import '../../domain/enums/booking_status.dart';
 import '../../domain/models/chat.dart';
 import '../../domain/models/chat_message.dart';
 import '../shared/user_avatar.dart';
 
-class ChatsListPage extends ConsumerWidget {
+class ChatsListPage extends ConsumerStatefulWidget {
   const ChatsListPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChatsListPage> createState() => _ChatsListPageState();
+}
+
+class _ChatsListPageState extends ConsumerState<ChatsListPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final oc = context.oc;
     final chatsAsync = ref.watch(chatsForModeProvider);
 
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Chats'),
+        title: const Text('Messages'),
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
         actions: const [BellIconButton()],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'En cours'),
+            Tab(text: 'Termin\u00e9es'),
+          ],
+        ),
       ),
       body: chatsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => Center(
           child: Text(
-            'Impossible de charger les chats.',
+            'Impossible de charger les messages.',
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
@@ -43,18 +71,74 @@ class ChatsListPage extends ConsumerWidget {
         ),
         data: (chats) {
           if (chats.isEmpty) return const _EmptyChats();
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: chats.length,
-            separatorBuilder: (_, __) => const Divider(
-              height: 1,
-              indent: 80,
-              endIndent: 0,
-            ),
-            itemBuilder: (context, i) => _ChatTile(chat: chats[i]),
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _ChatListFiltered(
+                chats: chats,
+                activeOnly: true,
+              ),
+              _ChatListFiltered(
+                chats: chats,
+                activeOnly: false,
+              ),
+            ],
           );
         },
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Filtered chat list — splits by booking status
+// ---------------------------------------------------------------------------
+
+class _ChatListFiltered extends ConsumerWidget {
+  const _ChatListFiltered({
+    required this.chats,
+    required this.activeOnly,
+  });
+
+  final List<Chat> chats;
+  final bool activeOnly;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Filter chats based on their linked booking status
+    final filtered = chats.where((chat) {
+      final bookingAsync = ref.watch(bookingDetailProvider(chat.bookingId));
+      final booking = bookingAsync.valueOrNull;
+      if (booking == null) return activeOnly; // loading → show in active tab
+      final isActive = booking.status == BookingStatus.accepted ||
+          booking.status == BookingStatus.inProgress ||
+          booking.status == BookingStatus.requested;
+      return activeOnly ? isActive : !isActive;
+    }).toList();
+
+    if (filtered.isEmpty) {
+      return Center(
+        child: Text(
+          activeOnly
+              ? 'Aucune conversation en cours'
+              : 'Aucune conversation termin\u00e9e',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: context.oc.secondaryText),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: filtered.length,
+      separatorBuilder: (_, __) => const Divider(
+        height: 1,
+        indent: 80,
+        endIndent: 0,
+      ),
+      itemBuilder: (context, i) => _ChatTile(chat: filtered[i]),
     );
   }
 }
@@ -75,7 +159,6 @@ class _ChatTile extends ConsumerWidget {
     final myUid =
         authState is AuthAuthenticated ? authState.user.id : null;
 
-    // Fetch last message for preview
     final messagesAsync = ref.watch(chatMessagesProvider(chat.id));
     final lastMsg = messagesAsync.valueOrNull?.lastOrNull;
 
@@ -84,7 +167,6 @@ class _ChatTile extends ConsumerWidget {
         lastMsg.senderId != myUid &&
         !lastMsg.readBy.contains(myUid);
 
-    // Resolve the other participant's profile.
     final otherUid = chat.participantIds
         .firstWhere((id) => id != myUid, orElse: () => '');
     final otherUserAsync =
@@ -97,15 +179,12 @@ class _ChatTile extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            // Avatar
             UserAvatar(
               displayName: otherUser?.displayName ?? '',
               photoPath: otherUser?.photoPath,
               radius: 26,
             ),
             const SizedBox(width: 14),
-
-            // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,7 +192,15 @@ class _ChatTile extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: _ServiceTitle(bookingId: chat.bookingId),
+                        child: Text(
+                          otherUser?.displayName ?? 'Conversation',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       if (chat.lastMessageAt != null)
                         Text(
@@ -163,53 +250,6 @@ class _ChatTile extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Service title loaded from booking
-// ---------------------------------------------------------------------------
-
-class _ServiceTitle extends ConsumerWidget {
-  const _ServiceTitle({required this.bookingId});
-
-  final String bookingId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bookingAsync = ref.watch(bookingDetailProvider(bookingId));
-    final serviceId = bookingAsync.valueOrNull?.serviceId;
-
-    // Use service title if available, otherwise show booking id placeholder
-    final label = serviceId != null ? _ServiceName(serviceId: serviceId) : null;
-
-    return label ??
-        Text(
-          'Réservation',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        );
-  }
-}
-
-class _ServiceName extends ConsumerWidget {
-  const _ServiceName({required this.serviceId});
-
-  final String serviceId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Text(
-      'Réservation', // sufficient for MVP — service title shown in chat AppBar
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Last message preview
 // ---------------------------------------------------------------------------
 
@@ -229,7 +269,7 @@ class _LastMessagePreview extends StatelessWidget {
     final oc = context.oc;
     if (message == null) {
       return Text(
-        'Démarrez la conversation',
+        'D\u00e9marrez la conversation',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: oc.secondaryText,
               fontStyle: FontStyle.italic,
@@ -283,7 +323,7 @@ class _EmptyChats extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Les conversations démarrent après\nl\'acceptation d\'une réservation.',
+              'Les conversations d\u00e9marrent apr\u00e8s\nl\'acceptation d\'une r\u00e9servation.',
               textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme
@@ -317,8 +357,8 @@ String _formatTime(DateTime dt) {
     return days[dt.weekday - 1];
   }
   const months = [
-    'jan', 'fév', 'mars', 'avr', 'mai', 'juin',
-    'juil', 'août', 'sep', 'oct', 'nov', 'déc',
+    'jan', 'f\u00e9v', 'mars', 'avr', 'mai', 'juin',
+    'juil', 'ao\u00fbt', 'sep', 'oct', 'nov', 'd\u00e9c',
   ];
   return '${dt.day} ${months[dt.month - 1]}';
 }

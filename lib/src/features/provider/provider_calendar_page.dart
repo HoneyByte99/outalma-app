@@ -425,16 +425,18 @@ class _BlockSlotSheet extends StatefulWidget {
 }
 
 class _BlockSlotSheetState extends State<_BlockSlotSheet> {
-  late DateTime _date;
+  late DateTime _startDate;
+  DateTime? _endDate; // null = single day
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
   bool _fullDay = true;
+  bool _multiDay = false;
   final _reasonController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _date = widget.initialDate ?? DateTime.now().add(const Duration(days: 1));
+    _startDate = widget.initialDate ?? DateTime.now().add(const Duration(days: 1));
   }
 
   @override
@@ -443,10 +445,37 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
     super.dispose();
   }
 
+  Future<void> _pickStartDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = picked;
+        if (_endDate != null && _endDate!.isBefore(picked)) {
+          _endDate = picked;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? _startDate,
+      firstDate: _startDate,
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) setState(() => _endDate = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    final dateFmt = DateFormat('EEE d MMMM yyyy', 'fr_FR');
+    final dateFmt = DateFormat('EEE d MMM yyyy', 'fr_FR');
 
     return Padding(
       padding: EdgeInsets.only(
@@ -476,93 +505,107 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Date
+          // Start date
+          Text('Date de d\u00e9but',
+              style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 4),
           GestureDetector(
-            onTap: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: _date,
-                firstDate: DateTime.now(),
-                lastDate: DateTime.now().add(const Duration(days: 365)),
-                locale: const Locale('fr'),
-              );
-              if (picked != null) setState(() => _date = picked);
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: oc.inputFill,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: oc.border),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.calendar_today_outlined,
-                      size: 18, color: oc.primary),
-                  const SizedBox(width: 10),
-                  Text(dateFmt.format(_date),
-                      style: Theme.of(context).textTheme.bodyMedium),
-                ],
-              ),
-            ),
+            onTap: _pickStartDate,
+            child: _DateRow(label: dateFmt.format(_startDate), oc: oc),
           ),
           const SizedBox(height: 12),
 
-          // Full day toggle
+          // Multi-day toggle
           Row(
             children: [
               Expanded(
-                child: Text('Journ\u00e9e enti\u00e8re',
+                child: Text('Plusieurs jours',
                     style: Theme.of(context).textTheme.bodyMedium),
               ),
               Switch(
-                value: _fullDay,
-                onChanged: (v) => setState(() => _fullDay = v),
+                value: _multiDay,
+                onChanged: (v) => setState(() {
+                  _multiDay = v;
+                  if (v) _endDate ??= _startDate;
+                }),
                 activeThumbColor: oc.primary,
               ),
             ],
           ),
 
-          if (!_fullDay) ...[
-            const SizedBox(height: 8),
+          if (_multiDay) ...[
+            Text('Date de fin',
+                style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: 4),
+            GestureDetector(
+              onTap: _pickEndDate,
+              child: _DateRow(
+                label: _endDate != null
+                    ? dateFmt.format(_endDate!)
+                    : 'Choisir',
+                oc: oc,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Full day toggle (only for single day)
+          if (!_multiDay) ...[
             Row(
               children: [
                 Expanded(
-                  child: _TimeButton(
-                    label: _startTime != null
-                        ? '${_startTime!.hour.toString().padLeft(2, '0')}h${_startTime!.minute.toString().padLeft(2, '0')}'
-                        : 'D\u00e9but',
-                    onTap: () async {
-                      final t = await showTimePicker(
-                        context: context,
-                        initialTime: _startTime ?? const TimeOfDay(hour: 8, minute: 0),
-                      );
-                      if (t != null) setState(() => _startTime = t);
-                    },
-                  ),
+                  child: Text('Journ\u00e9e enti\u00e8re',
+                      style: Theme.of(context).textTheme.bodyMedium),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text('\u2013',
-                      style: Theme.of(context).textTheme.titleMedium),
-                ),
-                Expanded(
-                  child: _TimeButton(
-                    label: _endTime != null
-                        ? '${_endTime!.hour.toString().padLeft(2, '0')}h${_endTime!.minute.toString().padLeft(2, '0')}'
-                        : 'Fin',
-                    onTap: () async {
-                      final t = await showTimePicker(
-                        context: context,
-                        initialTime: _endTime ?? const TimeOfDay(hour: 18, minute: 0),
-                      );
-                      if (t != null) setState(() => _endTime = t);
-                    },
-                  ),
+                Switch(
+                  value: _fullDay,
+                  onChanged: (v) => setState(() => _fullDay = v),
+                  activeThumbColor: oc.primary,
                 ),
               ],
             ),
+            if (!_fullDay) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _TimeButton(
+                      label: _startTime != null
+                          ? '${_startTime!.hour.toString().padLeft(2, '0')}h${_startTime!.minute.toString().padLeft(2, '0')}'
+                          : 'D\u00e9but',
+                      onTap: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime:
+                              _startTime ?? const TimeOfDay(hour: 8, minute: 0),
+                        );
+                        if (t != null) setState(() => _startTime = t);
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text('\u2013',
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                  Expanded(
+                    child: _TimeButton(
+                      label: _endTime != null
+                          ? '${_endTime!.hour.toString().padLeft(2, '0')}h${_endTime!.minute.toString().padLeft(2, '0')}'
+                          : 'Fin',
+                      onTap: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime:
+                              _endTime ?? const TimeOfDay(hour: 18, minute: 0),
+                        );
+                        if (t != null) setState(() => _endTime = t);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
           const SizedBox(height: 12),
 
@@ -590,24 +633,57 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
   void _save() {
     DateTime startDt;
     DateTime? endDt;
+    final reason = _reasonController.text.trim().isEmpty
+        ? null
+        : _reasonController.text.trim();
 
-    if (_fullDay) {
-      startDt = DateTime(_date.year, _date.month, _date.day);
+    if (_multiDay) {
+      startDt = DateTime(_startDate.year, _startDate.month, _startDate.day);
+      final ed = _endDate ?? _startDate;
+      endDt = DateTime(ed.year, ed.month, ed.day, 23, 59);
+    } else if (_fullDay) {
+      startDt = DateTime(_startDate.year, _startDate.month, _startDate.day);
     } else {
       final st = _startTime ?? const TimeOfDay(hour: 8, minute: 0);
       final et = _endTime ?? const TimeOfDay(hour: 18, minute: 0);
-      startDt = DateTime(_date.year, _date.month, _date.day, st.hour, st.minute);
-      endDt = DateTime(_date.year, _date.month, _date.day, et.hour, et.minute);
+      startDt = DateTime(
+          _startDate.year, _startDate.month, _startDate.day, st.hour, st.minute);
+      endDt = DateTime(
+          _startDate.year, _startDate.month, _startDate.day, et.hour, et.minute);
     }
 
     Navigator.of(context).pop(BlockedSlot(
-      id: '', // Firestore will generate
+      id: '',
       date: startDt,
       endDate: endDt,
-      reason: _reasonController.text.trim().isEmpty
-          ? null
-          : _reasonController.text.trim(),
+      reason: reason,
     ));
+  }
+}
+
+class _DateRow extends StatelessWidget {
+  const _DateRow({required this.label, required this.oc});
+  final String label;
+  final dynamic oc;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: oc.inputFill,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: oc.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.calendar_today_outlined, size: 18, color: oc.primary),
+          const SizedBox(width: 10),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
   }
 }
 

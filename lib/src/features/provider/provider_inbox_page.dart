@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
@@ -194,6 +195,14 @@ class _InboxCard extends ConsumerWidget {
                               color: oc.secondaryText,
                             ),
                       ),
+                      if (booking.scheduledAt != null)
+                        Text(
+                          'Pr\u00e9vu : ${DateFormat('d MMM \u00e0 HH:mm', 'fr_FR').format(booking.scheduledAt!)}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: oc.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
                     ],
                   ),
                 ),

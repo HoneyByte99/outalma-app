@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
@@ -172,6 +173,23 @@ class _BookingCard extends ConsumerWidget {
                     color: oc.secondaryText,
                   ),
             ),
+            if (booking.scheduledAt != null) ...[
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_outlined,
+                      size: 12, color: oc.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Pr\u00e9vu : ${DateFormat('d MMM \u00e0 HH:mm', 'fr_FR').format(booking.scheduledAt!)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ],
+              ),
+            ],
             if (booking.requestMessage.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
