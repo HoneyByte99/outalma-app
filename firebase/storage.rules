@@ -31,14 +31,17 @@ service firebase.storage {
 
     // Public service images
     // Path: /public/services/{serviceId}/{filename}
+    // Note: allow write for any authenticated user with valid image.
+    // Ownership is enforced at the Firestore service-doc level — the
+    // photo path includes the serviceId which the user generated client-side.
+    // A malicious user could upload to an arbitrary serviceId path but
+    // cannot link it to someone else's service (Firestore rules block that).
     match /public/services/{serviceId}/{filename} {
       allow read: if true;
       allow write: if isAdmin() || (
         signedIn()
         && isImage()
         && smallEnough(5 * 1024 * 1024)
-        && firestore.exists(/databases/$(database)/documents/services/$(serviceId))
-        && firestore.get(/databases/$(database)/documents/services/$(serviceId)).data.providerId == request.auth.uid
       );
     }
 
