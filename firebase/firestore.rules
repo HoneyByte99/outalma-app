@@ -21,12 +21,6 @@ service cloud.firestore {
             || bookingData(bookingId).providerId == request.auth.uid);
     }
 
-    function isBookingProvider(bookingId) {
-      return signedIn()
-        && bookingExists(bookingId)
-        && bookingData(bookingId).providerId == request.auth.uid;
-    }
-
     /// Phone sharing is unlocked when booking status is accepted, in_progress, or done.
     function bookingAccessible(bookingId) {
       return bookingExists(bookingId)
