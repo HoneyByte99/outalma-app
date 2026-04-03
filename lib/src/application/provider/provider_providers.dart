@@ -12,47 +12,50 @@ import '../../domain/models/provider_profile.dart';
 import '../../domain/models/service.dart';
 import '../../domain/repositories/provider_repository.dart';
 
+/// Stable UID that only changes on real auth transitions (sign-in/sign-out).
+/// Never flickers to null during transient re-evaluations.
+final _stableUidProvider = Provider<String?>((ref) {
+  final auth = ref.watch(authNotifierProvider).valueOrNull;
+  if (auth is AuthAuthenticated) return auth.user.id;
+  return null;
+});
+
 final providerRepositoryProvider = Provider<ProviderRepository>((ref) {
   return FirestoreProviderRepository(ref.watch(firestoreProvider));
 });
 
 /// Current user's provider profile — null if they haven't activated yet.
 final currentProviderProfileProvider = StreamProvider<ProviderProfile?>((ref) {
-  final authState = ref.watch(authNotifierProvider).valueOrNull;
-  if (authState is! AuthAuthenticated) return const Stream.empty();
-  return ref
-      .watch(providerRepositoryProvider)
-      .watchByUid(authState.user.id);
+  final uid = ref.watch(_stableUidProvider);
+  if (uid == null) return const Stream.empty();
+  return ref.watch(providerRepositoryProvider).watchByUid(uid);
 });
 
 /// Current provider's own services.
 final providerServicesProvider = StreamProvider<List<Service>>((ref) {
-  final authState = ref.watch(authNotifierProvider).valueOrNull;
-  if (authState is! AuthAuthenticated) return const Stream.empty();
-  return ref
-      .watch(serviceRepositoryProvider)
-      .watchForProvider(authState.user.id);
+  final uid = ref.watch(_stableUidProvider);
+  if (uid == null) return const Stream.empty();
+  return ref.watch(serviceRepositoryProvider).watchForProvider(uid);
 });
 
 /// Incoming booking requests for the current provider (status = requested).
 final providerInboxProvider = StreamProvider<List<Booking>>((ref) {
-  final authState = ref.watch(authNotifierProvider).valueOrNull;
-  if (authState is! AuthAuthenticated) return const Stream.empty();
+  final uid = ref.watch(_stableUidProvider);
+  if (uid == null) return const Stream.empty();
   return ref
       .watch(bookingRepositoryProvider)
-      .watchForProvider(authState.user.id)
-      .map((list) => list
-          .where((b) => b.status == BookingStatus.requested)
-          .toList());
+      .watchForProvider(uid)
+      .map((list) =>
+          list.where((b) => b.status == BookingStatus.requested).toList());
 });
 
 /// Active bookings for the current provider (accepted + in_progress).
 final providerActiveBookingsProvider = StreamProvider<List<Booking>>((ref) {
-  final authState = ref.watch(authNotifierProvider).valueOrNull;
-  if (authState is! AuthAuthenticated) return const Stream.empty();
+  final uid = ref.watch(_stableUidProvider);
+  if (uid == null) return const Stream.empty();
   return ref
       .watch(bookingRepositoryProvider)
-      .watchForProvider(authState.user.id)
+      .watchForProvider(uid)
       .map((list) => list
           .where((b) =>
               b.status == BookingStatus.accepted ||
@@ -71,20 +74,16 @@ final publicProviderServicesProvider =
 
 /// All bookings the current user has received as provider (full history).
 final providerBookingHistoryProvider = StreamProvider<List<Booking>>((ref) {
-  final authState = ref.watch(authNotifierProvider).valueOrNull;
-  if (authState is! AuthAuthenticated) return const Stream.empty();
-  return ref
-      .watch(bookingRepositoryProvider)
-      .watchForProvider(authState.user.id);
+  final uid = ref.watch(_stableUidProvider);
+  if (uid == null) return const Stream.empty();
+  return ref.watch(bookingRepositoryProvider).watchForProvider(uid);
 });
 
 /// Current provider's blocked slots.
 final providerBlockedSlotsProvider = StreamProvider<List<BlockedSlot>>((ref) {
-  final authState = ref.watch(authNotifierProvider).valueOrNull;
-  if (authState is! AuthAuthenticated) return const Stream.empty();
-  return ref
-      .watch(providerRepositoryProvider)
-      .watchBlockedSlots(authState.user.id);
+  final uid = ref.watch(_stableUidProvider);
+  if (uid == null) return const Stream.empty();
+  return ref.watch(providerRepositoryProvider).watchBlockedSlots(uid);
 });
 
 /// Blocked slots for any provider — used by clients to check availability.

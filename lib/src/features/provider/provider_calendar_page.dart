@@ -27,27 +27,11 @@ class _ProviderCalendarPageState
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  // Keep last known data to avoid flicker during stream refresh
-  List<Booking> _lastBookings = const [];
-  List<BlockedSlot> _lastBlocked = const [];
-
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    final bookingsAsync = ref.watch(providerBookingHistoryProvider);
-    final blockedAsync = ref.watch(providerBlockedSlotsProvider);
-
-    // Preserve last data during loading/error to avoid UI flicker
-    final bookings = bookingsAsync.when(
-      data: (d) { _lastBookings = d; return d; },
-      loading: () => _lastBookings,
-      error: (_, __) => _lastBookings,
-    );
-    final blockedSlots = blockedAsync.when(
-      data: (d) { _lastBlocked = d; return d; },
-      loading: () => _lastBlocked,
-      error: (_, __) => _lastBlocked,
-    );
+    final bookings = ref.watch(providerBookingHistoryProvider).valueOrNull ?? [];
+    final blockedSlots = ref.watch(providerBlockedSlotsProvider).valueOrNull ?? [];
 
     return Scaffold(
       backgroundColor: oc.background,
