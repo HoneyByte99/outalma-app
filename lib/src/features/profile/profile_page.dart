@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_theme.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/review/review_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../application/user/user_providers.dart';
 import '../../data/services/avatar_upload_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_user.dart';
+import '../../domain/models/review.dart';
 import '../shared/user_avatar.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -36,6 +38,12 @@ class ProfilePage extends ConsumerWidget {
           children: [
             const _EditableUserHeader(),
             const SizedBox(height: 28),
+            if (user != null) ...[
+              const _SectionLabel(label: 'Mes avis'),
+              const SizedBox(height: 12),
+              _MyReviewsSection(uid: user.id),
+              const SizedBox(height: 28),
+            ],
             const _SectionLabel(label: 'Mode actif'),
             const SizedBox(height: 12),
             const _ModeToggle(),
@@ -811,6 +819,184 @@ class _AccountSection extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// My reviews section
+// ---------------------------------------------------------------------------
+
+class _MyReviewsSection extends ConsumerWidget {
+  const _MyReviewsSection({required this.uid});
+
+  final String uid;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
+    final reviewsAsync = ref.watch(reviewsForUserProvider(uid));
+
+    return reviewsAsync.when(
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (reviews) {
+        if (reviews.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: oc.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: oc.border),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.star_outline_rounded, size: 20, color: oc.icons),
+                const SizedBox(width: 12),
+                Text(
+                  'Aucun avis reçu pour le moment',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: oc.secondaryText),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final avg = reviews.map((r) => r.rating).reduce((a, b) => a + b) /
+            reviews.length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Stats bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: oc.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: oc.border),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    avg.toStringAsFixed(1),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: oc.primaryText,
+                        ),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: List.generate(
+                          5,
+                          (i) => Icon(
+                            i < avg.round()
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            size: 18,
+                            color: const Color(0xFFFBBF24),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${reviews.length} avis',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: oc.secondaryText),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Review tiles
+            ...reviews.map((r) => _ReviewTile(review: r)),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ReviewTile extends ConsumerWidget {
+  const _ReviewTile({required this.review});
+
+  final Review review;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
+    final reviewer =
+        ref.watch(userByIdProvider(review.reviewerId)).valueOrNull;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: oc.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: oc.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              UserAvatar(
+                displayName: reviewer?.displayName ?? '',
+                photoPath: reviewer?.photoPath,
+                radius: 16,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  reviewer?.displayName ?? '—',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              Row(
+                children: List.generate(
+                  5,
+                  (i) => Icon(
+                    i < review.rating
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 14,
+                    color: const Color(0xFFFBBF24),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              review.comment!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: oc.secondaryText,
+                    height: 1.5,
+                  ),
+            ),
+          ],
+        ],
       ),
     );
   }
