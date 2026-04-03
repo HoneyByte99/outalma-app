@@ -17,6 +17,8 @@ dependencies:
   cloud_firestore: ^5.4.0
   cloud_functions: ^5.1.0
   firebase_messaging: ^15.1.3
+  connectivity_plus: ^6.1.0
+  flutter_native_splash: ^2.4.3
 
   # App
   go_router: ^14.2.7
@@ -43,6 +45,16 @@ flutter_launcher_icons:
     image_path: "assets/images/logo_outalma.png"
     background_color: "#ffffff"
     theme_color: "#1B3A4B"
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/images/logo_outalma.png
+  color_dark: "#1B3A4B"
+  image_dark: assets/images/logo_outalma.png
+  android_12:
+    color: "#FFFFFF"
+    image: assets/images/logo_outalma.png
+  web: false
 
 flutter:
   uses-material-design: true

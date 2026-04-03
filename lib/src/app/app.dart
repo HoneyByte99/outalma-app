@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/notification/notification_service.dart';
 import 'app_theme.dart';
+import 'connectivity_banner.dart';
 import 'router.dart';
 
 class OutlamaApp extends ConsumerStatefulWidget {
@@ -31,6 +32,9 @@ class _OutlamaAppState extends ConsumerState<OutlamaApp> {
       routerConfig: router,
       scaffoldMessengerKey: _messengerKey,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => ConnectivityBanner(
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }

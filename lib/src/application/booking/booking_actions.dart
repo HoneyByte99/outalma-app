@@ -48,6 +48,18 @@ class ConfirmDoneUseCase {
   }
 }
 
+/// Calls the server-authoritative `cancelBooking` Cloud Function.
+/// Only valid when booking status = `requested`.
+class CancelBookingUseCase {
+  const CancelBookingUseCase(this._functions);
+  final FirebaseFunctions _functions;
+
+  Future<void> call(String bookingId) async {
+    final callable = _functions.httpsCallable('cancelBooking');
+    await callable.call<void>({'bookingId': bookingId});
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
@@ -66,4 +78,8 @@ final markInProgressUseCaseProvider = Provider<MarkInProgressUseCase>((ref) {
 
 final confirmDoneUseCaseProvider = Provider<ConfirmDoneUseCase>((ref) {
   return ConfirmDoneUseCase(FirebaseFunctions.instance);
+});
+
+final cancelBookingUseCaseProvider = Provider<CancelBookingUseCase>((ref) {
+  return CancelBookingUseCase(FirebaseFunctions.instance);
 });
