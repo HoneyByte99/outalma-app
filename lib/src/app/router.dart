@@ -11,11 +11,13 @@ import '../features/auth/sign_in_page.dart';
 import '../features/auth/sign_up_page.dart';
 import '../features/booking/booking_detail_page.dart';
 import '../features/booking/booking_list_page.dart';
+import '../features/chat/chat_page.dart';
 import '../features/home/home_page.dart';
 import '../features/provider/provider_dashboard_page.dart';
 import '../features/provider/provider_inbox_page.dart';
 import '../features/provider/provider_onboarding_page.dart';
 import '../features/provider/service_form_page.dart';
+import '../features/review/review_form_page.dart';
 import '../features/service/service_detail_page.dart';
 import '../features/switch_mode/switch_mode_page.dart';
 import 'app_shell.dart';
@@ -41,6 +43,10 @@ abstract final class AppRoutes {
       '/provider/services/$serviceId/edit';
   static String providerBookingDetail(String bookingId) =>
       '/provider/inbox/bookings/$bookingId';
+
+  // Parameterised helpers
+  static String chat(String chatId) => '/chat/$chatId';
+  static String review(String bookingId) => '/review/$bookingId';
 }
 
 // ---------------------------------------------------------------------------
@@ -235,6 +241,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/bookings/:bookingId',
         name: 'booking-detail-root',
         builder: (_, state) => BookingDetailPage(
+          bookingId: state.pathParameters['bookingId']!,
+        ),
+      ),
+
+      // ---- Chat ----
+      GoRoute(
+        path: '/chat/:chatId',
+        name: 'chat',
+        builder: (_, state) => ChatPage(
+          chatId: state.pathParameters['chatId']!,
+        ),
+      ),
+
+      // ---- Review form ----
+      GoRoute(
+        path: '/review/:bookingId',
+        name: 'review',
+        builder: (_, state) => ReviewFormPage(
           bookingId: state.pathParameters['bookingId']!,
         ),
       ),

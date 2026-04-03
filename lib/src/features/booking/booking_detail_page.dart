@@ -1,12 +1,15 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/app_theme.dart';
+import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/booking/booking_actions.dart';
 import '../../application/booking/booking_providers.dart';
+import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
@@ -121,6 +124,24 @@ class _DetailContent extends ConsumerWidget {
             const SizedBox(height: 16),
           ],
 
+          // ---- Chat CTA (when chat is unlocked) ----
+          if (booking.chatId != null &&
+              (booking.status == BookingStatus.accepted ||
+                  booking.status == BookingStatus.inProgress ||
+                  booking.status == BookingStatus.done)) ...[
+            _ChatButton(chatId: booking.chatId!),
+            const SizedBox(height: 16),
+          ],
+
+          // ---- Review CTA (when done and not yet reviewed) ----
+          if (booking.status == BookingStatus.done) ...[
+            _ReviewSection(
+              bookingId: booking.id,
+              currentUid: uid,
+            ),
+            const SizedBox(height: 16),
+          ],
+
           // ---- Status timeline ----
           _Section(
             title: 'Suivi',
@@ -128,6 +149,86 @@ class _DetailContent extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Chat CTA
+// ---------------------------------------------------------------------------
+
+class _ChatButton extends StatelessWidget {
+  const _ChatButton({required this.chatId});
+
+  final String chatId;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: () => context.push(AppRoutes.chat(chatId)),
+      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+      label: const Text('Accéder au chat'),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Review section — shows form button if not yet reviewed, else confirmation
+// ---------------------------------------------------------------------------
+
+class _ReviewSection extends ConsumerWidget {
+  const _ReviewSection({
+    required this.bookingId,
+    required this.currentUid,
+  });
+
+  final String bookingId;
+  final String? currentUid;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasReviewedAsync = ref.watch(hasReviewedProvider(bookingId));
+
+    return hasReviewedAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (hasReviewed) {
+        if (hasReviewed) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.successAccent,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.success.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: AppColors.success,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Avis envoyé — merci !',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return OutlinedButton.icon(
+          onPressed: () => context.push(AppRoutes.review(bookingId)),
+          icon: const Icon(Icons.star_outline_rounded, size: 18),
+          label: const Text('Laisser un avis'),
+        );
+      },
     );
   }
 }
