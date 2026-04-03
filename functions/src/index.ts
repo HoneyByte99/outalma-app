@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as logger from 'firebase-functions/logger';
 import { assertAdminClaim, assertAuthenticated, requireBoolean, requireString } from './common';
 
@@ -99,6 +100,10 @@ export const createBooking = onCall(async (request) => {
   // schedule/addressSnapshot are intentionally permissive for MVP; validate in app + tighten later.
   const schedule = request.data?.schedule ?? null;
   const addressSnapshot = request.data?.addressSnapshot ?? null;
+  const scheduledAtRaw = request.data?.scheduledAt ?? null;
+  const scheduledAt = scheduledAtRaw
+    ? admin.firestore.Timestamp.fromDate(new Date(scheduledAtRaw))
+    : null;
 
   const bookingRef = db.collection('bookings').doc();
   await bookingRef.set({
@@ -107,8 +112,11 @@ export const createBooking = onCall(async (request) => {
     serviceId,
     status: 'requested' as BookingStatus,
     requestMessage,
+    scheduledAt,
     schedule,
     addressSnapshot,
+    reminded24h: false,
+    reminded1h: false,
     createdAt: admin.firestore.FieldValue.serverTimestamp()
   });
 
@@ -511,3 +519,79 @@ export const setAdminClaim = onCall(async (request) => {
 
   return { uid: targetUid, admin: isAdmin };
 });
+
+// ---------------------------------------------------------------------------
+// Scheduled: booking reminders (every 30 min)
+// ---------------------------------------------------------------------------
+
+export const sendBookingReminders = onSchedule(
+  { schedule: 'every 30 minutes', timeZone: 'Europe/Paris' },
+  async () => {
+    const now = new Date();
+    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const in24h30 = new Date(in24h.getTime() + 30 * 60 * 1000);
+
+    // Find bookings with scheduledAt that are accepted or in_progress
+    const snap = await db
+      .collection('bookings')
+      .where('scheduledAt', '>=', admin.firestore.Timestamp.fromDate(now))
+      .where('scheduledAt', '<=', admin.firestore.Timestamp.fromDate(in24h30))
+      .get();
+
+    let sent = 0;
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const status = data.status as BookingStatus;
+      if (status !== 'accepted' && status !== 'in_progress') continue;
+
+      const scheduledAt = (data.scheduledAt as admin.firestore.Timestamp).toDate();
+      const diffMs = scheduledAt.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+
+      const participants = [data.customerId, data.providerId].filter(Boolean);
+
+      // 24h reminder (between 23.5h and 24.5h before)
+      if (!data.reminded24h && diffHours >= 23.5 && diffHours <= 24.5) {
+        const timeStr = scheduledAt.toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        await sendPushToUsers(participants, {
+          title: 'Rappel — RDV demain',
+          body: `Votre prestation est prévue demain à ${timeStr}.`,
+        });
+        for (const uid of participants) {
+          await createNotification(uid, {
+            type: 'booking_reminder',
+            title: 'Rappel — RDV demain',
+            body: `Votre prestation est prévue demain à ${timeStr}.`,
+            bookingId: doc.id,
+          });
+        }
+        await doc.ref.update({ reminded24h: true });
+        sent++;
+      }
+
+      // 1h reminder (between 0.5h and 1.5h before)
+      if (!data.reminded1h && diffHours >= 0.5 && diffHours <= 1.5) {
+        await sendPushToUsers(participants, {
+          title: 'Rappel — RDV dans 1h',
+          body: 'Votre prestation commence bientôt !',
+        });
+        for (const uid of participants) {
+          await createNotification(uid, {
+            type: 'booking_reminder',
+            title: 'Rappel — RDV dans 1h',
+            body: 'Votre prestation commence bientôt !',
+            bookingId: doc.id,
+          });
+        }
+        await doc.ref.update({ reminded1h: true });
+        sent++;
+      }
+    }
+
+    logger.info(`Booking reminders: checked ${snap.size}, sent ${sent}`);
+  }
+);
