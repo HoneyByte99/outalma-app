@@ -84,7 +84,10 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
     setState(() => _uploading = true);
     try {
       final url = await service.pickAndUpload();
-      if (url == null) return; // user cancelled
+      if (url == null) {
+        // user cancelled — nothing to do
+        return;
+      }
 
       await ref
           .read(authNotifierProvider.notifier)
@@ -92,12 +95,13 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
             displayName: widget.user.displayName,
             photoPath: url,
           );
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible de mettre à jour la photo.'),
+            content: Text('Erreur : ${e.toString()}'),
             backgroundColor: context.oc.error,
+            duration: const Duration(seconds: 8),
           ),
         );
       }
