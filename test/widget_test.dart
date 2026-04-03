@@ -1,21 +1,21 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Smoke test — verifies that the app widget tree boots without crashing.
+// OutlamaApp requires ProviderScope since it is a ConsumerWidget.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:outlama_app/src/app/app.dart';
 
 void main() {
-  testWidgets('Smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const OutlamaApp());
+  testWidgets('Smoke test — app boots with ProviderScope', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: OutlamaApp(),
+      ),
+    );
 
-    // App boots.
-    expect(find.byType(MaterialApp), findsOneWidget);
+    // The app should render a router-backed MaterialApp variant.
+    expect(find.byType(Router<Object>), findsOneWidget);
   });
 }
