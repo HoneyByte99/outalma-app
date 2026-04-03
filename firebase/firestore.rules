@@ -63,7 +63,14 @@ service cloud.firestore {
 
     // ---------- BOOKINGS (private) ----------
     match /bookings/{bookingId} {
-      allow read: if isAdmin() || isBookingParticipant(bookingId);
+      // get: can use isBookingParticipant (calls get() on the same doc — valid for single-doc reads).
+      allow get: if isAdmin() || isBookingParticipant(bookingId);
+
+      // list: must use resource.data directly; get() on the iterated document is disallowed in list queries.
+      allow list: if isAdmin()
+        || (signedIn()
+            && (resource.data.customerId == request.auth.uid
+                || resource.data.providerId == request.auth.uid));
 
       // Create: customer creates; status must start as "requested"
       allow create: if isAdmin()
