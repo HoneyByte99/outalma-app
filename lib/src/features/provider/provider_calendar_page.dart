@@ -231,6 +231,8 @@ class _ProviderCalendarPageState
   }
 
   Future<void> _showBlockSlotSheet(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final errorColor = context.oc.error;
     final result = await showModalBottomSheet<BlockedSlot>(
       context: context,
       isScrollControlled: true,
@@ -239,9 +241,21 @@ class _ProviderCalendarPageState
     if (result != null && mounted) {
       final authState = ref.read(authNotifierProvider).valueOrNull;
       if (authState is AuthAuthenticated) {
-        await ref
-            .read(providerRepositoryProvider)
-            .addBlockedSlot(authState.user.id, result);
+        try {
+          await ref
+              .read(providerRepositoryProvider)
+              .addBlockedSlot(authState.user.id, result);
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Cr\u00e9neau bloqu\u00e9')),
+          );
+        } catch (_) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: const Text('Impossible de bloquer le cr\u00e9neau.'),
+              backgroundColor: errorColor,
+            ),
+          );
+        }
       }
     }
   }
@@ -686,10 +700,11 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
         top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Center(
             child: Container(
               width: 36,
@@ -828,6 +843,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
