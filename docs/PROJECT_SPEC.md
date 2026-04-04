@@ -2,7 +2,7 @@
 
 Marketplace de services à domicile (client ↔ provider), une seule app, France + Sénégal.
 Cibles : Android, iOS, Web — même codebase Flutter.
-Scope MVP : 100–1 000 users. Pas de paiement intégré.
+Scope MVP : 100-1 000 users. Pas de paiement intégré.
 
 ---
 
@@ -36,34 +36,43 @@ Scope MVP : 100–1 000 users. Pas de paiement intégré.
 - **BlaBlaCar (confiance)** : profil + avis + contact unlock après accept + reporting.
 - **Turo (switch mode)** : un switch clair "Mode Client / Mode Provider" dans l'app.
 - **Map utile** : affichage distance + zone de service, pas de suivi live en MVP.
+- **Accessibilité Sénégal** : UX extrêmement simple pour des utilisateurs peu alphabétisés. Messages vocaux et images dans le chat.
 
 ---
 
 ## 2. Modules MVP
 
 ### Client
-- Auth + profil
-- Browse / Search services (catégories, liste, filtre simple)
-- Service detail + zone de service
-- Créer une demande de booking (créneau + adresse + message libre)
-- Suivi booking (timeline de statuts)
-- Chat (après accept uniquement)
+- Auth + profil (email + mot de passe, mot de passe oublié)
+- Browse / Search services (catégories avec icônes, liste, filtre par localisation)
+- Localisation Uber Eats-style : pill dans l'AppBar, autocomplete Places API, rayon configurable, favoris sauvegardés
+- Service detail + zones de service (multi-zones avec lat/lng/rayon)
+- Créer une demande de booking (date structurée `scheduledAt` + adresse autocomplete + message libre)
+- Détection de conflits (bookings existants + créneaux bloqués du provider)
+- Suivi booking (timeline de statuts) + annulation si `status=requested`
+- Mini calendrier des bookings en cours (TableCalendar 2 semaines)
+- Chat (après accept uniquement) : texte, images (galerie + caméra), messages vocaux
 - Laisser un avis (après done)
 
 ### Provider
 - Activation du mode provider (sans validation externe)
-- CRUD services (photos, zone, prix)
-- Inbox de demandes + accept/reject
+- CRUD services (photos, multi-zones d'intervention, prix)
+- Inbox de demandes + accept/reject avec notifications
 - Marquer un booking en cours (in_progress)
+- Calendrier provider (TableCalendar mois) avec markers bookings (bleu) + créneaux bloqués (rouge)
+- Gestion des créneaux bloqués (1-7 jours, avec raison optionnelle)
 - Gestion bookings (actifs + historique)
-- Chat (par booking)
+- Chat (par booking) : texte, images, vocaux
 - Laisser un avis sur le client (après done)
 
-### Admin (web — hors scope app mobile)
-- Suspendre un provider ou un service
-- Lire les bookings
-- Supprimer un message (modération)
-- Gérer les reports
+### Admin (panel web séparé — voir `docs/admin/`)
+- Dashboard : compteurs bookings, reports, providers, services
+- Gestion utilisateurs et providers (suspension)
+- Modération signalements
+- Modération messages chat
+- Gestion catégories de services
+- Gestion rôles admin/moderator
+- Voir `docs/admin/admin-spec.md` pour le détail
 
 ---
 
@@ -71,13 +80,13 @@ Scope MVP : 100–1 000 users. Pas de paiement intégré.
 
 ### Flow client (happy path)
 ```
-Browse/Search
+Browse/Search (localisation + catégorie)
   → Service detail
-  → Booking request (message + créneau + adresse)
+  → Booking request (date + adresse + message)
   → [CF] createBooking → status=requested
-  → Attente réponse provider
+  → Attente réponse provider (notif push)
   → [CF] acceptBooking → status=accepted + chat créé
-  → Chat ouvert + contact déverrouillé
+  → Chat ouvert (texte/image/vocal) + contact déverrouillé
   → [CF] markInProgress → status=in_progress
   → [CF] confirmDone → status=done
   → Laisser un avis
@@ -85,7 +94,8 @@ Browse/Search
 
 ### Flow provider
 ```
-Inbox → Voir demande
+Inbox (notif push nouvelle demande)
+  → Voir demande + calendrier
   → acceptBooking() ou rejectBooking()
   → (si accept) Chat + coordonnées client visibles
   → Marquer "en cours" → markInProgress()
@@ -130,6 +140,16 @@ Même UID que `users/{uid}`. Créé quand l'utilisateur active le mode provider.
 | `suspended` | bool | Mis par admin — désactive le provider |
 | `createdAt` | Timestamp | UTC |
 
+### `providers/{uid}/blocked_slots/{slotId}`
+Créneaux pendant lesquels le provider est indisponible.
+
+| Champ | Type | Notes |
+|---|---|---|
+| `date` | Timestamp | Début de la période (stocké en UTC noon) |
+| `endDate` | Timestamp? | Fin de la période. Si null = journée entière |
+| `reason` | String? | Raison optionnelle ("Congé", "RDV perso"...) |
+| `createdAt` | Timestamp | UTC |
+
 ### `services/{serviceId}`
 Lecture publique.
 
@@ -168,9 +188,12 @@ Collection racine (pas de sous-collection).
 | `serviceId` | String | Référence au service |
 | `status` | String | Voir machine d'état section 0 |
 | `requestMessage` | String | Message libre du client |
-| `schedule` | Map? | Créneau souhaité (champ libre MVP) |
+| `scheduledAt` | Timestamp? | Date/heure structurée du RDV (remplace `schedule` freeform) |
+| `schedule` | Map? | Legacy — créneau freeform (conservé pour rétrocompatibilité) |
 | `addressSnapshot` | Map? | Adresse du client au moment du booking |
 | `chatId` | String? | Défini par `acceptBooking()` |
+| `reminded24h` | bool | Flag pour le reminder 24h avant |
+| `reminded1h` | bool | Flag pour le reminder 1h avant |
 | `createdAt` | Timestamp | UTC |
 | `acceptedAt` | Timestamp? | Défini par `acceptBooking()` |
 | `rejectedAt` | Timestamp? | Défini par `rejectBooking()` |
@@ -185,6 +208,8 @@ Créé exclusivement par `acceptBooking()`. ID dérivé : `chat_{bookingId}`.
 |---|---|---|
 | `bookingId` | String | Booking parent |
 | `participantIds` | List\<String\> | [customerId, providerId] |
+| `customerId` | String | Dénormalisé pour queries |
+| `providerId` | String | Dénormalisé pour queries |
 | `createdAt` | Timestamp | UTC |
 | `lastMessageAt` | Timestamp? | Mis à jour à chaque message |
 
@@ -193,9 +218,9 @@ Créé exclusivement par `acceptBooking()`. ID dérivé : `chat_{bookingId}`.
 |---|---|---|
 | `chatId` | String | Dénormalisé pour éviter les requêtes parent |
 | `senderId` | String | UID de l'expéditeur |
-| `type` | String | "text" ou "image" |
-| `text` | String? | Présent si type=text |
-| `mediaUrl` | String? | URL Storage si type=image |
+| `type` | String | "text", "image" ou "voice" |
+| `text` | String? | Présent si type=text (ou caption pour image) |
+| `mediaUrl` | String? | URL Storage si type=image ou type=voice |
 | `createdAt` | Timestamp | UTC |
 
 ### `reviews/{reviewId}`
@@ -230,6 +255,19 @@ Lisible par les participants dès que `status ∈ {accepted, in_progress, done}`
 | `status` | String | "open", "resolved" ou "dismissed" |
 | `createdAt` | Timestamp | UTC |
 
+### `notifications/{uid}/items/{notifId}`
+Notifications in-app par utilisateur.
+
+| Champ | Type | Notes |
+|---|---|---|
+| `type` | String | "new_message", "booking_accepted", "booking_rejected", "booking_in_progress", "booking_done", "booking_reminder" |
+| `title` | String | Titre de la notification |
+| `body` | String | Corps de la notification |
+| `bookingId` | String? | Booking concerné |
+| `chatId` | String? | Chat concerné |
+| `read` | bool | Marquée comme lue |
+| `createdAt` | Timestamp | UTC |
+
 ---
 
 ## 5. Modèle de sécurité
@@ -240,13 +278,24 @@ Deny-by-default. Règles complètes dans `firebase/firestore.rules`.
 |---|---|
 | `users` | Lecture/écriture = soi-même ou admin |
 | `providers` | Lecture publique ; écriture = soi-même ou admin |
+| `providers/blocked_slots` | Lecture/écriture = provider owner |
 | `services` | Lecture publique ; écriture = provider owner ou admin |
+| `service_types` | Lecture publique ; écriture = admin |
 | `bookings` | Lecture = participants ou admin ; **statut non modifiable par le client** — Cloud Functions seulement |
 | `chats` | Lecture/écriture = participants ou admin ; création par Cloud Function uniquement |
-| `chats/messages` | Lecture = participants ; création = participant authentifié (senderId = uid) |
+| `chats/messages` | Lecture = participants ; création = participant authentifié (senderId = uid) ; text OU mediaUrl requis |
 | `phoneShares` | Lisible si `status ∈ {accepted, in_progress, done}` et participant |
 | `reviews` | Lecture publique ; création = reviewer authentifié, une fois par sens par booking |
 | `reports` | Création = tout utilisateur authentifié ; lecture/modération = admin |
+| `notifications` | Lecture/écriture = owner uniquement |
+
+### Storage rules
+
+| Path | Règle |
+|---|---|
+| `/public/services/{serviceId}/*` | Lecture publique ; écriture = provider owner, images < 10MB |
+| `/private/chats/{chatId}/media/*` | Lecture/écriture = utilisateur authentifié, < 20MB |
+| `/public/users/{uid}/*` | Lecture publique ; écriture = owner, images < 5MB |
 
 ---
 
@@ -256,28 +305,37 @@ Deny-by-default. Règles complètes dans `firebase/firestore.rules`.
 
 | Fonction | Déclencheur | Préconditions | Effet |
 |---|---|---|---|
-| `createBooking(providerId, serviceId, requestMessage, schedule?, addressSnapshot?)` | Client | Auth requis | Crée booking status=requested |
-| `acceptBooking(bookingId)` | Provider | status=requested, appelant=provider | status=accepted, crée chat, set chatId + acceptedAt |
-| `rejectBooking(bookingId)` | Provider | status=requested, appelant=provider | status=rejected, set rejectedAt |
-| `cancelBooking(bookingId)` | Client ou Provider | status=requested, appelant=participant | status=cancelled, set cancelledAt |
-| `markInProgress(bookingId)` | Provider | status=accepted, appelant=provider | status=in_progress, set startedAt |
-| `confirmDone(bookingId)` | Client | status=in_progress, appelant=client | status=done, set doneAt |
+| `createBooking(providerId, serviceId, requestMessage, scheduledAt?, schedule?, addressSnapshot?)` | Client | Auth requis, scheduledAt doit être futur si fourni | Crée booking status=requested, stocke `reminded24h=false`, `reminded1h=false` |
+| `acceptBooking(bookingId)` | Provider | status=requested, appelant=provider (ou admin) | status=accepted, crée chat, set chatId + acceptedAt |
+| `rejectBooking(bookingId)` | Provider | status=requested, appelant=provider (ou admin) | status=rejected, set rejectedAt |
+| `cancelBooking(bookingId)` | Client ou Provider | status=requested, appelant=participant (ou admin) | status=cancelled, set cancelledAt |
+| `markInProgress(bookingId)` | Provider | status=accepted, appelant=provider (ou admin) | status=in_progress, set startedAt |
+| `confirmDone(bookingId)` | Client | status=in_progress, appelant=client (ou admin) | status=done, set doneAt |
 | `setAdminClaim(uid, admin)` | Admin | Appelant=admin | Pose ou retire le custom claim admin |
 
 ### Triggers Firestore
 
 | Trigger | Événement | Effet |
 |---|---|---|
-| `onMessageCreate` | `chats/{chatId}/messages/{messageId}` créé | Notif push à l'autre participant ; met à jour `lastMessageAt` sur le chat |
-| `onBookingStatusChange` | `bookings/{bookingId}` mis à jour (status change) | Notif push au participant concerné selon la transition |
+| `onMessageCreate` | `chats/{chatId}/messages/{messageId}` créé | Notif push + in-app à l'autre participant ; met à jour `lastMessageAt` ; body adapté au type (texte/image/vocal) |
+| `onBookingStatusChange` | `bookings/{bookingId}` mis à jour (status change) | Notif push + in-app au participant concerné selon la transition |
 
-### Admin callable
+### Scheduled
+
+| Fonction | Fréquence | Effet |
+|---|---|---|
+| `sendBookingReminders` | Toutes les 30 min | Envoie rappels push + in-app 24h et 1h avant `scheduledAt` pour les bookings accepted/in_progress |
+
+### Admin callable (à implémenter — voir `docs/admin/`)
 
 | Fonction | Effet |
 |---|---|
-| `suspendProvider(uid)` | Set `providers/{uid}.suspended=true` |
+| `setModeratorClaim(uid, moderator)` | Pose ou retire le custom claim moderator |
+| `suspendProvider(uid, reason?)` | Set `providers/{uid}.suspended=true`, unpublish services |
+| `unsuspendProvider(uid)` | Set `providers/{uid}.suspended=false` |
 | `removeService(serviceId)` | Set `services/{serviceId}.published=false` |
 | `deleteMessage(chatId, messageId)` | Supprime le message (modération) |
+| `resolveReport(reportId, action, notes?)` | Résout le signalement + log action |
 
 ---
 
@@ -285,12 +343,15 @@ Deny-by-default. Règles complètes dans `firebase/firestore.rules`.
 
 | Couche | Choix |
 |---|---|
-| App | Flutter (Android + iOS + Web) |
+| App mobile | Flutter (Android + iOS + Web) |
 | State management | Riverpod |
 | Navigation | GoRouter |
-| Backend | Firebase (Auth, Firestore, Storage, Cloud Functions Gen2) |
+| Backend | Firebase (Auth, Firestore, Storage, Cloud Functions Gen2, FCM) |
 | Functions runtime | Node 20 / TypeScript |
-| Admin | Web séparé (Next.js) — hors scope app mobile MVP |
+| Geocoding | Google Places API (New) — compatible CORS web |
+| Calendrier | table_calendar (FR locale) |
+| Chat media | image_picker + record + just_audio |
+| Admin panel | Flutter Web séparé (même Firebase project) |
 
 ---
 

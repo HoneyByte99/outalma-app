@@ -4,6 +4,8 @@ This file is the single source of truth for all Dart models, Firestore field nam
 TypeScript types, and Firestore rule assumptions. Any divergence between layers must
 be resolved by aligning to this document.
 
+Last updated: 2026-04-04
+
 ---
 
 ## BookingStatus
@@ -23,9 +25,10 @@ State machine:
 ```
 requested → accepted → in_progress → done
 requested → rejected
-accepted  → cancelled
 requested → cancelled
 ```
+
+No cancellation after `accepted` in MVP.
 
 These names must match exactly across:
 - Dart enum values
@@ -73,6 +76,20 @@ Firestore collection: `providers/{uid}` (same UID as users/{uid})
 
 ---
 
+## BlockedSlot
+
+Firestore collection: `providers/{uid}/blocked_slots/{slotId}`
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | String | Document ID |
+| `date` | Timestamp | Start of blocked period (stored as UTC noon to prevent timezone day-shift) |
+| `endDate` | Timestamp? | End of blocked period. If null = entire day blocked |
+| `reason` | String? | Optional reason ("Congé", "RDV perso"...) |
+| `createdAt` | Timestamp | UTC |
+
+---
+
 ## Service
 
 Firestore collection: `services/{serviceId}` (public read)
@@ -94,6 +111,15 @@ Firestore collection: `services/{serviceId}` (public read)
 
 `ownerId` is NOT used — the field is `providerId` for consistency with bookings.
 
+### ServiceZone (value object, not a Firestore collection)
+
+| Field | Type | Notes |
+|---|---|---|
+| `label` | String | Human-readable zone name (city, neighborhood) |
+| `latitude` | double | Latitude |
+| `longitude` | double | Longitude |
+| `radiusKm` | double | Radius in kilometers |
+
 ---
 
 ## Booking
@@ -108,9 +134,12 @@ Firestore collection: `bookings/{bookingId}` (top-level, not subcollection)
 | `serviceId` | String | Reference to the service |
 | `status` | String | See BookingStatus above |
 | `requestMessage` | String | Free-text message from client |
-| `schedule` | Map? | Slot info (start datetime, duration) |
+| `scheduledAt` | Timestamp? | Structured date/time for the appointment (preferred) |
+| `schedule` | Map? | Legacy slot info (freeform, kept for backwards compat) |
 | `addressSnapshot` | Map? | Client address at time of booking |
 | `chatId` | String? | Set by `acceptBooking()` Cloud Function |
+| `reminded24h` | bool | Flag for 24h reminder (set by sendBookingReminders) |
+| `reminded1h` | bool | Flag for 1h reminder (set by sendBookingReminders) |
 | `createdAt` | Timestamp | UTC |
 | `acceptedAt` | Timestamp? | UTC — set by acceptBooking() |
 | `rejectedAt` | Timestamp? | UTC — set by rejectBooking() |
@@ -132,6 +161,8 @@ Firestore collection: `chats/{chatId}`
 | `id` | String | Document ID, derived as `chat_{bookingId}` |
 | `bookingId` | String | The booking this chat belongs to |
 | `participantIds` | List\<String\> | [customerId, providerId] |
+| `customerId` | String | Denormalized for queries |
+| `providerId` | String | Denormalized for queries |
 | `createdAt` | Timestamp | Set by acceptBooking() |
 | `lastMessageAt` | Timestamp? | Updated on each new message |
 
@@ -149,10 +180,12 @@ Firestore collection: `chats/{chatId}/messages/{messageId}`
 | `id` | String | Document ID |
 | `chatId` | String | Parent chat ID |
 | `senderId` | String | UID of the sender |
-| `type` | String | "text" or "image" |
-| `text` | String? | Present when type=text |
-| `mediaUrl` | String? | Present when type=image (Storage URL) |
+| `type` | String | "text", "image", or "voice" |
+| `text` | String? | Present when type=text, or as caption for images |
+| `mediaUrl` | String? | Present when type=image or type=voice (Storage URL) |
 | `createdAt` | Timestamp | UTC — use `createdAt` not `sentAt` |
+
+Firestore rules: message create requires `text OR mediaUrl` (not both mandatory).
 
 Field name is `createdAt` (not `sentAt`) — aligns with all other collections.
 
@@ -208,14 +241,31 @@ Firestore collection: `reports/{reportId}`
 
 ---
 
+## Notification
+
+Firestore collection: `notifications/{uid}/items/{notifId}`
+
+| Field | Type | Notes |
+|---|---|---|
+| `type` | String | See notification types below |
+| `title` | String | Notification title |
+| `body` | String | Notification body |
+| `bookingId` | String? | Related booking |
+| `chatId` | String? | Related chat |
+| `read` | bool | Read flag |
+| `createdAt` | Timestamp | UTC |
+
+Notification types: `new_message`, `booking_accepted`, `booking_rejected`, `booking_in_progress`, `booking_done`, `booking_reminder`
+
+---
+
 ## Enums summary
 
 ```
 BookingStatus : requested | accepted | in_progress | done | rejected | cancelled
-ServiceStatus : draft | active | inactive
 UserRole      : customer | provider | admin   (technical auth role, not UI mode)
 ActiveMode    : client | provider              (UI switch — stored on AppUser)
-MessageType   : text | image | system
+MessageType   : text | image | voice | system
 PriceType     : hourly | fixed
 Country       : FR | SN
 ReviewerRole  : client | provider
@@ -223,6 +273,8 @@ TargetType    : user | service | message       (for reports)
 ReportStatus  : open | resolved | dismissed
 CategoryId    : menage | plomberie | jardinage | electricite | peinture | bricolage | gardeEnfants
 ```
+
+---
 
 ## PhoneShare access rule
 
