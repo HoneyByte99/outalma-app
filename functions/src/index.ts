@@ -3,7 +3,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as logger from 'firebase-functions/logger';
-import { assertAdminClaim, assertAuthenticated, requireBoolean, requireString } from './common';
+import { assertAdminClaim, assertAdminOrModeratorClaim, assertAuthenticated, requireBoolean, requireString } from './common';
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -613,3 +613,240 @@ export const sendBookingReminders = onSchedule(
     logger.info(`Booking reminders: checked ${snap.size}, sent ${sent}`);
   }
 );
+
+// ---------------------------------------------------------------------------
+// Admin audit log helper
+// ---------------------------------------------------------------------------
+
+async function writeAdminLog(data: {
+  actorUid: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  notes?: string;
+}): Promise<void> {
+  await db.collection('admin_logs').add({
+    actorUid: data.actorUid,
+    action: data.action,
+    targetType: data.targetType,
+    targetId: data.targetId,
+    notes: data.notes ?? null,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// setModeratorClaim — admin only
+// ---------------------------------------------------------------------------
+
+export const setModeratorClaim = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const targetUid = requireString(request.data?.uid, 'uid');
+  const isModerator = requireBoolean(request.data?.moderator, 'moderator');
+
+  // Merge with existing claims to avoid wiping admin claim
+  const user = await admin.auth().getUser(targetUid);
+  const currentClaims = (user.customClaims ?? {}) as Record<string, unknown>;
+  await admin.auth().setCustomUserClaims(targetUid, { ...currentClaims, moderator: isModerator });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: isModerator ? 'set_moderator_claim' : 'revoke_moderator_claim',
+    targetType: 'user',
+    targetId: targetUid,
+  });
+
+  return { uid: targetUid, moderator: isModerator };
+});
+
+// ---------------------------------------------------------------------------
+// suspendProvider — admin or moderator
+// ---------------------------------------------------------------------------
+
+export const suspendProvider = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const targetUid = requireString(request.data?.uid, 'uid');
+  const reason = typeof request.data?.reason === 'string' ? request.data.reason.trim() : null;
+
+  const providerRef = db.collection('providers').doc(targetUid);
+  const providerSnap = await providerRef.get();
+  if (!providerSnap.exists) {
+    throw new HttpsError('not-found', 'Provider not found.');
+  }
+
+  const servicesSnap = await db
+    .collection('services')
+    .where('providerId', '==', targetUid)
+    .where('published', '==', true)
+    .get();
+
+  const batch = db.batch();
+  batch.update(providerRef, {
+    suspended: true,
+    suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
+    suspendedReason: reason,
+  });
+  for (const doc of servicesSnap.docs) {
+    batch.update(doc.ref, { published: false });
+  }
+  await batch.commit();
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'suspend_provider',
+    targetType: 'provider',
+    targetId: targetUid,
+    notes: reason ?? undefined,
+  });
+
+  return { uid: targetUid, suspended: true, servicesUnpublished: servicesSnap.size };
+});
+
+// ---------------------------------------------------------------------------
+// unsuspendProvider — admin only
+// ---------------------------------------------------------------------------
+
+export const unsuspendProvider = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const targetUid = requireString(request.data?.uid, 'uid');
+
+  const providerRef = db.collection('providers').doc(targetUid);
+  const providerSnap = await providerRef.get();
+  if (!providerSnap.exists) {
+    throw new HttpsError('not-found', 'Provider not found.');
+  }
+
+  await providerRef.update({
+    suspended: false,
+    suspendedAt: admin.firestore.FieldValue.delete(),
+    suspendedReason: admin.firestore.FieldValue.delete(),
+  });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'unsuspend_provider',
+    targetType: 'provider',
+    targetId: targetUid,
+  });
+
+  return { uid: targetUid, suspended: false };
+});
+
+// ---------------------------------------------------------------------------
+// removeService — admin or moderator
+// ---------------------------------------------------------------------------
+
+export const removeService = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const serviceId = requireString(request.data?.serviceId, 'serviceId');
+
+  const serviceRef = db.collection('services').doc(serviceId);
+  const serviceSnap = await serviceRef.get();
+  if (!serviceSnap.exists) {
+    throw new HttpsError('not-found', 'Service not found.');
+  }
+
+  await serviceRef.update({ published: false });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'remove_service',
+    targetType: 'service',
+    targetId: serviceId,
+  });
+
+  return { serviceId, published: false };
+});
+
+// ---------------------------------------------------------------------------
+// deleteMessage — admin or moderator (soft delete)
+// ---------------------------------------------------------------------------
+
+export const deleteMessage = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const chatId = requireString(request.data?.chatId, 'chatId');
+  const messageId = requireString(request.data?.messageId, 'messageId');
+
+  const messageRef = db.collection('chats').doc(chatId).collection('messages').doc(messageId);
+  const messageSnap = await messageRef.get();
+  if (!messageSnap.exists) {
+    throw new HttpsError('not-found', 'Message not found.');
+  }
+
+  await messageRef.update({
+    deleted: true,
+    text: admin.firestore.FieldValue.delete(),
+    mediaUrl: admin.firestore.FieldValue.delete(),
+    deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+    deletedBy: callerUid,
+  });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'delete_message',
+    targetType: 'message',
+    targetId: `${chatId}/messages/${messageId}`,
+  });
+
+  return { chatId, messageId, deleted: true };
+});
+
+// ---------------------------------------------------------------------------
+// resolveReport — admin or moderator
+// ---------------------------------------------------------------------------
+
+export const resolveReport = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const reportId = requireString(request.data?.reportId, 'reportId');
+  const action = requireString(request.data?.action, 'action');
+  if (action !== 'resolved' && action !== 'rejected') {
+    throw new HttpsError('invalid-argument', "action must be 'resolved' or 'rejected'.");
+  }
+  const notes = typeof request.data?.notes === 'string' ? request.data.notes.trim() : null;
+
+  const reportRef = db.collection('reports').doc(reportId);
+  const reportSnap = await reportRef.get();
+  if (!reportSnap.exists) {
+    throw new HttpsError('not-found', 'Report not found.');
+  }
+
+  const report = reportSnap.data() as { status?: string };
+  if (report.status !== 'open') {
+    throw new HttpsError('failed-precondition', `Report is already ${report.status ?? 'closed'}.`);
+  }
+
+  await reportRef.update({
+    status: action,
+    resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
+    resolvedBy: callerUid,
+    resolutionNotes: notes,
+  });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: `resolve_report_${action}`,
+    targetType: 'report',
+    targetId: reportId,
+    notes: notes ?? undefined,
+  });
+
+  return { reportId, status: action };
+});

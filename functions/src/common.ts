@@ -25,3 +25,9 @@ export function assertAdminClaim(claimAdmin: unknown): void {
     throw new HttpsError('permission-denied', 'Admin privileges required.');
   }
 }
+
+export function assertAdminOrModeratorClaim(token: Record<string, unknown> | undefined): void {
+  if (token?.admin !== true && token?.moderator !== true) {
+    throw new HttpsError('permission-denied', 'Admin or moderator privileges required.');
+  }
+}
