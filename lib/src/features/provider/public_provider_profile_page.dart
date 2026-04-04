@@ -9,6 +9,7 @@ import '../../application/review/review_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
+import '../../domain/utils/country_utils.dart';
 import '../shared/user_avatar.dart';
 
 class PublicProviderProfilePage extends ConsumerWidget {
@@ -179,7 +180,7 @@ class _ProfileHeader extends ConsumerWidget {
                       Icon(Icons.location_on_outlined, size: 14, color: oc.secondaryText),
                       const SizedBox(width: 4),
                       Text(
-                        user.country,
+                        CountryUtils.flagAndName(user.country),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                       ),
                     ],

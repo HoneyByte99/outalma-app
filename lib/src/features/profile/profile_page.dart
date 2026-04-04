@@ -13,6 +13,7 @@ import '../../data/services/avatar_upload_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_user.dart';
 import '../../domain/models/review.dart';
+import '../../domain/utils/country_utils.dart';
 import '../shared/phone_field.dart';
 import '../shared/user_avatar.dart';
 
@@ -214,7 +215,7 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      user.country.toUpperCase(),
+                      CountryUtils.flagAndName(user.country),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: oc.primary,
                             fontWeight: FontWeight.w600,
@@ -488,7 +489,7 @@ class _CountryPicker extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      label,
+                      '${CountryUtils.flag(code)} $label',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: isSelected ? oc.primary : oc.primaryText,
                             fontWeight: isSelected
