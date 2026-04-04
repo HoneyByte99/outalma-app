@@ -533,7 +533,27 @@ export const setAdminClaim = onCall(async (request) => {
   const targetUid = requireString(request.data?.uid, 'uid');
   const isAdmin = requireBoolean(request.data?.admin, 'admin');
 
-  await admin.auth().setCustomUserClaims(targetUid, { admin: isAdmin });
+  // Merge with existing claims
+  const user = await admin.auth().getUser(targetUid);
+  const current = (user.customClaims ?? {}) as Record<string, unknown>;
+  await admin.auth().setCustomUserClaims(targetUid, { ...current, admin: isAdmin });
+
+  // Mirror role to Firestore for admin panel visibility
+  await db.collection('user_roles').doc(targetUid).set({
+    uid: targetUid,
+    email: user.email ?? null,
+    displayName: user.displayName ?? null,
+    admin: isAdmin,
+    moderator: (current.moderator as boolean | undefined) ?? false,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: isAdmin ? 'set_admin_claim' : 'revoke_admin_claim',
+    targetType: 'user',
+    targetId: targetUid,
+  });
 
   return { uid: targetUid, admin: isAdmin };
 });
@@ -651,6 +671,16 @@ export const setModeratorClaim = onCall(async (request) => {
   const user = await admin.auth().getUser(targetUid);
   const currentClaims = (user.customClaims ?? {}) as Record<string, unknown>;
   await admin.auth().setCustomUserClaims(targetUid, { ...currentClaims, moderator: isModerator });
+
+  // Mirror role to Firestore for admin panel visibility
+  await db.collection('user_roles').doc(targetUid).set({
+    uid: targetUid,
+    email: user.email ?? null,
+    displayName: user.displayName ?? null,
+    admin: (currentClaims.admin as boolean | undefined) ?? false,
+    moderator: isModerator,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
 
   await writeAdminLog({
     actorUid: callerUid,
@@ -804,6 +834,90 @@ export const deleteMessage = onCall(async (request) => {
   });
 
   return { chatId, messageId, deleted: true };
+});
+
+// ---------------------------------------------------------------------------
+// resolveReport — admin or moderator
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// logSession — called by the mobile app on every sign-in
+// ---------------------------------------------------------------------------
+
+export const logSession = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  assertAuthenticated(uid);
+
+  const platform = requireString(request.data?.platform, 'platform');
+  if (!['android', 'ios', 'web'].includes(platform)) {
+    throw new HttpsError('invalid-argument', "platform must be 'android', 'ios', or 'web'.");
+  }
+  const deviceModel =
+    typeof request.data?.deviceModel === 'string' ? request.data.deviceModel.trim() : null;
+  const appVersion =
+    typeof request.data?.appVersion === 'string' ? request.data.appVersion.trim() : null;
+  const sessionId =
+    typeof request.data?.sessionId === 'string' ? request.data.sessionId.trim() : null;
+
+  // Extract client IP (Cloud Run sets x-forwarded-for)
+  const rawIp =
+    (request.rawRequest.headers['x-forwarded-for'] as string | undefined)
+      ?.split(',')[0]
+      ?.trim() ?? request.rawRequest.socket?.remoteAddress ?? null;
+  const ip = rawIp === '::1' || rawIp === '127.0.0.1' ? null : rawIp;
+
+  // Geolocate IP via ipapi.co (1 000 req/day on free tier)
+  let country: string | null = null;
+  let countryCode: string | null = null;
+  if (ip) {
+    try {
+      const geoResp = await fetch(`https://ipapi.co/${ip}/json/`);
+      if (geoResp.ok) {
+        const geo = (await geoResp.json()) as {
+          country_code?: string;
+          country_name?: string;
+          error?: boolean;
+        };
+        if (!geo.error) {
+          countryCode = geo.country_code ?? null;
+          country = geo.country_name ?? null;
+        }
+      }
+    } catch (e) {
+      logger.warn('IP geolocation failed', { ip, error: String(e) });
+    }
+  }
+
+  const sessionRef = db.collection('user_sessions').doc(uid);
+  const eventRef = sessionRef.collection('events').doc();
+
+  const batch = db.batch();
+  batch.set(eventRef, {
+    uid,
+    ip,
+    country,
+    countryCode,
+    platform,
+    deviceModel,
+    appVersion,
+    sessionId,
+    loggedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  batch.set(
+    sessionRef,
+    {
+      uid,
+      lastSeenAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastIp: ip,
+      lastCountry: country,
+      lastCountryCode: countryCode,
+      lastPlatform: platform,
+    },
+    { merge: true }
+  );
+  await batch.commit();
+
+  return { logged: true };
 });
 
 // ---------------------------------------------------------------------------

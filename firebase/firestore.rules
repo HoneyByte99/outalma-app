@@ -223,6 +223,17 @@ service cloud.firestore {
       allow delete: if isAdmin() || isSelf(uid);
     }
 
+    // ---------- USER SESSIONS (admin read-only, written by Cloud Functions) ----------
+    match /user_sessions/{uid} {
+      allow read: if isAdmin();
+      allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
+
+      match /events/{eventId} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
+    }
+
     // ---------- Default deny ----------
     match /{document=**} {
       allow read, write: if false;
