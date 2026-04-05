@@ -89,8 +89,8 @@ service cloud.firestore {
               || resource.data.providerId == request.auth.uid);
       }
 
-      allow get: if isAdmin() || isParticipant();
-      allow list: if isAdmin() || isParticipant();
+      allow get: if isAdminOrModerator() || isParticipant();
+      allow list: if isAdminOrModerator() || isParticipant();
 
       // Create: customer creates; status must start as "requested"
       allow create: if isAdmin()
@@ -117,7 +117,7 @@ service cloud.firestore {
           && (request.auth.uid in resource.data.participantIds);
       }
 
-      allow read: if isAdmin() || isChatParticipant();
+      allow read: if isAdminOrModerator() || isChatParticipant();
 
       // Chat documents are created exclusively by the acceptBooking Cloud Function.
       allow create: if isAdmin();
@@ -133,7 +133,7 @@ service cloud.firestore {
                 get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
         }
 
-        allow read: if isAdmin() || isParticipantViaChat();
+        allow read: if isAdminOrModerator() || isParticipantViaChat();
 
         // Create: only participants; senderId must match auth uid
         // text OR mediaUrl must be present (supports image/voice messages)
