@@ -969,6 +969,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get phoneAuthOrWith => 'ou';
 
   @override
+  String get phoneAuthWebUnsupported =>
+      'La connexion par téléphone n\'est disponible que sur l\'application mobile.';
+
+  @override
   String get otpTitle => 'Code de vérification';
 
   @override

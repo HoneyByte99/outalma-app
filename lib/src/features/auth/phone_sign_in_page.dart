@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,6 +23,17 @@ class _PhoneSignInPageState extends ConsumerState<PhoneSignInPage> {
     if (phone == null || phone.isEmpty) return;
 
     final l10n = AppLocalizations.of(context)!;
+
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.phoneAuthWebUnsupported),
+          backgroundColor: context.oc.error,
+        ),
+      );
+      return;
+    }
+
     final errMsg = l10n.otpPhoneError;
     setState(() => _loading = true);
 

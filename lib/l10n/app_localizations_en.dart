@@ -960,6 +960,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get phoneAuthOrWith => 'or';
 
   @override
+  String get phoneAuthWebUnsupported =>
+      'Phone sign-in is only available on the mobile app.';
+
+  @override
   String get otpTitle => 'Verification code';
 
   @override

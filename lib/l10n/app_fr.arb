@@ -321,6 +321,7 @@
   "phoneAuthButton": "Envoyer le code",
   "phoneAuthWithNumber": "Continuer avec un numéro de téléphone",
   "phoneAuthOrWith": "ou",
+  "phoneAuthWebUnsupported": "La connexion par téléphone n'est disponible que sur l'application mobile.",
   "otpTitle": "Code de vérification",
   "otpSubtitle": "Un code a été envoyé au {phone}",
   "@otpSubtitle": {

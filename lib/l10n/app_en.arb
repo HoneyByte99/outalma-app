@@ -376,6 +376,7 @@
   "phoneAuthButton": "Send code",
   "phoneAuthWithNumber": "Continue with a phone number",
   "phoneAuthOrWith": "or",
+  "phoneAuthWebUnsupported": "Phone sign-in is only available on the mobile app.",
   "otpTitle": "Verification code",
   "otpSubtitle": "A code was sent to {phone}",
   "@otpSubtitle": {

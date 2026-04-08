@@ -1898,6 +1898,12 @@ abstract class AppLocalizations {
   /// **'or'**
   String get phoneAuthOrWith;
 
+  /// No description provided for @phoneAuthWebUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone sign-in is only available on the mobile app.'**
+  String get phoneAuthWebUnsupported;
+
   /// No description provided for @otpTitle.
   ///
   /// In en, this message translates to:
