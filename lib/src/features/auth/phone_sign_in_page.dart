@@ -19,21 +19,11 @@ class _PhoneSignInPageState extends ConsumerState<PhoneSignInPage> {
   bool _loading = false;
 
   Future<void> _send() async {
+    if (kIsWeb) return; // button is disabled on web; defensive guard only
     final phone = _phoneE164;
     if (phone == null || phone.isEmpty) return;
 
     final l10n = AppLocalizations.of(context)!;
-
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.phoneAuthWebUnsupported),
-          backgroundColor: context.oc.error,
-        ),
-      );
-      return;
-    }
-
     final errMsg = l10n.otpPhoneError;
     setState(() => _loading = true);
 
@@ -112,37 +102,90 @@ class _PhoneSignInPageState extends ConsumerState<PhoneSignInPage> {
                 ),
                 const SizedBox(height: 28),
 
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: (_loading || (_phoneE164?.isEmpty ?? true))
-                        ? null
-                        : _send,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: oc.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                if (kIsWeb) ...[
+                  // Persistent inline notice — web doesn't support phone auth.
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: oc.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: oc.primary.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.smartphone_rounded,
+                            color: oc.primary, size: 22),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            l10n.phoneAuthWebUnsupported,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: oc.primary,
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.4,
+                                    ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: null, // disabled on web
+                      style: FilledButton.styleFrom(
+                        backgroundColor: oc.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.phoneAuthButton,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
-                    child: _loading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            l10n.phoneAuthButton,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
                   ),
-                ),
+                ] else ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: (_loading || (_phoneE164?.isEmpty ?? true))
+                          ? null
+                          : _send,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: oc.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: _loading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              l10n.phoneAuthButton,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
