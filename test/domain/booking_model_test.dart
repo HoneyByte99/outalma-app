@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:outlama_app/src/domain/enums/booking_status.dart';
-import 'package:outlama_app/src/domain/models/booking.dart';
+import 'package:outalma_app/src/domain/enums/booking_status.dart';
+import 'package:outalma_app/src/domain/models/booking.dart';
 
 final _epoch = DateTime.utc(1970);
 

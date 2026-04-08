@@ -1,20 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:outlama_app/src/application/auth/auth_state.dart';
-import 'package:outlama_app/src/app/router.dart';
-import 'package:outlama_app/src/domain/enums/active_mode.dart';
-import 'package:outlama_app/src/domain/models/app_user.dart';
+import 'package:outalma_app/src/application/auth/auth_state.dart';
+import 'package:outalma_app/src/app/router.dart';
+import 'package:outalma_app/src/domain/enums/active_mode.dart';
+import 'package:outalma_app/src/domain/models/app_user.dart';
 
 // Tests the redirect logic extracted from RouterNotifier as a pure function.
 // The full GoRouter integration is covered by widget tests; these unit tests
 // protect the redirect decision rules.
 
 String? _redirect(AuthState authState, String location) {
-  const authRoutes = [AppRoutes.signIn, AppRoutes.signUp];
+  const authRoutes = [
+    AppRoutes.signIn,
+    AppRoutes.signUp,
+    AppRoutes.phoneSignIn,
+    AppRoutes.phoneOtp,
+    AppRoutes.phoneName,
+  ];
   final isAuthRoute = authRoutes.contains(location);
 
   return switch (authState) {
     AuthLoading() => null,
     AuthUnauthenticated() => isAuthRoute ? null : AppRoutes.signIn,
+    AuthPhoneVerification() =>
+      location == AppRoutes.phoneOtp ? null : AppRoutes.phoneOtp,
     AuthAuthenticated() => isAuthRoute ? AppRoutes.home : null,
   };
 }

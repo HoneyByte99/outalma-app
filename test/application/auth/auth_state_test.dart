@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:outlama_app/src/application/auth/auth_state.dart';
-import 'package:outlama_app/src/domain/enums/active_mode.dart';
-import 'package:outlama_app/src/domain/models/app_user.dart';
+import 'package:outalma_app/src/application/auth/auth_state.dart';
+import 'package:outalma_app/src/domain/enums/active_mode.dart';
+import 'package:outalma_app/src/domain/models/app_user.dart';
 
 void main() {
   group('AuthState sealed class', () {
@@ -29,6 +29,10 @@ void main() {
         const AuthLoading(),
         const AuthUnauthenticated(),
         AuthAuthenticated(_testUser()),
+        const AuthPhoneVerification(
+          verificationId: 'vid',
+          phoneNumber: '+221701234567',
+        ),
       ];
 
       for (final s in states) {
@@ -36,6 +40,7 @@ void main() {
           AuthLoading() => 'loading',
           AuthUnauthenticated() => 'unauthenticated',
           AuthAuthenticated() => 'authenticated',
+          AuthPhoneVerification() => 'phone-verification',
         };
         expect(label, isNotEmpty);
       }

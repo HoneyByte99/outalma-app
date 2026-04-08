@@ -16,3 +16,13 @@ class AuthAuthenticated extends AuthState {
 class AuthUnauthenticated extends AuthState {
   const AuthUnauthenticated();
 }
+
+/// Intermediate state: phone OTP was sent, waiting for user to enter the code.
+class AuthPhoneVerification extends AuthState {
+  const AuthPhoneVerification({
+    required this.verificationId,
+    required this.phoneNumber,
+  });
+  final String verificationId;
+  final String phoneNumber;
+}

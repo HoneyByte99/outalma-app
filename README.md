@@ -1,4 +1,4 @@
-# outlama_app
+# outalma_app
 
 A new Flutter project.
 

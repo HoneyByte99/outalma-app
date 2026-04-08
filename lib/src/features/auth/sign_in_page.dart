@@ -221,6 +221,40 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                           child: Text(l10n.signInButton),
                         ),
                       ),
+                const SizedBox(height: 16),
+
+                // ---- Phone auth divider ----
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: oc.border)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        l10n.phoneAuthOrWith,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: oc.secondaryText,
+                            ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: oc.border)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push(AppRoutes.phoneSignIn),
+                    icon: const Icon(Icons.phone_outlined, size: 18),
+                    label: Text(l10n.phoneAuthWithNumber),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 24),
 
                 // ---- Footer link ----

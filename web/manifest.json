@@ -1,6 +1,6 @@
 {
-    "name": "outlama_app",
-    "short_name": "outlama_app",
+    "name": "outalma_app",
+    "short_name": "outalma_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",

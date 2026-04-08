@@ -316,6 +316,35 @@
   "zoneValidate": "Valider",
   "zoneModify": "Modifier",
 
+  "phoneAuthTitle": "Numéro de téléphone",
+  "phoneAuthSubtitle": "Entrez votre numéro pour recevoir un code de vérification par SMS.",
+  "phoneAuthButton": "Envoyer le code",
+  "phoneAuthWithNumber": "Continuer avec un numéro de téléphone",
+  "phoneAuthOrWith": "ou",
+  "otpTitle": "Code de vérification",
+  "otpSubtitle": "Un code a été envoyé au {phone}",
+  "@otpSubtitle": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
+  "otpHint": "Code à 6 chiffres",
+  "otpVerify": "Vérifier",
+  "otpResendIn": "Renvoyer dans {seconds}s",
+  "@otpResendIn": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+  "otpResend": "Renvoyer le code",
+  "otpError": "Code incorrect. Réessayez.",
+  "otpPhoneError": "Impossible d'envoyer le code. Vérifiez le numéro.",
+  "phoneNameTitle": "Votre prénom et nom",
+  "phoneNameSubtitle": "Ce nom sera visible par les autres utilisateurs.",
+  "phoneNameHint": "Prénom et nom",
+  "phoneNameButton": "Continuer",
+  "phoneNameError": "Impossible de sauvegarder. Réessayez.",
+
   "langSystem": "Système (appareil)",
   "langFrench": "Français",
   "langEnglish": "Anglais",

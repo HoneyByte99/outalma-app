@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:outlama_app/src/data/firestore/firestore_serialization.dart';
+import 'package:outalma_app/src/data/firestore/firestore_serialization.dart';
 
 void main() {
   group('dateTimeFromFirestore', () {

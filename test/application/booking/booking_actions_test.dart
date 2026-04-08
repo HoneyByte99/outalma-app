@@ -1,6 +1,6 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:outlama_app/src/application/booking/booking_actions.dart';
+import 'package:outalma_app/src/application/booking/booking_actions.dart';
 
 // ---------------------------------------------------------------------------
 // Shared fakes (same pattern as create_booking_use_case_test)

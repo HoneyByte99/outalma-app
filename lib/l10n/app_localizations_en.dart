@@ -944,6 +944,65 @@ class AppLocalizationsEn extends AppLocalizations {
   String get zoneModify => 'Modify';
 
   @override
+  String get phoneAuthTitle => 'Phone number';
+
+  @override
+  String get phoneAuthSubtitle =>
+      'Enter your number to receive a verification code via SMS.';
+
+  @override
+  String get phoneAuthButton => 'Send code';
+
+  @override
+  String get phoneAuthWithNumber => 'Continue with a phone number';
+
+  @override
+  String get phoneAuthOrWith => 'or';
+
+  @override
+  String get otpTitle => 'Verification code';
+
+  @override
+  String otpSubtitle(String phone) {
+    return 'A code was sent to $phone';
+  }
+
+  @override
+  String get otpHint => '6-digit code';
+
+  @override
+  String get otpVerify => 'Verify';
+
+  @override
+  String otpResendIn(int seconds) {
+    return 'Resend in ${seconds}s';
+  }
+
+  @override
+  String get otpResend => 'Resend code';
+
+  @override
+  String get otpError => 'Incorrect code. Please try again.';
+
+  @override
+  String get otpPhoneError => 'Could not send code. Check the number.';
+
+  @override
+  String get phoneNameTitle => 'Your name';
+
+  @override
+  String get phoneNameSubtitle => 'This name will be visible to other users.';
+
+  @override
+  String get phoneNameHint => 'First and last name';
+
+  @override
+  String get phoneNameButton => 'Continue';
+
+  @override
+  String get phoneNameError => 'Could not save. Please try again.';
+
+  @override
   String get langSystem => 'System (device)';
 
   @override

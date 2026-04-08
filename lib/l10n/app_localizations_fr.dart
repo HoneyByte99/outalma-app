@@ -953,6 +953,67 @@ class AppLocalizationsFr extends AppLocalizations {
   String get zoneModify => 'Modifier';
 
   @override
+  String get phoneAuthTitle => 'Numéro de téléphone';
+
+  @override
+  String get phoneAuthSubtitle =>
+      'Entrez votre numéro pour recevoir un code de vérification par SMS.';
+
+  @override
+  String get phoneAuthButton => 'Envoyer le code';
+
+  @override
+  String get phoneAuthWithNumber => 'Continuer avec un numéro de téléphone';
+
+  @override
+  String get phoneAuthOrWith => 'ou';
+
+  @override
+  String get otpTitle => 'Code de vérification';
+
+  @override
+  String otpSubtitle(String phone) {
+    return 'Un code a été envoyé au $phone';
+  }
+
+  @override
+  String get otpHint => 'Code à 6 chiffres';
+
+  @override
+  String get otpVerify => 'Vérifier';
+
+  @override
+  String otpResendIn(int seconds) {
+    return 'Renvoyer dans ${seconds}s';
+  }
+
+  @override
+  String get otpResend => 'Renvoyer le code';
+
+  @override
+  String get otpError => 'Code incorrect. Réessayez.';
+
+  @override
+  String get otpPhoneError =>
+      'Impossible d\'envoyer le code. Vérifiez le numéro.';
+
+  @override
+  String get phoneNameTitle => 'Votre prénom et nom';
+
+  @override
+  String get phoneNameSubtitle =>
+      'Ce nom sera visible par les autres utilisateurs.';
+
+  @override
+  String get phoneNameHint => 'Prénom et nom';
+
+  @override
+  String get phoneNameButton => 'Continuer';
+
+  @override
+  String get phoneNameError => 'Impossible de sauvegarder. Réessayez.';
+
+  @override
   String get langSystem => 'Système (appareil)';
 
   @override

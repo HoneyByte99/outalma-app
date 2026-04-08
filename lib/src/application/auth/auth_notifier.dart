@@ -42,6 +42,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           id: firebaseUser.uid,
           displayName: firebaseUser.displayName ?? '',
           email: firebaseUser.email ?? '',
+          phoneE164: firebaseUser.phoneNumber,
           country: 'FR',
           activeMode: ActiveMode.client,
           createdAt: DateTime.now(),
@@ -64,6 +65,55 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
   Future<void> signOut() async {
     await ref.read(firebaseAuthProvider).signOut();
+  }
+
+  /// Step 1 of phone auth — sends SMS OTP.
+  /// On success, transitions to [AuthPhoneVerification].
+  /// Throws a [String] error message on failure.
+  Future<void> sendPhoneOtp(String phoneE164) async {
+    final auth = ref.read(firebaseAuthProvider);
+    String? errorMessage;
+
+    final completer = Completer<void>();
+
+    await auth.verifyPhoneNumber(
+      phoneNumber: phoneE164,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (credential) async {
+        // Auto-retrieval on Android — sign in immediately without OTP screen.
+        try {
+          await auth.signInWithCredential(credential);
+        } catch (_) {}
+        if (!completer.isCompleted) completer.complete();
+      },
+      verificationFailed: (e) {
+        errorMessage = e.message ?? e.code;
+        if (!completer.isCompleted) completer.complete();
+      },
+      codeSent: (verificationId, _) {
+        state = AsyncData(AuthPhoneVerification(
+          verificationId: verificationId,
+          phoneNumber: phoneE164,
+        ));
+        if (!completer.isCompleted) completer.complete();
+      },
+      codeAutoRetrievalTimeout: (_) {
+        if (!completer.isCompleted) completer.complete();
+      },
+    );
+
+    await completer.future;
+    if (errorMessage != null) throw errorMessage!;
+  }
+
+  /// Step 2 of phone auth — verifies the OTP entered by the user.
+  /// On success, [authStateChanges] fires and [_resolveState] runs.
+  Future<void> verifyPhoneOtp(String verificationId, String smsCode) async {
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    await ref.read(firebaseAuthProvider).signInWithCredential(credential);
   }
 
   /// Switches the active mode for the current user.

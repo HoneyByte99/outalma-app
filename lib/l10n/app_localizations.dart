@@ -1868,6 +1868,114 @@ abstract class AppLocalizations {
   /// **'Modify'**
   String get zoneModify;
 
+  /// No description provided for @phoneAuthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get phoneAuthTitle;
+
+  /// No description provided for @phoneAuthSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your number to receive a verification code via SMS.'**
+  String get phoneAuthSubtitle;
+
+  /// No description provided for @phoneAuthButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send code'**
+  String get phoneAuthButton;
+
+  /// No description provided for @phoneAuthWithNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with a phone number'**
+  String get phoneAuthWithNumber;
+
+  /// No description provided for @phoneAuthOrWith.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get phoneAuthOrWith;
+
+  /// No description provided for @otpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code'**
+  String get otpTitle;
+
+  /// No description provided for @otpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A code was sent to {phone}'**
+  String otpSubtitle(String phone);
+
+  /// No description provided for @otpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'6-digit code'**
+  String get otpHint;
+
+  /// No description provided for @otpVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get otpVerify;
+
+  /// No description provided for @otpResendIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend in {seconds}s'**
+  String otpResendIn(int seconds);
+
+  /// No description provided for @otpResend.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code'**
+  String get otpResend;
+
+  /// No description provided for @otpError.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect code. Please try again.'**
+  String get otpError;
+
+  /// No description provided for @otpPhoneError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send code. Check the number.'**
+  String get otpPhoneError;
+
+  /// No description provided for @phoneNameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name'**
+  String get phoneNameTitle;
+
+  /// No description provided for @phoneNameSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This name will be visible to other users.'**
+  String get phoneNameSubtitle;
+
+  /// No description provided for @phoneNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'First and last name'**
+  String get phoneNameHint;
+
+  /// No description provided for @phoneNameButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get phoneNameButton;
+
+  /// No description provided for @phoneNameError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save. Please try again.'**
+  String get phoneNameError;
+
   /// No description provided for @langSystem.
   ///
   /// In en, this message translates to:

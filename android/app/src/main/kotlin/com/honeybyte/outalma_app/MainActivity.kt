@@ -1,4 +1,4 @@
-package com.honeybyte.outlama_app
+package com.honeybyte.outalma_app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:outlama_app/src/application/review/review_providers.dart';
-import 'package:outlama_app/src/domain/enums/reviewer_role.dart';
-import 'package:outlama_app/src/domain/models/review.dart';
-import 'package:outlama_app/src/domain/repositories/review_repository.dart';
+import 'package:outalma_app/src/application/review/review_providers.dart';
+import 'package:outalma_app/src/domain/enums/reviewer_role.dart';
+import 'package:outalma_app/src/domain/models/review.dart';
+import 'package:outalma_app/src/domain/repositories/review_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Fake repository

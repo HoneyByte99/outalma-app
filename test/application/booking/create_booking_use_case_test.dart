@@ -1,6 +1,6 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:outlama_app/src/application/booking/create_booking_use_case.dart';
+import 'package:outalma_app/src/application/booking/create_booking_use_case.dart';
 
 // ---------------------------------------------------------------------------
 // Fake implementations — no mockito needed
