@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
@@ -36,6 +37,9 @@ class _ProviderOnboardingPageState
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
+    final errorMsg = AppLocalizations.of(context)!.onboardingError;
+    final errorColor = context.oc.error;
+
     setState(() => _saving = true);
     try {
       final profile = ProviderProfile(
@@ -56,8 +60,8 @@ class _ProviderOnboardingPageState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible d\'activer le profil. Réessayez.'),
-            backgroundColor: context.oc.error,
+            content: Text(errorMsg),
+            backgroundColor: errorColor,
           ),
         );
       }
@@ -68,11 +72,12 @@ class _ProviderOnboardingPageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Devenir prestataire'),
+        title: Text(l10n.onboardingTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.pop(),
@@ -103,13 +108,12 @@ class _ProviderOnboardingPageState
                 const SizedBox(height: 28),
 
                 Text(
-                  'Proposez vos services',
+                  l10n.onboardingHeadline,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Créez votre profil prestataire en quelques secondes. '
-                  'Vous pourrez ensuite publier vos services et recevoir des demandes.',
+                  l10n.onboardingBody,
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
@@ -119,7 +123,7 @@ class _ProviderOnboardingPageState
 
                 // Bio
                 Text(
-                  'Présentation (optionnel)',
+                  l10n.onboardingBio,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
@@ -127,25 +131,24 @@ class _ProviderOnboardingPageState
                   controller: _bioController,
                   maxLines: 3,
                   maxLength: 300,
-                  decoration: const InputDecoration(
-                    hintText:
-                        'Ex: Plombier avec 10 ans d\'expérience, disponible en région parisienne...',
+                  decoration: InputDecoration(
+                    hintText: l10n.onboardingBioHint,
                   ),
                 ),
                 const SizedBox(height: 20),
 
                 // Zone
                 Text(
-                  'Zone d\'intervention (optionnel)',
+                  l10n.onboardingZone,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _zoneController,
-                  decoration: const InputDecoration(
-                    hintText: 'Ex: Paris et banlieue, Île-de-France...',
+                  decoration: InputDecoration(
+                    hintText: l10n.onboardingZoneHint,
                     prefixIcon:
-                        Icon(Icons.location_on_outlined, size: 20),
+                        const Icon(Icons.location_on_outlined, size: 20),
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -169,9 +172,9 @@ class _ProviderOnboardingPageState
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Activer mon profil prestataire',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                        : Text(
+                            l10n.onboardingActivate,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                   ),
                 ),

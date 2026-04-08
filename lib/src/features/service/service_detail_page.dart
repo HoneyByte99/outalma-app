@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
@@ -47,6 +48,7 @@ class _ServiceDetailContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final uid = ref.watch(authNotifierProvider).valueOrNull is AuthAuthenticated
         ? (ref.watch(authNotifierProvider).valueOrNull as AuthAuthenticated)
@@ -127,7 +129,7 @@ class _ServiceDetailContent extends ConsumerWidget {
                   if (service.description != null &&
                       service.description!.isNotEmpty) ...[
                     Text(
-                      'Description',
+                      l10n.serviceDescription,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: 8),
@@ -232,6 +234,7 @@ class _ProviderRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
 
@@ -257,7 +260,7 @@ class _ProviderRow extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Prestataire',
+                    l10n.serviceProviderLabel,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: oc.secondaryText,
                         ),
@@ -275,7 +278,7 @@ class _ProviderRow extends ConsumerWidget {
             Row(
               children: [
                 Text(
-                  'Voir le profil',
+                  l10n.serviceViewProfile,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: oc.primary,
                         fontWeight: FontWeight.w600,
@@ -311,6 +314,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,7 +333,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
           GestureDetector(
             onTap: () => setState(() => _expanded = !_expanded),
             child: Text(
-              _expanded ? 'Voir moins' : 'Voir plus',
+              _expanded ? l10n.seeLess : l10n.seeMore,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: oc.primary,
                     fontWeight: FontWeight.w600,
@@ -353,6 +357,7 @@ class _BookingBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
@@ -363,7 +368,7 @@ class _BookingBottomBar extends StatelessWidget {
       ),
       child: ElevatedButton(
         onPressed: () => _openBookingSheet(context),
-        child: const Text('Demander ce service'),
+        child: Text(l10n.serviceBook),
       ),
     );
   }
@@ -393,6 +398,7 @@ class _EditBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
@@ -404,7 +410,7 @@ class _EditBottomBar extends StatelessWidget {
       child: ElevatedButton.icon(
         onPressed: () => context.push(AppRoutes.serviceEdit(serviceId)),
         icon: const Icon(Icons.edit_outlined, size: 18),
-        label: const Text('Modifier cette annonce'),
+        label: Text(l10n.serviceEditListing),
       ),
     );
   }
@@ -454,6 +460,7 @@ class _ServiceDetailError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: context.oc.background,
       appBar: AppBar(),
@@ -464,13 +471,13 @@ class _ServiceDetailError extends StatelessWidget {
             Icon(Icons.error_outline, size: 56, color: context.oc.icons),
             const SizedBox(height: 16),
             Text(
-              'Service introuvable',
+              l10n.serviceNotFound,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Retour'),
+              child: Text(l10n.back),
             ),
           ],
         ),

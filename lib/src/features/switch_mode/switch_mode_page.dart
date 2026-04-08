@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
@@ -24,6 +25,9 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
       return;
     }
 
+    final l10n = AppLocalizations.of(context)!;
+    final errorMsg = l10n.modeSwitchError;
+
     setState(() => _saving = true);
 
     try {
@@ -32,8 +36,7 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Impossible de changer de mode. Réessayez.')),
+          SnackBar(content: Text(errorMsg)),
         );
       }
     } finally {
@@ -43,13 +46,14 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final activeMode = ref.watch(activeModeProvider);
     final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Choisir un mode'),
+        title: Text(l10n.switchModeTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.pop(),
@@ -65,12 +69,12 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
                   children: [
                     // --- Mode section ---
                     Text(
-                      'Votre mode actif',
+                      l10n.switchModeHeading,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Passez du mode client au mode prestataire à tout moment.',
+                      l10n.switchModeDescription,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: oc.secondaryText,
                           ),
@@ -80,9 +84,8 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
                       mode: ActiveMode.client,
                       isActive: activeMode == ActiveMode.client,
                       icon: Icons.search_rounded,
-                      title: 'Mode Client',
-                      subtitle:
-                          'Recherchez et réservez des services à domicile.',
+                      title: l10n.modeClient,
+                      subtitle: l10n.modeClientSubtitle,
                       accentColor: oc.primary,
                       onTap: () => _selectMode(ActiveMode.client),
                     ),
@@ -91,8 +94,8 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
                       mode: ActiveMode.provider,
                       isActive: activeMode == ActiveMode.provider,
                       icon: Icons.handyman_rounded,
-                      title: 'Mode Prestataire',
-                      subtitle: 'Proposez vos services et gérez vos missions.',
+                      title: l10n.modeProvider,
+                      subtitle: l10n.modeProviderSubtitle,
                       accentColor: oc.success,
                       onTap: () => _selectMode(ActiveMode.provider),
                     ),
@@ -101,20 +104,20 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
 
                     // --- Appearance section ---
                     Text(
-                      'Apparence',
+                      l10n.profileAppearance,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Choisissez le thème de l\'application.',
+                      l10n.switchModeThemeDescription,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: oc.secondaryText,
                           ),
                     ),
                     const SizedBox(height: 16),
                     _ThemeOption(
-                      label: 'Système',
-                      subtitle: 'Suit les préférences de votre appareil',
+                      label: l10n.themeSystem,
+                      subtitle: l10n.themeSystemSubtitle,
                       icon: Icons.brightness_auto_outlined,
                       selected: themeMode == ThemeMode.system,
                       onTap: () => ref
@@ -123,8 +126,8 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
                     ),
                     const SizedBox(height: 10),
                     _ThemeOption(
-                      label: 'Clair',
-                      subtitle: 'Toujours en mode clair',
+                      label: l10n.themeLight,
+                      subtitle: l10n.themeLightSubtitle,
                       icon: Icons.light_mode_outlined,
                       selected: themeMode == ThemeMode.light,
                       onTap: () => ref
@@ -133,8 +136,8 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
                     ),
                     const SizedBox(height: 10),
                     _ThemeOption(
-                      label: 'Sombre',
-                      subtitle: 'Toujours en mode sombre',
+                      label: l10n.themeDark,
+                      subtitle: l10n.themeDarkSubtitle,
                       icon: Icons.dark_mode_outlined,
                       selected: themeMode == ThemeMode.dark,
                       onTap: () => ref

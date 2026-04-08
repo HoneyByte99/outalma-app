@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
@@ -19,6 +20,7 @@ class PublicProviderProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final reviewsAsync = ref.watch(reviewsForUserProvider(providerId));
     final servicesAsync = ref.watch(publicProviderServicesProvider(providerId));
@@ -55,7 +57,7 @@ class PublicProviderProfilePage extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-              child: Text('Avis', style: Theme.of(context).textTheme.titleMedium),
+              child: Text(l10n.reviewsLabel, style: Theme.of(context).textTheme.titleMedium),
             ),
           ),
 
@@ -67,8 +69,8 @@ class PublicProviderProfilePage extends ConsumerWidget {
             ),
             error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
             data: (reviews) => reviews.isEmpty
-                ? const SliverToBoxAdapter(
-                    child: _EmptySection(icon: Icons.star_outline_rounded, label: 'Aucun avis pour le moment'),
+                ? SliverToBoxAdapter(
+                    child: _EmptySection(icon: Icons.star_outline_rounded, label: l10n.reviewsEmpty),
                   )
                 : SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -85,7 +87,7 @@ class PublicProviderProfilePage extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-              child: Text('Services proposés', style: Theme.of(context).textTheme.titleMedium),
+              child: Text(l10n.servicesOffered, style: Theme.of(context).textTheme.titleMedium),
             ),
           ),
 
@@ -97,8 +99,8 @@ class PublicProviderProfilePage extends ConsumerWidget {
             ),
             error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
             data: (services) => services.isEmpty
-                ? const SliverToBoxAdapter(
-                    child: _EmptySection(icon: Icons.work_outline_rounded, label: 'Aucun service publié'),
+                ? SliverToBoxAdapter(
+                    child: _EmptySection(icon: Icons.work_outline_rounded, label: l10n.serviceEmptyTitle),
                   )
                 : SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),

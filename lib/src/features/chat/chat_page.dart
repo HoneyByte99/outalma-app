@@ -8,6 +8,8 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
@@ -75,6 +77,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
+    final l10n = AppLocalizations.of(context)!;
+    final errorMsg = l10n.chatErrorSend;
+
     setState(() => _sending = true);
 
     try {
@@ -97,7 +102,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible d\'envoyer le message.'),
+            content: Text(errorMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -113,6 +118,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Future<void> _sendMedia(MessageType type, String url, {String? caption}) async {
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final errorMsg = l10n.chatFileError;
 
     setState(() => _sending = true);
     try {
@@ -135,7 +143,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible d\'envoyer le fichier.'),
+            content: Text(errorMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -175,6 +183,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _startRecording() async {
+    final l10n = AppLocalizations.of(context)!;
+    final errorMsg = l10n.chatMicError;
+
     try {
       if (kIsWeb) {
         // On web, skip hasPermission (causes MissingPluginException with
@@ -198,7 +209,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible d\'activer le micro.'),
+            content: Text(errorMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -207,6 +218,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _stopAndSendRecording() async {
+    final l10n = AppLocalizations.of(context)!;
+    final errorMsg = l10n.chatVoiceError;
+
     final path = await _recorder.stop();
     setState(() => _recording = false);
     if (path == null || !mounted) return;
@@ -226,7 +240,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible d\'envoyer le vocal.'),
+            content: Text(errorMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -243,6 +257,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final messagesAsync = ref.watch(chatMessagesProvider(widget.chatId));
     final authState = ref.watch(authNotifierProvider).valueOrNull;
@@ -252,13 +267,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Chat'),
+        title: Text(l10n.chatConversation),
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             icon: const Icon(Icons.flag_outlined, size: 20),
-            tooltip: 'Signaler',
+            tooltip: l10n.bookingReport,
             onPressed: () => context.push(
               AppRoutes.report(type: 'message', id: widget.chatId),
             ),
@@ -274,7 +289,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   const Center(child: CircularProgressIndicator()),
               error: (_, __) => Center(
                 child: Text(
-                  'Impossible de charger les messages.',
+                  l10n.chatLoadError,
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
@@ -684,6 +699,7 @@ class _ImagePreviewBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
@@ -722,7 +738,7 @@ class _ImagePreviewBar extends StatelessWidget {
                   minLines: 1,
                   maxLines: 3,
                   decoration: InputDecoration(
-                    hintText: 'Ajouter un message\u2026',
+                    hintText: l10n.chatAddCaption,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 10),
                     filled: true,
@@ -838,6 +854,7 @@ class _InputBarState extends State<_InputBar> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
@@ -856,7 +873,7 @@ class _InputBarState extends State<_InputBar> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Enregistrement en cours\u2026',
+                l10n.chatRecording,
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
@@ -866,7 +883,7 @@ class _InputBarState extends State<_InputBar> {
             IconButton(
               onPressed: widget.onCancelRecording,
               icon: Icon(Icons.delete_outline, color: oc.error),
-              tooltip: 'Annuler',
+              tooltip: l10n.cancel,
             ),
             const SizedBox(width: 4),
             GestureDetector(
@@ -902,7 +919,7 @@ class _InputBarState extends State<_InputBar> {
           IconButton(
             onPressed: widget.sending ? null : widget.onPickGallery,
             icon: Icon(Icons.photo_outlined, color: oc.icons, size: 24),
-            tooltip: 'Galerie',
+            tooltip: l10n.chatGallery,
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
             padding: EdgeInsets.zero,
           ),
@@ -915,7 +932,7 @@ class _InputBarState extends State<_InputBar> {
               maxLines: 4,
               textInputAction: TextInputAction.newline,
               decoration: InputDecoration(
-                hintText: 'Message\u2026',
+                hintText: l10n.chatTyping,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 filled: true,
@@ -997,6 +1014,7 @@ class _InputBarState extends State<_InputBar> {
 class _EmptyChat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Center(
       child: Padding(
@@ -1011,12 +1029,12 @@ class _EmptyChat extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Démarrez la conversation',
+              l10n.chatStartConversation,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Coordonnez les détails du service ici.',
+              l10n.chatSubtitle,
               textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme

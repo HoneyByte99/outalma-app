@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/locale/locale_provider.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../application/user/user_providers.dart';
@@ -28,10 +30,12 @@ class ProfilePage extends ConsumerWidget {
         ? (authAsync.valueOrNull as AuthAuthenticated).user
         : null;
 
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Profil & Paramètres'),
+        title: Text(l10n.profileTitle),
         backgroundColor: oc.background,
         surfaceTintColor: Colors.transparent,
       ),
@@ -43,26 +47,30 @@ class ProfilePage extends ConsumerWidget {
             const _EditableUserHeader(),
             const SizedBox(height: 28),
             if (user != null) ...[
-              const _SectionLabel(label: 'Mes avis'),
+              _SectionLabel(label: l10n.profileMyReviews),
               const SizedBox(height: 12),
               _MyReviewsSection(uid: user.id),
               const SizedBox(height: 28),
             ],
-            const _SectionLabel(label: 'Mode actif'),
+            _SectionLabel(label: l10n.profileActiveMode),
             const SizedBox(height: 12),
             const _ModeToggle(),
             const SizedBox(height: 28),
             if (user != null) ...[
-              const _SectionLabel(label: 'Informations'),
+              _SectionLabel(label: l10n.profileInformation),
               const SizedBox(height: 12),
               _ProfileForm(user: user),
               const SizedBox(height: 28),
             ],
-            const _SectionLabel(label: 'Apparence'),
+            _SectionLabel(label: l10n.profileAppearance),
             const SizedBox(height: 12),
             const _ThemeSelector(),
             const SizedBox(height: 28),
-            const _SectionLabel(label: 'Compte'),
+            _SectionLabel(label: l10n.profileLanguage),
+            const SizedBox(height: 12),
+            const _LanguageSelector(),
+            const SizedBox(height: 28),
+            _SectionLabel(label: l10n.profileAccount),
             const SizedBox(height: 12),
             _AccountSection(user: user),
           ],
@@ -95,6 +103,7 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
     final service = ref.read(avatarUploadServiceProvider);
     if (service == null) return;
 
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _uploading = true);
     try {
       final url = await service.pickAndUpload();
@@ -108,7 +117,7 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur : ${e.toString()}'),
+            content: Text(l10n.profileErrorUpload(e.toString())),
             backgroundColor: context.oc.error,
             duration: const Duration(seconds: 8),
           ),
@@ -274,6 +283,9 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final l10n = AppLocalizations.of(context)!;
+    final savedMsg = l10n.profileSaved;
+    final saveErrMsg = l10n.profileSaveError;
     setState(() => _saving = true);
     try {
       await ref.read(authNotifierProvider.notifier).updateProfile(
@@ -283,14 +295,14 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
           );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil mis à jour.')),
+          SnackBar(content: Text(savedMsg)),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible de sauvegarder. Réessayez.'),
+            content: Text(saveErrMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -303,6 +315,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: oc.surface,
@@ -317,7 +330,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
           children: [
             // Email — read-only
             _ReadOnlyField(
-              label: 'Email',
+              label: l10n.fieldEmail,
               value: widget.user.email,
               icon: Icons.lock_outline_rounded,
             ),
@@ -329,11 +342,11 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
               textCapitalization: TextCapitalization.words,
               decoration: _inputDecoration(
                 context,
-                label: 'Nom complet',
+                label: l10n.fieldFullName,
                 icon: Icons.person_outline_rounded,
               ),
               validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Champ requis' : null,
+                  (v == null || v.trim().isEmpty) ? l10n.fieldRequired : null,
             ),
             const SizedBox(height: 14),
 
@@ -371,9 +384,9 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text(
-                      'Enregistrer',
-                      style: TextStyle(
+                  : Text(
+                      l10n.save,
+                      style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
                       ),
@@ -456,7 +469,7 @@ class _CountryPicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Pays',
+          AppLocalizations.of(context)!.fieldCountry,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: oc.secondaryText,
                 fontWeight: FontWeight.w500,
@@ -560,13 +573,13 @@ class _ModeToggleState extends ConsumerState<_ModeToggle> {
   Future<void> _select(ActiveMode mode) async {
     if (ref.read(activeModeProvider) == mode) return;
     setState(() => _saving = true);
+    final errMsg = AppLocalizations.of(context)!.modeSwitchError;
     try {
       await ref.read(authNotifierProvider.notifier).switchMode(mode);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Impossible de changer de mode. Réessayez.')),
+          SnackBar(content: Text(errMsg)),
         );
       }
     } finally {
@@ -595,13 +608,14 @@ class _ModeToggleState extends ConsumerState<_ModeToggle> {
       );
     }
 
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(
           child: _ModeTile(
             icon: Icons.search_rounded,
-            label: 'Client',
-            subtitle: 'Réserver des services',
+            label: l10n.modeClient,
+            subtitle: l10n.modeClientSubtitle,
             isActive: activeMode == ActiveMode.client,
             color: oc.primary,
             onTap: () => _select(ActiveMode.client),
@@ -611,8 +625,8 @@ class _ModeToggleState extends ConsumerState<_ModeToggle> {
         Expanded(
           child: _ModeTile(
             icon: Icons.handyman_rounded,
-            label: 'Prestataire',
-            subtitle: 'Gérer mes missions',
+            label: l10n.modeProvider,
+            subtitle: l10n.modeProviderSubtitle,
             isActive: activeMode == ActiveMode.provider,
             color: oc.success,
             onTap: () => _select(ActiveMode.provider),
@@ -703,10 +717,11 @@ class _ThemeSelector extends ConsumerWidget {
     final oc = context.oc;
     final current = ref.watch(themeModeProvider);
 
+    final l10n = AppLocalizations.of(context)!;
     final options = [
-      (ThemeMode.system, Icons.brightness_auto_outlined, 'Système'),
-      (ThemeMode.light, Icons.light_mode_outlined, 'Clair'),
-      (ThemeMode.dark, Icons.dark_mode_outlined, 'Sombre'),
+      (ThemeMode.system, Icons.brightness_auto_outlined, l10n.themeSystem),
+      (ThemeMode.light, Icons.light_mode_outlined, l10n.themeLight),
+      (ThemeMode.dark, Icons.dark_mode_outlined, l10n.themeDark),
     ];
 
     return Container(
@@ -800,6 +815,7 @@ class _AccountSection extends ConsumerWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: () async {
           final oc = context.oc;
+          final l10n = AppLocalizations.of(context)!;
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (ctx) => Dialog(
@@ -823,14 +839,14 @@ class _AccountSection extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Se d\u00e9connecter ?',
+                      l10n.signOutTitle,
                       style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Vous devrez saisir vos identifiants pour vous reconnecter.',
+                      l10n.signOutContent,
                       textAlign: TextAlign.center,
                       style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                             color: oc.secondaryText,
@@ -848,7 +864,7 @@ class _AccountSection extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text('Annuler'),
+                            child: Text(l10n.cancel),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -863,7 +879,7 @@ class _AccountSection extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text('D\u00e9connexion'),
+                            child: Text(l10n.signOutButton),
                           ),
                         ),
                       ],
@@ -885,7 +901,7 @@ class _AccountSection extends ConsumerWidget {
               Icon(Icons.logout_outlined, size: 20, color: oc.error),
               const SizedBox(width: 14),
               Text(
-                'Se déconnecter',
+                AppLocalizations.of(context)!.signOut,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: oc.error,
                       fontWeight: FontWeight.w500,
@@ -922,6 +938,7 @@ class _MyReviewsSection extends ConsumerWidget {
       ),
       error: (_, __) => const SizedBox.shrink(),
       data: (reviews) {
+        final l10n = AppLocalizations.of(context)!;
         if (reviews.isEmpty) {
           return Container(
             padding: const EdgeInsets.all(16),
@@ -935,7 +952,7 @@ class _MyReviewsSection extends ConsumerWidget {
                 Icon(Icons.star_outline_rounded, size: 20, color: oc.icons),
                 const SizedBox(width: 12),
                 Text(
-                  'Aucun avis reçu pour le moment',
+                  l10n.reviewsEmpty,
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
@@ -987,7 +1004,7 @@ class _MyReviewsSection extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${reviews.length} avis',
+                        l10n.reviewsCount(reviews.length),
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
@@ -1076,6 +1093,95 @@ class _ReviewTile extends ConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Language selector
+// ---------------------------------------------------------------------------
+
+class _LanguageSelector extends ConsumerWidget {
+  const _LanguageSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+    final current = ref.watch(localeProvider);
+
+    final options = <(Locale?, IconData, String)>[
+      (null, Icons.phone_android_outlined, l10n.langSystem),
+      (const Locale('fr'), Icons.translate_outlined, l10n.langFrench),
+      (const Locale('en'), Icons.translate_outlined, l10n.langEnglish),
+    ];
+
+    bool isSelected(Locale? option) {
+      if (option == null) return current == null;
+      return current?.languageCode == option.languageCode;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: oc.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: oc.border),
+      ),
+      child: Column(
+        children: options.asMap().entries.map((entry) {
+          final i = entry.key;
+          final (locale, icon, label) = entry.value;
+          final selected = isSelected(locale);
+
+          return Column(
+            children: [
+              InkWell(
+                borderRadius: BorderRadius.vertical(
+                  top: i == 0 ? const Radius.circular(14) : Radius.zero,
+                  bottom: i == options.length - 1
+                      ? const Radius.circular(14)
+                      : Radius.zero,
+                ),
+                onTap: () =>
+                    ref.read(localeProvider.notifier).setLocale(locale),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      Icon(
+                        icon,
+                        size: 20,
+                        color: selected ? oc.primary : oc.icons,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: selected ? oc.primary : oc.primaryText,
+                                fontWeight: selected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
+                        ),
+                      ),
+                      if (selected)
+                        Icon(Icons.check_rounded,
+                            color: oc.primary, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+              if (i < options.length - 1)
+                Divider(height: 1, indent: 50, color: oc.border),
+            ],
+          );
+        }).toList(),
       ),
     );
   }

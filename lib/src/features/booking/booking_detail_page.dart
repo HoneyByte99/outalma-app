@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
@@ -16,9 +17,9 @@ import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
 
-String _formatSchedule(DateTime dt) {
-  final dateFmt = DateFormat('EEE d MMMM yyyy', 'fr_FR');
-  final timeFmt = DateFormat('HH:mm', 'fr_FR');
+String _formatSchedule(DateTime dt, String locale) {
+  final dateFmt = DateFormat('EEE d MMMM yyyy', locale);
+  final timeFmt = DateFormat('HH:mm', locale);
   return '${dateFmt.format(dt)} \u00e0 ${timeFmt.format(dt)}';
 }
 
@@ -53,9 +54,10 @@ class _DetailContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final serviceAsync =
-        ref.watch(serviceDetailProvider(booking.serviceId));
+    final locale = Localizations.localeOf(context).toString();
+    final serviceAsync = ref.watch(serviceDetailProvider(booking.serviceId));
     final serviceTitle = serviceAsync.valueOrNull?.title ?? '---';
 
     final authState = ref.watch(authNotifierProvider).valueOrNull;
@@ -78,19 +80,18 @@ class _DetailContent extends ConsumerWidget {
     }
 
     // The "other" participant we can report
-    final otherUid = uid == booking.customerId
-        ? booking.providerId
-        : booking.customerId;
+    final otherUid =
+        uid == booking.customerId ? booking.providerId : booking.customerId;
 
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Détail de la réservation'),
+        title: Text(l10n.bookingDetailTitle),
         actions: [
           if (otherUid.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.flag_outlined, size: 20),
-              tooltip: 'Signaler',
+              tooltip: l10n.bookingReport,
               onPressed: () => context.push(
                 AppRoutes.report(type: 'user', id: otherUid),
               ),
@@ -103,7 +104,7 @@ class _DetailContent extends ConsumerWidget {
         children: [
           // ---- Service info ----
           _Section(
-            title: 'Service',
+            title: l10n.bookingService,
             child: _InfoRow(
               icon: Icons.home_repair_service_outlined,
               label: serviceTitle,
@@ -113,11 +114,11 @@ class _DetailContent extends ConsumerWidget {
 
           // ---- Request message ----
           _Section(
-            title: 'Message',
+            title: l10n.bookingMessage,
             child: Text(
               booking.requestMessage.isNotEmpty
                   ? booking.requestMessage
-                  : 'Aucun message',
+                  : l10n.bookingNoMessage,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: oc.secondaryText,
                     height: 1.5,
@@ -129,20 +130,20 @@ class _DetailContent extends ConsumerWidget {
           // ---- Schedule ----
           if (booking.scheduledAt != null) ...[
             _Section(
-              title: 'Créneau',
+              title: l10n.bookingSchedule,
               child: _InfoRow(
                 icon: Icons.calendar_today_outlined,
-                label: _formatSchedule(booking.scheduledAt!),
+                label: _formatSchedule(booking.scheduledAt!, locale),
               ),
             ),
             const SizedBox(height: 16),
           ] else if (booking.schedule != null) ...[
             _Section(
-              title: 'Créneau',
+              title: l10n.bookingSchedule,
               child: _InfoRow(
                 icon: Icons.calendar_today_outlined,
                 label: booking.schedule!['description'] as String? ??
-                    'Non pr\u00e9cis\u00e9',
+                    l10n.bookingScheduleUnspecified,
               ),
             ),
             const SizedBox(height: 16),
@@ -151,11 +152,11 @@ class _DetailContent extends ConsumerWidget {
           // ---- Address ----
           if (booking.addressSnapshot != null) ...[
             _Section(
-              title: 'Adresse',
+              title: l10n.bookingAddress,
               child: _InfoRow(
                 icon: Icons.location_on_outlined,
                 label: booking.addressSnapshot!['address'] as String? ??
-                    'Non précisée',
+                    l10n.bookingAddressUnspecified,
               ),
             ),
             const SizedBox(height: 16),
@@ -195,7 +196,7 @@ class _DetailContent extends ConsumerWidget {
 
           // ---- Status timeline ----
           _Section(
-            title: 'Suivi',
+            title: l10n.bookingTimeline,
             child: _StatusTimeline(booking: booking),
           ),
         ],
@@ -221,15 +222,15 @@ class _ContactSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final sharesAsync = ref.watch(phoneSharesProvider(bookingId));
     final hasSharedAsync = ref.watch(hasSharedPhoneProvider(bookingId));
 
     // Current user's phone from auth state
     final authState = ref.watch(authNotifierProvider).valueOrNull;
-    final myPhone = authState is AuthAuthenticated
-        ? authState.user.phoneE164
-        : null;
+    final myPhone =
+        authState is AuthAuthenticated ? authState.user.phoneE164 : null;
 
     return sharesAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -250,7 +251,7 @@ class _ContactSection extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Contact',
+                l10n.bookingContact,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: oc.secondaryText,
                       fontWeight: FontWeight.w600,
@@ -276,7 +277,7 @@ class _ContactSection extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    otherShare?.phone ?? 'Numéro non encore partagé',
+                    otherShare?.phone ?? l10n.bookingPhoneNotShared,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: otherShare != null
                               ? oc.primaryText
@@ -302,7 +303,7 @@ class _ContactSection extends ConsumerWidget {
               ] else if (!hasShared && myPhone == null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Ajoutez votre numéro dans votre profil pour le partager.',
+                  l10n.bookingAddPhoneInProfile,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: oc.secondaryText,
                       ),
@@ -320,7 +321,7 @@ class _ContactSection extends ConsumerWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Votre numéro est partagé',
+                      l10n.bookingPhoneShared,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: oc.success,
                           ),
@@ -355,6 +356,7 @@ class _SharePhoneButtonState extends ConsumerState<_SharePhoneButton> {
   bool _sharing = false;
 
   Future<void> _share() async {
+    final errMsg = AppLocalizations.of(context)!.bookingSharePhoneError;
     setState(() => _sharing = true);
     try {
       await ref.read(phoneShareRepositoryProvider).share(
@@ -366,7 +368,7 @@ class _SharePhoneButtonState extends ConsumerState<_SharePhoneButton> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible de partager le numéro.'),
+            content: Text(errMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -378,6 +380,7 @@ class _SharePhoneButtonState extends ConsumerState<_SharePhoneButton> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return SizedBox(
       width: double.infinity,
@@ -393,7 +396,7 @@ class _SharePhoneButtonState extends ConsumerState<_SharePhoneButton> {
                 ),
               )
             : const Icon(Icons.phone_outlined, size: 16),
-        label: Text('Partager mon numéro (${widget.phone})'),
+        label: Text(l10n.bookingSharePhone(widget.phone)),
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 44),
           textStyle: const TextStyle(fontSize: 13),
@@ -414,10 +417,11 @@ class _ChatButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ElevatedButton.icon(
       onPressed: () => context.push(AppRoutes.chat(chatId)),
       icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-      label: const Text('Accéder au chat'),
+      label: Text(l10n.bookingOpenChat),
     );
   }
 }
@@ -437,6 +441,7 @@ class _ReviewSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final hasReviewedAsync = ref.watch(hasReviewedProvider(bookingId));
 
@@ -463,7 +468,7 @@ class _ReviewSection extends ConsumerWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'Avis envoyé — merci !',
+                  l10n.bookingReviewSent,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: oc.success,
                         fontWeight: FontWeight.w500,
@@ -477,7 +482,7 @@ class _ReviewSection extends ConsumerWidget {
         return OutlinedButton.icon(
           onPressed: () => context.push(AppRoutes.review(bookingId)),
           icon: const Icon(Icons.star_outline_rounded, size: 18),
-          label: const Text('Laisser un avis'),
+          label: Text(l10n.bookingLeaveReview),
         );
       },
     );
@@ -495,7 +500,8 @@ class _StatusTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final events = _buildEvents();
+    final l10n = AppLocalizations.of(context)!;
+    final events = _buildEvents(l10n);
 
     return Column(
       children: events.asMap().entries.map((entry) {
@@ -511,23 +517,23 @@ class _StatusTimeline extends StatelessWidget {
     );
   }
 
-  List<(String, DateTime?, bool)> _buildEvents() {
+  List<(String, DateTime?, bool)> _buildEvents(AppLocalizations l10n) {
     return [
-      ('Demande envoyée', booking.createdAt, true),
+      (l10n.timelineRequestSent, booking.createdAt, true),
       if (booking.acceptedAt != null)
-        ('Demande acceptée', booking.acceptedAt, true),
+        (l10n.timelineAccepted, booking.acceptedAt, true),
       if (booking.rejectedAt != null)
-        ('Demande refusée', booking.rejectedAt, true),
+        (l10n.timelineRejected, booking.rejectedAt, true),
       if (booking.startedAt != null)
-        ('Service en cours', booking.startedAt, true),
+        (l10n.timelineInProgress, booking.startedAt, true),
       if (booking.cancelledAt != null)
-        ('Annulée', booking.cancelledAt, true),
-      if (booking.doneAt != null) ('Terminé', booking.doneAt, true),
+        (l10n.timelineCancelled, booking.cancelledAt, true),
+      if (booking.doneAt != null) (l10n.timelineDone, booking.doneAt, true),
       // Future milestone
       if (booking.status == BookingStatus.requested)
-        ('En attente de réponse', null, false),
+        (l10n.timelinePendingResponse, null, false),
       if (booking.status == BookingStatus.accepted)
-        ('Service à venir', null, false),
+        (l10n.timelineUpcoming, null, false),
     ];
   }
 }
@@ -594,9 +600,8 @@ class _TimelineRow extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight:
                               isActive ? FontWeight.w500 : FontWeight.w400,
-                          color: isActive
-                              ? oc.primaryText
-                              : oc.secondaryText,
+                          color:
+                              isActive ? oc.primaryText : oc.secondaryText,
                         ),
                   ),
                   if (dateLabel.isNotEmpty) ...[
@@ -711,19 +716,21 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
   bool _loadingReject = false;
 
   Future<void> _accept() async {
+    final acceptedMsg = AppLocalizations.of(context)!.bookingAccepted;
+    final acceptErrMsg = AppLocalizations.of(context)!.bookingAcceptError;
     setState(() => _loadingAccept = true);
     try {
       await ref.read(acceptBookingUseCaseProvider).call(widget.booking.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Demande acceptée')),
+          SnackBar(content: Text(acceptedMsg)),
         );
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message ?? 'Erreur lors de l\'acceptation.'),
+            content: Text(e.message ?? acceptErrMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -732,7 +739,7 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Erreur lors de l\'acceptation.'),
+            content: Text(acceptErrMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -743,19 +750,21 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
   }
 
   Future<void> _reject() async {
+    final rejectedMsg = AppLocalizations.of(context)!.bookingRejected;
+    final rejectErrMsg = AppLocalizations.of(context)!.bookingRejectError;
     setState(() => _loadingReject = true);
     try {
       await ref.read(rejectBookingUseCaseProvider).call(widget.booking.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Demande refusée')),
+          SnackBar(content: Text(rejectedMsg)),
         );
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message ?? 'Erreur lors du refus.'),
+            content: Text(e.message ?? rejectErrMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -764,7 +773,7 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Erreur lors du refus.'),
+            content: Text(rejectErrMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -776,6 +785,7 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final busy = _loadingAccept || _loadingReject;
@@ -804,7 +814,7 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
                         color: oc.error,
                       ),
                     )
-                  : const Text('Refuser'),
+                  : Text(l10n.bookingReject),
             ),
           ),
           const SizedBox(width: 12),
@@ -820,7 +830,7 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
                         color: oc.surface,
                       ),
                     )
-                  : const Text('Accepter'),
+                  : Text(l10n.bookingAccept),
             ),
           ),
         ],
@@ -846,21 +856,21 @@ class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
   bool _loading = false;
 
   Future<void> _markInProgress() async {
+    final startedMsg = AppLocalizations.of(context)!.bookingServiceStarted;
+    final startErrMsg = AppLocalizations.of(context)!.bookingStartError;
     setState(() => _loading = true);
     try {
-      await ref
-          .read(markInProgressUseCaseProvider)
-          .call(widget.booking.id);
+      await ref.read(markInProgressUseCaseProvider).call(widget.booking.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Service démarré')),
+          SnackBar(content: Text(startedMsg)),
         );
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message ?? 'Erreur.'),
+            content: Text(e.message ?? startErrMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -869,7 +879,7 @@ class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Erreur lors du démarrage.'),
+            content: Text(startErrMsg),
             backgroundColor: context.oc.error,
           ),
         );
@@ -881,6 +891,7 @@ class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
@@ -900,7 +911,7 @@ class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
                   color: oc.surface,
                 ),
               )
-            : const Text('Démarrer le service'),
+            : Text(l10n.bookingStartService),
       ),
     );
   }
@@ -922,15 +933,22 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
   bool _loading = false;
 
   Future<void> _cancel() async {
+    final l10n = AppLocalizations.of(context)!;
+    final cancelTitle = l10n.bookingCancelTitle;
+    final cancelContent = l10n.bookingCancelContent;
+    final cancelNo = l10n.bookingCancelNo;
+    final cancelYes = l10n.bookingCancelYes;
+    final cancelErr = l10n.bookingCancelError;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Annuler la demande ?'),
-        content: const Text('Cette action est irr\u00e9versible.'),
+        title: Text(cancelTitle),
+        content: Text(cancelContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Non'),
+            child: Text(cancelNo),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -938,7 +956,7 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
               backgroundColor: context.oc.error,
               minimumSize: Size.zero,
             ),
-            child: const Text('Oui, annuler'),
+            child: Text(cancelYes),
           ),
         ],
       ),
@@ -947,14 +965,12 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
 
     setState(() => _loading = true);
     try {
-      await ref
-          .read(cancelBookingUseCaseProvider)
-          .call(widget.booking.id);
+      await ref.read(cancelBookingUseCaseProvider).call(widget.booking.id);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible d\'annuler. R\u00e9essayez.'),
+            content: Text(cancelErr),
             backgroundColor: context.oc.error,
           ),
         );
@@ -966,6 +982,7 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return SafeArea(
       child: Padding(
@@ -985,7 +1002,7 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
                     color: oc.error,
                   ),
                 )
-              : const Text('Annuler la demande'),
+              : Text(l10n.bookingCancelButton),
         ),
       ),
     );
@@ -1008,23 +1025,28 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
   bool _loading = false;
 
   Future<void> _confirmDone() async {
+    final l10n = AppLocalizations.of(context)!;
+    final doneTitle = l10n.bookingConfirmDoneTitle;
+    final doneContent = l10n.bookingConfirmDoneContent;
+    final confirmLabel = l10n.confirm;
+    final cancelLabel = l10n.cancel;
+    final doneSuccess = l10n.bookingDoneSuccess;
+    final doneErr = l10n.bookingDoneError;
+
     // Ask for confirmation before marking as done.
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer la fin ?'),
-        content: const Text(
-          'En confirmant, le service sera marqué comme terminé. '
-          'Vous pourrez ensuite laisser un avis.',
-        ),
+        title: Text(doneTitle),
+        content: Text(doneContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Annuler'),
+            child: Text(cancelLabel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Confirmer'),
+            child: Text(confirmLabel),
           ),
         ],
       ),
@@ -1036,14 +1058,14 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
       await ref.read(confirmDoneUseCaseProvider).call(widget.booking.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Service terminé !')),
+          SnackBar(content: Text(doneSuccess)),
         );
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message ?? 'Erreur.'),
+            content: Text(e.message ?? doneErr),
             backgroundColor: context.oc.error,
           ),
         );
@@ -1052,7 +1074,7 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Erreur lors de la confirmation.'),
+            content: Text(doneErr),
             backgroundColor: context.oc.error,
           ),
         );
@@ -1064,6 +1086,7 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
@@ -1086,7 +1109,7 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
                   color: oc.surface,
                 ),
               )
-            : const Text('Confirmer la fin du service'),
+            : Text(l10n.bookingConfirmDoneButton),
       ),
     );
   }
@@ -1101,8 +1124,9 @@ class _DetailLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Réservation')),
+      appBar: AppBar(title: Text(l10n.bookingTitle)),
       body: const Center(child: CircularProgressIndicator()),
     );
   }
@@ -1113,8 +1137,9 @@ class _DetailError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Réservation')),
+      appBar: AppBar(title: Text(l10n.bookingTitle)),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1122,13 +1147,13 @@ class _DetailError extends StatelessWidget {
             Icon(Icons.error_outline, size: 56, color: context.oc.icons),
             const SizedBox(height: 16),
             Text(
-              'Réservation introuvable',
+              l10n.bookingNotFound,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Retour'),
+              child: Text(l10n.back),
             ),
           ],
         ),

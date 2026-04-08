@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/booking/booking_providers.dart';
@@ -36,16 +37,17 @@ class _BookingListPageState extends ConsumerState<BookingListPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Mes réservations'),
+        title: Text(l10n.bookingsTitle),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'En cours'),
-            Tab(text: 'Terminées'),
+          tabs: [
+            Tab(text: l10n.tabActive),
+            Tab(text: l10n.tabDone),
           ],
         ),
       ),
@@ -138,6 +140,8 @@ class _ActiveBookingsWithCalendarState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
     final oc = context.oc;
 
     // Filter by selected day if any
@@ -160,7 +164,7 @@ class _ActiveBookingsWithCalendarState
         // Mini calendar
         SliverToBoxAdapter(
           child: TableCalendar<Booking>(
-            locale: 'fr_FR',
+            locale: locale,
             calendarFormat: CalendarFormat.twoWeeks,
             availableCalendarFormats: const {
               CalendarFormat.twoWeeks: '2 sem.',
@@ -236,7 +240,7 @@ class _ActiveBookingsWithCalendarState
                             size: 14, color: oc.primary),
                         const SizedBox(width: 6),
                         Text(
-                          DateFormat('EEE d MMM', 'fr_FR')
+                          DateFormat('EEE d MMM', locale)
                               .format(_selectedDay!),
                           style: Theme.of(context)
                               .textTheme
@@ -276,8 +280,8 @@ class _ActiveBookingsWithCalendarState
               child: Center(
                 child: Text(
                   _selectedDay != null
-                      ? 'Aucune r\u00e9servation ce jour'
-                      : 'Aucune r\u00e9servation \u00e0 venir',
+                      ? l10n.bookingNoDateToday
+                      : l10n.bookingNoUpcoming,
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
@@ -312,6 +316,8 @@ class _BookingCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
     final oc = context.oc;
     final serviceAsync =
         ref.watch(serviceDetailProvider(booking.serviceId));
@@ -355,7 +361,7 @@ class _BookingCard extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Demande du $dateLabel',
+              l10n.bookingRequestedAt(dateLabel),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: oc.secondaryText,
                   ),
@@ -368,7 +374,7 @@ class _BookingCard extends ConsumerWidget {
                       size: 12, color: oc.primary),
                   const SizedBox(width: 4),
                   Text(
-                    'Pr\u00e9vu : ${DateFormat('d MMM \u00e0 HH:mm', 'fr_FR').format(booking.scheduledAt!)}',
+                    l10n.bookingScheduledAt(DateFormat('d MMM, HH:mm', locale).format(booking.scheduledAt!)),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: oc.primary,
                           fontWeight: FontWeight.w500,
@@ -429,7 +435,7 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    final (label, color) = _statusStyle(status, oc);
+    final (label, color) = _statusStyle(context, status, oc);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -447,20 +453,21 @@ class _StatusChip extends StatelessWidget {
     );
   }
 
-  (String, Color) _statusStyle(BookingStatus s, OutalmaColors oc) {
+  (String, Color) _statusStyle(BuildContext context, BookingStatus s, OutalmaColors oc) {
+    final l10n = AppLocalizations.of(context)!;
     switch (s) {
       case BookingStatus.requested:
-        return ('En attente', oc.warning);
+        return (l10n.statusPending, oc.warning);
       case BookingStatus.accepted:
-        return ('Acceptée', oc.primary);
+        return (l10n.statusAccepted, oc.primary);
       case BookingStatus.inProgress:
-        return ('En cours', const Color(0xFF7B2FBE));
+        return (l10n.statusInProgress, const Color(0xFF7B2FBE));
       case BookingStatus.done:
-        return ('Terminée', oc.success);
+        return (l10n.statusDone, oc.success);
       case BookingStatus.rejected:
-        return ('Refusée', oc.secondaryText);
+        return (l10n.statusRejected, oc.secondaryText);
       case BookingStatus.cancelled:
-        return ('Annulée', oc.secondaryText);
+        return (l10n.statusCancelled, oc.secondaryText);
     }
   }
 }
@@ -501,6 +508,7 @@ class _BookingListEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Center(
       child: Padding(
@@ -518,8 +526,8 @@ class _BookingListEmpty extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               isActive
-                  ? 'Aucune réservation en cours'
-                  : 'Aucune réservation terminée',
+                  ? l10n.bookingsActiveEmpty
+                  : l10n.bookingsDoneEmpty,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: oc.secondaryText,
@@ -539,6 +547,7 @@ class _BookingListError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Center(
       child: Column(
@@ -547,11 +556,11 @@ class _BookingListError extends StatelessWidget {
           Icon(Icons.wifi_off_outlined, size: 56, color: oc.icons),
           const SizedBox(height: 16),
           Text(
-            'Erreur de chargement',
+            l10n.errorLoading,
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 8),
-          TextButton(onPressed: onRetry, child: const Text('Réessayer')),
+          TextButton(onPressed: onRetry, child: Text(l10n.retry)),
         ],
       ),
     );

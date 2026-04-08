@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../application/locale/locale_provider.dart';
 import '../application/notification/notification_service.dart';
 import '../application/theme/theme_provider.dart';
 import 'app_theme.dart';
@@ -38,6 +39,7 @@ class _OutlamaAppState extends ConsumerState<OutlamaApp> {
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
       title: 'Outalma',
@@ -47,13 +49,9 @@ class _OutlamaAppState extends ConsumerState<OutlamaApp> {
       routerConfig: router,
       scaffoldMessengerKey: _messengerKey,
       debugShowCheckedModeBanner: false,
-      locale: const Locale('fr'),
-      supportedLocales: const [Locale('fr')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       builder: (context, child) => ConnectivityBanner(
         child: child ?? const SizedBox.shrink(),
       ),

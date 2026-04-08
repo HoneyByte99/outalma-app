@@ -8,6 +8,7 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
+import '../../../l10n/app_localizations.dart';
 import '../shared/phone_field.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
@@ -34,18 +35,22 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   }
 
   Future<void> _signUp() async {
+    final l10n = AppLocalizations.of(context)!;
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      _showError('Veuillez remplir tous les champs obligatoires.');
+      _showError(l10n.signUpErrorEmptyFields);
       return;
     }
     if (password.length < 6) {
-      _showError('Le mot de passe doit contenir au moins 6 caractères.');
+      _showError(l10n.signUpErrorPasswordTooShort);
       return;
     }
+
+    // Capture before async gap.
+    final errorGeneral = l10n.errorGeneral;
 
     setState(() => _loading = true);
 
@@ -65,7 +70,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e.code));
     } catch (_) {
-      _showError('Une erreur est survenue. Veuillez réessayer.');
+      _showError(errorGeneral);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -79,16 +84,18 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   }
 
   String _mapFirebaseError(String code) {
+    final l10n = AppLocalizations.of(context)!;
     return switch (code) {
-      'email-already-in-use' => 'Cet email est déjà utilisé.',
-      'invalid-email' => 'Adresse email invalide.',
-      'weak-password' => 'Mot de passe trop faible (min. 6 caractères).',
-      _ => 'Inscription échouée. Vérifiez vos informations.',
+      'email-already-in-use' => l10n.authErrorEmailAlreadyInUse,
+      'invalid-email' => l10n.authErrorInvalidEmail,
+      'weak-password' => l10n.authErrorWeakPassword,
+      _ => l10n.authErrorSignUpFailed,
     };
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
 
     return GestureDetector(
@@ -116,7 +123,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
                 // ---- Heading ----
                 Text(
-                  'Créez votre compte',
+                  l10n.signUpTitle,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -124,7 +131,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Rejoignez Outalma et accédez à des services à domicile.',
+                  l10n.signUpSubtitle,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: oc.secondaryText,
                       ),
@@ -137,9 +144,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    hintText: 'Votre nom complet',
-                    prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                  decoration: InputDecoration(
+                    hintText: l10n.signUpNameHint,
+                    prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -148,9 +155,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   autocorrect: false,
-                  decoration: const InputDecoration(
-                    hintText: 'Adresse email',
-                    prefixIcon: Icon(Icons.email_outlined, size: 20),
+                  decoration: InputDecoration(
+                    hintText: l10n.signInEmailHint,
+                    prefixIcon: const Icon(Icons.email_outlined, size: 20),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -165,7 +172,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _signUp(),
                   decoration: InputDecoration(
-                    hintText: 'Mot de passe (min. 6 caractères)',
+                    hintText: l10n.signUpPasswordHint,
                     prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -194,7 +201,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: _signUp,
-                          child: const Text('Créer un compte'),
+                          child: Text(l10n.signUpButton),
                         ),
                       ),
                 const SizedBox(height: 24),
@@ -202,13 +209,13 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 // ---- Footer link ----
                 Text.rich(
                   TextSpan(
-                    text: 'Déjà un compte ? ',
+                    text: l10n.signUpHaveAccount,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: oc.secondaryText,
                         ),
                     children: [
                       TextSpan(
-                        text: 'Se connecter',
+                        text: l10n.signUpSignIn,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: oc.primary,
                               fontWeight: FontWeight.w600,
@@ -272,6 +279,7 @@ class _ThemeToggleButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final current = ref.watch(themeModeProvider);
 
@@ -279,17 +287,17 @@ class _ThemeToggleButton extends ConsumerWidget {
       ThemeMode.light => (
           Icons.dark_mode_outlined,
           ThemeMode.dark,
-          'Sombre',
+          l10n.themeDark,
         ),
       ThemeMode.dark => (
           Icons.brightness_auto_outlined,
           ThemeMode.system,
-          'Auto',
+          l10n.themeAuto,
         ),
       _ => (
           Icons.light_mode_outlined,
           ThemeMode.light,
-          'Clair',
+          l10n.themeLight,
         ),
     };
 

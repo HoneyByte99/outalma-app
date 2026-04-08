@@ -8,12 +8,14 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/notification/notification_providers.dart';
 import '../../domain/models/app_notification.dart';
+import '../../../l10n/app_localizations.dart';
 
 class NotificationsPage extends ConsumerWidget {
   const NotificationsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final notifAsync = ref.watch(notificationsProvider);
     final db = ref.read(firestoreProvider);
@@ -24,7 +26,7 @@ class NotificationsPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(l10n.notificationsTitle),
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
         actions: [
@@ -38,7 +40,7 @@ class NotificationsPage extends ConsumerWidget {
                   uid: uid,
                   notifications: list,
                 ),
-                child: const Text('Tout lire'),
+                child: Text(l10n.notificationsReadAll),
               );
             },
             orElse: () => const SizedBox.shrink(),
@@ -60,7 +62,7 @@ class NotificationsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Impossible de charger les notifications.',
+                  l10n.notificationsError,
                   textAlign: TextAlign.center,
                   style: Theme.of(context)
                       .textTheme
@@ -137,8 +139,19 @@ class _NotificationTile extends StatelessWidget {
   final dynamic db;
   final VoidCallback onTap;
 
+  String _relativeTime(DateTime dt, AppLocalizations l10n) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return l10n.notificationTimeNow;
+    if (diff.inMinutes < 60) return l10n.notificationTimeMinutes(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.notificationTimeHours(diff.inHours);
+    if (diff.inDays == 1) return l10n.notificationTimeYesterday;
+    if (diff.inDays < 7) return l10n.notificationTimeDays(diff.inDays);
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final isUnread = !notification.read;
 
@@ -210,7 +223,7 @@ class _NotificationTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _relativeTime(notification.createdAt),
+                    _relativeTime(notification.createdAt, l10n),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 11,
                           color: oc.icons,
@@ -233,6 +246,7 @@ class _NotificationTile extends StatelessWidget {
 class _EmptyNotifications extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Center(
       child: Padding(
@@ -247,12 +261,12 @@ class _EmptyNotifications extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Aucune notification',
+              l10n.notificationsEmpty,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Vous serez notifié ici lorsque\nquelque chose se passe.',
+              l10n.notificationsEmptySubtitle,
               textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme
@@ -290,14 +304,4 @@ Color _iconColor(String type, OutalmaColors oc) {
     'new_message' => oc.primary,
     _ => oc.icons,
   };
-}
-
-String _relativeTime(DateTime dt) {
-  final diff = DateTime.now().difference(dt);
-  if (diff.inSeconds < 60) return 'A l\'instant';
-  if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
-  if (diff.inHours < 24) return 'Il y a ${diff.inHours} h';
-  if (diff.inDays == 1) return 'Hier';
-  if (diff.inDays < 7) return 'Il y a ${diff.inDays} j';
-  return '${dt.day}/${dt.month}/${dt.year}';
 }

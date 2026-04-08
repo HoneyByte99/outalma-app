@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/theme/theme_provider.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SignInPage extends ConsumerStatefulWidget {
   const SignInPage({super.key});
@@ -29,13 +30,17 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   }
 
   Future<void> _signIn() async {
+    final l10n = AppLocalizations.of(context)!;
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      _showError('Veuillez remplir tous les champs.');
+      _showError(l10n.signInErrorEmptyFields);
       return;
     }
+
+    // Capture before async gap.
+    final errorGeneral = l10n.errorGeneral;
 
     setState(() => _loading = true);
 
@@ -47,7 +52,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e.code));
     } catch (_) {
-      _showError('Une erreur est survenue. Veuillez réessayer.');
+      _showError(errorGeneral);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -61,17 +66,19 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   }
 
   String _mapFirebaseError(String code) {
+    final l10n = AppLocalizations.of(context)!;
     return switch (code) {
       'user-not-found' || 'wrong-password' || 'invalid-credential' =>
-        'Email ou mot de passe incorrect.',
-      'user-disabled' => 'Ce compte est désactivé.',
-      'too-many-requests' => 'Trop de tentatives. Réessayez plus tard.',
-      _ => 'Connexion échouée. Vérifiez vos informations.',
+        l10n.authErrorInvalidCredential,
+      'user-disabled' => l10n.authErrorAccountDisabled,
+      'too-many-requests' => l10n.authErrorTooManyRequests,
+      _ => l10n.authErrorSignInFailed,
     };
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
 
     return GestureDetector(
@@ -99,7 +106,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
                 // ---- Heading ----
                 Text(
-                  'Bon retour !',
+                  l10n.signInWelcome,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -107,7 +114,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Connectez-vous pour accéder à vos services.',
+                  l10n.signInSubtitle,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: oc.secondaryText,
                       ),
@@ -121,9 +128,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   autocorrect: false,
-                  decoration: const InputDecoration(
-                    hintText: 'Adresse email',
-                    prefixIcon: Icon(Icons.email_outlined, size: 20),
+                  decoration: InputDecoration(
+                    hintText: l10n.signInEmailHint,
+                    prefixIcon: const Icon(Icons.email_outlined, size: 20),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -133,7 +140,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _signIn(),
                   decoration: InputDecoration(
-                    hintText: 'Mot de passe',
+                    hintText: l10n.signInPasswordHint,
                     prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -155,12 +162,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () async {
+                      final innerL10n = AppLocalizations.of(context)!;
                       final email = _emailController.text.trim();
                       if (email.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text(
-                                'Saisissez votre email pour r\u00e9initialiser.'),
+                            content: Text(innerL10n.signInForgotEnterEmail),
                             backgroundColor: oc.error,
                           ),
                         );
@@ -171,9 +178,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             .sendPasswordResetEmail(email: email);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Email de r\u00e9initialisation envoy\u00e9.'),
+                            SnackBar(
+                              content: Text(AppLocalizations.of(context)!
+                                  .signInForgotEmailSent),
                             ),
                           );
                         }
@@ -181,8 +188,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: const Text(
-                                  'Impossible d\'envoyer l\'email. V\u00e9rifiez l\'adresse.'),
+                              content: Text(AppLocalizations.of(context)!
+                                  .signInForgotEmailError),
                               backgroundColor: oc.error,
                             ),
                           );
@@ -190,7 +197,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       }
                     },
                     child: Text(
-                      'Mot de passe oubli\u00e9 ?',
+                      l10n.signInForgotPassword,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: oc.primary,
                           ),
@@ -211,7 +218,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: _signIn,
-                          child: const Text('Se connecter'),
+                          child: Text(l10n.signInButton),
                         ),
                       ),
                 const SizedBox(height: 24),
@@ -219,13 +226,13 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                 // ---- Footer link ----
                 Text.rich(
                   TextSpan(
-                    text: "Pas de compte ? ",
+                    text: l10n.signInNoAccount,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: oc.secondaryText,
                         ),
                     children: [
                       TextSpan(
-                        text: "S'inscrire",
+                        text: l10n.signInRegister,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: oc.primary,
                               fontWeight: FontWeight.w600,
@@ -289,6 +296,7 @@ class _ThemeToggleButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final current = ref.watch(themeModeProvider);
 
@@ -296,17 +304,17 @@ class _ThemeToggleButton extends ConsumerWidget {
       ThemeMode.light => (
           Icons.dark_mode_outlined,
           ThemeMode.dark,
-          'Sombre',
+          l10n.themeDark,
         ),
       ThemeMode.dark => (
           Icons.brightness_auto_outlined,
           ThemeMode.system,
-          'Auto',
+          l10n.themeAuto,
         ),
       _ => (
           Icons.light_mode_outlined,
           ThemeMode.light,
-          'Clair',
+          l10n.themeLight,
         ),
     };
 

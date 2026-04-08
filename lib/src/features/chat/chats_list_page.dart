@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_shell.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
@@ -40,21 +41,22 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final chatsAsync = ref.watch(chatsForModeProvider);
 
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Messages'),
+        title: Text(l10n.messagesTitle),
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
         actions: const [BellIconButton()],
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'En cours'),
-            Tab(text: 'Termin\u00e9es'),
+          tabs: [
+            Tab(text: l10n.chatTabActive),
+            Tab(text: l10n.chatTabDone),
           ],
         ),
       ),
@@ -62,7 +64,7 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage>
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => Center(
           child: Text(
-            'Impossible de charger les messages.',
+            l10n.chatLoadError,
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
@@ -117,11 +119,10 @@ class _ChatListFiltered extends ConsumerWidget {
     }).toList();
 
     if (filtered.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
       return Center(
         child: Text(
-          activeOnly
-              ? 'Aucune conversation en cours'
-              : 'Aucune conversation termin\u00e9e',
+          activeOnly ? l10n.chatActiveEmpty : l10n.chatDoneEmpty,
           style: Theme.of(context)
               .textTheme
               .bodyMedium
@@ -266,10 +267,11 @@ class _LastMessagePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     if (message == null) {
       return Text(
-        'D\u00e9marrez la conversation',
+        l10n.chatStartConversation,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: oc.secondaryText,
               fontStyle: FontStyle.italic,
@@ -280,7 +282,7 @@ class _LastMessagePreview extends StatelessWidget {
     }
 
     final isMe = message!.senderId == myUid;
-    final prefix = isMe ? 'Vous : ' : '';
+    final prefix = isMe ? l10n.chatYou : '';
     final text = message!.text ?? '';
 
     return Text(
@@ -304,6 +306,7 @@ class _EmptyChats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Center(
       child: Padding(
@@ -318,12 +321,12 @@ class _EmptyChats extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Aucun chat actif',
+              l10n.chatEmpty,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Les conversations d\u00e9marrent apr\u00e8s\nl\'acceptation d\'une r\u00e9servation.',
+              l10n.chatEmptySubtitle,
               textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme

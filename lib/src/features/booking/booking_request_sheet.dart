@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/booking/booking_providers.dart';
@@ -84,6 +85,11 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
+    final successMsg = l10n.bookingSentSuccess;
+    final errorMsg = l10n.errorGeneral;
+    final errorColor = context.oc.error;
+
     setState(() => _loading = true);
     try {
       final useCase = ref.read(createBookingUseCaseProvider);
@@ -96,7 +102,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Demande envoyée avec succès ✓')),
+          SnackBar(content: Text(successMsg)),
         );
         context.go(AppRoutes.bookings);
       }
@@ -104,10 +110,8 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.message ?? 'Une erreur est survenue. Réessayez.',
-            ),
-            backgroundColor: context.oc.error,
+            content: Text(e.message ?? errorMsg),
+            backgroundColor: errorColor,
           ),
         );
       }
@@ -115,8 +119,8 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Une erreur est survenue. Réessayez.'),
-            backgroundColor: context.oc.error,
+            content: Text(errorMsg),
+            backgroundColor: errorColor,
           ),
         );
       }
@@ -158,6 +162,8 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       return;
     }
 
+    final l10n = AppLocalizations.of(context)!;
+
     // Invalidate to force fresh data, then read
     final dateKey = (providerId: widget.providerId, date: dt);
     ref.invalidate(providerBookingsForDateProvider(dateKey));
@@ -178,7 +184,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       if (b.scheduledAt != null) {
         final diff = (b.scheduledAt!.difference(dt).inMinutes).abs();
         if (diff < 120) {
-          conflict = 'Le prestataire a d\u00e9j\u00e0 un RDV pr\u00e9vu \u00e0 cette heure.';
+          conflict = l10n.bookingConflictBusy;
           break;
         }
       }
@@ -192,13 +198,13 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
             slot.date.year == dt.year &&
             slot.date.month == dt.month &&
             slot.date.day == dt.day) {
-          conflict = 'Le prestataire est indisponible ce jour.';
+          conflict = l10n.bookingConflictUnavailableDay;
           break;
         }
         if (slot.endDate != null &&
             dt.isAfter(slot.date) &&
             dt.isBefore(slot.endDate!)) {
-          conflict = 'Le prestataire est indisponible sur ce cr\u00e9neau.';
+          conflict = l10n.bookingConflictUnavailableSlot;
           break;
         }
       }
@@ -209,6 +215,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
@@ -246,7 +253,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Demander ce service',
+                      l10n.bookingRequestTitle,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
@@ -282,7 +289,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                       child: OutlinedButton(
                         onPressed:
                             _loading ? null : () => setState(() => _step--),
-                        child: const Text('Retour'),
+                        child: Text(l10n.bookingBack),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -294,7 +301,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                             onPressed: _canAdvance
                                 ? () => setState(() => _step++)
                                 : null,
-                            child: const Text('Continuer'),
+                            child: Text(l10n.bookingContinue),
                           )
                         : ElevatedButton(
                             onPressed: _loading ? null : _submit,
@@ -307,7 +314,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                                       color: oc.surface,
                                     ),
                                   )
-                                : const Text('Envoyer la demande'),
+                                : Text(l10n.bookingSend),
                           ),
                   ),
                 ],
@@ -384,16 +391,17 @@ class _StepMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Décrivez votre besoin',
+          l10n.bookingStep1Title,
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 4),
         Text(
-          'Donnez des détails pour aider le prestataire à comprendre votre demande.',
+          l10n.bookingStep1Subtitle,
           style: Theme.of(context)
               .textTheme
               .bodySmall
@@ -407,8 +415,8 @@ class _StepMessage extends StatelessWidget {
           maxLines: 5,
           maxLength: 500,
           textInputAction: TextInputAction.newline,
-          decoration: const InputDecoration(
-            hintText: 'Ex: J\'ai besoin d\'un nettoyage complet de mon appartement...',
+          decoration: InputDecoration(
+            hintText: l10n.bookingStep1Hint,
           ),
         ),
       ],
@@ -437,25 +445,26 @@ class _StepSchedule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final dateFmt = DateFormat('EEE d MMMM yyyy', 'fr_FR');
     final dateLabel = selectedDate != null
         ? dateFmt.format(selectedDate!)
-        : 'Choisir une date';
+        : l10n.bookingStep2PickDate;
     final timeLabel = selectedTime != null
         ? '${selectedTime!.hour.toString().padLeft(2, '0')}h${selectedTime!.minute.toString().padLeft(2, '0')}'
-        : 'Choisir une heure';
+        : l10n.bookingStep2PickTime;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Date et heure souhaitées',
+          l10n.bookingStep2Title,
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 4),
         Text(
-          'Sélectionnez un créneau (optionnel).',
+          l10n.bookingStep2Subtitle,
           style: Theme.of(context)
               .textTheme
               .bodySmall
@@ -594,17 +603,18 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Adresse d\'intervention',
+          l10n.bookingAddressLabel,
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 4),
         Text(
-          'O\u00f9 souhaitez-vous que le prestataire intervienne ? (optionnel)',
+          l10n.bookingStep3Subtitle,
           style: Theme.of(context)
               .textTheme
               .bodySmall
@@ -617,7 +627,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
           autofocus: true,
           textInputAction: TextInputAction.done,
           decoration: InputDecoration(
-            hintText: 'Ex: 12 rue de la Paix, Paris 75001',
+            hintText: l10n.bookingStep3Hint,
             prefixIcon: Icon(Icons.location_on_outlined,
                 size: 20, color: oc.icons),
           ),

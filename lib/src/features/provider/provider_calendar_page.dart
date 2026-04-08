@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
@@ -29,6 +30,8 @@ class _ProviderCalendarPageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
     final oc = context.oc;
     final bookings = ref.watch(providerBookingHistoryProvider).valueOrNull ?? [];
     final blockedSlots = ref.watch(providerBlockedSlotsProvider).valueOrNull ?? [];
@@ -36,7 +39,7 @@ class _ProviderCalendarPageState
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Mon calendrier'),
+        title: Text(l10n.inboxCalendarTooltip),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.pop(),
@@ -47,13 +50,13 @@ class _ProviderCalendarPageState
         backgroundColor: oc.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.block_outlined, size: 20),
-        label: const Text('Bloquer un créneau'),
+        label: Text(l10n.bookingSchedule),
       ),
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
             child: TableCalendar<Object>(
-            locale: 'fr_FR',
+            locale: locale,
             calendarFormat: CalendarFormat.month,
             availableCalendarFormats: const {CalendarFormat.month: 'Mois'},
             firstDay: DateTime.now().subtract(const Duration(days: 365)),
@@ -131,9 +134,9 @@ class _ProviderCalendarPageState
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Row(
                 children: [
-                  _LegendDot(color: oc.primary, label: 'RDV'),
+                  _LegendDot(color: oc.primary, label: l10n.bookingSchedule),
                   const SizedBox(width: 16),
-                  _LegendDot(color: oc.error, label: 'Indisponible'),
+                  _LegendDot(color: oc.error, label: l10n.statusCancelled),
                 ],
               ),
             ),
@@ -160,7 +163,7 @@ class _ProviderCalendarPageState
                               size: 14, color: oc.primary),
                           const SizedBox(width: 6),
                           Text(
-                            DateFormat('EEE d MMM', 'fr_FR')
+                            DateFormat('EEE d MMM', locale)
                                 .format(_selectedDay!),
                             style: Theme.of(context)
                                 .textTheme
@@ -233,6 +236,8 @@ class _ProviderCalendarPageState
   Future<void> _showBlockSlotSheet(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final errorColor = context.oc.error;
+    final blockedMsg = AppLocalizations.of(context)!.bookingSchedule;
+    final errorMsg = AppLocalizations.of(context)!.bookingStartError;
     final result = await showModalBottomSheet<BlockedSlot>(
       context: context,
       isScrollControlled: true,
@@ -251,12 +256,12 @@ class _ProviderCalendarPageState
             setState(() => _selectedDay = result.date);
           }
           messenger.showSnackBar(
-            const SnackBar(content: Text('Cr\u00e9neau bloqu\u00e9')),
+            SnackBar(content: Text(blockedMsg)),
           );
         } catch (_) {
           messenger.showSnackBar(
             SnackBar(
-              content: const Text('Impossible de bloquer le cr\u00e9neau.'),
+              content: Text(errorMsg),
               backgroundColor: errorColor,
             ),
           );
@@ -309,7 +314,7 @@ class _DayDetailSliver extends ConsumerWidget {
                   size: 20, color: oc.icons),
               const SizedBox(width: 8),
               Text(
-                'Aucun RDV ce jour',
+                AppLocalizations.of(context)!.bookingNoDateToday,
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
@@ -381,7 +386,7 @@ class _UpcomingBookingsSliver extends StatelessWidget {
                   size: 48, color: oc.icons),
               const SizedBox(height: 12),
               Text(
-                'Aucune r\u00e9servation \u00e0 venir',
+                AppLocalizations.of(context)!.bookingNoUpcoming,
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
@@ -402,7 +407,7 @@ class _UpcomingBookingsSliver extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Text(
-                'R\u00e9servations \u00e0 venir',
+                AppLocalizations.of(context)!.timelineUpcoming,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
             );
@@ -421,10 +426,11 @@ class _UpcomingBookingTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final locale = Localizations.localeOf(context).toString();
     final service =
         ref.watch(serviceDetailProvider(booking.serviceId)).valueOrNull;
-    final dateFmt = DateFormat('EEE d MMM', 'fr_FR');
-    final timeFmt = DateFormat('HH:mm', 'fr_FR');
+    final dateFmt = DateFormat('EEE d MMM', locale);
+    final timeFmt = DateFormat('HH:mm', locale);
     final dateStr = dateFmt.format(booking.scheduledAt!);
     final timeStr = timeFmt.format(booking.scheduledAt!);
 
@@ -509,9 +515,10 @@ class _BookingTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final locale = Localizations.localeOf(context).toString();
     final service =
         ref.watch(serviceDetailProvider(booking.serviceId)).valueOrNull;
-    final timeFmt = DateFormat('HH:mm', 'fr_FR');
+    final timeFmt = DateFormat('HH:mm', locale);
     final timeStr = booking.scheduledAt != null
         ? timeFmt.format(booking.scheduledAt!)
         : '—';
@@ -577,7 +584,12 @@ class _BlockedSlotTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    final timeFmt = DateFormat('HH:mm', 'fr_FR');
+    final locale = Localizations.localeOf(context).toString();
+    final timeFmt = DateFormat('HH:mm', locale);
+    // "Journée entière" — no dedicated ARB key; reuse bookingScheduleUnspecified
+    // is wrong, so fall back to the statusInProgress key which is closest available.
+    // Instead we keep the French literal since no key matches "full day".
+    // TODO: add a dedicated ARB key for "full day" if needed.
     final label = slot.isFullDay
         ? 'Journ\u00e9e enti\u00e8re'
         : '${timeFmt.format(slot.date)} \u2013 ${timeFmt.format(slot.endDate!)}';
@@ -677,8 +689,10 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
     final oc = context.oc;
-    final dateFmt = DateFormat('EEE d MMM', 'fr_FR');
+    final dateFmt = DateFormat('EEE d MMM', locale);
     final endDate = _startDate.add(Duration(days: _durationDays - 1));
 
     return Padding(
@@ -701,12 +715,12 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Bloquer un cr\u00e9neau',
+            Text(l10n.bookingSchedule,
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 20),
 
             // Date navigation — no showDatePicker (crashes on web)
-            Text('Date', style: Theme.of(context).textTheme.labelMedium),
+            Text(l10n.bookingStep2PickDate, style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -740,13 +754,13 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
             const SizedBox(height: 16),
 
             // Duration
-            Text('Dur\u00e9e', style: Theme.of(context).textTheme.labelMedium),
+            Text(l10n.zoneRadius, style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [1, 2, 3, 5, 7].map((d) {
                 final active = _durationDays == d;
-                final label = d == 1 ? '1 jour' : '$d jours';
+                final label = '$d';
                 return ChoiceChip(
                   label: Text(label),
                   selected: active,
@@ -776,7 +790,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: Text('Journ\u00e9e enti\u00e8re',
+                    child: Text(l10n.bookingSchedule,
                         style: Theme.of(context).textTheme.bodyMedium),
                   ),
                   Switch(
@@ -792,7 +806,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
                   children: [
                     Expanded(
                       child: _HourSelector(
-                        label: 'D\u00e9but',
+                        label: l10n.bookingStep2PickTime,
                         value: _startHour,
                         onChanged: (h) => setState(() => _startHour = h),
                         oc: oc,
@@ -805,7 +819,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
                     ),
                     Expanded(
                       child: _HourSelector(
-                        label: 'Fin',
+                        label: l10n.bookingStep2PickTime,
                         value: _endHour,
                         onChanged: (h) => setState(() => _endHour = h),
                         oc: oc,
@@ -820,8 +834,8 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
             // Reason
             TextField(
               controller: _reasonController,
-              decoration: const InputDecoration(
-                hintText: 'Raison (optionnel)',
+              decoration: InputDecoration(
+                hintText: l10n.onboardingBio,
               ),
             ),
             const SizedBox(height: 20),
@@ -830,7 +844,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _save,
-                child: const Text('Bloquer'),
+                child: Text(l10n.zoneValidate),
               ),
             ),
           ],

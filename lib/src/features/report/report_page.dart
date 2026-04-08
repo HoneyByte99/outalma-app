@@ -5,16 +5,7 @@ import '../../app/app_theme.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/report/report_providers.dart';
-
-/// Predefined report reasons shown as selectable chips.
-const _reasons = [
-  'Comportement inapproprié',
-  'Faux profil ou arnaque',
-  'Service non réalisé',
-  'Contenu offensant',
-  'Harcèlement',
-  'Autre',
-];
+import '../../../l10n/app_localizations.dart';
 
 /// Report page.
 ///
@@ -55,14 +46,14 @@ class _ReportPageState extends ConsumerState<ReportPage> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Signalement envoyé. Merci.')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.reportSuccess)),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible d\'envoyer le signalement.'),
+            content: Text(AppLocalizations.of(context)!.reportError),
             backgroundColor: context.oc.error,
           ),
         );
@@ -74,11 +65,22 @@ class _ReportPageState extends ConsumerState<ReportPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+
+    final reasons = [
+      l10n.reportReason1,
+      l10n.reportReason2,
+      l10n.reportReason3,
+      l10n.reportReason4,
+      l10n.reportReason5,
+      l10n.reportReason6,
+    ];
+
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Signaler'),
+        title: Text(l10n.reportTitle),
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
       ),
@@ -88,12 +90,12 @@ class _ReportPageState extends ConsumerState<ReportPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Pourquoi signalez-vous ?',
+              l10n.reportQuestion,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Votre signalement est anonyme et sera examiné par notre équipe.',
+              l10n.reportSubtitle,
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
@@ -104,10 +106,10 @@ class _ReportPageState extends ConsumerState<ReportPage> {
             // Reason chips
             Expanded(
               child: ListView.separated(
-                itemCount: _reasons.length,
+                itemCount: reasons.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, i) {
-                  final reason = _reasons[i];
+                  final reason = reasons[i];
                   final selected = _selectedReason == reason;
                   return GestureDetector(
                     onTap: () => setState(() => _selectedReason = reason),
@@ -174,7 +176,7 @@ class _ReportPageState extends ConsumerState<ReportPage> {
                         color: oc.surface,
                       ),
                     )
-                  : const Text('Envoyer le signalement'),
+                  : Text(l10n.reportSubmit),
             ),
           ],
         ),

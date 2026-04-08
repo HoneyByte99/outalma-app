@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_shell.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
@@ -18,6 +19,7 @@ class ProviderDashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final profileAsync = ref.watch(currentProviderProfileProvider);
     final servicesAsync = ref.watch(providerServicesProvider);
@@ -32,7 +34,7 @@ class ProviderDashboardPage extends ConsumerWidget {
             backgroundColor: oc.background,
             surfaceTintColor: Colors.transparent,
             title: Text(
-              'Tableau de bord',
+              l10n.dashboardTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             actions: [
@@ -43,7 +45,7 @@ class ProviderDashboardPage extends ConsumerWidget {
               IconButton(
                 icon: const Icon(Icons.person_outline),
                 onPressed: () => context.push(AppRoutes.providerOnboarding),
-                tooltip: 'Mon profil prestataire',
+                tooltip: l10n.tooltipProviderProfile,
               ),
               const BellIconButton(),
               const SizedBox(width: 4),
@@ -69,13 +71,13 @@ class ProviderDashboardPage extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Mes services',
+                    l10n.dashboardMyServices,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   TextButton.icon(
                     onPressed: () => context.push(AppRoutes.serviceNew),
                     icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Ajouter'),
+                    label: Text(l10n.dashboardAdd),
                   ),
                 ],
               ),
@@ -92,9 +94,9 @@ class ProviderDashboardPage extends ConsumerWidget {
                 ),
               ),
             ),
-            error: (_, __) => const SliverToBoxAdapter(
+            error: (_, __) => SliverToBoxAdapter(
               child: _ErrorState(
-                message: 'Impossible de charger vos services.',
+                message: l10n.dashboardServicesError,
               ),
             ),
             data: (services) => services.isEmpty
@@ -127,6 +129,7 @@ class ProviderDashboardPage extends ConsumerWidget {
 class _OnboardingBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -168,7 +171,7 @@ class _OnboardingBanner extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Activez votre profil',
+                        l10n.dashboardActivateTitle,
                         style:
                             Theme.of(context).textTheme.titleSmall?.copyWith(
                                   color: oc.primaryText,
@@ -177,7 +180,7 @@ class _OnboardingBanner extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Quelques infos pour commencer à recevoir des demandes.',
+                        l10n.dashboardActivateBody,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: oc.secondaryText,
                             ),
@@ -200,7 +203,7 @@ class _OnboardingBanner extends ConsumerWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              child: const Text('Commencer'),
+              child: Text(l10n.dashboardActivateButton),
             ),
           ],
         ),
@@ -220,6 +223,7 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -251,7 +255,7 @@ class _ProfileCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    profile.active ? 'Profil actif' : 'Profil inactif',
+                    profile.active ? l10n.profileActive : l10n.profileInactive,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: profile.active
@@ -423,9 +427,10 @@ class _PublishedDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Tooltip(
-      message: published ? 'Publié' : 'Non publié',
+      message: published ? l10n.published : l10n.notPublished,
       child: Container(
         width: 8,
         height: 8,
@@ -446,6 +451,7 @@ class _EmptyServices extends StatelessWidget {
   const _EmptyServices();
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
@@ -459,12 +465,12 @@ class _EmptyServices extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Aucun service publié',
+              l10n.serviceEmptyTitle,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Créez votre premier service pour commencer\nà recevoir des demandes.',
+              l10n.serviceEmptyBody,
               textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme
@@ -475,7 +481,7 @@ class _EmptyServices extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () => GoRouter.of(context).push(AppRoutes.serviceNew),
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Créer un service'),
+              label: Text(l10n.serviceCreate),
             ),
           ],
         ),
@@ -517,9 +523,10 @@ class _ModeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final isClient = activeMode == ActiveMode.client;
-    final label = isClient ? 'Client' : 'Prestataire';
+    final label = isClient ? l10n.modeClient : l10n.modeProvider;
     final color = isClient ? oc.primary : oc.success;
 
     return GestureDetector(

@@ -20,6 +20,7 @@ import '../../domain/enums/category_id.dart';
 import '../../domain/models/service.dart';
 import '../shared/category_icon.dart';
 import '../shared/user_avatar.dart';
+import '../../../l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
 // Filter state — local to this page subtree
@@ -61,6 +62,7 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final authAsync = ref.watch(authNotifierProvider);
     final activeMode = ref.watch(activeModeProvider);
@@ -87,14 +89,16 @@ class HomePage extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
             child: Text(
-              displayName.isNotEmpty ? 'Bonjour $displayName' : 'Bonjour',
+              displayName.isNotEmpty
+                  ? l10n.homeGreeting(displayName)
+                  : l10n.homeGreetingNoName,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text(
-              'Que recherchez-vous ?',
+              l10n.homeSearchPrompt,
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -121,11 +125,12 @@ class _LocationPill extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final filter = ref.watch(locationFilterProvider);
     final label = filter != null
         ? '${filter.label}, ${filter.radiusKm.round()} km'
-        : 'Toute la France';
+        : l10n.locationAllFrance;
 
     return GestureDetector(
       onTap: () => _showLocationSheet(context, ref),
@@ -252,6 +257,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
   }
 
   void _saveCurrentLocation() {
+    final l10n = AppLocalizations.of(context)!;
     final filter = ref.read(locationFilterProvider);
     if (filter == null) return;
 
@@ -259,18 +265,18 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Nom de l\'adresse'),
+        title: Text(l10n.locationAddressName),
         content: TextField(
           controller: nameController,
           autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Ex: Maison, Bureau...',
+          decoration: InputDecoration(
+            hintText: l10n.locationAddressHint,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Annuler'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -285,10 +291,10 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                   ));
               Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('"$name" enregistr\u00e9')),
+                SnackBar(content: Text(l10n.locationSaved(name))),
               );
             },
-            child: const Text('Enregistrer'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -309,6 +315,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final filter = ref.watch(locationFilterProvider);
     final savedLocations = ref.watch(savedLocationsProvider);
@@ -341,7 +348,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
               children: [
                 Expanded(
                   child: Text(
-                    'Localisation',
+                    l10n.locationTitle,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
@@ -350,7 +357,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                     onPressed: _saveCurrentLocation,
                     icon: Icon(Icons.star_outline_rounded,
                         color: oc.warning, size: 24),
-                    tooltip: 'Enregistrer cette adresse',
+                    tooltip: l10n.locationSaveTooltip,
                   ),
               ],
             ),
@@ -361,7 +368,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
               controller: _controller,
               autofocus: false,
               decoration: InputDecoration(
-                hintText: 'Ville ou adresse',
+                hintText: l10n.locationSearchHint,
                 prefixIcon:
                     Icon(Icons.search_rounded, size: 20, color: oc.icons),
                 suffixIcon: filter != null
@@ -430,7 +437,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                   Icon(Icons.radar_outlined, size: 16, color: oc.secondaryText),
                   const SizedBox(width: 6),
                   Text(
-                    'Rayon',
+                    l10n.locationRadius,
                     style: Theme.of(context)
                         .textTheme
                         .labelMedium
@@ -470,7 +477,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
               child: OutlinedButton.icon(
                 onPressed: _clearFilter,
                 icon: const Icon(Icons.public_outlined, size: 18),
-                label: const Text('Toute la France'),
+                label: Text(l10n.locationAllFrance),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, 44),
                   side: BorderSide(color: oc.border),
@@ -482,7 +489,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
             if (savedLocations.isNotEmpty) ...[
               const SizedBox(height: 20),
               Text(
-                'Mes adresses',
+                l10n.locationMyAddresses,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
@@ -582,10 +589,11 @@ class _CategoryChipsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final selected = ref.watch(_selectedCategoryProvider);
 
     final items = <(String label, IconData icon, CategoryId? value)>[
-      ('Tout', Icons.apps_outlined, null),
+      (l10n.categoryAll, Icons.apps_outlined, null),
       ...CategoryId.values.map((c) => (c.label, c.icon, c)),
     ];
 
@@ -924,6 +932,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Center(
       child: Padding(
@@ -934,7 +943,7 @@ class _EmptyState extends StatelessWidget {
             Icon(Icons.search_off_outlined, size: 56, color: oc.icons),
             const SizedBox(height: 16),
             Text(
-              'Aucun service disponible\npour le moment',
+              l10n.servicesEmpty,
               textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme
@@ -959,9 +968,10 @@ class _ModeBadge extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final isClient = activeMode == ActiveMode.client;
-    final label = isClient ? 'Client' : 'Prestataire';
+    final label = isClient ? l10n.modeClient : l10n.modeProvider;
     final color = isClient ? oc.primary : oc.success;
 
     return GestureDetector(
@@ -972,8 +982,8 @@ class _ModeBadge extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(newMode == ActiveMode.client
-                ? 'Mode client activ\u00e9'
-                : 'Mode prestataire activ\u00e9'),
+                ? l10n.modeClientActivated
+                : l10n.modeProviderActivated),
           ),
         );
       },
@@ -1011,6 +1021,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Center(
       child: Padding(
@@ -1021,13 +1032,13 @@ class _ErrorState extends StatelessWidget {
             Icon(Icons.wifi_off_outlined, size: 56, color: oc.icons),
             const SizedBox(height: 16),
             Text(
-              'Erreur de chargement',
+              l10n.errorLoading,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: onRetry,
-              child: const Text('R\u00e9essayer'),
+              child: Text(l10n.retry),
             ),
           ],
         ),

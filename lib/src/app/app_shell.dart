@@ -8,6 +8,7 @@ import '../application/notification/notification_providers.dart';
 import '../application/provider/provider_providers.dart';
 import '../application/user/user_providers.dart';
 import '../domain/enums/active_mode.dart';
+import '../../l10n/app_localizations.dart';
 import 'app_theme.dart';
 
 /// Shell scaffold with mode-aware bottom navigation.
@@ -36,6 +37,7 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(notificationInitProvider);
 
+    final l10n = AppLocalizations.of(context)!;
     final isProvider = ref.watch(activeModeProvider) == ActiveMode.provider;
     final branches = isProvider ? _providerBranches : _clientBranches;
 
@@ -57,8 +59,8 @@ class AppShell extends ConsumerWidget {
     final clientActiveCount = ref.watch(clientActiveBookingsCountProvider);
 
     final items = isProvider
-        ? _providerNavItems(providerInboxCount)
-        : _clientNavItems(clientActiveCount);
+        ? _providerNavItems(l10n, providerInboxCount)
+        : _clientNavItems(l10n, clientActiveCount);
 
     final oc = context.oc;
 
@@ -86,52 +88,54 @@ class AppShell extends ConsumerWidget {
 // Nav item builders with badge support
 // ---------------------------------------------------------------------------
 
-List<BottomNavigationBarItem> _clientNavItems(int activeCount) {
+List<BottomNavigationBarItem> _clientNavItems(
+    AppLocalizations l10n, int activeCount) {
   return [
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.home_outlined),
-      activeIcon: Icon(Icons.home_rounded),
-      label: 'Accueil',
+    BottomNavigationBarItem(
+      icon: const Icon(Icons.home_outlined),
+      activeIcon: const Icon(Icons.home_rounded),
+      label: l10n.navHome,
     ),
     BottomNavigationBarItem(
       icon: _BadgedIcon(count: activeCount, icon: Icons.calendar_today_outlined),
       activeIcon: _BadgedIcon(count: activeCount, icon: Icons.calendar_today_rounded),
-      label: 'Réservations',
+      label: l10n.navBookings,
     ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.chat_bubble_outline_rounded),
-      activeIcon: Icon(Icons.chat_bubble_rounded),
-      label: 'Chats',
+    BottomNavigationBarItem(
+      icon: const Icon(Icons.chat_bubble_outline_rounded),
+      activeIcon: const Icon(Icons.chat_bubble_rounded),
+      label: l10n.navChats,
     ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.person_outline_rounded),
-      activeIcon: Icon(Icons.person_rounded),
-      label: 'Profil',
+    BottomNavigationBarItem(
+      icon: const Icon(Icons.person_outline_rounded),
+      activeIcon: const Icon(Icons.person_rounded),
+      label: l10n.navProfile,
     ),
   ];
 }
 
-List<BottomNavigationBarItem> _providerNavItems(int inboxCount) {
+List<BottomNavigationBarItem> _providerNavItems(
+    AppLocalizations l10n, int inboxCount) {
   return [
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.dashboard_outlined),
-      activeIcon: Icon(Icons.dashboard_rounded),
-      label: 'Dashboard',
+    BottomNavigationBarItem(
+      icon: const Icon(Icons.dashboard_outlined),
+      activeIcon: const Icon(Icons.dashboard_rounded),
+      label: l10n.navDashboard,
     ),
     BottomNavigationBarItem(
       icon: _BadgedIcon(count: inboxCount, icon: Icons.inbox_outlined),
       activeIcon: _BadgedIcon(count: inboxCount, icon: Icons.inbox_rounded),
-      label: 'Missions',
+      label: l10n.navMissions,
     ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.chat_bubble_outline_rounded),
-      activeIcon: Icon(Icons.chat_bubble_rounded),
-      label: 'Chats',
+    BottomNavigationBarItem(
+      icon: const Icon(Icons.chat_bubble_outline_rounded),
+      activeIcon: const Icon(Icons.chat_bubble_rounded),
+      label: l10n.navChats,
     ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.person_outline_rounded),
-      activeIcon: Icon(Icons.person_rounded),
-      label: 'Profil',
+    BottomNavigationBarItem(
+      icon: const Icon(Icons.person_outline_rounded),
+      activeIcon: const Icon(Icons.person_rounded),
+      label: l10n.navProfile,
     ),
   ];
 }
@@ -165,9 +169,10 @@ class BellIconButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final unreadCount = ref.watch(unreadNotificationsCountProvider);
     return IconButton(
-      tooltip: 'Notifications',
+      tooltip: l10n.tooltipNotifications,
       onPressed: () => context.push('/notifications'),
       icon: Badge(
         isLabelVisible: unreadCount > 0,

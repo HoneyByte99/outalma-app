@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
@@ -70,6 +71,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   }
 
   Future<void> _pickPhoto() async {
+    final l10n = AppLocalizations.of(context)!;
+    final photoErrorMsg = l10n.serviceFormPhotoError;
+    final errorColor = context.oc.error;
     final uploader = ref.read(servicePhotoUploadServiceProvider);
     setState(() => _uploadingPhoto = true);
     try {
@@ -81,8 +85,8 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible d\'importer la photo. Réessayez.'),
-            backgroundColor: context.oc.error,
+            content: Text(photoErrorMsg),
+            backgroundColor: errorColor,
           ),
         );
       }
@@ -129,11 +133,16 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l10n = AppLocalizations.of(context)!;
+    final zonesRequiredMsg = l10n.serviceFormZonesRequired;
+    final saveErrorMsg = l10n.serviceFormSaveError;
+    final errorColor = context.oc.error;
+
     if (_zones.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Ajoutez au moins une zone d\'intervention.'),
-          backgroundColor: context.oc.error,
+          content: Text(zonesRequiredMsg),
+          backgroundColor: errorColor,
         ),
       );
       return;
@@ -187,8 +196,8 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible d\'enregistrer. Réessayez.'),
-            backgroundColor: context.oc.error,
+            content: Text(saveErrorMsg),
+            backgroundColor: errorColor,
           ),
         );
       }
@@ -199,11 +208,12 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: Text(_isEdit ? 'Modifier le service' : 'Nouveau service'),
+        title: Text(_isEdit ? l10n.serviceFormEditTitle : l10n.serviceFormCreateTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.pop(),
@@ -223,7 +233,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                       color: Colors.white,
                     ),
                   )
-                : Text(_isEdit ? 'Enregistrer' : 'Créer le service'),
+                : Text(_isEdit ? l10n.serviceFormSave : l10n.serviceFormCreate),
           ),
         ),
       ),
@@ -243,20 +253,20 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               const SizedBox(height: 20),
 
               // Title
-              const _Label('Titre du service'),
+              _Label(l10n.serviceFormTitleLabel),
               TextFormField(
                 controller: _titleController,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Ex: Nettoyage complet d\'appartement',
+                decoration: InputDecoration(
+                  hintText: l10n.serviceFormTitleHint,
                 ),
                 validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Titre requis' : null,
+                    (v == null || v.trim().isEmpty) ? l10n.serviceFormTitleRequired : null,
               ),
               const SizedBox(height: 20),
 
               // Category
-              const _Label('Catégorie'),
+              _Label(l10n.serviceFormCategory),
               _CategorySelector(
                 value: _category,
                 onChanged: (c) => setState(() => _category = c),
@@ -264,20 +274,20 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               const SizedBox(height: 20),
 
               // Description
-              const _Label('Description (optionnel)'),
+              _Label(l10n.serviceFormDescription),
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 4,
                 maxLength: 500,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Décrivez ce que vous proposez...',
+                decoration: InputDecoration(
+                  hintText: l10n.serviceFormDescriptionHint,
                 ),
               ),
               const SizedBox(height: 20),
 
               // Price + type
-              const _Label('Tarif'),
+              _Label(l10n.serviceFormPrice),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -295,10 +305,10 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                       ),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
-                          return 'Requis';
+                          return l10n.serviceFormPriceRequired;
                         }
                         final n = int.tryParse(v.trim());
-                        if (n == null || n <= 0) return 'Invalide';
+                        if (n == null || n <= 0) return l10n.serviceFormPriceInvalid;
                         return null;
                       },
                     ),
@@ -316,7 +326,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               const SizedBox(height: 20),
 
               // Zones d'intervention
-              const _Label('Zones d\'intervention *'),
+              _Label(l10n.serviceFormZones),
               _ZonesSection(
                 zones: _zones,
                 onRemove: _removeZone,
@@ -340,14 +350,14 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Publier ce service',
+                            l10n.serviceFormPublish,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w500,
                                 ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Visible par les clients',
+                            l10n.serviceFormPublishSubtitle,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: oc.secondaryText,
                                 ),
@@ -392,6 +402,7 @@ class _ZonesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,7 +411,7 @@ class _ZonesSection extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              'Aucune zone ajoutée',
+              l10n.zoneNone,
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
@@ -420,7 +431,7 @@ class _ZonesSection extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add_location_alt_outlined, size: 18),
-            label: const Text('Ajouter une zone'),
+            label: Text(l10n.zoneAdd),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(0, 44),
               side: BorderSide(color: oc.border),
@@ -445,8 +456,9 @@ class _ZoneChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final subtitle = zone.radiusKm > 0 ? '${zone.radiusKm} km' : null;
+    final radiusStr = zone.radiusKm > 0 ? '${zone.radiusKm} km' : null;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -470,9 +482,9 @@ class _ZoneChip extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                 ),
-                if (subtitle != null)
+                if (radiusStr != null)
                   Text(
-                    'Rayon : $subtitle',
+                    l10n.zoneRadiusLabel(radiusStr),
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
@@ -558,8 +570,13 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
   }
 
   Future<void> _validate() async {
+    final l10n = AppLocalizations.of(context)!;
+    final selectErrorMsg = l10n.zoneSelectError;
+    final locateErrorMsg = l10n.zoneLocateError;
+    final connectionErrorMsg = l10n.zoneConnectionError;
+
     if (_selected == null) {
-      setState(() => _error = 'Sélectionnez une adresse dans les suggestions');
+      setState(() => _error = selectErrorMsg);
       return;
     }
 
@@ -587,7 +604,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
       if (result == null) {
         setState(() {
           _loading = false;
-          _error = 'Impossible de localiser cette adresse.';
+          _error = locateErrorMsg;
         });
         return;
       }
@@ -602,7 +619,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Connexion requise pour ajouter une zone.';
+          _error = connectionErrorMsg;
         });
       }
     }
@@ -959,17 +976,18 @@ class _PriceTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return DropdownButtonFormField<PriceType>(
       initialValue: value,
       decoration: const InputDecoration(),
-      items: const [
+      items: [
         DropdownMenuItem(
           value: PriceType.hourly,
-          child: Text('par heure'),
+          child: Text(l10n.priceHourly),
         ),
         DropdownMenuItem(
           value: PriceType.fixed,
-          child: Text('forfait'),
+          child: Text(l10n.priceFixed),
         ),
       ],
       onChanged: (t) {

@@ -8,6 +8,7 @@ import '../../application/booking/booking_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/enums/reviewer_role.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Full-screen form to leave a bilateral review after a booking is done.
 ///
@@ -19,6 +20,7 @@ class ReviewFormPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final bookingAsync = ref.watch(bookingDetailProvider(bookingId));
 
     return bookingAsync.when(
@@ -27,14 +29,14 @@ class ReviewFormPage extends ConsumerWidget {
       ),
       error: (_, __) => Scaffold(
         appBar: AppBar(),
-        body: const Center(child: Text('Réservation introuvable.')),
+        body: Center(child: Text(l10n.reviewBookingNotFound)),
       ),
       data: (booking) {
         if (booking == null || booking.status != BookingStatus.done) {
           return Scaffold(
             appBar: AppBar(),
-            body: const Center(
-              child: Text('Avis disponible uniquement après la fin du service.'),
+            body: Center(
+              child: Text(l10n.reviewOnlyAfterDone),
             ),
           );
         }
@@ -111,7 +113,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Impossible d\'envoyer l\'avis.'),
+            content: Text(AppLocalizations.of(context)!.reviewError),
             backgroundColor: context.oc.error,
           ),
         );
@@ -123,15 +125,16 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final targetLabel = widget.reviewerRole == ReviewerRole.client
-        ? 'le prestataire'
-        : 'le client';
+    final headingLabel = widget.reviewerRole == ReviewerRole.client
+        ? l10n.reviewEvaluateProvider
+        : l10n.reviewEvaluateClient;
 
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: const Text('Laisser un avis'),
+        title: Text(l10n.reviewTitle),
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
       ),
@@ -142,12 +145,12 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
           children: [
             // Heading
             Text(
-              'Évaluez $targetLabel',
+              headingLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Votre avis aide la communauté à faire confiance.',
+              l10n.reviewHelp,
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
@@ -157,7 +160,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
 
             // Star rating
             Text(
-              'Note',
+              l10n.reviewRating,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: oc.secondaryText,
                     fontWeight: FontWeight.w600,
@@ -172,7 +175,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
 
             // Comment
             Text(
-              'Commentaire (optionnel)',
+              l10n.reviewComment,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: oc.secondaryText,
                     fontWeight: FontWeight.w600,
@@ -183,8 +186,8 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
               controller: _commentController,
               minLines: 3,
               maxLines: 6,
-              decoration: const InputDecoration(
-                hintText: 'Partagez votre expérience…',
+              decoration: InputDecoration(
+                hintText: l10n.reviewCommentHint,
               ),
             ),
             const SizedBox(height: 32),
@@ -201,7 +204,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
                         color: oc.surface,
                       ),
                     )
-                  : const Text('Envoyer l\'avis'),
+                  : Text(l10n.reviewSubmit),
             ),
           ],
         ),

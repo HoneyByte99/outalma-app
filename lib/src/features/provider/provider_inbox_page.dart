@@ -9,6 +9,7 @@ import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ProviderInboxPage extends ConsumerStatefulWidget {
   const ProviderInboxPage({super.key});
@@ -35,6 +36,7 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Scaffold(
       backgroundColor: oc.background,
@@ -45,21 +47,21 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
             backgroundColor: oc.background,
             surfaceTintColor: Colors.transparent,
             title: Text(
-              'Missions',
+              l10n.inboxTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             actions: [
               IconButton(
                 onPressed: () => context.push(AppRoutes.providerCalendar),
                 icon: const Icon(Icons.calendar_month_outlined),
-                tooltip: 'Mon calendrier',
+                tooltip: l10n.inboxCalendarTooltip,
               ),
             ],
             bottom: TabBar(
               controller: _tabController,
-              tabs: const [
-                Tab(text: 'Demandes'),
-                Tab(text: 'En cours'),
+              tabs: [
+                Tab(text: l10n.inboxTabRequests),
+                Tab(text: l10n.inboxTabActive),
               ],
             ),
           ),
@@ -145,6 +147,7 @@ class _InboxCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final serviceAsync = ref.watch(serviceDetailProvider(booking.serviceId));
     final serviceTitle = serviceAsync.valueOrNull?.title ?? '---';
@@ -197,7 +200,10 @@ class _InboxCard extends ConsumerWidget {
                       ),
                       if (booking.scheduledAt != null)
                         Text(
-                          'Pr\u00e9vu : ${DateFormat('d MMM \u00e0 HH:mm', 'fr_FR').format(booking.scheduledAt!)}',
+                          l10n.bookingScheduledAt(
+                            DateFormat('d MMM à HH:mm', 'fr_FR')
+                                .format(booking.scheduledAt!),
+                          ),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: oc.primary,
                                 fontWeight: FontWeight.w500,
@@ -248,7 +254,7 @@ class _InboxCard extends ConsumerWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Ouvrir le chat',
+                      l10n.inboxOpenChat,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: oc.primary,
                             fontWeight: FontWeight.w500,
@@ -276,14 +282,15 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final (label, color) = switch (status) {
-      BookingStatus.requested => ('En attente', oc.warning),
-      BookingStatus.accepted => ('Acceptée', oc.primary),
-      BookingStatus.inProgress => ('En cours', const Color(0xFF7B2FBE)),
-      BookingStatus.done => ('Terminée', oc.success),
-      BookingStatus.rejected => ('Refusée', oc.secondaryText),
-      BookingStatus.cancelled => ('Annulée', oc.secondaryText),
+      BookingStatus.requested => (l10n.statusPending, oc.warning),
+      BookingStatus.accepted => (l10n.statusAccepted, oc.primary),
+      BookingStatus.inProgress => (l10n.statusInProgress, const Color(0xFF7B2FBE)),
+      BookingStatus.done => (l10n.statusDone, oc.success),
+      BookingStatus.rejected => (l10n.statusRejected, oc.secondaryText),
+      BookingStatus.cancelled => (l10n.statusCancelled, oc.secondaryText),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -326,6 +333,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Center(
       child: Padding(
@@ -342,16 +350,14 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              isActive
-                  ? 'Aucune mission en cours'
-                  : 'Aucune demande en attente',
+              isActive ? l10n.inboxEmptyActive : l10n.inboxEmptyRequests,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
             Text(
               isActive
-                  ? 'Les missions acceptées apparaîtront ici.'
-                  : 'Les nouvelles demandes clients apparaîtront ici.',
+                  ? l10n.inboxEmptyActiveSubtitle
+                  : l10n.inboxEmptyRequestsSubtitle,
               textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme
@@ -370,9 +376,10 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Text(
-        'Impossible de charger les données.',
+        l10n.inboxLoadError,
         style: Theme.of(context)
             .textTheme
             .bodySmall
