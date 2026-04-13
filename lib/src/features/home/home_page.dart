@@ -234,13 +234,13 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
     final coords = await geocoding.getPlaceLatLng(suggestion.placeId);
     if (coords == null || !mounted) return;
 
+    // Apply the filter but keep the sheet open so the user can adjust the radius.
     ref.read(locationFilterProvider.notifier).state = LocationFilter(
       label: suggestion.description,
       lat: coords.lat,
       lng: coords.lng,
       radiusKm: _radiusKm,
     );
-    if (mounted) Navigator.of(context).pop();
   }
 
   void _applyFavorite(SavedLocation loc) {
@@ -431,7 +431,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                 ),
               ),
 
-            // Radius slider
+            // Radius slider + validate button
             if (filter != null) ...[
               const SizedBox(height: 8),
               Row(
@@ -468,6 +468,15 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: Text(l10n.locationValidate),
+                ),
               ),
             ],
 

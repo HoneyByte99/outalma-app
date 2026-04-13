@@ -67,6 +67,7 @@
 
   "locationTitle": "Localisation",
   "locationAllFrance": "Toute la France",
+  "locationValidate": "Valider",
   "locationSearchHint": "Ville ou adresse",
   "locationSaveTooltip": "Enregistrer cette adresse",
   "locationRadius": "Rayon",

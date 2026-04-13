@@ -66,19 +66,31 @@ class AppShell extends ConsumerWidget {
 
     return Scaffold(
       body: shell,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentLogical,
-        onTap: onTap,
-        backgroundColor: oc.surface,
-        selectedItemColor: isProvider ? oc.success : oc.primary,
-        unselectedItemColor: oc.icons,
-        selectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: oc.border, width: 1)),
+          boxShadow: [
+            BoxShadow(
+              color: oc.shadow,
+              blurRadius: 12,
+              offset: const Offset(0, -4),
+            ),
+          ],
         ),
-        unselectedLabelStyle: const TextStyle(fontSize: 12),
-        elevation: 8,
-        items: items,
+        child: BottomNavigationBar(
+          currentIndex: currentLogical,
+          onTap: onTap,
+          backgroundColor: oc.surface,
+          selectedItemColor: isProvider ? oc.success : oc.primary,
+          unselectedItemColor: oc.icons,
+          selectedLabelStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+          unselectedLabelStyle: const TextStyle(fontSize: 12),
+          elevation: 0,
+          items: items,
+        ),
       ),
     );
   }

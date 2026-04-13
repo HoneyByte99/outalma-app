@@ -194,6 +194,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationAllFrance => 'All of France';
 
   @override
+  String get locationValidate => 'Apply';
+
+  @override
   String get locationSearchHint => 'City or address';
 
   @override

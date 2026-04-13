@@ -458,6 +458,12 @@ abstract class AppLocalizations {
   /// **'All of France'**
   String get locationAllFrance;
 
+  /// No description provided for @locationValidate.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get locationValidate;
+
   /// No description provided for @locationSearchHint.
   ///
   /// In en, this message translates to:

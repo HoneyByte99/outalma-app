@@ -200,6 +200,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get locationAllFrance => 'Toute la France';
 
   @override
+  String get locationValidate => 'Valider';
+
+  @override
   String get locationSearchHint => 'Ville ou adresse';
 
   @override
