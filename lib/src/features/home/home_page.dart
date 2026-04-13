@@ -11,12 +11,14 @@ import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/home/location_providers.dart';
+import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
+import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
 import '../shared/category_icon.dart';
 import '../shared/user_avatar.dart';
@@ -735,6 +737,8 @@ class _ServiceCard extends ConsumerWidget {
     final oc = context.oc;
     final providerUser =
         ref.watch(userByIdProvider(service.providerId)).valueOrNull;
+    final reviews =
+        ref.watch(reviewsForUserProvider(service.providerId)).valueOrNull ?? [];
     final priceLabel = service.priceType.name == 'hourly'
         ? '${(service.price / 100).toStringAsFixed(0)} \u20ac/h'
         : '${(service.price / 100).toStringAsFixed(0)} \u20ac';
@@ -849,6 +853,8 @@ class _ServiceCard extends ConsumerWidget {
                                 fontWeight: FontWeight.w700,
                               ),
                         ),
+                        const SizedBox(height: 4),
+                        _RatingRow(reviews: reviews),
                       ],
                     ),
                     Row(
@@ -892,6 +898,60 @@ class _ServiceCard extends ConsumerWidget {
           color: oc.primary.withValues(alpha: 0.35),
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rating row — stars + average or "Nouveau" badge
+// ---------------------------------------------------------------------------
+
+class _RatingRow extends StatelessWidget {
+  const _RatingRow({required this.reviews});
+
+  final List<Review> reviews;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+
+    if (reviews.isEmpty) {
+      return Row(
+        children: [
+          Icon(Icons.star_outline_rounded, size: 14, color: oc.icons),
+          const SizedBox(width: 3),
+          Text(
+            'Nouveau',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: oc.secondaryText,
+                  fontStyle: FontStyle.italic,
+                ),
+          ),
+        ],
+      );
+    }
+
+    final avg = reviews.fold<int>(0, (s, r) => s + r.rating) / reviews.length;
+    final fullStars = avg.floor();
+    final hasHalf = (avg - fullStars) >= 0.5;
+
+    return Row(
+      children: [
+        for (int i = 0; i < fullStars; i++)
+          const Icon(Icons.star_rounded, size: 14, color: Color(0xFFFBBF24)),
+        if (hasHalf)
+          const Icon(Icons.star_half_rounded, size: 14, color: Color(0xFFFBBF24)),
+        for (int i = 0; i < 5 - fullStars - (hasHalf ? 1 : 0); i++)
+          Icon(Icons.star_outline_rounded, size: 14, color: oc.icons),
+        const SizedBox(width: 4),
+        Text(
+          '${avg.toStringAsFixed(1)} (${reviews.length})',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: oc.secondaryText,
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+      ],
     );
   }
 }
