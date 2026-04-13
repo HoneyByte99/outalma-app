@@ -197,6 +197,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationValidate => 'Apply';
 
   @override
+  String get locationUseMyPosition => 'Use my location';
+
+  @override
+  String get locationPermissionDenied => 'Location permission denied';
+
+  @override
+  String get locationGeoError => 'Could not get your location';
+
+  @override
   String get locationSearchHint => 'City or address';
 
   @override

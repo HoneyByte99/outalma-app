@@ -464,6 +464,24 @@ abstract class AppLocalizations {
   /// **'Apply'**
   String get locationValidate;
 
+  /// No description provided for @locationUseMyPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Use my location'**
+  String get locationUseMyPosition;
+
+  /// No description provided for @locationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission denied'**
+  String get locationPermissionDenied;
+
+  /// No description provided for @locationGeoError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not get your location'**
+  String get locationGeoError;
+
   /// No description provided for @locationSearchHint.
   ///
   /// In en, this message translates to:

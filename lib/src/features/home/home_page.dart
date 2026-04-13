@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/app_shell.dart';
@@ -303,6 +304,69 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
     );
   }
 
+  bool _geoLoading = false;
+
+  Future<void> _useMyLocation() async {
+    setState(() => _geoLoading = true);
+
+    try {
+      // Check permissions
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.locationPermissionDenied),
+            ),
+          );
+        }
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      if (!mounted) return;
+
+      // Reverse geocode to get a readable label
+      final geocoding = ref.read(geocodingServiceProvider);
+      final label = await geocoding.reverseGeocode(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (!mounted) return;
+
+      _controller.text = label ?? 'Ma position';
+      setState(() => _suggestions = []);
+
+      ref.read(locationFilterProvider.notifier).state = LocationFilter(
+        label: label ?? 'Ma position',
+        lat: position.latitude,
+        lng: position.longitude,
+        radiusKm: _radiusKm,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.locationGeoError),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _geoLoading = false);
+    }
+  }
+
   void _updateRadius(double value) {
     setState(() => _radiusKm = value);
     _radiusDebounce?.cancel();
@@ -384,6 +448,27 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                     : null,
               ),
               onChanged: _onSearchChanged,
+            ),
+            const SizedBox(height: 8),
+
+            // "Use my location" button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _geoLoading ? null : _useMyLocation,
+                icon: _geoLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(Icons.my_location_rounded, size: 18, color: oc.primary),
+                label: Text(l10n.locationUseMyPosition),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  side: BorderSide(color: oc.primary.withValues(alpha: 0.4)),
+                ),
+              ),
             ),
             const SizedBox(height: 4),
 

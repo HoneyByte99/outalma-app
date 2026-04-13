@@ -203,6 +203,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get locationValidate => 'Valider';
 
   @override
+  String get locationUseMyPosition => 'Utiliser ma position';
+
+  @override
+  String get locationPermissionDenied => 'Accès à la localisation refusé';
+
+  @override
+  String get locationGeoError => 'Impossible d\'obtenir votre position';
+
+  @override
   String get locationSearchHint => 'Ville ou adresse';
 
   @override

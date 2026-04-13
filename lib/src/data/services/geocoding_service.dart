@@ -81,6 +81,25 @@ class GeocodingService {
       lng: (location['longitude'] as num).toDouble(),
     );
   }
+
+  /// Reverse-geocodes [lat]/[lng] into a human-readable address label.
+  /// Returns `null` on failure.
+  Future<String?> reverseGeocode(double lat, double lng) async {
+    final uri = Uri.parse(
+      'https://maps.googleapis.com/maps/api/geocode/json'
+      '?latlng=$lat,$lng&language=fr&key=$_apiKey',
+    );
+    try {
+      final response = await http.get(uri);
+      if (response.statusCode != 200) return null;
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final results = json['results'] as List?;
+      if (results == null || results.isEmpty) return null;
+      return (results.first as Map<String, dynamic>)['formatted_address'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 final geocodingServiceProvider = Provider<GeocodingService>((ref) {
