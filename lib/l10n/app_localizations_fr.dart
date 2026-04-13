@@ -165,6 +165,9 @@ class AppLocalizationsFr extends AppLocalizations {
       'Inscription échouée. Vérifiez vos informations.';
 
   @override
+  String get authErrorPhoneTaken => 'Ce numéro de téléphone est déjà utilisé.';
+
+  @override
   String homeGreeting(String name) {
     return 'Bonjour $name';
   }

@@ -54,6 +54,7 @@
   "authErrorInvalidEmail": "Adresse email invalide.",
   "authErrorWeakPassword": "Mot de passe trop faible (min. 6 caractères).",
   "authErrorSignUpFailed": "Inscription échouée. Vérifiez vos informations.",
+  "authErrorPhoneTaken": "Ce numéro de téléphone est déjà utilisé.",
 
   "homeGreeting": "Bonjour {name}",
   "homeGreetingNoName": "Bonjour",

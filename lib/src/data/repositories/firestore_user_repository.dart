@@ -29,4 +29,15 @@ class FirestoreUserRepository implements UserRepository {
         .doc(user.id)
         .set(user, SetOptions(merge: true));
   }
+
+  @override
+  Future<bool> isPhoneTaken(String phoneE164, {String? excludeUid}) async {
+    final snap = await FirestoreCollections.users(_db)
+        .where('phoneE164', isEqualTo: phoneE164)
+        .limit(1)
+        .get();
+    if (snap.docs.isEmpty) return false;
+    if (excludeUid != null && snap.docs.first.id == excludeUid) return false;
+    return true;
+  }
 }

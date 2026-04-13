@@ -54,6 +54,7 @@
   "authErrorInvalidEmail": "Invalid email address.",
   "authErrorWeakPassword": "Password too weak (min. 6 characters).",
   "authErrorSignUpFailed": "Sign up failed. Check your information.",
+  "authErrorPhoneTaken": "This phone number is already in use.",
 
   "homeGreeting": "Hello {name}",
   "@homeGreeting": {

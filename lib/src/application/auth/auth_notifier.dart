@@ -9,6 +9,12 @@ import '../../domain/models/app_user.dart';
 import 'auth_providers.dart';
 import 'auth_state.dart';
 
+/// Thrown when a phone number is already associated with another account.
+class PhoneTakenException implements Exception {
+  @override
+  String toString() => 'PhoneTakenException: phone number already in use';
+}
+
 class AuthNotifier extends AsyncNotifier<AuthState> {
   late StreamSubscription<User?> _authSub;
 
@@ -122,11 +128,16 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
   /// Sign up with phone number (no OTP). Creates a Firebase email account
   /// under the hood and stores the real phone in the user doc.
+  /// Throws [PhoneTakenException] if the number is already in use.
   /// TODO: Replace with real OTP flow when ready.
   Future<void> signUpWithPhone({
     required String phoneE164,
     required String displayName,
   }) async {
+    // Check phone uniqueness before creating the Firebase account.
+    final taken = await ref.read(userRepositoryProvider).isPhoneTaken(phoneE164);
+    if (taken) throw PhoneTakenException();
+
     final auth = ref.read(firebaseAuthProvider);
     final email = _phoneToEmail(phoneE164);
     final password = _phoneToPassword(phoneE164);
@@ -179,6 +190,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   /// Updates mutable profile fields for the current user.
+  /// Throws [PhoneTakenException] if the new phone is already in use.
   /// Performs an optimistic local update and reverts on failure.
   Future<void> updateProfile({
     required String displayName,
@@ -189,9 +201,20 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     final current = state.valueOrNull;
     if (current is! AuthAuthenticated) return;
 
+    // Check phone uniqueness if phone is changing.
+    final newPhone = phoneE164 ?? current.user.phoneE164;
+    if (newPhone != null &&
+        newPhone.isNotEmpty &&
+        newPhone != current.user.phoneE164) {
+      final taken = await ref
+          .read(userRepositoryProvider)
+          .isPhoneTaken(newPhone, excludeUid: current.user.id);
+      if (taken) throw PhoneTakenException();
+    }
+
     final updated = current.user.copyWith(
       displayName: displayName,
-      phoneE164: phoneE164 ?? current.user.phoneE164,
+      phoneE164: newPhone,
       country: country ?? current.user.country,
       photoPath: photoPath ?? current.user.photoPath,
     );
@@ -210,12 +233,18 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
   /// Persist a user doc immediately after FirebaseAuth account creation,
   /// so displayName is set before authStateChanges fires.
+  /// Throws [PhoneTakenException] if the phone number is already in use.
   Future<void> createUserDoc({
     required String uid,
     required String displayName,
     required String email,
     String? phoneE164,
   }) async {
+    if (phoneE164 != null && phoneE164.isNotEmpty) {
+      final taken = await ref.read(userRepositoryProvider).isPhoneTaken(phoneE164);
+      if (taken) throw PhoneTakenException();
+    }
+
     final user = AppUser(
       id: uid,
       displayName: displayName,

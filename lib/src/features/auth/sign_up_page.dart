@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
+import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -82,6 +83,8 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
             displayName: name,
             email: email,
           );
+    } on PhoneTakenException {
+      _showError(l10n.authErrorPhoneTaken);
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e.code));
     } catch (_) {
@@ -123,6 +126,8 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
             phoneE164: phone,
             displayName: name,
           );
+    } on PhoneTakenException {
+      _showError(l10n.authErrorPhoneTaken);
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e.code));
     } catch (_) {

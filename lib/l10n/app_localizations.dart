@@ -392,6 +392,12 @@ abstract class AppLocalizations {
   /// **'Sign up failed. Check your information.'**
   String get authErrorSignUpFailed;
 
+  /// No description provided for @authErrorPhoneTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone number is already in use.'**
+  String get authErrorPhoneTaken;
+
   /// No description provided for @homeGreeting.
   ///
   /// In en, this message translates to:

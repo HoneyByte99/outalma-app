@@ -159,6 +159,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authErrorSignUpFailed => 'Sign up failed. Check your information.';
 
   @override
+  String get authErrorPhoneTaken => 'This phone number is already in use.';
+
+  @override
   String homeGreeting(String name) {
     return 'Hello $name';
   }
