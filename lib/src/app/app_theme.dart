@@ -26,8 +26,8 @@ abstract final class AppColors {
   static const border = Color(0xFFCDD8DE);
   static const inputFill = Color(0xFFF4F7F9);
 
-  // Card surface — slightly tinted in light mode for contrast against background
-  static const cardSurface = Color(0xFFEFF3F6);
+  // Card surface — warm white in light mode, distinct from grey background
+  static const cardSurface = Color(0xFFFFFFFF);
 
   // Semantic
   static const success = Color(0xFF00A678);
@@ -96,7 +96,7 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     secondaryText: Color(0xFF5C7A8A),
     background: Color(0xFFF4F7F9),
     surface: Color(0xFFFFFFFF),
-    cardSurface: Color(0xFFEFF3F6),
+    cardSurface: Color(0xFFFFFFFF),
     surfaceVariant: Color(0xFFEDF2F5),
     border: Color(0xFFCDD8DE),
     inputFill: Color(0xFFF4F7F9),
@@ -316,7 +316,8 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: AppColors.cardSurface,
-        elevation: 0,
+        elevation: 2,
+        shadowColor: AppColors.shadow,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppColors.border),

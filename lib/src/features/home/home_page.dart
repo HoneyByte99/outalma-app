@@ -743,8 +743,9 @@ class _ServiceCard extends ConsumerWidget {
       onTap: () => context.push(AppRoutes.serviceDetail(service.id)),
       child: Container(
         decoration: BoxDecoration(
-          color: context.isDark ? oc.surface : oc.surfaceVariant,
+          color: oc.cardSurface,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: oc.border.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
               color: oc.shadow,
@@ -787,8 +788,7 @@ class _ServiceCard extends ConsumerWidget {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              (context.isDark ? oc.surface : oc.surfaceVariant)
-                                  .withValues(alpha: 0.55),
+                              oc.cardSurface.withValues(alpha: 0.55),
                             ],
                           ),
                         ),
