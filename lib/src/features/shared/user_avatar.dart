@@ -33,14 +33,16 @@ class UserAvatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: Text(
-        initials,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: radius * 0.7,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+      child: initials.isEmpty
+          ? Icon(Icons.person_rounded, color: Colors.white, size: radius)
+          : Text(
+              initials,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: radius * 0.7,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
     );
 
     if (photoPath == null || photoPath!.isEmpty) return initialsWidget;
@@ -78,7 +80,7 @@ class UserAvatar extends StatelessWidget {
 
 String _initials(String name) {
   final parts = name.trim().split(RegExp(r'\s+'));
-  if (parts.isEmpty || parts.first.isEmpty) return '?';
+  if (parts.isEmpty || parts.first.isEmpty) return '';
   if (parts.length == 1) return parts[0][0].toUpperCase();
   return '${parts[0][0]}${parts.last[0]}'.toUpperCase();
 }
