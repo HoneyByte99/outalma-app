@@ -412,7 +412,7 @@ class _AuthLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = context.isDark;
     final logo = Image.asset(
-      'assets/images/logo_outalma.png',
+      'assets/images/logo_icon_cropped.png',
       height: 160,
     );
 

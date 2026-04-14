@@ -182,7 +182,7 @@ class _ServiceDetailContent extends ConsumerWidget {
       color: oc.border,
       child: Center(
         child: Image.asset(
-          'assets/images/logo_outalma.png',
+          'assets/images/logo_icon_cropped.png',
           height: 100,
           fit: BoxFit.contain,
         ),
