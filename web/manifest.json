@@ -3,7 +3,7 @@
     "short_name": "Outalma",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#ffffff",
+    "background_color": "#1B3A4B",
     "theme_color": "#1B3A4B",
     "description": "Outalma Service — marketplace de services",
     "orientation": "portrait-primary",
