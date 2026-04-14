@@ -10,11 +10,27 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/booking/booking_providers.dart';
 import '../../application/chat/chat_providers.dart';
+import '../../application/provider/provider_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/chat.dart';
 import '../../domain/models/chat_message.dart';
 import '../shared/user_avatar.dart';
+
+// ---------------------------------------------------------------------------
+// Combined booking-status map — avoids N+1 Firestore reads in the chat list.
+// Merges the user's customer bookings and provider bookings (both already
+// subscribed upstream) into a single bookingId → BookingStatus lookup.
+// ---------------------------------------------------------------------------
+final _bookingStatusMapProvider = Provider<Map<String, BookingStatus>>((ref) {
+  final customerBookings =
+      ref.watch(customerBookingsProvider).valueOrNull ?? [];
+  final providerBookings =
+      ref.watch(providerBookingHistoryProvider).valueOrNull ?? [];
+  return {
+    for (final b in [...customerBookings, ...providerBookings]) b.id: b.status,
+  };
+});
 
 class ChatsListPage extends ConsumerStatefulWidget {
   const ChatsListPage({super.key});
@@ -107,14 +123,14 @@ class _ChatListFiltered extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Filter chats based on their linked booking status
+    // Single map lookup — no per-chat Firestore subscriptions.
+    final statusMap = ref.watch(_bookingStatusMapProvider);
     final filtered = chats.where((chat) {
-      final bookingAsync = ref.watch(bookingDetailProvider(chat.bookingId));
-      final booking = bookingAsync.valueOrNull;
-      if (booking == null) return activeOnly; // loading → show in active tab
-      final isActive = booking.status == BookingStatus.accepted ||
-          booking.status == BookingStatus.inProgress ||
-          booking.status == BookingStatus.requested;
+      final status = statusMap[chat.bookingId];
+      if (status == null) return activeOnly; // not loaded yet → show in active tab
+      final isActive = status == BookingStatus.accepted ||
+          status == BookingStatus.inProgress ||
+          status == BookingStatus.requested;
       return activeOnly ? isActive : !isActive;
     }).toList();
 

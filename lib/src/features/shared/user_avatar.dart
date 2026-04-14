@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
@@ -5,8 +6,9 @@ import '../../app/app_theme.dart';
 /// A circular avatar that displays a network photo when [photoPath] is set,
 /// falling back to a coloured initials circle otherwise.
 ///
-/// Image load errors also fall back gracefully to initials so the UI never
-/// shows a broken image placeholder.
+/// Images are cached on disk and in memory via CachedNetworkImage.
+/// Load errors fall back gracefully to initials so the UI never shows a
+/// broken image placeholder.
 class UserAvatar extends StatelessWidget {
   const UserAvatar({
     super.key,
@@ -51,26 +53,26 @@ class UserAvatar extends StatelessWidget {
       width: size,
       height: size,
       child: ClipOval(
-        child: Image.network(
-          photoPath!,
+        child: CachedNetworkImage(
+          imageUrl: photoPath!,
           width: size,
           height: size,
           fit: BoxFit.cover,
-          headers: const {'Accept': '*/*'},
-          errorBuilder: (_, error, __) {
-          debugPrint('[UserAvatar] image load error for $photoPath — $error');
-          return initialsWidget;
-        },
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                color: oc.primary.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-            );
+          // Cache at 2× for Retina; avatar radius rarely exceeds 40pt → 80px
+          memCacheWidth: (radius * 4).toInt(),
+          memCacheHeight: (radius * 4).toInt(),
+          httpHeaders: const {'Accept': '*/*'},
+          placeholder: (_, __) => Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: oc.primary.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+          ),
+          errorWidget: (_, __, error) {
+            debugPrint('[UserAvatar] image load error for $photoPath — $error');
+            return initialsWidget;
           },
         ),
       ),

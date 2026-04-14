@@ -1,8 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-/// A robust network image widget that handles loading, errors, and iOS
-/// compatibility issues gracefully. Use this instead of raw Image.network
-/// throughout the app for consistent behavior across platforms.
+/// A robust network image widget with persistent disk + memory caching.
+/// Handles loading, errors, and iOS compatibility gracefully.
+/// Use this instead of raw Image.network throughout the app.
 class AppNetworkImage extends StatelessWidget {
   const AppNetworkImage({
     super.key,
@@ -14,6 +15,8 @@ class AppNetworkImage extends StatelessWidget {
     this.placeholder,
     this.errorWidget,
     this.borderRadius,
+    this.memCacheWidth,
+    this.memCacheHeight,
   });
 
   final String url;
@@ -21,6 +24,8 @@ class AppNetworkImage extends StatelessWidget {
   final double? width;
   final double? height;
   final Alignment alignment;
+  final int? memCacheWidth;
+  final int? memCacheHeight;
 
   /// Shown while loading. Defaults to a subtle shimmer container.
   final Widget? placeholder;
@@ -33,23 +38,21 @@ class AppNetworkImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget image = Image.network(
-      url,
+    Widget image = CachedNetworkImage(
+      imageUrl: url,
       fit: fit,
       width: width,
       height: height,
       alignment: alignment,
-      // Force no-cache headers to work around iOS aggressive caching issues
-      headers: const {'Accept': '*/*'},
-      errorBuilder: (context, error, stackTrace) {
+      memCacheWidth: memCacheWidth,
+      memCacheHeight: memCacheHeight,
+      httpHeaders: const {'Accept': '*/*'},
+      placeholder: (_, __) =>
+          placeholder ?? _DefaultLoadingPlaceholder(width: width, height: height),
+      errorWidget: (_, __, error) {
         debugPrint('[AppNetworkImage] load failed: $url — $error');
         return errorWidget ??
             _DefaultErrorPlaceholder(width: width, height: height);
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return placeholder ??
-            _DefaultLoadingPlaceholder(width: width, height: height);
       },
     );
 
@@ -71,7 +74,10 @@ class _DefaultLoadingPlaceholder extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      color: Theme.of(context)
+          .colorScheme
+          .surfaceContainerHighest
+          .withValues(alpha: 0.3),
     );
   }
 }
@@ -86,7 +92,10 @@ class _DefaultErrorPlaceholder extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+      color: Theme.of(context)
+          .colorScheme
+          .surfaceContainerHighest
+          .withValues(alpha: 0.2),
       child: Center(
         child: Icon(
           Icons.image_not_supported_outlined,

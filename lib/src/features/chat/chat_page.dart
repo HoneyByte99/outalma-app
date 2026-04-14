@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -493,26 +496,26 @@ class _MessageBubble extends ConsumerWidget {
                 onTap: () => _showFullImage(context, message.mediaUrl!),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    message.mediaUrl!,
+                  child: CachedNetworkImage(
+                    imageUrl: message.mediaUrl!,
                     width: 220,
                     height: 180,
                     fit: BoxFit.cover,
-                    headers: const {'Accept': '*/*'},
-                    loadingBuilder: (_, child, progress) {
-                      if (progress == null) return child;
-                      return SizedBox(
-                        width: 220,
-                        height: 180,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: fg,
-                          ),
+                    // 2× for Retina — 440×360 keeps memory reasonable
+                    memCacheWidth: 440,
+                    memCacheHeight: 360,
+                    httpHeaders: const {'Accept': '*/*'},
+                    placeholder: (_, __) => SizedBox(
+                      width: 220,
+                      height: 180,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: fg,
                         ),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => SizedBox(
+                      ),
+                    ),
+                    errorWidget: (_, __, ___) => SizedBox(
                       width: 220,
                       height: 80,
                       child: Center(
@@ -593,6 +596,8 @@ class _VoicePlayerState extends State<_VoicePlayer> {
   bool _playing = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
+  StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<PlayerState>? _playerStateSub;
 
   @override
   void initState() {
@@ -606,11 +611,11 @@ class _VoicePlayerState extends State<_VoicePlayer> {
       if (dur != null && mounted) setState(() => _duration = dur);
     } catch (_) {}
 
-    _player.positionStream.listen((pos) {
+    _positionSub = _player.positionStream.listen((pos) {
       if (mounted) setState(() => _position = pos);
     });
 
-    _player.playerStateStream.listen((state) {
+    _playerStateSub = _player.playerStateStream.listen((state) {
       if (mounted) {
         setState(() => _playing = state.playing);
         if (state.processingState == ProcessingState.completed) {
@@ -623,6 +628,8 @@ class _VoicePlayerState extends State<_VoicePlayer> {
 
   @override
   void dispose() {
+    _positionSub?.cancel();
+    _playerStateSub?.cancel();
     _player.dispose();
     super.dispose();
   }
@@ -721,13 +728,15 @@ class _ImagePreviewBar extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  imageUrl,
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
                   width: 64,
                   height: 64,
                   fit: BoxFit.cover,
-                  headers: const {'Accept': '*/*'},
-                  errorBuilder: (_, __, ___) => Container(
+                  memCacheWidth: 128,
+                  memCacheHeight: 128,
+                  httpHeaders: const {'Accept': '*/*'},
+                  errorWidget: (_, __, ___) => Container(
                     width: 64,
                     height: 64,
                     color: oc.border,
