@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/auth/phone_otp_service.dart';
@@ -64,8 +65,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     } catch (e, st) {
       // Log the error so we can diagnose auth issues instead of silently
       // treating every failure as "unauthenticated".
-      // ignore: avoid_print
-      print('[AuthNotifier] _resolveState error: $e\n$st');
+      debugPrint('[AuthNotifier] _resolveState error: $e\n$st');
       return const AuthUnauthenticated();
     }
   }

@@ -57,6 +57,11 @@
   "authErrorPhoneTaken": "Ce numéro de téléphone est déjà utilisé.",
 
   "homeGreeting": "Bonjour {name}",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "homeGreetingNoName": "Bonjour",
   "homeSearchPrompt": "Que recherchez-vous ?",
   "categoryAll": "Tout",
@@ -80,6 +85,11 @@
   "locationAddressHint": "Ex: Maison, Bureau…",
   "locationMyAddresses": "Mes adresses",
   "locationSaved": "\"{name}\" enregistré",
+  "@locationSaved": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
 
   "profileTitle": "Profil & Paramètres",
   "profileMyReviews": "Mes avis",
@@ -88,6 +98,11 @@
   "profileAppearance": "Apparence",
   "profileAccount": "Compte",
   "profileErrorUpload": "Erreur : {error}",
+  "@profileErrorUpload": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
   "profileSaved": "Profil mis à jour.",
   "profileSaveError": "Impossible de sauvegarder. Réessayez.",
   "profileLanguage": "Langue",
@@ -104,6 +119,11 @@
   "signOut": "Se déconnecter",
   "reviewsEmpty": "Aucun avis reçu pour le moment",
   "reviewsCount": "{count, plural, =0{Aucun avis} =1{1 avis} other{{count} avis}}",
+  "@reviewsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
 
   "dashboardTitle": "Tableau de bord",
   "dashboardMyServices": "Mes services",
@@ -135,7 +155,17 @@
   "bookingNoDateToday": "Aucune réservation ce jour",
   "bookingNoUpcoming": "Aucune réservation à venir",
   "bookingRequestedAt": "Demande du {date}",
+  "@bookingRequestedAt": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
   "bookingScheduledAt": "Prévu : {datetime}",
+  "@bookingScheduledAt": {
+    "placeholders": {
+      "datetime": { "type": "String" }
+    }
+  },
 
   "bookingDetailTitle": "Détail de la réservation",
   "bookingService": "Service",
@@ -150,6 +180,11 @@
   "bookingAddPhoneInProfile": "Ajoutez votre numéro dans votre profil pour le partager.",
   "bookingPhoneShared": "Votre numéro est partagé",
   "bookingSharePhone": "Partager mon numéro ({phone})",
+  "@bookingSharePhone": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
   "bookingSharePhoneError": "Impossible de partager le numéro.",
   "bookingOpenChat": "Accéder au chat",
   "bookingReviewSent": "Avis envoyé — merci !",
@@ -228,9 +263,24 @@
   "notificationsError": "Impossible de charger les notifications.",
   "notificationTimeNow": "A l'instant",
   "notificationTimeMinutes": "Il y a {count} min",
+  "@notificationTimeMinutes": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "notificationTimeHours": "Il y a {count} h",
+  "@notificationTimeHours": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "notificationTimeYesterday": "Hier",
   "notificationTimeDays": "Il y a {count} j",
+  "@notificationTimeDays": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
 
   "inboxTitle": "Missions",
   "inboxCalendarTooltip": "Mon calendrier",
@@ -319,6 +369,11 @@
   "priceFixed": "forfait",
   "photoAdd": "Ajouter une photo (optionnel)",
   "zoneRadiusLabel": "Rayon : {radius}",
+  "@zoneRadiusLabel": {
+    "placeholders": {
+      "radius": { "type": "String" }
+    }
+  },
   "zoneValidate": "Valider",
   "zoneModify": "Modifier",
 

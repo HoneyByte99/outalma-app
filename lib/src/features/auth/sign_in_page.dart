@@ -298,9 +298,10 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   Future<void> _forgotPassword() async {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+    final messenger = ScaffoldMessenger.of(context);
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.signInForgotEnterEmail),
           backgroundColor: oc.error,
@@ -311,19 +312,17 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: Text(
-                AppLocalizations.of(context)!.signInForgotEmailSent),
+            content: Text(l10n.signInForgotEmailSent),
           ),
         );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: Text(
-                AppLocalizations.of(context)!.signInForgotEmailError),
+            content: Text(l10n.signInForgotEmailError),
             backgroundColor: oc.error,
           ),
         );

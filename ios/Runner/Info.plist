@@ -66,11 +66,6 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
-		<key>NSAppTransportSecurity</key>
-		<dict>
-			<key>NSAllowsArbitraryLoads</key>
-			<true/>
-		</dict>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Outalma Service utilise votre galerie pour choisir des photos.</string>
 		<key>NSCameraUsageDescription</key>

@@ -1,0 +1,15 @@
+# Copy this file to android/key.properties (never commit key.properties to git)
+# and fill in the values below.
+#
+# How to generate a keystore:
+#   keytool -genkey -v -keystore outalma-release.jks \
+#           -keyalg RSA -keysize 2048 -validity 10000 \
+#           -alias outalma
+#
+# Then move the .jks file to a safe location (outside the repo recommended)
+# and set storeFile to the absolute or relative path from the android/ directory.
+
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=outalma
+storeFile=../outalma-release.jks

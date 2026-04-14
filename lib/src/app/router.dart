@@ -35,7 +35,6 @@ abstract final class AppRoutes {
   static const signIn = '/sign-in';
   static const signUp = '/sign-up';
   static const home = '/home';
-  static const switchMode = '/switch-mode';
   static const bookings = '/bookings';
   static const providerHome = '/provider';
   static const providerInbox = '/provider/inbox';

@@ -369,8 +369,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
         radiusKm: _radiusKm,
       );
     } catch (e) {
-      // ignore: avoid_print
-      print('[Location] GPS error: $e');
+      debugPrint('[Location] GPS error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -819,8 +818,8 @@ class _ServiceGrid extends ConsumerWidget {
           builder: (context, constraints) {
             final width = constraints.maxWidth;
             final columns = width > 700 ? 3 : 2;
-            final spacing = 12.0;
-            final hPad = 16.0;
+            const spacing = 12.0;
+            const hPad = 16.0;
             final cardWidth =
                 (width - hPad * 2 - (columns - 1) * spacing) / columns;
             // Image takes cardWidth height (square), info block ~100px
@@ -829,7 +828,7 @@ class _ServiceGrid extends ConsumerWidget {
             final ratio = cardWidth / cardHeight;
 
             return GridView.builder(
-              padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 24),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: columns,
                 crossAxisSpacing: spacing,
@@ -875,12 +874,12 @@ class _ServiceCard extends ConsumerWidget {
           color: oc.cardSurface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: oc.border),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: const Color(0x1A1B3A4B),
+              color: Color(0x1A1B3A4B),
               blurRadius: 16,
               spreadRadius: 1,
-              offset: const Offset(0, 4),
+              offset: Offset(0, 4),
             ),
           ],
         ),
