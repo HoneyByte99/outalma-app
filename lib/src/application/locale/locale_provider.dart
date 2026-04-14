@@ -33,8 +33,9 @@ class LocaleNotifier extends Notifier<Locale?> {
 
   void _apply(Locale? locale) {
     state = locale;
-    Intl.defaultLocale =
-        locale != null ? '${locale.languageCode}_${locale.languageCode.toUpperCase()}' : null;
+    Intl.defaultLocale = locale != null
+        ? '${locale.languageCode}_${locale.languageCode.toUpperCase()}'
+        : null;
   }
 }
 

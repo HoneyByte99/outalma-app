@@ -15,12 +15,12 @@ enum CategoryId {
   }
 
   String get label => switch (this) {
-        menage => 'Ménage',
-        plomberie => 'Plomberie',
-        jardinage => 'Jardinage',
-        electricite => 'Électricité',
-        peinture => 'Peinture',
-        bricolage => 'Bricolage',
-        gardeEnfants => 'Garde d\'enfants',
-      };
+    menage => 'Ménage',
+    plomberie => 'Plomberie',
+    jardinage => 'Jardinage',
+    electricite => 'Électricité',
+    peinture => 'Peinture',
+    bricolage => 'Bricolage',
+    gardeEnfants => 'Garde d\'enfants',
+  };
 }

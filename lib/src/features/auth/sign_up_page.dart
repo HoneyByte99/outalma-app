@@ -72,13 +72,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     setState(() => _loading = true);
 
     try {
-      final credential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-      await ref.read(authNotifierProvider.notifier).createUserDoc(
+      await ref
+          .read(authNotifierProvider.notifier)
+          .createUserDoc(
             uid: credential.user!.uid,
             displayName: name,
             email: email,
@@ -122,10 +121,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     setState(() => _loading = true);
 
     try {
-      await ref.read(authNotifierProvider.notifier).signUpWithPhone(
-            phoneE164: phone,
-            displayName: name,
-          );
+      await ref
+          .read(authNotifierProvider.notifier)
+          .signUpWithPhone(phoneE164: phone, displayName: name);
     } on PhoneTakenException {
       _showError(l10n.authErrorPhoneTaken);
     } on FirebaseAuthException catch (e) {
@@ -143,9 +141,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _mapFirebaseError(String code) {
@@ -190,16 +188,16 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 Text(
                   l10n.signUpTitle,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    fontWeight: FontWeight.w800,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   l10n.signUpSubtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: oc.secondaryText,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 28),
@@ -218,8 +216,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
                     hintText: l10n.signUpNameHint,
-                    prefixIcon:
-                        const Icon(Icons.person_outline_rounded, size: 20),
+                    prefixIcon: const Icon(
+                      Icons.person_outline_rounded,
+                      size: 20,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -244,8 +244,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     onSubmitted: (_) => _signUpEmail(),
                     decoration: InputDecoration(
                       hintText: l10n.signUpPasswordHint,
-                      prefixIcon:
-                          const Icon(Icons.lock_outline_rounded, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline_rounded,
+                        size: 20,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
@@ -255,7 +257,8 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                           size: 20,
                         ),
                         onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword),
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
                   ),
@@ -290,16 +293,16 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 Text.rich(
                   TextSpan(
                     text: l10n.signUpHaveAccount,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: oc.secondaryText,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                     children: [
                       TextSpan(
                         text: l10n.signUpSignIn,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: oc.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: oc.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                         recognizer: TapGestureRecognizer()
                           ..onTap = () => context.go(AppRoutes.signIn),
                       ),
@@ -391,9 +394,9 @@ class _AuthModeToggle extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isActive ? Colors.white : oc.secondaryText,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? Colors.white : oc.secondaryText,
+                ),
               ),
             ],
           ),
@@ -451,28 +454,23 @@ class _ThemeToggleButton extends ConsumerWidget {
 
     final (icon, next, label) = switch (current) {
       ThemeMode.light => (
-          Icons.dark_mode_outlined,
-          ThemeMode.dark,
-          l10n.themeDark,
-        ),
+        Icons.dark_mode_outlined,
+        ThemeMode.dark,
+        l10n.themeDark,
+      ),
       ThemeMode.dark => (
-          Icons.brightness_auto_outlined,
-          ThemeMode.system,
-          l10n.themeAuto,
-        ),
-      _ => (
-          Icons.light_mode_outlined,
-          ThemeMode.light,
-          l10n.themeLight,
-        ),
+        Icons.brightness_auto_outlined,
+        ThemeMode.system,
+        l10n.themeAuto,
+      ),
+      _ => (Icons.light_mode_outlined, ThemeMode.light, l10n.themeLight),
     };
 
     return Tooltip(
       message: label,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () =>
-            ref.read(themeModeProvider.notifier).setThemeMode(next),
+        onTap: () => ref.read(themeModeProvider.notifier).setThemeMode(next),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -488,9 +486,9 @@ class _ThemeToggleButton extends ConsumerWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: oc.primaryText,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: oc.primaryText,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

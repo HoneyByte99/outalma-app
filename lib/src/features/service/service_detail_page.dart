@@ -53,8 +53,8 @@ class _ServiceDetailContent extends ConsumerWidget {
     final oc = context.oc;
     final uid = ref.watch(authNotifierProvider).valueOrNull is AuthAuthenticated
         ? (ref.watch(authNotifierProvider).valueOrNull as AuthAuthenticated)
-            .user
-            .id
+              .user
+              .id
         : null;
     final isOwner = uid != null && uid == service.providerId;
     final priceLabel = service.priceType == PriceType.hourly
@@ -115,9 +115,9 @@ class _ServiceDetailContent extends ConsumerWidget {
                   // Price
                   Text(
                     priceLabel,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: oc.primary,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(color: oc.primary),
                   ),
                   const SizedBox(height: 20),
 
@@ -154,9 +154,7 @@ class _ServiceDetailContent extends ConsumerWidget {
                               zone.radiusKm > 0
                                   ? '${zone.label}, ${zone.radiusKm} km'
                                   : zone.label,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: oc.secondaryText),
                             ),
                           ],
@@ -177,8 +175,8 @@ class _ServiceDetailContent extends ConsumerWidget {
     );
   }
 
-  Widget _heroFallback(dynamic oc) {
-    return Container(
+  Widget _heroFallback(OutalmaColors oc) {
+    return ColoredBox(
       color: oc.border,
       child: Center(
         child: Image.asset(
@@ -212,9 +210,9 @@ class _CategoryBadge extends StatelessWidget {
       child: Text(
         _label(categoryId),
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: oc.primary,
-              fontWeight: FontWeight.w600,
-            ),
+          color: oc.primary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -261,16 +259,16 @@ class _ProviderRow extends ConsumerWidget {
                 children: [
                   Text(
                     l10n.serviceProviderLabel,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: oc.secondaryText,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(color: oc.secondaryText),
                   ),
                   Text(
                     user?.displayName ?? '—',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: oc.primaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: oc.primaryText,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -280,9 +278,9 @@ class _ProviderRow extends ConsumerWidget {
                 Text(
                   l10n.serviceViewProfile,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: oc.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: oc.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Icon(Icons.chevron_right_rounded, size: 16, color: oc.primary),
@@ -324,9 +322,9 @@ class _ExpandableTextState extends State<_ExpandableText> {
           maxLines: _expanded ? null : _maxLines,
           overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: oc.secondaryText,
-                height: 1.5,
-              ),
+            color: oc.secondaryText,
+            height: 1.5,
+          ),
         ),
         if (widget.text.length > 200) ...[
           const SizedBox(height: 4),
@@ -335,9 +333,9 @@ class _ExpandableTextState extends State<_ExpandableText> {
             child: Text(
               _expanded ? l10n.seeLess : l10n.seeMore,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: oc.primary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

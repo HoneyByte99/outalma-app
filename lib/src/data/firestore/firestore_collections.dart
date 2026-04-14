@@ -27,28 +27,36 @@ class FirestoreCollections {
   const FirestoreCollections._();
 
   static CollectionReference<AppUser> users(FirebaseFirestore db) {
-    return db.collection('users').withConverter<AppUser>(
+    return db
+        .collection('users')
+        .withConverter<AppUser>(
           fromFirestore: (snap, _) => _userFromFirestore(snap),
           toFirestore: (user, _) => _userToFirestore(user),
         );
   }
 
   static CollectionReference<Service> services(FirebaseFirestore db) {
-    return db.collection('services').withConverter<Service>(
+    return db
+        .collection('services')
+        .withConverter<Service>(
           fromFirestore: (snap, _) => _serviceFromFirestore(snap),
           toFirestore: (service, _) => _serviceToFirestore(service),
         );
   }
 
   static CollectionReference<Booking> bookings(FirebaseFirestore db) {
-    return db.collection('bookings').withConverter<Booking>(
+    return db
+        .collection('bookings')
+        .withConverter<Booking>(
           fromFirestore: (snap, _) => _bookingFromFirestore(snap),
           toFirestore: (booking, _) => _bookingToFirestore(booking),
         );
   }
 
   static CollectionReference<Chat> chats(FirebaseFirestore db) {
-    return db.collection('chats').withConverter<Chat>(
+    return db
+        .collection('chats')
+        .withConverter<Chat>(
           fromFirestore: (snap, _) => _chatFromFirestore(snap),
           toFirestore: (chat, _) => _chatToFirestore(chat),
         );
@@ -69,7 +77,9 @@ class FirestoreCollections {
   }
 
   static CollectionReference<ProviderProfile> providers(FirebaseFirestore db) {
-    return db.collection('providers').withConverter<ProviderProfile>(
+    return db
+        .collection('providers')
+        .withConverter<ProviderProfile>(
           fromFirestore: (snap, _) => _providerFromFirestore(snap),
           toFirestore: (profile, _) => _providerToFirestore(profile),
         );
@@ -90,14 +100,18 @@ class FirestoreCollections {
   }
 
   static CollectionReference<Review> reviews(FirebaseFirestore db) {
-    return db.collection('reviews').withConverter<Review>(
+    return db
+        .collection('reviews')
+        .withConverter<Review>(
           fromFirestore: (snap, _) => _reviewFromFirestore(snap),
           toFirestore: (review, _) => _reviewToFirestore(review),
         );
   }
 
   static CollectionReference<Report> reports(FirebaseFirestore db) {
-    return db.collection('reports').withConverter<Report>(
+    return db
+        .collection('reports')
+        .withConverter<Report>(
           fromFirestore: (snap, _) => _reportFromFirestore(snap),
           toFirestore: (report, _) => _reportToFirestore(report),
         );
@@ -210,19 +224,17 @@ class FirestoreCollections {
   /// Backward-compatible zone reader: prefers `serviceZones` array, falls back
   /// to legacy `serviceArea` string (synthesised as a single zone with no coords).
   static List<ServiceZone> _serviceZonesFromFirestore(
-      Map<String, dynamic> data) {
+    Map<String, dynamic> data,
+  ) {
     final raw = data['serviceZones'];
     if (raw is List && raw.isNotEmpty) {
-      return raw
-          .cast<Map<String, dynamic>>()
-          .map(serviceZoneFromMap)
-          .toList();
+      return raw.cast<Map<String, dynamic>>().map(serviceZoneFromMap).toList();
     }
     // Legacy fallback
     final legacy = data['serviceArea'] as String?;
     if (legacy != null && legacy.isNotEmpty) {
       return [
-        ServiceZone(label: legacy, latitude: 0, longitude: 0, radiusKm: 0)
+        ServiceZone(label: legacy, latitude: 0, longitude: 0, radiusKm: 0),
       ];
     }
     return const [];
@@ -266,8 +278,9 @@ class FirestoreCollections {
       startedAt: data['startedAt'] != null
           ? dateTimeFromFirestore(data['startedAt'])
           : null,
-      doneAt:
-          data['doneAt'] != null ? dateTimeFromFirestore(data['doneAt']) : null,
+      doneAt: data['doneAt'] != null
+          ? dateTimeFromFirestore(data['doneAt'])
+          : null,
     );
   }
 
@@ -285,38 +298,32 @@ class FirestoreCollections {
       'addressSnapshot': booking.addressSnapshot,
       'chatId': booking.chatId,
       'createdAt': dateTimeToFirestore(booking.createdAt),
-      'acceptedAt':
-          booking.acceptedAt != null
-              ? dateTimeToFirestore(booking.acceptedAt!)
-              : null,
-      'rejectedAt':
-          booking.rejectedAt != null
-              ? dateTimeToFirestore(booking.rejectedAt!)
-              : null,
-      'cancelledAt':
-          booking.cancelledAt != null
-              ? dateTimeToFirestore(booking.cancelledAt!)
-              : null,
-      'startedAt':
-          booking.startedAt != null
-              ? dateTimeToFirestore(booking.startedAt!)
-              : null,
-      'doneAt':
-          booking.doneAt != null ? dateTimeToFirestore(booking.doneAt!) : null,
+      'acceptedAt': booking.acceptedAt != null
+          ? dateTimeToFirestore(booking.acceptedAt!)
+          : null,
+      'rejectedAt': booking.rejectedAt != null
+          ? dateTimeToFirestore(booking.rejectedAt!)
+          : null,
+      'cancelledAt': booking.cancelledAt != null
+          ? dateTimeToFirestore(booking.cancelledAt!)
+          : null,
+      'startedAt': booking.startedAt != null
+          ? dateTimeToFirestore(booking.startedAt!)
+          : null,
+      'doneAt': booking.doneAt != null
+          ? dateTimeToFirestore(booking.doneAt!)
+          : null,
     };
   }
 
   // ---- Chat ----
 
-  static Chat _chatFromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> snap,
-  ) {
+  static Chat _chatFromFirestore(DocumentSnapshot<Map<String, dynamic>> snap) {
     final data = snap.data() ?? const <String, dynamic>{};
     return Chat(
       id: snap.id,
       bookingId: (data['bookingId'] as String?) ?? '',
-      participantIds:
-          (data['participantIds'] as List?)?.cast<String>() ?? [],
+      participantIds: (data['participantIds'] as List?)?.cast<String>() ?? [],
       createdAt: dateTimeFromFirestore(data['createdAt']),
       lastMessageAt: data['lastMessageAt'] != null
           ? dateTimeFromFirestore(data['lastMessageAt'])
@@ -331,10 +338,9 @@ class FirestoreCollections {
       'bookingId': chat.bookingId,
       'participantIds': chat.participantIds,
       'createdAt': dateTimeToFirestore(chat.createdAt),
-      'lastMessageAt':
-          chat.lastMessageAt != null
-              ? dateTimeToFirestore(chat.lastMessageAt!)
-              : null,
+      'lastMessageAt': chat.lastMessageAt != null
+          ? dateTimeToFirestore(chat.lastMessageAt!)
+          : null,
       'customerId': chat.customerId,
       'providerId': chat.providerId,
     };
@@ -408,8 +414,9 @@ class FirestoreCollections {
     return BlockedSlot(
       id: snap.id,
       date: dateTimeFromFirestore(data['date']),
-      endDate:
-          data['endDate'] != null ? dateTimeFromFirestore(data['endDate']) : null,
+      endDate: data['endDate'] != null
+          ? dateTimeFromFirestore(data['endDate'])
+          : null,
       reason: data['reason'] as String?,
     );
   }
@@ -417,8 +424,9 @@ class FirestoreCollections {
   static Map<String, Object?> _blockedSlotToFirestore(BlockedSlot slot) {
     return {
       'date': dateTimeToFirestore(slot.date),
-      'endDate':
-          slot.endDate != null ? dateTimeToFirestore(slot.endDate!) : null,
+      'endDate': slot.endDate != null
+          ? dateTimeToFirestore(slot.endDate!)
+          : null,
       'reason': slot.reason,
     };
   }
@@ -497,10 +505,7 @@ class FirestoreCollections {
   }
 
   static Map<String, Object?> _phoneShareToFirestore(PhoneShare ps) {
-    return {
-      'phone': ps.phone,
-      'createdAt': dateTimeToFirestore(ps.createdAt),
-    };
+    return {'phone': ps.phone, 'createdAt': dateTimeToFirestore(ps.createdAt)};
   }
 
   // ---- AppNotification ----

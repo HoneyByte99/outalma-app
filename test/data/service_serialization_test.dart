@@ -74,12 +74,18 @@ void main() {
       await col.doc(service.id).set(service);
 
       // Read raw Firestore document to inspect field names
-      final raw =
-          (await fakeDb.collection('services').doc(service.id).get()).data()!;
-      expect(raw.containsKey('providerId'), isTrue,
-          reason: 'Field must be "providerId", not "ownerId"');
-      expect(raw.containsKey('ownerId'), isFalse,
-          reason: 'Legacy "ownerId" must not be written');
+      final raw = (await fakeDb.collection('services').doc(service.id).get())
+          .data()!;
+      expect(
+        raw.containsKey('providerId'),
+        isTrue,
+        reason: 'Field must be "providerId", not "ownerId"',
+      );
+      expect(
+        raw.containsKey('ownerId'),
+        isFalse,
+        reason: 'Legacy "ownerId" must not be written',
+      );
       expect(raw['providerId'], 'provider_abc');
     });
 
@@ -121,8 +127,11 @@ void main() {
       });
       final col = FirestoreCollections.services(fakeDb);
       final result = (await col.doc('no_published').get()).data()!;
-      expect(result.published, isFalse,
-          reason: 'New services must be hidden by default');
+      expect(
+        result.published,
+        isFalse,
+        reason: 'New services must be hidden by default',
+      );
     });
   });
 
@@ -139,8 +148,11 @@ void main() {
           'updatedAt': ts,
         });
         final result = (await col.doc(docId).get()).data()!;
-        expect(result.priceType, priceType,
-            reason: 'PriceType.${priceType.name} must roundtrip');
+        expect(
+          result.priceType,
+          priceType,
+          reason: 'PriceType.${priceType.name} must roundtrip',
+        );
       }
     });
 
@@ -186,31 +198,37 @@ void main() {
       expect(result.serviceZones[1].label, 'Paris 20e');
     });
 
-    test('serviceZones is empty list (not null) when field is absent', () async {
-      final ts = Timestamp.fromDate(DateTime(2024, 1, 1).toUtc());
-      await fakeDb.collection('services').doc('no_zones').set({
-        'createdAt': ts,
-        'updatedAt': ts,
-      });
-      final col = FirestoreCollections.services(fakeDb);
-      final result = (await col.doc('no_zones').get()).data()!;
-      expect(result.serviceZones, isEmpty);
-    });
+    test(
+      'serviceZones is empty list (not null) when field is absent',
+      () async {
+        final ts = Timestamp.fromDate(DateTime(2024, 1, 1).toUtc());
+        await fakeDb.collection('services').doc('no_zones').set({
+          'createdAt': ts,
+          'updatedAt': ts,
+        });
+        final col = FirestoreCollections.services(fakeDb);
+        final result = (await col.doc('no_zones').get()).data()!;
+        expect(result.serviceZones, isEmpty);
+      },
+    );
 
-    test('legacy "serviceArea" string becomes a single fallback zone', () async {
-      final ts = Timestamp.fromDate(DateTime(2024, 1, 1).toUtc());
-      await fakeDb.collection('services').doc('legacy').set({
-        'serviceArea': 'Lyon',
-        'createdAt': ts,
-        'updatedAt': ts,
-      });
-      final col = FirestoreCollections.services(fakeDb);
-      final result = (await col.doc('legacy').get()).data()!;
-      expect(result.serviceZones.length, 1);
-      expect(result.serviceZones.first.label, 'Lyon');
-      expect(result.serviceZones.first.latitude, 0.0);
-      expect(result.serviceZones.first.longitude, 0.0);
-    });
+    test(
+      'legacy "serviceArea" string becomes a single fallback zone',
+      () async {
+        final ts = Timestamp.fromDate(DateTime(2024, 1, 1).toUtc());
+        await fakeDb.collection('services').doc('legacy').set({
+          'serviceArea': 'Lyon',
+          'createdAt': ts,
+          'updatedAt': ts,
+        });
+        final col = FirestoreCollections.services(fakeDb);
+        final result = (await col.doc('legacy').get()).data()!;
+        expect(result.serviceZones.length, 1);
+        expect(result.serviceZones.first.label, 'Lyon');
+        expect(result.serviceZones.first.latitude, 0.0);
+        expect(result.serviceZones.first.longitude, 0.0);
+      },
+    );
   });
 
   group('Service serialization — photos', () {
@@ -254,8 +272,11 @@ void main() {
           'updatedAt': ts,
         });
         final result = (await col.doc(docId).get()).data()!;
-        expect(result.categoryId, category,
-            reason: 'CategoryId.${category.name} must roundtrip');
+        expect(
+          result.categoryId,
+          category,
+          reason: 'CategoryId.${category.name} must roundtrip',
+        );
       }
     });
   });

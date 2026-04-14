@@ -30,9 +30,10 @@ Future<void> markNotificationRead({
   required String uid,
   required String notifId,
 }) async {
-  await FirestoreCollections.notifications(db: db, uid: uid)
-      .doc(notifId)
-      .update({'read': true});
+  await FirestoreCollections.notifications(
+    db: db,
+    uid: uid,
+  ).doc(notifId).update({'read': true});
 }
 
 /// Batch-marks all unread notifications as read.

@@ -47,8 +47,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     super.initState();
     final s = widget.existing;
     _titleController = TextEditingController(text: s?.title ?? '');
-    _descriptionController =
-        TextEditingController(text: s?.description ?? '');
+    _descriptionController = TextEditingController(text: s?.description ?? '');
     _priceController = TextEditingController(
       text: s != null ? (s.price / 100).toStringAsFixed(0) : '',
     );
@@ -84,10 +83,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(photoErrorMsg),
-            backgroundColor: errorColor,
-          ),
+          SnackBar(content: Text(photoErrorMsg), backgroundColor: errorColor),
         );
       }
     } finally {
@@ -107,7 +103,8 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     final zone = await showModalBottomSheet<ServiceZone>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _AddZoneSheet(geocoding: ref.read(geocodingServiceProvider)),
+      builder: (_) =>
+          _AddZoneSheet(geocoding: ref.read(geocodingServiceProvider)),
     );
     if (zone != null && mounted) {
       setState(() => _zones = [..._zones, zone]);
@@ -140,10 +137,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
 
     if (_zones.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(zonesRequiredMsg),
-          backgroundColor: errorColor,
-        ),
+        SnackBar(content: Text(zonesRequiredMsg), backgroundColor: errorColor),
       );
       return;
     }
@@ -195,10 +189,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(saveErrorMsg),
-            backgroundColor: errorColor,
-          ),
+          SnackBar(content: Text(saveErrorMsg), backgroundColor: errorColor),
         );
       }
     } finally {
@@ -213,7 +204,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: Text(_isEdit ? l10n.serviceFormEditTitle : l10n.serviceFormCreateTitle),
+        title: Text(
+          _isEdit ? l10n.serviceFormEditTitle : l10n.serviceFormCreateTitle,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.pop(),
@@ -260,8 +253,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                 decoration: InputDecoration(
                   hintText: l10n.serviceFormTitleHint,
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? l10n.serviceFormTitleRequired : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? l10n.serviceFormTitleRequired
+                    : null,
               ),
               const SizedBox(height: 20),
 
@@ -296,9 +290,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                     child: TextFormField(
                       controller: _priceController,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
                         hintText: '0',
                         suffixText: '€',
@@ -308,7 +300,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                           return l10n.serviceFormPriceRequired;
                         }
                         final n = int.tryParse(v.trim());
-                        if (n == null || n <= 0) return l10n.serviceFormPriceInvalid;
+                        if (n == null || n <= 0) {
+                          return l10n.serviceFormPriceInvalid;
+                        }
                         return null;
                       },
                     ),
@@ -337,7 +331,10 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
 
               // Published toggle
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: oc.cardSurface,
                   borderRadius: BorderRadius.circular(12),
@@ -351,16 +348,14 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                         children: [
                           Text(
                             l10n.serviceFormPublish,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             l10n.serviceFormPublishSubtitle,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: oc.secondaryText,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: oc.secondaryText),
                           ),
                         ],
                       ),
@@ -412,10 +407,9 @@ class _ZonesSection extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
               l10n.zoneNone,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: oc.secondaryText),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
           ),
         for (var i = 0; i < zones.length; i++) ...[
@@ -462,43 +456,42 @@ class _ZoneChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: oc.cardSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: oc.border),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.location_on_outlined, size: 18, color: oc.primary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  zone.label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-                if (radiusStr != null)
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: oc.cardSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: oc.border),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.location_on_outlined, size: 18, color: oc.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    l10n.zoneRadiusLabel(radiusStr),
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: oc.secondaryText),
+                    zone.label,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-              ],
+                  if (radiusStr != null)
+                    Text(
+                      l10n.zoneRadiusLabel(radiusStr),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                    ),
+                ],
+              ),
             ),
-          ),
-          GestureDetector(
-            onTap: onRemove,
-            child: Icon(Icons.close, size: 18, color: oc.secondaryText),
-          ),
-        ],
-      ),
+            GestureDetector(
+              onTap: onRemove,
+              child: Icon(Icons.close, size: 18, color: oc.secondaryText),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -583,12 +576,14 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
     // Edit mode: if label unchanged, reuse existing coords (only radius changed)
     final e = widget.existing;
     if (e != null && _selected!.description == e.label) {
-      Navigator.of(context).pop(ServiceZone(
-        label: e.label,
-        latitude: e.latitude,
-        longitude: e.longitude,
-        radiusKm: _radiusKm.round(),
-      ));
+      Navigator.of(context).pop(
+        ServiceZone(
+          label: e.label,
+          latitude: e.latitude,
+          longitude: e.longitude,
+          radiusKm: _radiusKm.round(),
+        ),
+      );
       return;
     }
 
@@ -609,12 +604,14 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
         return;
       }
 
-      Navigator.of(context).pop(ServiceZone(
-        label: _selected!.description,
-        latitude: result.lat,
-        longitude: result.lng,
-        radiusKm: _radiusKm.round(),
-      ));
+      Navigator.of(context).pop(
+        ServiceZone(
+          label: _selected!.description,
+          latitude: result.lat,
+          longitude: result.lng,
+          radiusKm: _radiusKm.round(),
+        ),
+      );
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -688,10 +685,8 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
                 itemCount: _suggestions.length,
-                separatorBuilder: (_, __) => Divider(
-                  height: 1,
-                  color: oc.border.withValues(alpha: 0.5),
-                ),
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, color: oc.border.withValues(alpha: 0.5)),
                 itemBuilder: (_, i) {
                   final s = _suggestions[i];
                   return InkWell(
@@ -706,8 +701,11 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.location_on_outlined,
-                              size: 16, color: oc.secondaryText),
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 16,
+                            color: oc.secondaryText,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -751,9 +749,9 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
                 child: Text(
                   '${_radiusKm.round()} km',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: oc.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: oc.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                   textAlign: TextAlign.end,
                 ),
               ),
@@ -813,7 +811,7 @@ class _PhotoSection extends StatelessWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, dynamic oc) {
+  Widget _buildContent(BuildContext context, OutalmaColors oc) {
     if (uploading) {
       return SizedBox.expand(
         child: ColoredBox(
@@ -862,8 +860,7 @@ class _PhotoSection extends StatelessWidget {
                     color: Colors.black.withValues(alpha: 0.55),
                     shape: BoxShape.circle,
                   ),
-                  child:
-                      const Icon(Icons.close, color: Colors.white, size: 16),
+                  child: const Icon(Icons.close, color: Colors.white, size: 16),
                 ),
               ),
             ),
@@ -899,17 +896,13 @@ class _Placeholder extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.add_photo_alternate_outlined,
-              size: 36,
-              color: oc.icons,
-            ),
+            Icon(Icons.add_photo_alternate_outlined, size: 36, color: oc.icons),
             const SizedBox(height: 8),
             Text(
               'Ajouter une photo (optionnel)',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.secondaryText,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),
@@ -930,10 +923,7 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleSmall,
-      ),
+      child: Text(text, style: Theme.of(context).textTheme.titleSmall),
     );
   }
 }
@@ -944,8 +934,9 @@ class _CategorySelector extends StatelessWidget {
   final CategoryId value;
   final ValueChanged<CategoryId> onChanged;
 
-  static Map<CategoryId, String> get _labels =>
-      {for (final c in CategoryId.values) c: c.label};
+  static Map<CategoryId, String> get _labels => {
+    for (final c in CategoryId.values) c: c.label,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -986,10 +977,7 @@ class _PriceTypeSelector extends StatelessWidget {
           value: PriceType.hourly,
           child: Text(l10n.priceHourly),
         ),
-        DropdownMenuItem(
-          value: PriceType.fixed,
-          child: Text(l10n.priceFixed),
-        ),
+        DropdownMenuItem(value: PriceType.fixed, child: Text(l10n.priceFixed)),
       ],
       onChanged: (t) {
         if (t != null) onChanged(t);

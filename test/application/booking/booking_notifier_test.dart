@@ -39,34 +39,36 @@ class _AuthenticatedNotifier extends AuthNotifier {
 // ---------------------------------------------------------------------------
 
 AppUser _makeUser({String id = 'user_1'}) => AppUser(
-      id: id,
-      displayName: 'Alice',
-      email: 'alice@test.com',
-      country: 'FR',
-      activeMode: ActiveMode.client,
-      createdAt: DateTime(2024, 1, 1).toUtc(),
-    );
+  id: id,
+  displayName: 'Alice',
+  email: 'alice@test.com',
+  country: 'FR',
+  activeMode: ActiveMode.client,
+  createdAt: DateTime(2024, 1, 1).toUtc(),
+);
 
 Booking _makeBooking(String id, BookingStatus status) => Booking(
-      id: id,
-      customerId: 'user_1',
-      providerId: 'provider_1',
-      serviceId: 'service_1',
-      status: status,
-      requestMessage: 'Test message',
-      createdAt: DateTime(2024, 1, 15).toUtc(),
-    );
+  id: id,
+  customerId: 'user_1',
+  providerId: 'provider_1',
+  serviceId: 'service_1',
+  status: status,
+  requestMessage: 'Test message',
+  createdAt: DateTime(2024, 1, 15).toUtc(),
+);
 
 ProviderContainer _makeContainer(
   _MockBookingRepository mockRepo, {
   AppUser? user,
 }) {
-  return ProviderContainer(overrides: [
-    bookingRepositoryProvider.overrideWithValue(mockRepo),
-    authNotifierProvider.overrideWith(
-      () => _AuthenticatedNotifier(user ?? _makeUser()),
-    ),
-  ]);
+  return ProviderContainer(
+    overrides: [
+      bookingRepositoryProvider.overrideWithValue(mockRepo),
+      authNotifierProvider.overrideWith(
+        () => _AuthenticatedNotifier(user ?? _makeUser()),
+      ),
+    ],
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -87,8 +89,9 @@ void main() {
 
   group('customerBookingsProvider', () {
     test('returns empty list when stream emits empty', () async {
-      when(() => mockRepo.watchForCustomer(any()))
-          .thenAnswer((_) => Stream.value([]));
+      when(
+        () => mockRepo.watchForCustomer(any()),
+      ).thenAnswer((_) => Stream.value([]));
       final container = _makeContainer(mockRepo);
       addTearDown(container.dispose);
 
@@ -102,8 +105,9 @@ void main() {
         _makeBooking('b1', BookingStatus.requested),
         _makeBooking('b2', BookingStatus.accepted),
       ];
-      when(() => mockRepo.watchForCustomer('user_1'))
-          .thenAnswer((_) => Stream.value(bookings));
+      when(
+        () => mockRepo.watchForCustomer('user_1'),
+      ).thenAnswer((_) => Stream.value(bookings));
       final container = _makeContainer(mockRepo);
       addTearDown(container.dispose);
 
@@ -116,8 +120,9 @@ void main() {
     });
 
     test('queries repository with the authenticated user id', () async {
-      when(() => mockRepo.watchForCustomer('user_1'))
-          .thenAnswer((_) => Stream.value([]));
+      when(
+        () => mockRepo.watchForCustomer('user_1'),
+      ).thenAnswer((_) => Stream.value([]));
       final container = _makeContainer(mockRepo);
       addTearDown(container.dispose);
 
@@ -129,8 +134,9 @@ void main() {
 
     test('reflects stream updates over time', () async {
       final controller = StreamController<List<Booking>>();
-      when(() => mockRepo.watchForCustomer(any()))
-          .thenAnswer((_) => controller.stream);
+      when(
+        () => mockRepo.watchForCustomer(any()),
+      ).thenAnswer((_) => controller.stream);
       final container = _makeContainer(mockRepo);
       addTearDown(() {
         container.dispose();
@@ -165,15 +171,16 @@ void main() {
   group('clientActiveBookingsCountProvider', () {
     test('counts accepted + inProgress bookings only', () async {
       final bookings = [
-        _makeBooking('b1', BookingStatus.requested),   // not active
-        _makeBooking('b2', BookingStatus.accepted),    // active
-        _makeBooking('b3', BookingStatus.inProgress),  // active
-        _makeBooking('b4', BookingStatus.done),        // not active
-        _makeBooking('b5', BookingStatus.cancelled),   // not active
-        _makeBooking('b6', BookingStatus.rejected),    // not active
+        _makeBooking('b1', BookingStatus.requested), // not active
+        _makeBooking('b2', BookingStatus.accepted), // active
+        _makeBooking('b3', BookingStatus.inProgress), // active
+        _makeBooking('b4', BookingStatus.done), // not active
+        _makeBooking('b5', BookingStatus.cancelled), // not active
+        _makeBooking('b6', BookingStatus.rejected), // not active
       ];
-      when(() => mockRepo.watchForCustomer('user_1'))
-          .thenAnswer((_) => Stream.value(bookings));
+      when(
+        () => mockRepo.watchForCustomer('user_1'),
+      ).thenAnswer((_) => Stream.value(bookings));
       final container = _makeContainer(mockRepo);
       addTearDown(container.dispose);
 
@@ -181,12 +188,17 @@ void main() {
       await container.read(customerBookingsProvider.future);
 
       final count = container.read(clientActiveBookingsCountProvider);
-      expect(count, 2, reason: 'Only b2 (accepted) and b3 (inProgress) are active');
+      expect(
+        count,
+        2,
+        reason: 'Only b2 (accepted) and b3 (inProgress) are active',
+      );
     });
 
     test('returns 0 when no bookings', () async {
-      when(() => mockRepo.watchForCustomer('user_1'))
-          .thenAnswer((_) => Stream.value([]));
+      when(
+        () => mockRepo.watchForCustomer('user_1'),
+      ).thenAnswer((_) => Stream.value([]));
       final container = _makeContainer(mockRepo);
       addTearDown(container.dispose);
 
@@ -202,8 +214,9 @@ void main() {
         _makeBooking('b2', BookingStatus.cancelled),
         _makeBooking('b3', BookingStatus.rejected),
       ];
-      when(() => mockRepo.watchForCustomer('user_1'))
-          .thenAnswer((_) => Stream.value(bookings));
+      when(
+        () => mockRepo.watchForCustomer('user_1'),
+      ).thenAnswer((_) => Stream.value(bookings));
       final container = _makeContainer(mockRepo);
       addTearDown(container.dispose);
 
@@ -221,8 +234,9 @@ void main() {
   group('bookingDetailProvider', () {
     test('returns the booking when found', () async {
       final booking = _makeBooking('b1', BookingStatus.accepted);
-      when(() => mockRepo.watchById('b1'))
-          .thenAnswer((_) => Stream.value(booking));
+      when(
+        () => mockRepo.watchById('b1'),
+      ).thenAnswer((_) => Stream.value(booking));
       final container = _makeContainer(mockRepo);
       addTearDown(container.dispose);
 
@@ -232,20 +246,21 @@ void main() {
     });
 
     test('returns null when booking is not found', () async {
-      when(() => mockRepo.watchById('unknown'))
-          .thenAnswer((_) => Stream.value(null));
+      when(
+        () => mockRepo.watchById('unknown'),
+      ).thenAnswer((_) => Stream.value(null));
       final container = _makeContainer(mockRepo);
       addTearDown(container.dispose);
 
-      final result =
-          await container.read(bookingDetailProvider('unknown').future);
+      final result = await container.read(
+        bookingDetailProvider('unknown').future,
+      );
       expect(result, isNull);
     });
 
     test('reflects status changes from stream', () async {
       final controller = StreamController<Booking?>();
-      when(() => mockRepo.watchById('b1'))
-          .thenAnswer((_) => controller.stream);
+      when(() => mockRepo.watchById('b1')).thenAnswer((_) => controller.stream);
       final container = _makeContainer(mockRepo);
       addTearDown(() {
         container.dispose();

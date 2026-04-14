@@ -47,7 +47,9 @@ class FirestoreBookingRepository implements BookingRepository {
       await ref.set(booking);
       final snap = await ref.get();
       if (!snap.exists || snap.data() == null) {
-        throw Exception('Booking creation failed: document not found after set');
+        throw Exception(
+          'Booking creation failed: document not found after set',
+        );
       }
       return snap.data()!;
     } else {
@@ -58,9 +60,9 @@ class FirestoreBookingRepository implements BookingRepository {
 
   @override
   Future<void> update(Booking booking) async {
-    await FirestoreCollections.bookings(_db)
-        .doc(booking.id)
-        .set(booking, SetOptions(merge: true));
+    await FirestoreCollections.bookings(
+      _db,
+    ).doc(booking.id).set(booking, SetOptions(merge: true));
   }
 
   @override

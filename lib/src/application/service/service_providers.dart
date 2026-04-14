@@ -15,7 +15,9 @@ final serviceListProvider = StreamProvider<List<Service>>((ref) {
 });
 
 /// Single service by id — used for detail page.
-final serviceDetailProvider =
-    StreamProvider.family<Service?, String>((ref, id) {
+final serviceDetailProvider = StreamProvider.family<Service?, String>((
+  ref,
+  id,
+) {
   return ref.watch(serviceRepositoryProvider).watchById(id);
 });

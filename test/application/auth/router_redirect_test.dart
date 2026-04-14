@@ -9,10 +9,7 @@ import 'package:outalma_app/src/domain/models/app_user.dart';
 // protect the redirect decision rules.
 
 String? _redirect(AuthState authState, String location) {
-  const authRoutes = [
-    AppRoutes.signIn,
-    AppRoutes.signUp,
-  ];
+  const authRoutes = [AppRoutes.signIn, AppRoutes.signUp];
   final isAuthRoute = authRoutes.contains(location);
 
   return switch (authState) {
@@ -42,17 +39,11 @@ void main() {
     });
 
     test('allows /sign-in to pass through', () {
-      expect(
-        _redirect(const AuthUnauthenticated(), AppRoutes.signIn),
-        isNull,
-      );
+      expect(_redirect(const AuthUnauthenticated(), AppRoutes.signIn), isNull);
     });
 
     test('allows /sign-up to pass through', () {
-      expect(
-        _redirect(const AuthUnauthenticated(), AppRoutes.signUp),
-        isNull,
-      );
+      expect(_redirect(const AuthUnauthenticated(), AppRoutes.signUp), isNull);
     });
   });
 

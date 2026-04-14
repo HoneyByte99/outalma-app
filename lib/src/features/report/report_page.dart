@@ -37,7 +37,9 @@ class _ReportPageState extends ConsumerState<ReportPage> {
 
     setState(() => _submitting = true);
     try {
-      await ref.read(createReportUseCaseProvider).call(
+      await ref
+          .read(createReportUseCaseProvider)
+          .call(
             reporterId: authState.user.id,
             targetType: widget.targetType,
             targetId: widget.targetId,
@@ -96,10 +98,9 @@ class _ReportPageState extends ConsumerState<ReportPage> {
             const SizedBox(height: 8),
             Text(
               l10n.reportSubtitle,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: oc.secondaryText),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
             const SizedBox(height: 28),
 
@@ -133,9 +134,7 @@ class _ReportPageState extends ConsumerState<ReportPage> {
                           Expanded(
                             child: Text(
                               reason,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
+                              style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     color: selected
                                         ? oc.primary
@@ -163,10 +162,10 @@ class _ReportPageState extends ConsumerState<ReportPage> {
             const SizedBox(height: 20),
 
             ElevatedButton(
-              onPressed: (_selectedReason == null || _submitting) ? null : _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: oc.error,
-              ),
+              onPressed: (_selectedReason == null || _submitting)
+                  ? null
+                  : _submit,
+              style: ElevatedButton.styleFrom(backgroundColor: oc.error),
               child: _submitting
                   ? SizedBox(
                       height: 22,

@@ -30,7 +30,8 @@ class _FakeReviewRepository implements ReviewRepository {
   }
 
   @override
-  Stream<List<Review>> watchForBooking(String bookingId) => const Stream.empty();
+  Stream<List<Review>> watchForBooking(String bookingId) =>
+      const Stream.empty();
 
   @override
   Stream<List<Review>> watchForUser(String userId) => const Stream.empty();

@@ -9,11 +9,7 @@ import 'package:outalma_app/src/app/app.dart';
 
 void main() {
   testWidgets('Smoke test — app boots with ProviderScope', (tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: OutalmaServiceApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: OutalmaServiceApp()));
 
     // The app should render a router-backed MaterialApp variant.
     expect(find.byType(Router<Object>), findsOneWidget);

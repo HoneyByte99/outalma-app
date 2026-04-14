@@ -11,11 +11,9 @@ import '../../application/auth/auth_state.dart';
 /// Storage path: /private/users/{uid}/avatar/profile.jpg
 /// Returns the HTTPS download URL on success.
 class AvatarUploadService {
-  AvatarUploadService({
-    required FirebaseStorage storage,
-    required String uid,
-  })  : _storage = storage,
-        _uid = uid;
+  AvatarUploadService({required FirebaseStorage storage, required String uid})
+    : _storage = storage,
+      _uid = uid;
 
   final FirebaseStorage _storage;
   final String _uid;

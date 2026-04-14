@@ -24,8 +24,10 @@ final customerBookingsProvider = StreamProvider<List<Booking>>((ref) {
 });
 
 /// Single booking by id — used for detail page.
-final bookingDetailProvider =
-    StreamProvider.family<Booking?, String>((ref, bookingId) {
+final bookingDetailProvider = StreamProvider.family<Booking?, String>((
+  ref,
+  bookingId,
+) {
   return ref.watch(bookingRepositoryProvider).watchById(bookingId);
 });
 

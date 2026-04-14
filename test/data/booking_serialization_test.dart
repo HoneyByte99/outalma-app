@@ -80,8 +80,11 @@ void main() {
         });
         final col = FirestoreCollections.bookings(fakeDb);
         final result = (await col.doc(docId).get()).data()!;
-        expect(result.status, status,
-            reason: '"${status.value}" must deserialize to ${status.name}');
+        expect(
+          result.status,
+          status,
+          reason: '"${status.value}" must deserialize to ${status.name}',
+        );
       }
     });
   });
@@ -91,26 +94,32 @@ void main() {
       final booking = _makeBooking(status: BookingStatus.inProgress);
       await FirestoreCollections.bookings(fakeDb).doc(booking.id).set(booking);
 
-      final raw =
-          (await fakeDb.collection('bookings').doc(booking.id).get()).data()!;
-      expect(raw['status'], 'in_progress',
-          reason: 'Cloud Functions expects snake_case "in_progress"');
+      final raw = (await fakeDb.collection('bookings').doc(booking.id).get())
+          .data()!;
+      expect(
+        raw['status'],
+        'in_progress',
+        reason: 'Cloud Functions expects snake_case "in_progress"',
+      );
     });
 
-    test('raw "in_progress" from Cloud Functions deserializes to inProgress', () async {
-      await fakeDb.collection('bookings').doc('cf_booking').set({
-        'customerId': 'c1',
-        'providerId': 'p1',
-        'serviceId': 's1',
-        'requestMessage': 'test',
-        'status': 'in_progress', // as written by Cloud Functions
-        'createdAt': Timestamp.fromDate(DateTime(2024, 1, 15).toUtc()),
-      });
+    test(
+      'raw "in_progress" from Cloud Functions deserializes to inProgress',
+      () async {
+        await fakeDb.collection('bookings').doc('cf_booking').set({
+          'customerId': 'c1',
+          'providerId': 'p1',
+          'serviceId': 's1',
+          'requestMessage': 'test',
+          'status': 'in_progress', // as written by Cloud Functions
+          'createdAt': Timestamp.fromDate(DateTime(2024, 1, 15).toUtc()),
+        });
 
-      final col = FirestoreCollections.bookings(fakeDb);
-      final result = (await col.doc('cf_booking').get()).data()!;
-      expect(result.status, BookingStatus.inProgress);
-    });
+        final col = FirestoreCollections.bookings(fakeDb);
+        final result = (await col.doc('cf_booking').get()).data()!;
+        expect(result.status, BookingStatus.inProgress);
+      },
+    );
   });
 
   group('Booking serialization — chatId lifecycle', () {
@@ -189,32 +198,38 @@ void main() {
     });
   });
 
-  group('Booking serialization — safe defaults for incomplete Firestore docs', () {
-    test('missing fields do not crash and use safe defaults', () async {
-      // Minimal doc as might be written by a buggy client or old schema version
-      await fakeDb.collection('bookings').doc('minimal').set({
-        'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
-      });
-      final col = FirestoreCollections.bookings(fakeDb);
-      final result = (await col.doc('minimal').get()).data()!;
+  group(
+    'Booking serialization — safe defaults for incomplete Firestore docs',
+    () {
+      test('missing fields do not crash and use safe defaults', () async {
+        // Minimal doc as might be written by a buggy client or old schema version
+        await fakeDb.collection('bookings').doc('minimal').set({
+          'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
+        });
+        final col = FirestoreCollections.bookings(fakeDb);
+        final result = (await col.doc('minimal').get()).data()!;
 
-      expect(result.customerId, '');
-      expect(result.providerId, '');
-      expect(result.serviceId, '');
-      expect(result.requestMessage, '');
-      expect(result.status, BookingStatus.requested); // default fallback
-      expect(result.chatId, isNull);
-      expect(result.scheduledAt, isNull);
-    });
-
-    test('unknown status string falls back to requested (not a crash)', () async {
-      await fakeDb.collection('bookings').doc('bad_status').set({
-        'status': 'flying', // unknown value
-        'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
+        expect(result.customerId, '');
+        expect(result.providerId, '');
+        expect(result.serviceId, '');
+        expect(result.requestMessage, '');
+        expect(result.status, BookingStatus.requested); // default fallback
+        expect(result.chatId, isNull);
+        expect(result.scheduledAt, isNull);
       });
-      final col = FirestoreCollections.bookings(fakeDb);
-      final result = (await col.doc('bad_status').get()).data()!;
-      expect(result.status, BookingStatus.requested);
-    });
-  });
+
+      test(
+        'unknown status string falls back to requested (not a crash)',
+        () async {
+          await fakeDb.collection('bookings').doc('bad_status').set({
+            'status': 'flying', // unknown value
+            'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
+          });
+          final col = FirestoreCollections.bookings(fakeDb);
+          final result = (await col.doc('bad_status').get()).data()!;
+          expect(result.status, BookingStatus.requested);
+        },
+      );
+    },
+  );
 }

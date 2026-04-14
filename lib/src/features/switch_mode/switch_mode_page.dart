@@ -35,9 +35,9 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
       if (mounted) context.pop();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMsg)));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -75,9 +75,9 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
                     const SizedBox(height: 8),
                     Text(
                       l10n.switchModeDescription,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: oc.secondaryText,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                     ),
                     const SizedBox(height: 32),
                     _ModeCard(
@@ -110,9 +110,9 @@ class _SwitchModePageState extends ConsumerState<SwitchModePage> {
                     const SizedBox(height: 8),
                     Text(
                       l10n.switchModeThemeDescription,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: oc.secondaryText,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                     ),
                     const SizedBox(height: 16),
                     _ThemeOption(
@@ -184,9 +184,7 @@ class _ModeCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isActive
-              ? accentColor.withValues(alpha: 0.06)
-              : oc.surface,
+          color: isActive ? accentColor.withValues(alpha: 0.06) : oc.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isActive ? accentColor : oc.border,
@@ -212,16 +210,16 @@ class _ModeCard extends StatelessWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: isActive ? accentColor : oc.primaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: isActive ? accentColor : oc.primaryText,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.secondaryText,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                   ),
                 ],
               ),
@@ -275,9 +273,7 @@ class _ThemeOption extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon,
-                size: 22,
-                color: selected ? oc.primary : oc.icons),
+            Icon(icon, size: 22, color: selected ? oc.primary : oc.icons),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -286,22 +282,21 @@ class _ThemeOption extends StatelessWidget {
                   Text(
                     label,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: selected ? oc.primary : oc.primaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: selected ? oc.primary : oc.primaryText,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.secondaryText,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                   ),
                 ],
               ),
             ),
             if (selected)
-              Icon(Icons.check_circle_rounded,
-                  color: oc.primary, size: 20),
+              Icon(Icons.check_circle_rounded, color: oc.primary, size: 20),
           ],
         ),
       ),

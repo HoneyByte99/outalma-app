@@ -23,13 +23,13 @@ class AppNotification {
   final String? chatId;
 
   AppNotification copyWith({bool? read}) => AppNotification(
-        id: id,
-        type: type,
-        title: title,
-        body: body,
-        read: read ?? this.read,
-        createdAt: createdAt,
-        bookingId: bookingId,
-        chatId: chatId,
-      );
+    id: id,
+    type: type,
+    title: title,
+    body: body,
+    read: read ?? this.read,
+    createdAt: createdAt,
+    bookingId: bookingId,
+    chatId: chatId,
+  );
 }

@@ -58,20 +58,30 @@ class PublicProviderProfilePage extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-              child: Text(l10n.reviewsLabel, style: Theme.of(context).textTheme.titleMedium),
+              child: Text(
+                l10n.reviewsLabel,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
           ),
 
           reviewsAsync.when(
             loading: () => const SliverToBoxAdapter(
               child: Center(
-                child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()),
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
               ),
             ),
-            error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) =>
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
             data: (reviews) => reviews.isEmpty
                 ? SliverToBoxAdapter(
-                    child: _EmptySection(icon: Icons.star_outline_rounded, label: l10n.reviewsEmpty),
+                    child: _EmptySection(
+                      icon: Icons.star_outline_rounded,
+                      label: l10n.reviewsEmpty,
+                    ),
                   )
                 : SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -88,26 +98,37 @@ class PublicProviderProfilePage extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-              child: Text(l10n.servicesOffered, style: Theme.of(context).textTheme.titleMedium),
+              child: Text(
+                l10n.servicesOffered,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
           ),
 
           servicesAsync.when(
             loading: () => const SliverToBoxAdapter(
               child: Center(
-                child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()),
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
               ),
             ),
-            error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) =>
+                const SliverToBoxAdapter(child: SizedBox.shrink()),
             data: (services) => services.isEmpty
                 ? SliverToBoxAdapter(
-                    child: _EmptySection(icon: Icons.work_outline_rounded, label: l10n.serviceEmptyTitle),
+                    child: _EmptySection(
+                      icon: Icons.work_outline_rounded,
+                      label: l10n.serviceEmptyTitle,
+                    ),
                   )
                 : SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, i) => _PublicServiceTile(service: services[i]),
+                        (context, i) =>
+                            _PublicServiceTile(service: services[i]),
                         childCount: services.length,
                       ),
                     ),
@@ -157,21 +178,30 @@ class _ProfileHeader extends ConsumerWidget {
               children: [
                 Text(
                   user?.displayName ?? '—',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 6),
                 if (avgRating != null) ...[
                   Row(
                     children: [
-                      ...List.generate(5, (i) => Icon(
-                        i < avgRating.round() ? Icons.star_rounded : Icons.star_outline_rounded,
-                        size: 16,
-                        color: const Color(0xFFFBBF24),
-                      )),
+                      ...List.generate(
+                        5,
+                        (i) => Icon(
+                          i < avgRating.round()
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          size: 16,
+                          color: const Color(0xFFFBBF24),
+                        ),
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         '${avgRating.toStringAsFixed(1)} (${reviews.length})',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.secondaryText,
+                        ),
                       ),
                     ],
                   ),
@@ -180,11 +210,17 @@ class _ProfileHeader extends ConsumerWidget {
                 if (user?.country != null && user!.country.isNotEmpty)
                   Row(
                     children: [
-                      Icon(Icons.location_on_outlined, size: 14, color: oc.secondaryText),
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: oc.secondaryText,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         CountryUtils.flagAndName(user.country),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.secondaryText,
+                        ),
                       ),
                     ],
                   ),
@@ -233,15 +269,22 @@ class _ReviewTile extends ConsumerWidget {
               Expanded(
                 child: Text(
                   reviewer?.displayName ?? '—',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               Row(
-                children: List.generate(5, (i) => Icon(
-                  i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                  size: 14,
-                  color: const Color(0xFFFBBF24),
-                )),
+                children: List.generate(
+                  5,
+                  (i) => Icon(
+                    i < review.rating
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 14,
+                    color: const Color(0xFFFBBF24),
+                  ),
+                ),
               ),
             ],
           ),
@@ -250,9 +293,9 @@ class _ReviewTile extends ConsumerWidget {
             Text(
               review.comment!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.secondaryText,
-                    height: 1.5,
-                  ),
+                color: oc.secondaryText,
+                height: 1.5,
+              ),
             ),
           ],
         ],
@@ -289,7 +332,9 @@ class _PublicServiceTile extends StatelessWidget {
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(14),
+              ),
               child: SizedBox(
                 width: 80,
                 height: 80,
@@ -311,7 +356,9 @@ class _PublicServiceTile extends StatelessWidget {
                   children: [
                     Text(
                       service.title,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -319,9 +366,9 @@ class _PublicServiceTile extends StatelessWidget {
                     Text(
                       priceLabel,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: oc.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        color: oc.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
@@ -329,7 +376,11 @@ class _PublicServiceTile extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(right: 12),
-              child: Icon(Icons.chevron_right_rounded, color: oc.icons, size: 20),
+              child: Icon(
+                Icons.chevron_right_rounded,
+                color: oc.icons,
+                size: 20,
+              ),
             ),
           ],
         ),
@@ -337,10 +388,14 @@ class _PublicServiceTile extends StatelessWidget {
     );
   }
 
-  Widget _iconFallback(dynamic oc) {
-    return Container(
+  Widget _iconFallback(OutalmaColors oc) {
+    return ColoredBox(
       color: oc.primary.withValues(alpha: 0.08),
-      child: Icon(Icons.work_outline_rounded, size: 28, color: oc.primary.withValues(alpha: 0.4)),
+      child: Icon(
+        Icons.work_outline_rounded,
+        size: 28,
+        color: oc.primary.withValues(alpha: 0.4),
+      ),
     );
   }
 }
@@ -364,8 +419,12 @@ class _EmptySection extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: oc.icons),
           const SizedBox(width: 10),
-          Text(label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: oc.secondaryText)),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+          ),
         ],
       ),
     );

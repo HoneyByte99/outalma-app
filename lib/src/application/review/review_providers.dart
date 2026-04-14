@@ -12,14 +12,18 @@ final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
 });
 
 /// Watches all reviews received by [userId] (as reviewee).
-final reviewsForUserProvider =
-    StreamProvider.family<List<Review>, String>((ref, userId) {
+final reviewsForUserProvider = StreamProvider.family<List<Review>, String>((
+  ref,
+  userId,
+) {
   return ref.watch(reviewRepositoryProvider).watchForUser(userId);
 });
 
 /// Watches all reviews for a given booking (at most 2 — one per role).
-final reviewsForBookingProvider =
-    StreamProvider.family<List<Review>, String>((ref, bookingId) {
+final reviewsForBookingProvider = StreamProvider.family<List<Review>, String>((
+  ref,
+  bookingId,
+) {
   return ref.watch(reviewRepositoryProvider).watchForBooking(bookingId);
 });
 
@@ -62,8 +66,10 @@ final createReviewUseCaseProvider = Provider<CreateReviewUseCase>((ref) {
 
 /// Whether the current user has already left a review for [bookingId].
 /// Returns null while loading.
-final hasReviewedProvider =
-    StreamProvider.family<bool, String>((ref, bookingId) {
+final hasReviewedProvider = StreamProvider.family<bool, String>((
+  ref,
+  bookingId,
+) {
   final authState = ref.watch(authNotifierProvider).valueOrNull;
   if (authState is! AuthAuthenticated) return Stream.value(false);
 

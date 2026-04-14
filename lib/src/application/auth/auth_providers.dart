@@ -27,8 +27,9 @@ final logSessionServiceProvider = Provider<LogSessionService>(
   (ref) => LogSessionService(FirebaseFunctions.instance),
 );
 
-final authNotifierProvider =
-    AsyncNotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);
 
 /// Side-effect provider: registers FCM token when user is authenticated.
 /// Watch this from AppShell so it runs while the user is logged in.

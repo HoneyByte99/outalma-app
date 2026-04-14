@@ -60,10 +60,12 @@ ProviderContainer _makeAuthenticatedContainer(
   AppUser user,
   _MockUserRepository mockRepo,
 ) {
-  return ProviderContainer(overrides: [
-    authNotifierProvider.overrideWith(() => _AuthenticatedNotifier(user)),
-    userRepositoryProvider.overrideWithValue(mockRepo),
-  ]);
+  return ProviderContainer(
+    overrides: [
+      authNotifierProvider.overrideWith(() => _AuthenticatedNotifier(user)),
+      userRepositoryProvider.overrideWithValue(mockRepo),
+    ],
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -108,16 +110,14 @@ void main() {
           .read(authNotifierProvider.notifier)
           .switchMode(ActiveMode.provider);
 
-      final captured =
-          verify(() => mockRepo.upsert(captureAny())).captured;
+      final captured = verify(() => mockRepo.upsert(captureAny())).captured;
       final updatedUser = captured.first as AppUser;
       expect(updatedUser.id, 'user_1');
       expect(updatedUser.activeMode, ActiveMode.provider);
     });
 
     test('reverts state when repo.upsert throws', () async {
-      when(() => mockRepo.upsert(any()))
-          .thenThrow(Exception('Network error'));
+      when(() => mockRepo.upsert(any())).thenThrow(Exception('Network error'));
       final container = _makeAuthenticatedContainer(_makeUser(), mockRepo);
       addTearDown(container.dispose);
 
@@ -139,10 +139,12 @@ void main() {
     });
 
     test('does nothing when not authenticated', () async {
-      final unauthContainer = ProviderContainer(overrides: [
-        authNotifierProvider.overrideWith(() => _UnauthenticatedNotifier()),
-        userRepositoryProvider.overrideWithValue(mockRepo),
-      ]);
+      final unauthContainer = ProviderContainer(
+        overrides: [
+          authNotifierProvider.overrideWith(() => _UnauthenticatedNotifier()),
+          userRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+      );
       addTearDown(unauthContainer.dispose);
 
       await unauthContainer.read(authNotifierProvider.future);
@@ -165,9 +167,9 @@ void main() {
       addTearDown(container.dispose);
 
       await container.read(authNotifierProvider.future);
-      await container.read(authNotifierProvider.notifier).updateProfile(
-            displayName: 'Bob',
-          );
+      await container
+          .read(authNotifierProvider.notifier)
+          .updateProfile(displayName: 'Bob');
 
       final state = container.read(authNotifierProvider).valueOrNull;
       expect((state as AuthAuthenticated).user.displayName, 'Bob');
@@ -180,10 +182,9 @@ void main() {
       addTearDown(container.dispose);
 
       await container.read(authNotifierProvider.future);
-      await container.read(authNotifierProvider.notifier).updateProfile(
-            displayName: 'Alice',
-            country: 'SN',
-          );
+      await container
+          .read(authNotifierProvider.notifier)
+          .updateProfile(displayName: 'Alice', country: 'SN');
 
       final state = container.read(authNotifierProvider).valueOrNull;
       expect((state as AuthAuthenticated).user.country, 'SN');
@@ -192,72 +193,85 @@ void main() {
     test('does not call isPhoneTaken when phone is not changing', () async {
       when(() => mockRepo.upsert(any())).thenAnswer((_) async {});
       // user has no phone; updateProfile called without phone → no check needed
-      final container =
-          _makeAuthenticatedContainer(_makeUser(phoneE164: null), mockRepo);
+      final container = _makeAuthenticatedContainer(
+        _makeUser(phoneE164: null),
+        mockRepo,
+      );
       addTearDown(container.dispose);
 
       await container.read(authNotifierProvider.future);
-      await container.read(authNotifierProvider.notifier).updateProfile(
-            displayName: 'Alice',
-          );
+      await container
+          .read(authNotifierProvider.notifier)
+          .updateProfile(displayName: 'Alice');
 
-      verifyNever(() =>
-          mockRepo.isPhoneTaken(any(), excludeUid: any(named: 'excludeUid')));
+      verifyNever(
+        () =>
+            mockRepo.isPhoneTaken(any(), excludeUid: any(named: 'excludeUid')),
+      );
     });
 
     test('calls isPhoneTaken when phone changes', () async {
-      when(() => mockRepo.isPhoneTaken(any(),
-              excludeUid: any(named: 'excludeUid')))
-          .thenAnswer((_) async => false);
+      when(
+        () =>
+            mockRepo.isPhoneTaken(any(), excludeUid: any(named: 'excludeUid')),
+      ).thenAnswer((_) async => false);
       when(() => mockRepo.upsert(any())).thenAnswer((_) async {});
 
       final container = _makeAuthenticatedContainer(
-          _makeUser(phoneE164: '+33600000000'), mockRepo);
+        _makeUser(phoneE164: '+33600000000'),
+        mockRepo,
+      );
       addTearDown(container.dispose);
 
       await container.read(authNotifierProvider.future);
-      await container.read(authNotifierProvider.notifier).updateProfile(
+      await container
+          .read(authNotifierProvider.notifier)
+          .updateProfile(
             displayName: 'Alice',
             phoneE164: '+33611111111', // different phone
           );
 
-      verify(() => mockRepo.isPhoneTaken('+33611111111',
-          excludeUid: any(named: 'excludeUid'))).called(1);
+      verify(
+        () => mockRepo.isPhoneTaken(
+          '+33611111111',
+          excludeUid: any(named: 'excludeUid'),
+        ),
+      ).called(1);
     });
 
     test('throws PhoneTakenException when new phone already in use', () async {
-      when(() => mockRepo.isPhoneTaken(any(),
-              excludeUid: any(named: 'excludeUid')))
-          .thenAnswer((_) async => true);
+      when(
+        () =>
+            mockRepo.isPhoneTaken(any(), excludeUid: any(named: 'excludeUid')),
+      ).thenAnswer((_) async => true);
 
       final container = _makeAuthenticatedContainer(
-          _makeUser(phoneE164: '+33600000000'), mockRepo);
+        _makeUser(phoneE164: '+33600000000'),
+        mockRepo,
+      );
       addTearDown(container.dispose);
 
       await container.read(authNotifierProvider.future);
 
       await expectLater(
-        container.read(authNotifierProvider.notifier).updateProfile(
-              displayName: 'Alice',
-              phoneE164: '+33699999999',
-            ),
+        container
+            .read(authNotifierProvider.notifier)
+            .updateProfile(displayName: 'Alice', phoneE164: '+33699999999'),
         throwsA(isA<PhoneTakenException>()),
       );
     });
 
     test('reverts state on repo.upsert failure', () async {
-      when(() => mockRepo.upsert(any()))
-          .thenThrow(Exception('Write failed'));
-      final container =
-          _makeAuthenticatedContainer(_makeUser(), mockRepo);
+      when(() => mockRepo.upsert(any())).thenThrow(Exception('Write failed'));
+      final container = _makeAuthenticatedContainer(_makeUser(), mockRepo);
       addTearDown(container.dispose);
 
       await container.read(authNotifierProvider.future);
 
       await expectLater(
-        container.read(authNotifierProvider.notifier).updateProfile(
-              displayName: 'Bob',
-            ),
+        container
+            .read(authNotifierProvider.notifier)
+            .updateProfile(displayName: 'Bob'),
         throwsA(isA<Exception>()),
       );
 

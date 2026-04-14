@@ -80,8 +80,9 @@ class _DetailContent extends ConsumerWidget {
     }
 
     // The "other" participant we can report
-    final otherUid =
-        uid == booking.customerId ? booking.providerId : booking.customerId;
+    final otherUid = uid == booking.customerId
+        ? booking.providerId
+        : booking.customerId;
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -92,9 +93,8 @@ class _DetailContent extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.flag_outlined, size: 20),
               tooltip: l10n.bookingReport,
-              onPressed: () => context.push(
-                AppRoutes.report(type: 'user', id: otherUid),
-              ),
+              onPressed: () =>
+                  context.push(AppRoutes.report(type: 'user', id: otherUid)),
             ),
         ],
       ),
@@ -120,9 +120,9 @@ class _DetailContent extends ConsumerWidget {
                   ? booking.requestMessage
                   : l10n.bookingNoMessage,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: oc.secondaryText,
-                    height: 1.5,
-                  ),
+                color: oc.secondaryText,
+                height: 1.5,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -142,7 +142,8 @@ class _DetailContent extends ConsumerWidget {
               title: l10n.bookingSchedule,
               child: _InfoRow(
                 icon: Icons.calendar_today_outlined,
-                label: booking.schedule!['description'] as String? ??
+                label:
+                    booking.schedule!['description'] as String? ??
                     l10n.bookingScheduleUnspecified,
               ),
             ),
@@ -155,7 +156,8 @@ class _DetailContent extends ConsumerWidget {
               title: l10n.bookingAddress,
               child: _InfoRow(
                 icon: Icons.location_on_outlined,
-                label: booking.addressSnapshot!['address'] as String? ??
+                label:
+                    booking.addressSnapshot!['address'] as String? ??
                     l10n.bookingAddressUnspecified,
               ),
             ),
@@ -187,10 +189,7 @@ class _DetailContent extends ConsumerWidget {
 
           // ---- Review CTA (when done and not yet reviewed) ----
           if (booking.status == BookingStatus.done) ...[
-            _ReviewSection(
-              bookingId: booking.id,
-              currentUid: uid,
-            ),
+            _ReviewSection(bookingId: booking.id, currentUid: uid),
             const SizedBox(height: 16),
           ],
 
@@ -229,15 +228,17 @@ class _ContactSection extends ConsumerWidget {
 
     // Current user's phone from auth state
     final authState = ref.watch(authNotifierProvider).valueOrNull;
-    final myPhone =
-        authState is AuthAuthenticated ? authState.user.phoneE164 : null;
+    final myPhone = authState is AuthAuthenticated
+        ? authState.user.phoneE164
+        : null;
 
     return sharesAsync.when(
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
       data: (shares) {
-        final otherShare =
-            shares.where((s) => s.uid == otherParticipantId).firstOrNull;
+        final otherShare = shares
+            .where((s) => s.uid == otherParticipantId)
+            .firstOrNull;
         final hasShared = hasSharedAsync.valueOrNull ?? false;
 
         return Container(
@@ -253,9 +254,9 @@ class _ContactSection extends ConsumerWidget {
               Text(
                 l10n.bookingContact,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: oc.secondaryText,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: oc.secondaryText,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 12),
 
@@ -279,13 +280,13 @@ class _ContactSection extends ConsumerWidget {
                   Text(
                     otherShare?.phone ?? l10n.bookingPhoneNotShared,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: otherShare != null
-                              ? oc.primaryText
-                              : oc.secondaryText,
-                          fontWeight: otherShare != null
-                              ? FontWeight.w500
-                              : FontWeight.w400,
-                        ),
+                      color: otherShare != null
+                          ? oc.primaryText
+                          : oc.secondaryText,
+                      fontWeight: otherShare != null
+                          ? FontWeight.w500
+                          : FontWeight.w400,
+                    ),
                   ),
                 ],
               ),
@@ -304,9 +305,9 @@ class _ContactSection extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   l10n.bookingAddPhoneInProfile,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: oc.secondaryText,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                 ),
               ],
 
@@ -322,9 +323,9 @@ class _ContactSection extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Text(
                       l10n.bookingPhoneShared,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: oc.success,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: oc.success),
                     ),
                   ],
                 ),
@@ -359,7 +360,9 @@ class _SharePhoneButtonState extends ConsumerState<_SharePhoneButton> {
     final errMsg = AppLocalizations.of(context)!.bookingSharePhoneError;
     setState(() => _sharing = true);
     try {
-      await ref.read(phoneShareRepositoryProvider).share(
+      await ref
+          .read(phoneShareRepositoryProvider)
+          .share(
             bookingId: widget.bookingId,
             uid: widget.uid,
             phone: widget.phone,
@@ -367,10 +370,7 @@ class _SharePhoneButtonState extends ConsumerState<_SharePhoneButton> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errMsg),
-            backgroundColor: context.oc.error,
-          ),
+          SnackBar(content: Text(errMsg), backgroundColor: context.oc.error),
         );
       }
     } finally {
@@ -431,10 +431,7 @@ class _ChatButton extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _ReviewSection extends ConsumerWidget {
-  const _ReviewSection({
-    required this.bookingId,
-    required this.currentUid,
-  });
+  const _ReviewSection({required this.bookingId, required this.currentUid});
 
   final String bookingId;
   final String? currentUid;
@@ -455,9 +452,7 @@ class _ReviewSection extends ConsumerWidget {
             decoration: BoxDecoration(
               color: oc.successAccent,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: oc.success.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: oc.success.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -470,9 +465,9 @@ class _ReviewSection extends ConsumerWidget {
                 Text(
                   l10n.bookingReviewSent,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: oc.success,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    color: oc.success,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -598,19 +593,17 @@ class _TimelineRow extends StatelessWidget {
                   Text(
                     label,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight:
-                              isActive ? FontWeight.w500 : FontWeight.w400,
-                          color:
-                              isActive ? oc.primaryText : oc.secondaryText,
-                        ),
+                      fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
+                      color: isActive ? oc.primaryText : oc.secondaryText,
+                    ),
                   ),
                   if (dateLabel.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
                       dateLabel,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: oc.secondaryText,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                     ),
                   ],
                 ],
@@ -649,9 +642,9 @@ class _Section extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: oc.secondaryText,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: oc.secondaryText,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 8),
           child,
@@ -674,10 +667,7 @@ class _InfoRow extends StatelessWidget {
         Icon(icon, size: 18, color: context.oc.secondaryText),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
         ),
       ],
     );
@@ -690,8 +680,18 @@ class _InfoRow extends StatelessWidget {
 
 String _formatDateTime(DateTime dt) {
   const months = [
-    'jan', 'fév', 'mars', 'avr', 'mai', 'juin',
-    'juil', 'août', 'sep', 'oct', 'nov', 'déc',
+    'jan',
+    'fév',
+    'mars',
+    'avr',
+    'mai',
+    'juin',
+    'juil',
+    'août',
+    'sep',
+    'oct',
+    'nov',
+    'déc',
   ];
   final h = dt.hour.toString().padLeft(2, '0');
   final m = dt.minute.toString().padLeft(2, '0');
@@ -722,9 +722,9 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
     try {
       await ref.read(acceptBookingUseCaseProvider).call(widget.booking.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(acceptedMsg)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(acceptedMsg)));
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
@@ -756,9 +756,9 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
     try {
       await ref.read(rejectBookingUseCaseProvider).call(widget.booking.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(rejectedMsg)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(rejectedMsg)));
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
@@ -848,8 +848,7 @@ class _MarkInProgressBar extends ConsumerStatefulWidget {
   final Booking booking;
 
   @override
-  ConsumerState<_MarkInProgressBar> createState() =>
-      _MarkInProgressBarState();
+  ConsumerState<_MarkInProgressBar> createState() => _MarkInProgressBarState();
 }
 
 class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
@@ -862,9 +861,9 @@ class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
     try {
       await ref.read(markInProgressUseCaseProvider).call(widget.booking.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(startedMsg)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(startedMsg)));
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
@@ -969,10 +968,7 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(cancelErr),
-            backgroundColor: context.oc.error,
-          ),
+          SnackBar(content: Text(cancelErr), backgroundColor: context.oc.error),
         );
       }
     } finally {
@@ -1057,9 +1053,9 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
     try {
       await ref.read(confirmDoneUseCaseProvider).call(widget.booking.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(doneSuccess)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(doneSuccess)));
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
@@ -1073,10 +1069,7 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(doneErr),
-            backgroundColor: context.oc.error,
-          ),
+          SnackBar(content: Text(doneErr), backgroundColor: context.oc.error),
         );
       }
     } finally {
@@ -1097,9 +1090,7 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
       ),
       child: ElevatedButton(
         onPressed: _loading ? null : _confirmDone,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: oc.success,
-        ),
+        style: ElevatedButton.styleFrom(backgroundColor: oc.success),
         child: _loading
             ? SizedBox(
                 height: 20,

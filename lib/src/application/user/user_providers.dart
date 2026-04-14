@@ -15,7 +15,6 @@ final activeModeProvider = Provider<ActiveMode>((ref) {
 
 /// Streams a single [AppUser] by uid. Returns null if the document does not
 /// exist. Used by chat widgets to resolve participant profiles.
-final userByIdProvider =
-    StreamProvider.family<AppUser?, String>((ref, uid) {
+final userByIdProvider = StreamProvider.family<AppUser?, String>((ref, uid) {
   return ref.watch(userRepositoryProvider).watchById(uid);
 });

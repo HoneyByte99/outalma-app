@@ -81,10 +81,9 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage>
         error: (_, __) => Center(
           child: Text(
             l10n.chatLoadError,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: oc.secondaryText),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
           ),
         ),
         data: (chats) {
@@ -92,14 +91,8 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage>
           return TabBarView(
             controller: _tabController,
             children: [
-              _ChatListFiltered(
-                chats: chats,
-                activeOnly: true,
-              ),
-              _ChatListFiltered(
-                chats: chats,
-                activeOnly: false,
-              ),
+              _ChatListFiltered(chats: chats, activeOnly: true),
+              _ChatListFiltered(chats: chats, activeOnly: false),
             ],
           );
         },
@@ -113,10 +106,7 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage>
 // ---------------------------------------------------------------------------
 
 class _ChatListFiltered extends ConsumerWidget {
-  const _ChatListFiltered({
-    required this.chats,
-    required this.activeOnly,
-  });
+  const _ChatListFiltered({required this.chats, required this.activeOnly});
 
   final List<Chat> chats;
   final bool activeOnly;
@@ -127,8 +117,11 @@ class _ChatListFiltered extends ConsumerWidget {
     final statusMap = ref.watch(_bookingStatusMapProvider);
     final filtered = chats.where((chat) {
       final status = statusMap[chat.bookingId];
-      if (status == null) return activeOnly; // not loaded yet → show in active tab
-      final isActive = status == BookingStatus.accepted ||
+      if (status == null) {
+        return activeOnly; // not loaded yet → show in active tab
+      }
+      final isActive =
+          status == BookingStatus.accepted ||
           status == BookingStatus.inProgress ||
           status == BookingStatus.requested;
       return activeOnly ? isActive : !isActive;
@@ -139,10 +132,9 @@ class _ChatListFiltered extends ConsumerWidget {
       return Center(
         child: Text(
           activeOnly ? l10n.chatActiveEmpty : l10n.chatDoneEmpty,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: context.oc.secondaryText),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: context.oc.secondaryText),
         ),
       );
     }
@@ -150,11 +142,8 @@ class _ChatListFiltered extends ConsumerWidget {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: filtered.length,
-      separatorBuilder: (_, __) => const Divider(
-        height: 1,
-        indent: 80,
-        endIndent: 0,
-      ),
+      separatorBuilder: (_, __) =>
+          const Divider(height: 1, indent: 80, endIndent: 0),
       itemBuilder: (context, i) => _ChatTile(chat: filtered[i]),
     );
   }
@@ -173,21 +162,24 @@ class _ChatTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
     final authState = ref.watch(authNotifierProvider).valueOrNull;
-    final myUid =
-        authState is AuthAuthenticated ? authState.user.id : null;
+    final myUid = authState is AuthAuthenticated ? authState.user.id : null;
 
     final messagesAsync = ref.watch(chatMessagesProvider(chat.id));
     final lastMsg = messagesAsync.valueOrNull?.lastOrNull;
 
-    final hasUnread = lastMsg != null &&
+    final hasUnread =
+        lastMsg != null &&
         myUid != null &&
         lastMsg.senderId != myUid &&
         !lastMsg.readBy.contains(myUid);
 
-    final otherUid = chat.participantIds
-        .firstWhere((id) => id != myUid, orElse: () => '');
-    final otherUserAsync =
-        otherUid.isNotEmpty ? ref.watch(userByIdProvider(otherUid)) : null;
+    final otherUid = chat.participantIds.firstWhere(
+      (id) => id != myUid,
+      orElse: () => '',
+    );
+    final otherUserAsync = otherUid.isNotEmpty
+        ? ref.watch(userByIdProvider(otherUid))
+        : null;
     final otherUser = otherUserAsync?.valueOrNull;
 
     return InkWell(
@@ -211,9 +203,7 @@ class _ChatTile extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           otherUser?.displayName ?? 'Conversation',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
+                          style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(fontWeight: FontWeight.w600),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -222,16 +212,14 @@ class _ChatTile extends ConsumerWidget {
                       if (chat.lastMessageAt != null)
                         Text(
                           _formatTime(chat.lastMessageAt!),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: hasUnread
-                                        ? oc.primary
-                                        : oc.icons,
-                                    fontWeight: hasUnread
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                    fontSize: 12,
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: hasUnread ? oc.primary : oc.icons,
+                                fontWeight: hasUnread
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                fontSize: 12,
+                              ),
                         ),
                     ],
                   ),
@@ -289,9 +277,9 @@ class _LastMessagePreview extends StatelessWidget {
       return Text(
         l10n.chatStartConversation,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: oc.secondaryText,
-              fontStyle: FontStyle.italic,
-            ),
+          color: oc.secondaryText,
+          fontStyle: FontStyle.italic,
+        ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       );
@@ -304,9 +292,9 @@ class _LastMessagePreview extends StatelessWidget {
     return Text(
       '$prefix$text',
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: hasUnread ? oc.primaryText : oc.secondaryText,
-            fontWeight: hasUnread ? FontWeight.w500 : FontWeight.w400,
-          ),
+        color: hasUnread ? oc.primaryText : oc.secondaryText,
+        fontWeight: hasUnread ? FontWeight.w500 : FontWeight.w400,
+      ),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -330,24 +318,16 @@ class _EmptyChats extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.chat_bubble_outline_rounded,
-              size: 64,
-              color: oc.icons,
-            ),
+            Icon(Icons.chat_bubble_outline_rounded, size: 64, color: oc.icons),
             const SizedBox(height: 16),
-            Text(
-              l10n.chatEmpty,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
+            Text(l10n.chatEmpty, style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             Text(
               l10n.chatEmptySubtitle,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: oc.secondaryText),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),
@@ -376,8 +356,18 @@ String _formatTime(DateTime dt) {
     return days[dt.weekday - 1];
   }
   const months = [
-    'jan', 'f\u00e9v', 'mars', 'avr', 'mai', 'juin',
-    'juil', 'ao\u00fbt', 'sep', 'oct', 'nov', 'd\u00e9c',
+    'jan',
+    'f\u00e9v',
+    'mars',
+    'avr',
+    'mai',
+    'juin',
+    'juil',
+    'ao\u00fbt',
+    'sep',
+    'oct',
+    'nov',
+    'd\u00e9c',
   ];
   return '${dt.day} ${months[dt.month - 1]}';
 }

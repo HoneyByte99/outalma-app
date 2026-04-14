@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 /// Returns the HTTPS download URL on success, null if the user cancelled.
 class ServicePhotoUploadService {
   ServicePhotoUploadService({required FirebaseStorage storage})
-      : _storage = storage;
+    : _storage = storage;
 
   final FirebaseStorage _storage;
 
@@ -44,9 +44,7 @@ class ServicePhotoUploadService {
   /// Deletes the stored photo. Ignores errors if the file does not exist.
   Future<void> deletePhoto(String serviceId) async {
     try {
-      await _storage
-          .ref('public/services/$serviceId/photo_0.jpg')
-          .delete();
+      await _storage.ref('public/services/$serviceId/photo_0.jpg').delete();
     } on FirebaseException catch (e) {
       if (e.code != 'object-not-found') rethrow;
     }
@@ -66,7 +64,8 @@ class ServicePhotoUploadService {
   }
 }
 
-final servicePhotoUploadServiceProvider =
-    Provider<ServicePhotoUploadService>((ref) {
+final servicePhotoUploadServiceProvider = Provider<ServicePhotoUploadService>((
+  ref,
+) {
   return ServicePhotoUploadService(storage: FirebaseStorage.instance);
 });

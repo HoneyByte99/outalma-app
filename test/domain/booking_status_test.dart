@@ -28,10 +28,7 @@ void main() {
     });
 
     test('unknown value returns requested fallback without throwing', () {
-      expect(
-        () => BookingStatus.fromString('unknown_value'),
-        returnsNormally,
-      );
+      expect(() => BookingStatus.fromString('unknown_value'), returnsNormally);
       expect(
         BookingStatus.fromString('unknown_value'),
         BookingStatus.requested,

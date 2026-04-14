@@ -35,10 +35,7 @@ class _FakeFunctions extends Fake implements FirebaseFunctions {
   final _FakeCallable _callable;
 
   @override
-  HttpsCallable httpsCallable(
-    String name, {
-    HttpsCallableOptions? options,
-  }) =>
+  HttpsCallable httpsCallable(String name, {HttpsCallableOptions? options}) =>
       _callable;
 }
 
@@ -91,10 +88,9 @@ void main() {
         schedule: 'Lundi matin',
       );
 
-      expect(
-        callable.capturedPayload!['schedule'],
-        {'description': 'Lundi matin'},
-      );
+      expect(callable.capturedPayload!['schedule'], {
+        'description': 'Lundi matin',
+      });
     });
 
     test('omits schedule key when schedule is empty', () async {
@@ -124,10 +120,9 @@ void main() {
         address: '12 rue de la Paix',
       );
 
-      expect(
-        callable.capturedPayload!['addressSnapshot'],
-        {'address': '12 rue de la Paix'},
-      );
+      expect(callable.capturedPayload!['addressSnapshot'], {
+        'address': '12 rue de la Paix',
+      });
     });
 
     test('omits addressSnapshot when address is empty', () async {
@@ -151,11 +146,7 @@ void main() {
       final useCase = CreateBookingUseCase(functions);
 
       await expectLater(
-        useCase(
-          providerId: 'p',
-          serviceId: 's',
-          requestMessage: 'm',
-        ),
+        useCase(providerId: 'p', serviceId: 's', requestMessage: 'm'),
         throwsA(isA<Exception>()),
       );
     });
@@ -172,11 +163,7 @@ void main() {
       final useCase = CreateBookingUseCase(functions);
 
       await expectLater(
-        useCase(
-          providerId: 'p',
-          serviceId: 's',
-          requestMessage: 'm',
-        ),
+        useCase(providerId: 'p', serviceId: 's', requestMessage: 'm'),
         throwsA(isA<FirebaseFunctionsException>()),
       );
     });

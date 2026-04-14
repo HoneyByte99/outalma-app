@@ -119,21 +119,24 @@ void main() {
     });
   });
 
-  group('BookingStatus.canTransitionTo — terminal states allow no transitions', () {
-    const terminals = [
-      BookingStatus.done,
-      BookingStatus.rejected,
-      BookingStatus.cancelled,
-    ];
+  group(
+    'BookingStatus.canTransitionTo — terminal states allow no transitions',
+    () {
+      const terminals = [
+        BookingStatus.done,
+        BookingStatus.rejected,
+        BookingStatus.cancelled,
+      ];
 
-    for (final terminal in terminals) {
-      for (final target in BookingStatus.values) {
-        test('${terminal.value} → ${target.value} is forbidden', () {
-          expect(terminal.canTransitionTo(target), isFalse);
-        });
+      for (final terminal in terminals) {
+        for (final target in BookingStatus.values) {
+          test('${terminal.value} → ${target.value} is forbidden', () {
+            expect(terminal.canTransitionTo(target), isFalse);
+          });
+        }
       }
-    }
-  });
+    },
+  );
 
   group('BookingStatus serialization contract (Firestore alignment)', () {
     test('inProgress serializes to "in_progress" (snake_case)', () {
@@ -143,8 +146,11 @@ void main() {
     test('all statuses except inProgress serialize to their Dart name', () {
       for (final status in BookingStatus.values) {
         if (status == BookingStatus.inProgress) continue;
-        expect(status.value, status.name,
-            reason: '${status.name}.value must equal its Dart name');
+        expect(
+          status.value,
+          status.name,
+          reason: '${status.name}.value must equal its Dart name',
+        );
       }
     });
 
@@ -163,7 +169,10 @@ void main() {
     });
 
     test('unknown string falls back to requested (not a crash)', () {
-      expect(BookingStatus.fromString('totally_unknown'), BookingStatus.requested);
+      expect(
+        BookingStatus.fromString('totally_unknown'),
+        BookingStatus.requested,
+      );
     });
 
     test('empty string falls back to requested', () {

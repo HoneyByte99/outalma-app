@@ -14,11 +14,11 @@ class LocationFilter {
   final double radiusKm;
 
   LocationFilter copyWith({double? radiusKm}) => LocationFilter(
-        label: label,
-        lat: lat,
-        lng: lng,
-        radiusKm: radiusKm ?? this.radiusKm,
-      );
+    label: label,
+    lat: lat,
+    lng: lng,
+    radiusKm: radiusKm ?? this.radiusKm,
+  );
 }
 
 final locationFilterProvider = StateProvider<LocationFilter?>((ref) => null);

@@ -1,28 +1,68 @@
-# This file configures the analyzer, which statically analyzes Dart code to
-# check for errors, warnings, and lints.
+# Analysis options for Outalma.
+# Based on flutter_lints with targeted additions for the MVP quality bar.
 #
-# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
-# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
-# invoked from the command line by running `flutter analyze`.
+# Rules philosophy:
+#   - Correctness rules are errors (catch bugs)
+#   - Code quality rules are warnings (block CI)
+#   - Style rules are infos (visible in IDE, don't block CI)
 
-# The following line activates a set of recommended lints for Flutter apps,
-# packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
-linter:
-  # The lint rules applied to this project can be customized in the
-  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
-  # included above or to enable additional rules. A list of all available lints
-  # and their documentation is published at https://dart.dev/lints.
-  #
-  # Instead of disabling a lint rule for the entire project in the
-  # section below, it can also be suppressed for a single line of code
-  # or a specific dart file by using the `// ignore: name_of_lint` and
-  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
-  # producing the lint.
-  rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+analyzer:
+  # Exclude generated code and Firebase auto-generated files.
+  exclude:
+    - lib/firebase_options.dart
+    - lib/l10n/app_localizations*.dart
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "lib/generated/**"
 
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
+  errors:
+    # Treat these as hard errors — they represent definite bugs.
+    missing_required_param: error
+    missing_return: error
+    dead_code: warning
+
+linter:
+  rules:
+    # -------------------------------------------------------------------------
+    # Correctness — these catch real bugs
+    # -------------------------------------------------------------------------
+
+    # Forces use of debugPrint (or a logger) instead of print(),
+    # which leaks to production logs.
+    avoid_print: true
+
+    # Catch fire-and-forget async calls that swallow errors silently.
+    unawaited_futures: true
+
+    # Warn when a StreamSubscription is not stored and cancelled.
+    cancel_subscriptions: true
+
+    # Warn when a StreamController (or Sink) is never closed.
+    close_sinks: true
+
+    # -------------------------------------------------------------------------
+    # Code quality — improve reliability without massive churn
+    # -------------------------------------------------------------------------
+
+    # Avoid returning a Future from a function that immediately awaits it.
+    unnecessary_await_in_return: true
+
+    # Detects assignments whose value is never used.
+    avoid_unused_constructor_parameters: true
+
+    # Prevent calling methods on dynamic — forces proper typing.
+    avoid_dynamic_calls: true
+
+    # -------------------------------------------------------------------------
+    # Performance
+    # -------------------------------------------------------------------------
+
+    # Promote const where the analyzer already suggests it (infos → warnings).
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+
+    # Replace Container(color: …) with ColoredBox when there's no other need.
+    use_colored_box: true

@@ -35,7 +35,10 @@ class LogSessionService {
 
   static String _generateId() {
     final ts = DateTime.now().millisecondsSinceEpoch;
-    final rand = Random.secure().nextInt(0xFFFFFF).toRadixString(16).padLeft(6, '0');
+    final rand = Random.secure()
+        .nextInt(0xFFFFFF)
+        .toRadixString(16)
+        .padLeft(6, '0');
     return '${ts.toRadixString(16)}-$rand';
   }
 

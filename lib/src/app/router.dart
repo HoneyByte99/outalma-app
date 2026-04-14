@@ -44,6 +44,7 @@ abstract final class AppRoutes {
 
   static String serviceDetail(String serviceId) => '/service/$serviceId';
   static String bookingDetail(String bookingId) => '/bookings/$bookingId';
+
   /// Deep-link path for notifications — resolves outside the shell to avoid
   /// duplicate-key conflict with the shell-nested /bookings/:bookingId route.
   static String bookingDeepLink(String bookingId) => '/booking/$bookingId';
@@ -75,10 +76,7 @@ class RouterNotifier extends ChangeNotifier {
       authNotifierProvider,
       (_, __) => notifyListeners(),
     );
-    _ref.listen<ActiveMode>(
-      activeModeProvider,
-      (_, __) => notifyListeners(),
-    );
+    _ref.listen<ActiveMode>(activeModeProvider, (_, __) => notifyListeners());
   }
 
   final Ref _ref;
@@ -91,8 +89,7 @@ class RouterNotifier extends ChangeNotifier {
       error: (_, __) => AppRoutes.signIn,
       data: (authState) {
         final loc = state.matchedLocation;
-        final isAuthRoute = loc == AppRoutes.signIn ||
-            loc == AppRoutes.signUp;
+        final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
 
         // ---- Unauthenticated ----
         if (authState is AuthUnauthenticated) {
@@ -107,8 +104,8 @@ class RouterNotifier extends ChangeNotifier {
           final mode = _ref.read(activeModeProvider);
           final isClientTab =
               loc == AppRoutes.home || loc == AppRoutes.bookings;
-          final isProviderTab = loc == AppRoutes.providerHome ||
-              loc == AppRoutes.providerInbox;
+          final isProviderTab =
+              loc == AppRoutes.providerHome || loc == AppRoutes.providerInbox;
           final isSharedTab =
               loc == AppRoutes.chatsList || loc == AppRoutes.profile;
 
@@ -129,18 +126,24 @@ class RouterNotifier extends ChangeNotifier {
 // Stable branch navigator keys (module-level so they never change identity)
 // ---------------------------------------------------------------------------
 
-final _shellNavigatorHomeKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shellHome');
-final _shellNavigatorBookingsKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shellBookings');
-final _shellNavigatorProviderKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shellProvider');
-final _shellNavigatorInboxKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shellInbox');
-final _shellNavigatorChatsKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shellChats');
-final _shellNavigatorProfileKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shellProfile');
+final _shellNavigatorHomeKey = GlobalKey<NavigatorState>(
+  debugLabel: 'shellHome',
+);
+final _shellNavigatorBookingsKey = GlobalKey<NavigatorState>(
+  debugLabel: 'shellBookings',
+);
+final _shellNavigatorProviderKey = GlobalKey<NavigatorState>(
+  debugLabel: 'shellProvider',
+);
+final _shellNavigatorInboxKey = GlobalKey<NavigatorState>(
+  debugLabel: 'shellInbox',
+);
+final _shellNavigatorChatsKey = GlobalKey<NavigatorState>(
+  debugLabel: 'shellChats',
+);
+final _shellNavigatorProfileKey = GlobalKey<NavigatorState>(
+  debugLabel: 'shellProfile',
+);
 
 // ---------------------------------------------------------------------------
 // Router provider
@@ -299,9 +302,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/service/:serviceId',
         name: 'service-detail',
-        builder: (_, state) => ServiceDetailPage(
-          serviceId: state.pathParameters['serviceId']!,
-        ),
+        builder: (_, state) =>
+            ServiceDetailPage(serviceId: state.pathParameters['serviceId']!),
       ),
 
       // ---- Booking detail deep-link (notifications, external links) ----
@@ -310,27 +312,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/booking/:bookingId',
         name: 'booking-deep-link',
-        builder: (_, state) => BookingDetailPage(
-          bookingId: state.pathParameters['bookingId']!,
-        ),
+        builder: (_, state) =>
+            BookingDetailPage(bookingId: state.pathParameters['bookingId']!),
       ),
 
       // ---- Chat ----
       GoRoute(
         path: '/chat/:chatId',
         name: 'chat',
-        builder: (_, state) => ChatPage(
-          chatId: state.pathParameters['chatId']!,
-        ),
+        builder: (_, state) =>
+            ChatPage(chatId: state.pathParameters['chatId']!),
       ),
 
       // ---- Review form ----
       GoRoute(
         path: '/review/:bookingId',
         name: 'review',
-        builder: (_, state) => ReviewFormPage(
-          bookingId: state.pathParameters['bookingId']!,
-        ),
+        builder: (_, state) =>
+            ReviewFormPage(bookingId: state.pathParameters['bookingId']!),
       ),
 
       // ---- Report ----
@@ -347,9 +346,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/provider-profile/:uid',
         name: 'provider-profile',
-        builder: (_, state) => PublicProviderProfilePage(
-          providerId: state.pathParameters['uid']!,
-        ),
+        builder: (_, state) =>
+            PublicProviderProfilePage(providerId: state.pathParameters['uid']!),
       ),
 
       // ---- Notifications ----
@@ -376,9 +374,8 @@ class _ServiceEditLoader extends ConsumerWidget {
     final serviceAsync = ref.watch(serviceDetailProvider(serviceId));
 
     return serviceAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (_, __) => Scaffold(
         appBar: AppBar(),
         body: const Center(child: Text('Service introuvable')),

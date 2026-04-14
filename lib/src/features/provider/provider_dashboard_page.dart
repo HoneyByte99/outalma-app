@@ -94,9 +94,7 @@ class ProviderDashboardPage extends ConsumerWidget {
               ),
             ),
             error: (_, __) => SliverToBoxAdapter(
-              child: _ErrorState(
-                message: l10n.dashboardServicesError,
-              ),
+              child: _ErrorState(message: l10n.dashboardServicesError),
             ),
             data: (services) => services.isEmpty
                 ? const SliverToBoxAdapter(child: _EmptyServices())
@@ -171,18 +169,17 @@ class _OnboardingBanner extends ConsumerWidget {
                     children: [
                       Text(
                         l10n.dashboardActivateTitle,
-                        style:
-                            Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  color: oc.primaryText,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: oc.primaryText,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         l10n.dashboardActivateBody,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: oc.secondaryText,
-                            ),
+                          color: oc.secondaryText,
+                        ),
                       ),
                     ],
                   ),
@@ -242,11 +239,7 @@ class _ProfileCard extends StatelessWidget {
                 color: oc.success.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.verified_outlined,
-                color: oc.success,
-                size: 22,
-              ),
+              child: Icon(Icons.verified_outlined, color: oc.success, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -256,11 +249,9 @@ class _ProfileCard extends StatelessWidget {
                   Text(
                     profile.active ? l10n.profileActive : l10n.profileInactive,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: profile.active
-                              ? oc.success
-                              : oc.secondaryText,
-                        ),
+                      fontWeight: FontWeight.w600,
+                      color: profile.active ? oc.success : oc.secondaryText,
+                    ),
                   ),
                   if (profile.serviceArea != null) ...[
                     const SizedBox(height: 2),
@@ -275,9 +266,7 @@ class _ProfileCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             profile.serviceArea!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
+                            style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: oc.secondaryText),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -346,9 +335,9 @@ class _ServiceTile extends ConsumerWidget {
         ),
         title: Text(
           service.title,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -357,9 +346,9 @@ class _ServiceTile extends ConsumerWidget {
             Text(
               priceLabel,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
+                color: oc.primary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(width: 8),
             _CategoryChip(categoryId: service.categoryId),
@@ -370,11 +359,7 @@ class _ServiceTile extends ConsumerWidget {
           children: [
             _PublishedDot(published: service.published),
             const SizedBox(width: 4),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: oc.icons,
-              size: 20,
-            ),
+            Icon(Icons.chevron_right_rounded, color: oc.icons, size: 20),
           ],
         ),
         onTap: () => context.push(AppRoutes.serviceEdit(service.id)),
@@ -382,10 +367,14 @@ class _ServiceTile extends ConsumerWidget {
     );
   }
 
-  Widget _iconFallback(dynamic oc) {
-    return Container(
+  Widget _iconFallback(OutalmaColors oc) {
+    return ColoredBox(
       color: oc.primary.withValues(alpha: 0.08),
-      child: Icon(_categoryIcon(service.categoryId), size: 22, color: oc.primary),
+      child: Icon(
+        _categoryIcon(service.categoryId),
+        size: 22,
+        color: oc.primary,
+      ),
     );
   }
 
@@ -397,8 +386,9 @@ class _CategoryChip extends StatelessWidget {
 
   final CategoryId categoryId;
 
-  static Map<CategoryId, String> get _labels =>
-      {for (final c in CategoryId.values) c: c.label};
+  static Map<CategoryId, String> get _labels => {
+    for (final c in CategoryId.values) c: c.label,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -411,9 +401,9 @@ class _CategoryChip extends StatelessWidget {
       ),
       child: Text(
         _labels[categoryId] ?? '',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: oc.secondaryText,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: oc.secondaryText),
       ),
     );
   }
@@ -457,11 +447,7 @@ class _EmptyServices extends StatelessWidget {
       child: Center(
         child: Column(
           children: [
-            Icon(
-              Icons.add_box_outlined,
-              size: 56,
-              color: oc.icons,
-            ),
+            Icon(Icons.add_box_outlined, size: 56, color: oc.icons),
             const SizedBox(height: 16),
             Text(
               l10n.serviceEmptyTitle,
@@ -471,10 +457,9 @@ class _EmptyServices extends StatelessWidget {
             Text(
               l10n.serviceEmptyBody,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: oc.secondaryText),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -500,9 +485,9 @@ class _ErrorState extends StatelessWidget {
       child: Center(
         child: Text(
           message,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: context.oc.secondaryText,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: context.oc.secondaryText),
           textAlign: TextAlign.center,
         ),
       ),
@@ -533,9 +518,11 @@ class _ModeBadge extends ConsumerWidget {
         ref.read(authNotifierProvider.notifier).switchMode(newMode);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(newMode == ActiveMode.client
-                ? l10n.modeClientActivated
-                : l10n.modeProviderActivated),
+            content: Text(
+              newMode == ActiveMode.client
+                  ? l10n.modeClientActivated
+                  : l10n.modeProviderActivated,
+            ),
           ),
         );
       },
@@ -553,9 +540,9 @@ class _ModeBadge extends ConsumerWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(width: 4),
             Icon(Icons.swap_horiz_rounded, size: 14, color: color),
