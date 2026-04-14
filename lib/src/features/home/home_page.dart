@@ -814,17 +814,32 @@ class _ServiceGrid extends ConsumerWidget {
           return const _EmptyState();
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.85,
-          ),
-          itemCount: filtered.length,
-          itemBuilder: (context, i) {
-            return _ServiceCard(service: filtered[i]);
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final columns = width > 700 ? 3 : 2;
+            final spacing = 12.0;
+            final hPad = 16.0;
+            final cardWidth =
+                (width - hPad * 2 - (columns - 1) * spacing) / columns;
+            // Image takes cardWidth height (square), info block ~100px
+            const infoHeight = 100.0;
+            final cardHeight = cardWidth + infoHeight;
+            final ratio = cardWidth / cardHeight;
+
+            return GridView.builder(
+              padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 24),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+                childAspectRatio: ratio,
+              ),
+              itemCount: filtered.length,
+              itemBuilder: (context, i) {
+                return _ServiceCard(service: filtered[i]);
+              },
+            );
           },
         );
       },
@@ -871,9 +886,8 @@ class _ServiceCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
+            // Image — takes all remaining space
             Expanded(
-              flex: 60,
               child: ClipRRect(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(20)),
@@ -933,62 +947,58 @@ class _ServiceCard extends ConsumerWidget {
                 ),
               ),
             ),
-            // Info
-            Expanded(
-              flex: 40,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          service.title,
-                          style: Theme.of(context).textTheme.titleSmall,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          priceLabel,
+            // Info — intrinsic height, never overflows
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    service.title,
+                    style: Theme.of(context).textTheme.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        priceLabel,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(
+                              color: oc.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: _RatingRow(reviews: reviews)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      UserAvatar(
+                        displayName: providerUser?.displayName ?? '',
+                        photoPath: providerUser?.photoPath,
+                        radius: 10,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          providerUser?.displayName ?? '\u2014',
                           style: Theme.of(context)
                               .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: oc.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              .bodySmall
+                              ?.copyWith(color: oc.secondaryText),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
-                        _RatingRow(reviews: reviews),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        UserAvatar(
-                          displayName: providerUser?.displayName ?? '',
-                          photoPath: providerUser?.photoPath,
-                          radius: 10,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            providerUser?.displayName ?? '\u2014',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: oc.secondaryText),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
