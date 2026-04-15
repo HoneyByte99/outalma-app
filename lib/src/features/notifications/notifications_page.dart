@@ -20,8 +20,7 @@ class NotificationsPage extends ConsumerWidget {
     final notifAsync = ref.watch(notificationsProvider);
     final db = ref.read(firestoreProvider);
     final authState = ref.watch(authNotifierProvider).valueOrNull;
-    final uid =
-        authState is AuthAuthenticated ? authState.user.id : null;
+    final uid = authState is AuthAuthenticated ? authState.user.id : null;
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -55,19 +54,14 @@ class NotificationsPage extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.wifi_off_outlined,
-                  size: 56,
-                  color: oc.icons,
-                ),
+                Icon(Icons.wifi_off_outlined, size: 56, color: oc.icons),
                 const SizedBox(height: 16),
                 Text(
                   l10n.notificationsError,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: oc.secondaryText),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                 ),
               ],
             ),
@@ -80,11 +74,8 @@ class NotificationsPage extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: notifications.length,
-            separatorBuilder: (_, __) => const Divider(
-              height: 1,
-              indent: 72,
-              endIndent: 16,
-            ),
+            separatorBuilder: (_, __) =>
+                const Divider(height: 1, indent: 72, endIndent: 16),
             itemBuilder: (context, i) {
               final notif = notifications[i];
               return _NotificationTile(
@@ -142,7 +133,9 @@ class _NotificationTile extends StatelessWidget {
   String _relativeTime(DateTime dt, AppLocalizations l10n) {
     final diff = DateTime.now().difference(dt);
     if (diff.inSeconds < 60) return l10n.notificationTimeNow;
-    if (diff.inMinutes < 60) return l10n.notificationTimeMinutes(diff.inMinutes);
+    if (diff.inMinutes < 60) {
+      return l10n.notificationTimeMinutes(diff.inMinutes);
+    }
     if (diff.inHours < 24) return l10n.notificationTimeHours(diff.inHours);
     if (diff.inDays == 1) return l10n.notificationTimeYesterday;
     if (diff.inDays < 7) return l10n.notificationTimeDays(diff.inDays);
@@ -170,7 +163,10 @@ class _NotificationTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _iconColor(notification.type, oc).withValues(alpha: 0.12),
+                color: _iconColor(
+                  notification.type,
+                  oc,
+                ).withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -190,9 +186,7 @@ class _NotificationTile extends StatelessWidget {
                       Expanded(
                         child: Text(
                           notification.title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
+                          style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 fontWeight: isUnread
                                     ? FontWeight.w600
@@ -225,9 +219,9 @@ class _NotificationTile extends StatelessWidget {
                   Text(
                     _relativeTime(notification.createdAt, l10n),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                          color: oc.icons,
-                        ),
+                      fontSize: 11,
+                      color: oc.icons,
+                    ),
                   ),
                 ],
               ),
@@ -254,11 +248,7 @@ class _EmptyNotifications extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.notifications_none_rounded,
-              size: 56,
-              color: oc.icons,
-            ),
+            Icon(Icons.notifications_none_rounded, size: 56, color: oc.icons),
             const SizedBox(height: 16),
             Text(
               l10n.notificationsEmpty,
@@ -268,10 +258,9 @@ class _EmptyNotifications extends StatelessWidget {
             Text(
               l10n.notificationsEmptySubtitle,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: oc.secondaryText),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),

@@ -14,9 +14,9 @@ class NotificationService {
     required FirebaseMessaging messaging,
     required FirebaseFirestore db,
     required String uid,
-  })  : _messaging = messaging,
-        _db = db,
-        _uid = uid;
+  }) : _messaging = messaging,
+       _db = db,
+       _uid = uid;
 
   final FirebaseMessaging _messaging;
   final FirebaseFirestore _db;
@@ -27,11 +27,7 @@ class NotificationService {
     if (kIsWeb) return;
 
     // 1. Request permission (required on iOS; no-op on Android 12 and below)
-    await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    await _messaging.requestPermission(alert: true, badge: true, sound: true);
 
     // 2. Get and save token
     final token = await _messaging.getToken();
@@ -50,7 +46,8 @@ class NotificationService {
   /// inside the listener (avoids async BuildContext warnings).
   /// Returns the subscription so the caller can cancel it on dispose.
   static StreamSubscription<RemoteMessage> listenForeground(
-      GlobalKey<ScaffoldMessengerState> messengerKey) {
+    GlobalKey<ScaffoldMessengerState> messengerKey,
+  ) {
     return FirebaseMessaging.onMessage.listen((message) {
       final notification = message.notification;
       if (notification == null) return;

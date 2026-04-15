@@ -12,18 +12,16 @@ class FirestoreChatRepository implements ChatRepository {
 
   @override
   Stream<Chat?> watchChat(String chatId) {
-    return FirestoreCollections.chats(_db)
-        .doc(chatId)
-        .snapshots()
-        .map((snap) => snap.exists ? snap.data() : null);
+    return FirestoreCollections.chats(
+      _db,
+    ).doc(chatId).snapshots().map((snap) => snap.exists ? snap.data() : null);
   }
 
   @override
   Stream<List<Chat>> watchForUser(String uid) {
-    return FirestoreCollections.chats(_db)
-        .where('participantIds', arrayContains: uid)
-        .snapshots()
-        .map((qs) {
+    return FirestoreCollections.chats(
+      _db,
+    ).where('participantIds', arrayContains: uid).snapshots().map((qs) {
       final list = qs.docs.map((d) => d.data()).toList();
       list.sort((a, b) {
         final aTime = a.lastMessageAt ?? a.createdAt;

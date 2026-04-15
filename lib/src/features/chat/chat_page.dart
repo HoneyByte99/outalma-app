@@ -60,10 +60,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Future<void> _markRead() async {
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
-    await ref.read(chatRepositoryProvider).markMessagesRead(
-          chatId: widget.chatId,
-          uid: authState.user.id,
-        );
+    await ref
+        .read(chatRepositoryProvider)
+        .markMessagesRead(chatId: widget.chatId, uid: authState.user.id);
   }
 
   void _scrollToBottom() {
@@ -88,7 +87,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     setState(() => _sending = true);
 
     try {
-      await ref.read(chatRepositoryProvider).sendMessage(
+      await ref
+          .read(chatRepositoryProvider)
+          .sendMessage(
             ChatMessage(
               id: '',
               chatId: widget.chatId,
@@ -100,16 +101,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           );
       if (mounted) {
         _controller.clear();
-        SchedulerBinding.instance
-            .addPostFrameCallback((_) => _scrollToBottom());
+        SchedulerBinding.instance.addPostFrameCallback(
+          (_) => _scrollToBottom(),
+        );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: context.oc.error,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
         );
       }
     } finally {
@@ -120,7 +119,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   // Pending image preview — WhatsApp-style: preview + caption before send
   String? _pendingImageUrl;
 
-  Future<void> _sendMedia(MessageType type, String url, {String? caption}) async {
+  Future<void> _sendMedia(
+    MessageType type,
+    String url, {
+    String? caption,
+  }) async {
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
@@ -129,7 +132,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     setState(() => _sending = true);
     try {
-      await ref.read(chatRepositoryProvider).sendMessage(
+      await ref
+          .read(chatRepositoryProvider)
+          .sendMessage(
             ChatMessage(
               id: '',
               chatId: widget.chatId,
@@ -141,16 +146,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ),
           );
       if (mounted) {
-        SchedulerBinding.instance
-            .addPostFrameCallback((_) => _scrollToBottom());
+        SchedulerBinding.instance.addPostFrameCallback(
+          (_) => _scrollToBottom(),
+        );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: context.oc.error,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
         );
       }
     } finally {
@@ -213,10 +216,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: context.oc.error,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
         );
       }
     }
@@ -236,18 +236,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       String url;
       // path is a blob URL on web or file path on native — fetch bytes via HTTP
       final response = await http.get(Uri.parse(path));
-      url = await media.uploadVoiceBytes(
-        widget.chatId,
-        response.bodyBytes,
-      );
+      url = await media.uploadVoiceBytes(widget.chatId, response.bodyBytes);
       await _sendMedia(MessageType.voice, url);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: context.oc.error,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
         );
       }
     } finally {
@@ -266,8 +260,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final oc = context.oc;
     final messagesAsync = ref.watch(chatMessagesProvider(widget.chatId));
     final authState = ref.watch(authNotifierProvider).valueOrNull;
-    final myUid =
-        authState is AuthAuthenticated ? authState.user.id : null;
+    final myUid = authState is AuthAuthenticated ? authState.user.id : null;
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -290,15 +283,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           // ---- Messages ----
           Expanded(
             child: messagesAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, __) => Center(
                 child: Text(
                   l10n.chatLoadError,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: oc.secondaryText),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                 ),
               ),
               data: (messages) {
@@ -325,7 +316,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     );
                   },
                 );
-
               },
             ),
           ),
@@ -378,14 +368,12 @@ class _MessageBubble extends ConsumerWidget {
     final oc = context.oc;
     final bg = isMe ? oc.primary : oc.surface;
     final fg = isMe ? oc.surface : oc.primaryText;
-    final align =
-        isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final radius = BorderRadius.only(
       topLeft: const Radius.circular(16),
       topRight: const Radius.circular(16),
       bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(4),
-      bottomRight:
-          isMe ? const Radius.circular(4) : const Radius.circular(16),
+      bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
     );
 
     // System messages — centered
@@ -394,17 +382,16 @@ class _MessageBubble extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Center(
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
               color: oc.border,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               message.text ?? '',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.secondaryText,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
           ),
         ),
@@ -412,8 +399,7 @@ class _MessageBubble extends ConsumerWidget {
     }
 
     // Determine read receipt for own messages.
-    final bool isRead =
-        isMe && message.readBy.any((uid) => uid != myUid);
+    final bool isRead = isMe && message.readBy.any((uid) => uid != myUid);
 
     // For received messages, resolve sender profile for the avatar.
     final senderAsync = !isMe
@@ -425,8 +411,9 @@ class _MessageBubble extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment:
-            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           // Sender avatar — only for received messages
           if (!isMe) ...[
@@ -461,9 +448,9 @@ class _MessageBubble extends ConsumerWidget {
                   Text(
                     _formatTime(message.createdAt),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                          color: oc.icons,
-                        ),
+                      fontSize: 11,
+                      color: oc.icons,
+                    ),
                   ),
                   if (isMe) ...[
                     const SizedBox(width: 4),
@@ -519,8 +506,11 @@ class _MessageBubble extends ConsumerWidget {
                       width: 220,
                       height: 80,
                       child: Center(
-                        child: Icon(Icons.broken_image_outlined,
-                            color: fg, size: 32),
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: fg,
+                          size: 32,
+                        ),
                       ),
                     ),
                   ),
@@ -531,10 +521,9 @@ class _MessageBubble extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
                 child: Text(
                   message.text!,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: fg, height: 1.4),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: fg, height: 1.4),
                 ),
               ),
           ],
@@ -552,10 +541,9 @@ class _MessageBubble extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Text(
             message.text ?? '',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: fg, height: 1.4),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: fg, height: 1.4),
           ),
         );
     }
@@ -672,9 +660,9 @@ class _VoicePlayerState extends State<_VoicePlayer> {
               Text(
                 '${_fmt(_position)} / ${_fmt(_duration)}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: widget.fg.withValues(alpha: 0.7),
-                      fontSize: 11,
-                    ),
+                  color: widget.fg.withValues(alpha: 0.7),
+                  fontSize: 11,
+                ),
               ),
             ],
           ),
@@ -753,7 +741,9 @@ class _ImagePreviewBar extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.chatAddCaption,
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     filled: true,
                     fillColor: oc.inputFill,
                     enabledBorder: OutlineInputBorder(
@@ -800,8 +790,11 @@ class _ImagePreviewBar extends StatelessWidget {
                                 color: oc.surface,
                               ),
                             )
-                          : Icon(Icons.send_rounded,
-                              size: 16, color: oc.surface),
+                          : Icon(
+                              Icons.send_rounded,
+                              size: 16,
+                              color: oc.surface,
+                            ),
                     ),
                   ),
                 ],
@@ -878,7 +871,8 @@ class _InputBarState extends State<_InputBar> {
         decoration: BoxDecoration(
           color: oc.error.withValues(alpha: 0.06),
           border: Border(
-              top: BorderSide(color: oc.error.withValues(alpha: 0.3))),
+            top: BorderSide(color: oc.error.withValues(alpha: 0.3)),
+          ),
         ),
         child: Row(
           children: [
@@ -887,10 +881,9 @@ class _InputBarState extends State<_InputBar> {
             Expanded(
               child: Text(
                 l10n.chatRecording,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: oc.error),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: oc.error),
               ),
             ),
             IconButton(
@@ -908,8 +901,7 @@ class _InputBarState extends State<_InputBar> {
                   color: oc.error,
                   shape: BoxShape.circle,
                 ),
-                child:
-                    Icon(Icons.stop_rounded, color: oc.surface, size: 24),
+                child: Icon(Icons.stop_rounded, color: oc.surface, size: 24),
               ),
             ),
           ],
@@ -946,14 +938,19 @@ class _InputBarState extends State<_InputBar> {
               textInputAction: TextInputAction.newline,
               decoration: InputDecoration(
                 hintText: l10n.chatTyping,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 filled: true,
                 fillColor: oc.inputFill,
                 suffixIcon: IconButton(
                   onPressed: widget.sending ? null : widget.onTakePhoto,
-                  icon: Icon(Icons.camera_alt_outlined,
-                      color: oc.icons, size: 22),
+                  icon: Icon(
+                    Icons.camera_alt_outlined,
+                    color: oc.icons,
+                    size: 22,
+                  ),
                   tooltip: 'Photo',
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -996,8 +993,7 @@ class _InputBarState extends State<_InputBar> {
                   color: oc.primary,
                   shape: BoxShape.circle,
                 ),
-                child:
-                    Icon(Icons.send_rounded, color: oc.surface, size: 20),
+                child: Icon(Icons.send_rounded, color: oc.surface, size: 20),
               ),
             )
           else
@@ -1010,8 +1006,7 @@ class _InputBarState extends State<_InputBar> {
                   color: oc.primary,
                   shape: BoxShape.circle,
                 ),
-                child:
-                    Icon(Icons.mic_rounded, color: oc.surface, size: 22),
+                child: Icon(Icons.mic_rounded, color: oc.surface, size: 22),
               ),
             ),
         ],
@@ -1035,11 +1030,7 @@ class _EmptyChat extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.chat_bubble_outline_rounded,
-              size: 56,
-              color: oc.icons,
-            ),
+            Icon(Icons.chat_bubble_outline_rounded, size: 56, color: oc.icons),
             const SizedBox(height: 16),
             Text(
               l10n.chatStartConversation,
@@ -1049,10 +1040,9 @@ class _EmptyChat extends StatelessWidget {
             Text(
               l10n.chatSubtitle,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: oc.secondaryText),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),

@@ -48,7 +48,8 @@ class AppNetworkImage extends StatelessWidget {
       memCacheHeight: memCacheHeight,
       httpHeaders: const {'Accept': '*/*'},
       placeholder: (_, __) =>
-          placeholder ?? _DefaultLoadingPlaceholder(width: width, height: height),
+          placeholder ??
+          _DefaultLoadingPlaceholder(width: width, height: height),
       errorWidget: (_, __, error) {
         debugPrint('[AppNetworkImage] load failed: $url — $error');
         return errorWidget ??
@@ -74,10 +75,9 @@ class _DefaultLoadingPlaceholder extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      color: Theme.of(context)
-          .colorScheme
-          .surfaceContainerHighest
-          .withValues(alpha: 0.3),
+      color: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
     );
   }
 }
@@ -92,10 +92,9 @@ class _DefaultErrorPlaceholder extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      color: Theme.of(context)
-          .colorScheme
-          .surfaceContainerHighest
-          .withValues(alpha: 0.2),
+      color: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
       child: Center(
         child: Icon(
           Icons.image_not_supported_outlined,

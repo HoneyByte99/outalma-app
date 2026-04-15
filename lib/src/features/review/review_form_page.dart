@@ -24,9 +24,8 @@ class ReviewFormPage extends ConsumerWidget {
     final bookingAsync = ref.watch(bookingDetailProvider(bookingId));
 
     return bookingAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (_, __) => Scaffold(
         appBar: AppBar(),
         body: Center(child: Text(l10n.reviewBookingNotFound)),
@@ -35,9 +34,7 @@ class ReviewFormPage extends ConsumerWidget {
         if (booking == null || booking.status != BookingStatus.done) {
           return Scaffold(
             appBar: AppBar(),
-            body: Center(
-              child: Text(l10n.reviewOnlyAfterDone),
-            ),
+            body: Center(child: Text(l10n.reviewOnlyAfterDone)),
           );
         }
 
@@ -50,8 +47,7 @@ class ReviewFormPage extends ConsumerWidget {
         final isClient = uid == booking.customerId;
         final reviewerId = uid;
         final revieweeId = isClient ? booking.providerId : booking.customerId;
-        final role =
-            isClient ? ReviewerRole.client : ReviewerRole.provider;
+        final role = isClient ? ReviewerRole.client : ReviewerRole.provider;
 
         return _ReviewForm(
           bookingId: bookingId,
@@ -100,7 +96,9 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
     if (_submitting) return;
     setState(() => _submitting = true);
     try {
-      await ref.read(createReviewUseCaseProvider).call(
+      await ref
+          .read(createReviewUseCaseProvider)
+          .call(
             bookingId: widget.bookingId,
             reviewerId: widget.reviewerId,
             revieweeId: widget.revieweeId,
@@ -151,10 +149,9 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             const SizedBox(height: 8),
             Text(
               l10n.reviewHelp,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: oc.secondaryText),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
             const SizedBox(height: 32),
 
@@ -162,9 +159,9 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             Text(
               l10n.reviewRating,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: oc.secondaryText,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: oc.secondaryText,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 12),
             _StarRating(
@@ -177,18 +174,16 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             Text(
               l10n.reviewComment,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: oc.secondaryText,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: oc.secondaryText,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _commentController,
               minLines: 3,
               maxLines: 6,
-              decoration: InputDecoration(
-                hintText: l10n.reviewCommentHint,
-              ),
+              decoration: InputDecoration(hintText: l10n.reviewCommentHint),
             ),
             const SizedBox(height: 32),
 

@@ -1,2 +1,5 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
 #include "Generated.xcconfig"
+// Secrets.xcconfig holds MAPS_API_KEY and other billing-sensitive keys.
+// It is gitignored — copy Secrets.xcconfig.example → Secrets.xcconfig and fill in values.
+#include? "Secrets.xcconfig"

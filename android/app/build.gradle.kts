@@ -14,6 +14,21 @@ if (hasKeystore) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// ---------------------------------------------------------------------------
+// Google Maps API key — reads from local.properties (dev) or the
+// MAPS_API_KEY environment variable (CI / server builds).
+// Never commit an API key in this file.
+// ---------------------------------------------------------------------------
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+val mapsApiKey: String =
+    localProperties.getProperty("MAPS_API_KEY")
+        ?: System.getenv("MAPS_API_KEY")
+        ?: ""
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -44,6 +59,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Injects MAPS_API_KEY into AndroidManifest.xml via ${MAPS_API_KEY}.
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     signingConfigs {

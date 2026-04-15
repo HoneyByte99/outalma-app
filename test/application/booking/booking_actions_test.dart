@@ -34,10 +34,7 @@ class _FakeFunctions extends Fake implements FirebaseFunctions {
   final _FakeCallable _callable;
 
   @override
-  HttpsCallable httpsCallable(
-    String name, {
-    HttpsCallableOptions? options,
-  }) {
+  HttpsCallable httpsCallable(String name, {HttpsCallableOptions? options}) {
     _callable.capturedFunctionName = name;
     return _callable;
   }

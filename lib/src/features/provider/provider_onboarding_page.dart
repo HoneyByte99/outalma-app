@@ -59,10 +59,7 @@ class _ProviderOnboardingPageState
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: errorColor,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: errorColor),
         );
       }
     } finally {
@@ -114,10 +111,10 @@ class _ProviderOnboardingPageState
                 const SizedBox(height: 8),
                 Text(
                   l10n.onboardingBody,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: oc.secondaryText, height: 1.5),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: oc.secondaryText,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 32),
 
@@ -131,9 +128,7 @@ class _ProviderOnboardingPageState
                   controller: _bioController,
                   maxLines: 3,
                   maxLength: 300,
-                  decoration: InputDecoration(
-                    hintText: l10n.onboardingBioHint,
-                  ),
+                  decoration: InputDecoration(hintText: l10n.onboardingBioHint),
                 ),
                 const SizedBox(height: 20),
 
@@ -147,8 +142,10 @@ class _ProviderOnboardingPageState
                   controller: _zoneController,
                   decoration: InputDecoration(
                     hintText: l10n.onboardingZoneHint,
-                    prefixIcon:
-                        const Icon(Icons.location_on_outlined, size: 20),
+                    prefixIcon: const Icon(
+                      Icons.location_on_outlined,
+                      size: 20,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 40),

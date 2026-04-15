@@ -60,8 +60,7 @@ class ChatMediaService {
     final ext = rawExt.length > 5 || rawExt.contains('/') ? 'jpg' : rawExt;
     final ts = DateTime.now().millisecondsSinceEpoch;
     final contentType = file.mimeType ?? _mimeType(ext);
-    final ref =
-        _storage.ref('private/chats/$chatId/media/${ts}_$prefix.$ext');
+    final ref = _storage.ref('private/chats/$chatId/media/${ts}_$prefix.$ext');
     await ref.putData(bytes, SettableMetadata(contentType: contentType));
     return ref.getDownloadURL();
   }

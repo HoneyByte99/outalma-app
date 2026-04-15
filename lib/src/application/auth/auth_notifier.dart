@@ -17,6 +17,7 @@ class PhoneTakenException implements Exception {
 }
 
 class AuthNotifier extends AsyncNotifier<AuthState> {
+  // ignore: cancel_subscriptions — cancelled via ref.onDispose(_authSub.cancel) below.
   late StreamSubscription<User?> _authSub;
 
   @override
@@ -59,6 +60,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       }
 
       // Fire-and-forget: log the session (IP, country, device). Never blocks.
+      // ignore: unawaited_futures
       ref.read(logSessionServiceProvider).log();
 
       return AuthAuthenticated(appUser);
@@ -89,10 +91,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     );
     // null → Android auto-verified; authStateChanges handles the rest.
     if (token != null) {
-      state = AsyncData(AuthPhoneVerification(
-        verificationId: token,
-        phoneNumber: phoneE164,
-      ));
+      state = AsyncData(
+        AuthPhoneVerification(verificationId: token, phoneNumber: phoneE164),
+      );
     }
   }
 
@@ -135,7 +136,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String displayName,
   }) async {
     // Check phone uniqueness before creating the Firebase account.
-    final taken = await ref.read(userRepositoryProvider).isPhoneTaken(phoneE164);
+    final taken = await ref
+        .read(userRepositoryProvider)
+        .isPhoneTaken(phoneE164);
     if (taken) throw PhoneTakenException();
 
     final auth = ref.read(firebaseAuthProvider);
@@ -241,7 +244,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     String? phoneE164,
   }) async {
     if (phoneE164 != null && phoneE164.isNotEmpty) {
-      final taken = await ref.read(userRepositoryProvider).isPhoneTaken(phoneE164);
+      final taken = await ref
+          .read(userRepositoryProvider)
+          .isPhoneTaken(phoneE164);
       if (taken) throw PhoneTakenException();
     }
 

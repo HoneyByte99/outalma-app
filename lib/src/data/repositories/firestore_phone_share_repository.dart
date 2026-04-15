@@ -11,9 +11,10 @@ class FirestorePhoneShareRepository implements PhoneShareRepository {
 
   @override
   Stream<List<PhoneShare>> watchForBooking(String bookingId) {
-    return FirestoreCollections.phoneShares(db: _db, bookingId: bookingId)
-        .snapshots()
-        .map((qs) => qs.docs.map((d) => d.data()).toList());
+    return FirestoreCollections.phoneShares(
+      db: _db,
+      bookingId: bookingId,
+    ).snapshots().map((qs) => qs.docs.map((d) => d.data()).toList());
   }
 
   @override
@@ -22,8 +23,10 @@ class FirestorePhoneShareRepository implements PhoneShareRepository {
     required String uid,
     required String phone,
   }) async {
-    final ref = FirestoreCollections.phoneShares(db: _db, bookingId: bookingId)
-        .doc(uid);
+    final ref = FirestoreCollections.phoneShares(
+      db: _db,
+      bookingId: bookingId,
+    ).doc(uid);
     await ref.set(
       PhoneShare(uid: uid, phone: phone, createdAt: DateTime.now().toUtc()),
       SetOptions(merge: true),

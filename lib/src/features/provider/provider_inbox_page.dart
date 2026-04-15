@@ -68,10 +68,7 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
         ],
         body: TabBarView(
           controller: _tabController,
-          children: const [
-            _RequestsTab(),
-            _ActiveTab(),
-          ],
+          children: const [_RequestsTab(), _ActiveTab()],
         ),
       ),
     );
@@ -187,24 +184,27 @@ class _InboxCard extends ConsumerWidget {
                       Text(
                         serviceTitle,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         _formatDate(booking.createdAt),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: oc.secondaryText,
-                            ),
+                          color: oc.secondaryText,
+                        ),
                       ),
                       if (booking.scheduledAt != null)
                         Text(
                           l10n.bookingScheduledAt(
-                            DateFormat('d MMM à HH:mm', 'fr_FR')
-                                .format(booking.scheduledAt!),
+                            DateFormat(
+                              'd MMM à HH:mm',
+                              'fr_FR',
+                            ).format(booking.scheduledAt!),
                           ),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
                                 color: oc.primary,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -213,15 +213,8 @@ class _InboxCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Flexible(
-                  flex: 0,
-                  child: _StatusChip(status: booking.status),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: oc.icons,
-                  size: 20,
-                ),
+                Flexible(flex: 0, child: _StatusChip(status: booking.status)),
+                Icon(Icons.chevron_right_rounded, color: oc.icons, size: 20),
               ],
             ),
             if (booking.requestMessage.isNotEmpty) ...[
@@ -229,9 +222,9 @@ class _InboxCard extends ConsumerWidget {
               Text(
                 booking.requestMessage,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: oc.secondaryText,
-                      height: 1.4,
-                    ),
+                  color: oc.secondaryText,
+                  height: 1.4,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -256,9 +249,9 @@ class _InboxCard extends ConsumerWidget {
                     Text(
                       l10n.inboxOpenChat,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: oc.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        color: oc.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -287,7 +280,10 @@ class _StatusChip extends StatelessWidget {
     final (label, color) = switch (status) {
       BookingStatus.requested => (l10n.statusPending, oc.warning),
       BookingStatus.accepted => (l10n.statusAccepted, oc.primary),
-      BookingStatus.inProgress => (l10n.statusInProgress, const Color(0xFF7B2FBE)),
+      BookingStatus.inProgress => (
+        l10n.statusInProgress,
+        const Color(0xFF7B2FBE),
+      ),
       BookingStatus.done => (l10n.statusDone, oc.success),
       BookingStatus.rejected => (l10n.statusRejected, oc.secondaryText),
       BookingStatus.cancelled => (l10n.statusCancelled, oc.secondaryText),
@@ -302,9 +298,9 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -316,8 +312,18 @@ class _StatusChip extends StatelessWidget {
 
 String _formatDate(DateTime dt) {
   const months = [
-    'jan', 'fév', 'mars', 'avr', 'mai', 'juin',
-    'juil', 'août', 'sep', 'oct', 'nov', 'déc',
+    'jan',
+    'fév',
+    'mars',
+    'avr',
+    'mai',
+    'juin',
+    'juil',
+    'août',
+    'sep',
+    'oct',
+    'nov',
+    'déc',
   ];
   return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
 }
@@ -342,9 +348,7 @@ class _EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isActive
-                  ? Icons.hourglass_empty_outlined
-                  : Icons.inbox_outlined,
+              isActive ? Icons.hourglass_empty_outlined : Icons.inbox_outlined,
               size: 56,
               color: oc.icons,
             ),
@@ -359,10 +363,9 @@ class _EmptyState extends StatelessWidget {
                   ? l10n.inboxEmptyActiveSubtitle
                   : l10n.inboxEmptyRequestsSubtitle,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: oc.secondaryText),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),
@@ -380,10 +383,9 @@ class _ErrorState extends StatelessWidget {
     return Center(
       child: Text(
         l10n.inboxLoadError,
-        style: Theme.of(context)
-            .textTheme
-            .bodySmall
-            ?.copyWith(color: context.oc.secondaryText),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: context.oc.secondaryText),
       ),
     );
   }

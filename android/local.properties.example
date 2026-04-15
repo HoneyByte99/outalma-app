@@ -1,0 +1,6 @@
+# local.properties is gitignored — this example documents the entries you can add.
+# The Android Gradle plugin generates sdk.dir and flutter.* automatically.
+# Add any secrets below and they will be read by build.gradle.kts.
+
+# Google Maps Android API key (billing-sensitive — never commit the real value)
+MAPS_API_KEY=YOUR_GOOGLE_MAPS_ANDROID_API_KEY_HERE

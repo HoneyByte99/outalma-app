@@ -5,10 +5,7 @@ import 'package:http/http.dart' as http;
 
 /// Address suggestion from Places Autocomplete.
 class PlaceSuggestion {
-  const PlaceSuggestion({
-    required this.placeId,
-    required this.description,
-  });
+  const PlaceSuggestion({required this.placeId, required this.description});
   final String placeId;
   final String description;
 }
@@ -26,14 +23,13 @@ class GeocodingService {
   Future<List<PlaceSuggestion>> autocomplete(String input) async {
     if (input.trim().length < 2) return const [];
 
-    final uri = Uri.parse('https://places.googleapis.com/v1/places:autocomplete');
+    final uri = Uri.parse(
+      'https://places.googleapis.com/v1/places:autocomplete',
+    );
 
     final response = await http.post(
       uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': _apiKey,
-      },
+      headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': _apiKey},
       body: jsonEncode({
         'input': input,
         'languageCode': 'fr',
@@ -47,15 +43,17 @@ class GeocodingService {
     final suggestions = json['suggestions'] as List? ?? [];
 
     return suggestions
-        .where((s) => (s as Map)['placePrediction'] != null)
+        .cast<Map<String, dynamic>>()
+        .where((s) => s['placePrediction'] != null)
         .map((s) {
-      final pred = s['placePrediction'] as Map<String, dynamic>;
-      return PlaceSuggestion(
-        placeId: pred['placeId'] as String,
-        description:
-            (pred['text'] as Map<String, dynamic>)['text'] as String,
-      );
-    }).toList();
+          final pred = s['placePrediction'] as Map<String, dynamic>;
+          return PlaceSuggestion(
+            placeId: pred['placeId'] as String,
+            description:
+                (pred['text'] as Map<String, dynamic>)['text'] as String,
+          );
+        })
+        .toList();
   }
 
   /// Returns lat/lng for a given [placeId] via Place Details (New).
@@ -64,10 +62,7 @@ class GeocodingService {
 
     final response = await http.get(
       uri,
-      headers: {
-        'X-Goog-Api-Key': _apiKey,
-        'X-Goog-FieldMask': 'location',
-      },
+      headers: {'X-Goog-Api-Key': _apiKey, 'X-Goog-FieldMask': 'location'},
     );
 
     if (response.statusCode != 200) return null;
@@ -95,13 +90,19 @@ class GeocodingService {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final results = json['results'] as List?;
       if (results == null || results.isEmpty) return null;
-      return (results.first as Map<String, dynamic>)['formatted_address'] as String?;
+      return (results.first as Map<String, dynamic>)['formatted_address']
+          as String?;
     } catch (_) {
       return null;
     }
   }
 }
 
+/// Injected at build time via `--dart-define=PLACES_API_KEY=<key>`.
+/// In development, set the variable in your IDE run configuration or pass it
+/// to `flutter run`. In CI, inject via the PLACES_API_KEY GitHub Secret.
+const _placesApiKey = String.fromEnvironment('PLACES_API_KEY');
+
 final geocodingServiceProvider = Provider<GeocodingService>((ref) {
-  return GeocodingService(apiKey: 'AIzaSyA8LD81VepWh8J31k6WqRH8FCJ85OLXBFA');
+  return GeocodingService(apiKey: _placesApiKey);
 });

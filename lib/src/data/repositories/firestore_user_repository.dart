@@ -11,10 +11,9 @@ class FirestoreUserRepository implements UserRepository {
 
   @override
   Stream<AppUser?> watchById(String userId) {
-    return FirestoreCollections.users(_db)
-        .doc(userId)
-        .snapshots()
-        .map((snap) => snap.exists ? snap.data() : null);
+    return FirestoreCollections.users(
+      _db,
+    ).doc(userId).snapshots().map((snap) => snap.exists ? snap.data() : null);
   }
 
   @override
@@ -25,17 +24,16 @@ class FirestoreUserRepository implements UserRepository {
 
   @override
   Future<void> upsert(AppUser user) async {
-    await FirestoreCollections.users(_db)
-        .doc(user.id)
-        .set(user, SetOptions(merge: true));
+    await FirestoreCollections.users(
+      _db,
+    ).doc(user.id).set(user, SetOptions(merge: true));
   }
 
   @override
   Future<bool> isPhoneTaken(String phoneE164, {String? excludeUid}) async {
-    final snap = await FirestoreCollections.users(_db)
-        .where('phoneE164', isEqualTo: phoneE164)
-        .limit(1)
-        .get();
+    final snap = await FirestoreCollections.users(
+      _db,
+    ).where('phoneE164', isEqualTo: phoneE164).limit(1).get();
     if (snap.docs.isEmpty) return false;
     if (excludeUid != null && snap.docs.first.id == excludeUid) return false;
     return true;

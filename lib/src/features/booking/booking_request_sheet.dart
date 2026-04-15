@@ -101,9 +101,9 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         address: _addressController.text.trim(),
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(successMsg)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(successMsg)));
         context.go(AppRoutes.bookings);
       }
     } on FirebaseFunctionsException catch (e) {
@@ -118,10 +118,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: errorColor,
-          ),
+          SnackBar(content: Text(errorMsg), backgroundColor: errorColor),
         );
       }
     } finally {
@@ -168,9 +165,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     final dateKey = (providerId: widget.providerId, date: dt);
     ref.invalidate(providerBookingsForDateProvider(dateKey));
 
-    final bookingsAsync = ref.read(
-      providerBookingsForDateProvider(dateKey),
-    );
+    final bookingsAsync = ref.read(providerBookingsForDateProvider(dateKey));
 
     final blockedAsync = ref.read(
       blockedSlotsForProviderProvider(widget.providerId),
@@ -263,9 +258,9 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
               const SizedBox(height: 4),
               Text(
                 widget.serviceTitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: oc.secondaryText,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -287,8 +282,9 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                   if (_step > 0) ...[
                     Expanded(
                       child: OutlinedButton(
-                        onPressed:
-                            _loading ? null : () => setState(() => _step--),
+                        onPressed: _loading
+                            ? null
+                            : () => setState(() => _step--),
                         child: Text(l10n.bookingBack),
                       ),
                     ),
@@ -330,7 +326,10 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   Widget _buildStepContent() {
     switch (_step) {
       case 0:
-        return _StepMessage(controller: _messageController, focus: _messageFocus);
+        return _StepMessage(
+          controller: _messageController,
+          focus: _messageFocus,
+        );
       case 1:
         return _StepSchedule(
           selectedDate: _selectedDate,
@@ -341,7 +340,9 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         );
       case 2:
         return _StepAddress(
-            controller: _addressController, focus: _addressFocus);
+          controller: _addressController,
+          focus: _addressFocus,
+        );
       default:
         return const SizedBox.shrink();
     }
@@ -402,10 +403,9 @@ class _StepMessage extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           l10n.bookingStep1Subtitle,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: context.oc.secondaryText),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: context.oc.secondaryText),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -415,9 +415,7 @@ class _StepMessage extends StatelessWidget {
           maxLines: 5,
           maxLength: 500,
           textInputAction: TextInputAction.newline,
-          decoration: InputDecoration(
-            hintText: l10n.bookingStep1Hint,
-          ),
+          decoration: InputDecoration(hintText: l10n.bookingStep1Hint),
         ),
       ],
     );
@@ -465,10 +463,9 @@ class _StepSchedule extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           l10n.bookingStep2Subtitle,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: oc.secondaryText),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
         ),
         const SizedBox(height: 16),
 
@@ -507,9 +504,9 @@ class _StepSchedule extends StatelessWidget {
                   child: Text(
                     conflictMessage!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.warning,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: oc.warning,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -556,9 +553,9 @@ class _PickerButton extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: filled ? oc.primary : oc.secondaryText,
-                    fontWeight: filled ? FontWeight.w500 : FontWeight.w400,
-                  ),
+                color: filled ? oc.primary : oc.secondaryText,
+                fontWeight: filled ? FontWeight.w500 : FontWeight.w400,
+              ),
             ),
           ],
         ),
@@ -615,10 +612,9 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
         const SizedBox(height: 4),
         Text(
           l10n.bookingStep3Subtitle,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: oc.secondaryText),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -628,8 +624,11 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
           textInputAction: TextInputAction.done,
           decoration: InputDecoration(
             hintText: l10n.bookingStep3Hint,
-            prefixIcon: Icon(Icons.location_on_outlined,
-                size: 20, color: oc.icons),
+            prefixIcon: Icon(
+              Icons.location_on_outlined,
+              size: 20,
+              color: oc.icons,
+            ),
           ),
           onChanged: _onChanged,
         ),
@@ -654,11 +653,16 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
                   onTap: () => _selectSuggestion(s),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     child: Row(
                       children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 14, color: oc.secondaryText),
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: oc.secondaryText,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(

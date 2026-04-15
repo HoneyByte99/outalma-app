@@ -34,12 +34,18 @@ void main() {
 
     test('returns epoch zero for null', () {
       final result = dateTimeFromFirestore(null);
-      expect(result, equals(DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)));
+      expect(
+        result,
+        equals(DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)),
+      );
     });
 
     test('returns epoch zero for unrecognised type', () {
       final result = dateTimeFromFirestore(Object());
-      expect(result, equals(DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)));
+      expect(
+        result,
+        equals(DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)),
+      );
     });
   });
 

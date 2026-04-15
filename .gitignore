@@ -46,3 +46,11 @@ app.*.map.json
 
 # Seed script credentials
 scripts/service-account.json
+
+# Environment / secrets — never commit billing-sensitive keys
+.env
+.env.*
+!.env.example
+
+# iOS secrets — copy Secrets.xcconfig.example → Secrets.xcconfig and fill in values
+ios/Flutter/Secrets.xcconfig

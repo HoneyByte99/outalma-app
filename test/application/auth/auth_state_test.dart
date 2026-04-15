@@ -59,10 +59,10 @@ void main() {
 }
 
 AppUser _testUser() => AppUser(
-      id: 'uid-1',
-      displayName: 'Alice',
-      email: 'alice@example.com',
-      country: 'FR',
-      activeMode: ActiveMode.client,
-      createdAt: DateTime(2024),
-    );
+  id: 'uid-1',
+  displayName: 'Alice',
+  email: 'alice@example.com',
+  country: 'FR',
+  activeMode: ActiveMode.client,
+  createdAt: DateTime(2024),
+);

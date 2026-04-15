@@ -120,7 +120,9 @@ class _PhoneFieldState extends State<PhoneField> {
       }
     }
     _country = _kDefaultCountry;
-    _ctrl = TextEditingController(text: value.replaceFirst(RegExp(r'^\+\d+'), ''));
+    _ctrl = TextEditingController(
+      text: value.replaceFirst(RegExp(r'^\+\d+'), ''),
+    );
   }
 
   @override
@@ -161,87 +163,92 @@ class _PhoneFieldState extends State<PhoneField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-      Container(
-      decoration: BoxDecoration(
-        color: oc.inputFill,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: hasError ? oc.error : oc.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // ── Country picker chip ──────────────────────────────
-          GestureDetector(
-            onTap: _pickCountry,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(_country.flag, style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 6),
-                  Text(
-                    _country.dialCode,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        Container(
+          decoration: BoxDecoration(
+            color: oc.inputFill,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: hasError ? oc.error : oc.border),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // ── Country picker chip ──────────────────────────────
+              GestureDetector(
+                onTap: _pickCountry,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_country.flag, style: const TextStyle(fontSize: 20)),
+                      const SizedBox(width: 6),
+                      Text(
+                        _country.dialCode,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: oc.primaryText,
                         ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_drop_down_rounded,
+                        size: 18,
+                        color: oc.icons,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.arrow_drop_down_rounded,
-                    size: 18,
-                    color: oc.icons,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Divider ─────────────────────────────────────────
-          Container(width: 1, height: 24, color: oc.border),
-
-          // ── Number input ─────────────────────────────────────
-          Expanded(
-            child: TextField(
-              controller: _ctrl,
-              keyboardType: TextInputType.phone,
-              textInputAction: widget.textInputAction,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d\s\-]')),
-              ],
-              onSubmitted: widget.onSubmitted != null ? (_) => widget.onSubmitted!() : null,
-              decoration: InputDecoration(
-                hintText: 'Numéro',
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                filled: false,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 14,
                 ),
-                hintStyle: TextStyle(color: oc.icons),
               ),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: oc.primaryText,
+
+              // ── Divider ─────────────────────────────────────────
+              Container(width: 1, height: 24, color: oc.border),
+
+              // ── Number input ─────────────────────────────────────
+              Expanded(
+                child: TextField(
+                  controller: _ctrl,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: widget.textInputAction,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[\d\s\-]')),
+                  ],
+                  onSubmitted: widget.onSubmitted != null
+                      ? (_) => widget.onSubmitted!()
+                      : null,
+                  decoration: InputDecoration(
+                    hintText: 'Numéro',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
+                    hintStyle: TextStyle(color: oc.icons),
                   ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: oc.primaryText),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: Text(
+              _error!,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.error),
             ),
           ),
-        ],
-      ),
-    ),
-    if (hasError)
-      Padding(
-        padding: const EdgeInsets.only(top: 6, left: 4),
-        child: Text(
-          _error!,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: oc.error,
-              ),
-        ),
-      ),
       ],
     );
   }
@@ -283,10 +290,12 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
       _filtered = q.isEmpty
           ? _kCountries
           : _kCountries
-              .where((c) =>
-                  c.name.toLowerCase().contains(q) ||
-                  c.dialCode.contains(q))
-              .toList();
+                .where(
+                  (c) =>
+                      c.name.toLowerCase().contains(q) ||
+                      c.dialCode.contains(q),
+                )
+                .toList();
     });
   }
 
@@ -327,8 +336,8 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                     Text(
                       'Indicatif pays',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const Spacer(),
                     IconButton(
@@ -349,7 +358,11 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                   autofocus: true,
                   decoration: InputDecoration(
                     hintText: 'Rechercher un pays…',
-                    prefixIcon: Icon(Icons.search_rounded, color: oc.icons, size: 20),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: oc.icons,
+                      size: 20,
+                    ),
                     contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
@@ -364,7 +377,8 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                   itemCount: _filtered.length,
                   itemBuilder: (context, i) {
                     final c = _filtered[i];
-                    final isSelected = c.dialCode == widget.selected.dialCode &&
+                    final isSelected =
+                        c.dialCode == widget.selected.dialCode &&
                         c.name == widget.selected.name;
                     return InkWell(
                       onTap: () => Navigator.of(context).pop(c),
@@ -373,7 +387,9 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                             ? oc.primary.withValues(alpha: 0.07)
                             : null,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 14),
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
                         child: Row(
                           children: [
                             Text(c.flag, style: const TextStyle(fontSize: 22)),
@@ -381,9 +397,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                             Expanded(
                               child: Text(
                                 c.name,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
+                                style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
                                       fontWeight: isSelected
                                           ? FontWeight.w600
@@ -396,9 +410,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                             ),
                             Text(
                               c.dialCode,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
+                              style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     color: isSelected
                                         ? oc.primary
@@ -408,8 +420,11 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                             ),
                             if (isSelected) ...[
                               const SizedBox(width: 8),
-                              Icon(Icons.check_rounded,
-                                  color: oc.primary, size: 18),
+                              Icon(
+                                Icons.check_rounded,
+                                color: oc.primary,
+                                size: 18,
+                              ),
                             ],
                           ],
                         ),

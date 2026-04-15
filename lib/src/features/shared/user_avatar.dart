@@ -30,10 +30,7 @@ class UserAvatar extends StatelessWidget {
     final initialsWidget = Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: oc.primary,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: oc.primary, shape: BoxShape.circle),
       alignment: Alignment.center,
       child: initials.isEmpty
           ? Icon(Icons.person_rounded, color: Colors.white, size: radius)

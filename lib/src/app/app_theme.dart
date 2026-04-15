@@ -72,6 +72,7 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
   final Color secondaryText;
   final Color background;
   final Color surface;
+
   /// Slightly tinted surface for cards/containers in light mode.
   /// Use this instead of [surface] for card-like containers to ensure
   /// they visually separate from the scaffold background.
@@ -252,8 +253,10 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.inputFill,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         hintStyle: GoogleFonts.inter(
           color: AppColors.secondaryText,
           fontSize: 15,
@@ -401,8 +404,10 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: oc.inputFill,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         hintStyle: GoogleFonts.inter(
           color: oc.secondaryText,
           fontSize: 15,
@@ -472,11 +477,7 @@ abstract final class AppTheme {
         ),
         margin: EdgeInsets.zero,
       ),
-      dividerTheme: DividerThemeData(
-        color: oc.border,
-        thickness: 1,
-        space: 0,
-      ),
+      dividerTheme: DividerThemeData(color: oc.border, thickness: 1, space: 0),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -512,35 +513,80 @@ abstract final class AppTheme {
   static TextTheme _buildTextTheme(OutalmaColors oc) {
     return TextTheme(
       displayLarge: GoogleFonts.inter(
-          fontSize: 64, fontWeight: FontWeight.w600, color: oc.primaryText),
+        fontSize: 64,
+        fontWeight: FontWeight.w600,
+        color: oc.primaryText,
+      ),
       displayMedium: GoogleFonts.inter(
-          fontSize: 44, fontWeight: FontWeight.w600, color: oc.primaryText),
+        fontSize: 44,
+        fontWeight: FontWeight.w600,
+        color: oc.primaryText,
+      ),
       displaySmall: GoogleFonts.inter(
-          fontSize: 36, fontWeight: FontWeight.w600, color: oc.primaryText),
+        fontSize: 36,
+        fontWeight: FontWeight.w600,
+        color: oc.primaryText,
+      ),
       headlineLarge: GoogleFonts.inter(
-          fontSize: 28, fontWeight: FontWeight.bold, color: oc.primaryText),
+        fontSize: 28,
+        fontWeight: FontWeight.bold,
+        color: oc.primaryText,
+      ),
       headlineMedium: GoogleFonts.inter(
-          fontSize: 24, fontWeight: FontWeight.bold, color: oc.primaryText),
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        color: oc.primaryText,
+      ),
       headlineSmall: GoogleFonts.inter(
-          fontSize: 20, fontWeight: FontWeight.bold, color: oc.primaryText),
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: oc.primaryText,
+      ),
       titleLarge: GoogleFonts.inter(
-          fontSize: 16, fontWeight: FontWeight.bold, color: oc.primaryText),
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: oc.primaryText,
+      ),
       titleMedium: GoogleFonts.inter(
-          fontSize: 16, fontWeight: FontWeight.w500, color: oc.primaryText),
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        color: oc.primaryText,
+      ),
       titleSmall: GoogleFonts.inter(
-          fontSize: 14, fontWeight: FontWeight.w500, color: oc.primaryText),
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: oc.primaryText,
+      ),
       labelLarge: GoogleFonts.inter(
-          fontSize: 15, fontWeight: FontWeight.w500, color: oc.secondaryText),
+        fontSize: 15,
+        fontWeight: FontWeight.w500,
+        color: oc.secondaryText,
+      ),
       labelMedium: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w500, color: oc.secondaryText),
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: oc.secondaryText,
+      ),
       labelSmall: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w500, color: oc.secondaryText),
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: oc.secondaryText,
+      ),
       bodyLarge: GoogleFonts.inter(
-          fontSize: 16, fontWeight: FontWeight.w400, color: oc.primaryText),
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        color: oc.primaryText,
+      ),
       bodyMedium: GoogleFonts.inter(
-          fontSize: 14, fontWeight: FontWeight.w400, color: oc.primaryText),
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: oc.primaryText,
+      ),
       bodySmall: GoogleFonts.inter(
-          fontSize: 13, fontWeight: FontWeight.w400, color: oc.secondaryText),
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        color: oc.secondaryText,
+      ),
     );
   }
 }

@@ -148,8 +148,11 @@ class _ActiveBookingsWithCalendarState
     var displayed = widget.bookings;
     if (_selectedDay != null) {
       displayed = displayed
-          .where((b) =>
-              b.scheduledAt != null && isSameDay(b.scheduledAt!, _selectedDay!))
+          .where(
+            (b) =>
+                b.scheduledAt != null &&
+                isSameDay(b.scheduledAt!, _selectedDay!),
+          )
           .toList();
     }
     // Sort by scheduledAt (upcoming first), fallback to createdAt
@@ -187,8 +190,10 @@ class _ActiveBookingsWithCalendarState
             },
             onPageChanged: (focused) => _focusedDay = focused,
             eventLoader: (day) => widget.bookings
-                .where((b) =>
-                    b.scheduledAt != null && isSameDay(b.scheduledAt!, day))
+                .where(
+                  (b) =>
+                      b.scheduledAt != null && isSameDay(b.scheduledAt!, day),
+                )
                 .toList(),
             calendarStyle: CalendarStyle(
               todayDecoration: BoxDecoration(
@@ -227,8 +232,10 @@ class _ActiveBookingsWithCalendarState
               child: Row(
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: oc.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(20),
@@ -236,15 +243,11 @@ class _ActiveBookingsWithCalendarState
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.calendar_today,
-                            size: 14, color: oc.primary),
+                        Icon(Icons.calendar_today, size: 14, color: oc.primary),
                         const SizedBox(width: 6),
                         Text(
-                          DateFormat('EEE d MMM', locale)
-                              .format(_selectedDay!),
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelMedium
+                          DateFormat('EEE d MMM', locale).format(_selectedDay!),
+                          style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(
                                 color: oc.primary,
                                 fontWeight: FontWeight.w600,
@@ -260,8 +263,11 @@ class _ActiveBookingsWithCalendarState
                               color: oc.primary.withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.close,
-                                size: 12, color: oc.primary),
+                            child: Icon(
+                              Icons.close,
+                              size: 12,
+                              color: oc.primary,
+                            ),
                           ),
                         ),
                       ],
@@ -282,10 +288,9 @@ class _ActiveBookingsWithCalendarState
                   _selectedDay != null
                       ? l10n.bookingNoDateToday
                       : l10n.bookingNoUpcoming,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: oc.secondaryText),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                 ),
               ),
             ),
@@ -296,8 +301,7 @@ class _ActiveBookingsWithCalendarState
             sliver: SliverList.separated(
               itemCount: displayed.length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) =>
-                  _BookingCard(booking: displayed[i]),
+              itemBuilder: (context, i) => _BookingCard(booking: displayed[i]),
             ),
           ),
       ],
@@ -319,8 +323,7 @@ class _BookingCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
     final oc = context.oc;
-    final serviceAsync =
-        ref.watch(serviceDetailProvider(booking.serviceId));
+    final serviceAsync = ref.watch(serviceDetailProvider(booking.serviceId));
 
     final serviceTitle = serviceAsync.valueOrNull?.title ?? '---';
     final dateLabel = _formatDate(booking.createdAt);
@@ -362,23 +365,31 @@ class _BookingCard extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               l10n.bookingRequestedAt(dateLabel),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.secondaryText,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
             if (booking.scheduledAt != null) ...[
               const SizedBox(height: 2),
               Row(
                 children: [
-                  Icon(Icons.calendar_today_outlined,
-                      size: 12, color: oc.primary),
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 12,
+                    color: oc.primary,
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    l10n.bookingScheduledAt(DateFormat('d MMM, HH:mm', locale).format(booking.scheduledAt!)),
+                    l10n.bookingScheduledAt(
+                      DateFormat(
+                        'd MMM, HH:mm',
+                        locale,
+                      ).format(booking.scheduledAt!),
+                    ),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: oc.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -387,9 +398,9 @@ class _BookingCard extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 booking.requestMessage,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: oc.secondaryText,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -446,14 +457,18 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 
-  (String, Color) _statusStyle(BuildContext context, BookingStatus s, OutalmaColors oc) {
+  (String, Color) _statusStyle(
+    BuildContext context,
+    BookingStatus s,
+    OutalmaColors oc,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     switch (s) {
       case BookingStatus.requested:
@@ -517,21 +532,17 @@ class _BookingListEmpty extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isActive
-                  ? Icons.calendar_today_outlined
-                  : Icons.history_outlined,
+              isActive ? Icons.calendar_today_outlined : Icons.history_outlined,
               size: 56,
               color: oc.icons,
             ),
             const SizedBox(height: 16),
             Text(
-              isActive
-                  ? l10n.bookingsActiveEmpty
-                  : l10n.bookingsDoneEmpty,
+              isActive ? l10n.bookingsActiveEmpty : l10n.bookingsDoneEmpty,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: oc.secondaryText,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),

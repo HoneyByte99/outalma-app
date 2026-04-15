@@ -52,9 +52,8 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      builder: (context, child) => ConnectivityBanner(
-        child: child ?? const SizedBox.shrink(),
-      ),
+      builder: (context, child) =>
+          ConnectivityBanner(child: child ?? const SizedBox.shrink()),
     );
   }
 }

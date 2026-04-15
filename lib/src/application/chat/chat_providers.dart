@@ -19,8 +19,10 @@ final chatDetailProvider = StreamProvider.family<Chat?, String>((ref, chatId) {
 });
 
 /// Watches the latest 50 messages for a chat.
-final chatMessagesProvider =
-    StreamProvider.family<List<ChatMessage>, String>((ref, chatId) {
+final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>((
+  ref,
+  chatId,
+) {
   return ref
       .watch(chatRepositoryProvider)
       .watchMessages(chatId: chatId, limit: 50);

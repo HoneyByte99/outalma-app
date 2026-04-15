@@ -37,7 +37,8 @@ double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
   const r = 6371.0;
   final dLat = _deg2rad(lat2 - lat1);
   final dLng = _deg2rad(lng2 - lng1);
-  final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+  final a =
+      math.sin(dLat / 2) * math.sin(dLat / 2) +
       math.cos(_deg2rad(lat1)) *
           math.cos(_deg2rad(lat2)) *
           math.sin(dLng / 2) *
@@ -50,8 +51,12 @@ double _deg2rad(double deg) => deg * (math.pi / 180);
 bool _serviceMatchesLocation(Service service, LocationFilter filter) {
   for (final zone in service.serviceZones) {
     if (zone.latitude == 0 && zone.longitude == 0) continue;
-    final dist =
-        _haversineKm(filter.lat, filter.lng, zone.latitude, zone.longitude);
+    final dist = _haversineKm(
+      filter.lat,
+      filter.lng,
+      zone.latitude,
+      zone.longitude,
+    );
     if (dist <= filter.radiusKm + zone.radiusKm) return true;
   }
   return false;
@@ -103,10 +108,9 @@ class HomePage extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text(
               l10n.homeSearchPrompt,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: oc.secondaryText),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
             ),
           ),
           // Category chips
@@ -153,16 +157,19 @@ class _LocationPill extends ConsumerWidget {
               child: Text(
                 label,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: oc.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: oc.primary,
+                  fontWeight: FontWeight.w600,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.keyboard_arrow_down_rounded,
-                size: 18, color: oc.primary),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: oc.primary,
+            ),
           ],
         ),
       ),
@@ -273,9 +280,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
         content: TextField(
           controller: nameController,
           autofocus: true,
-          decoration: InputDecoration(
-            hintText: l10n.locationAddressHint,
-          ),
+          decoration: InputDecoration(hintText: l10n.locationAddressHint),
         ),
         actions: [
           TextButton(
@@ -286,17 +291,21 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
             onPressed: () {
               final name = nameController.text.trim();
               if (name.isEmpty) return;
-              ref.read(savedLocationsProvider.notifier).add(SavedLocation(
-                    label: name,
-                    address: filter.label,
-                    lat: filter.lat,
-                    lng: filter.lng,
-                    radiusKm: filter.radiusKm,
-                  ));
+              ref
+                  .read(savedLocationsProvider.notifier)
+                  .add(
+                    SavedLocation(
+                      label: name,
+                      address: filter.label,
+                      lat: filter.lat,
+                      lng: filter.lng,
+                      radiusKm: filter.radiusKm,
+                    ),
+                  );
               Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.locationSaved(name))),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(l10n.locationSaved(name))));
             },
             child: Text(l10n.save),
           ),
@@ -317,7 +326,9 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)!.locationServiceDisabled),
+              content: Text(
+                AppLocalizations.of(context)!.locationServiceDisabled,
+              ),
             ),
           );
         }
@@ -334,7 +345,9 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)!.locationPermissionDenied),
+              content: Text(
+                AppLocalizations.of(context)!.locationPermissionDenied,
+              ),
             ),
           );
         }
@@ -388,8 +401,9 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
     _radiusDebounce = Timer(const Duration(milliseconds: 300), () {
       final current = ref.read(locationFilterProvider);
       if (current != null) {
-        ref.read(locationFilterProvider.notifier).state =
-            current.copyWith(radiusKm: value);
+        ref.read(locationFilterProvider.notifier).state = current.copyWith(
+          radiusKm: value,
+        );
       }
     });
   }
@@ -436,8 +450,11 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                 if (filter != null)
                   IconButton(
                     onPressed: _saveCurrentLocation,
-                    icon: Icon(Icons.star_outline_rounded,
-                        color: oc.warning, size: 24),
+                    icon: Icon(
+                      Icons.star_outline_rounded,
+                      color: oc.warning,
+                      size: 24,
+                    ),
                     tooltip: l10n.locationSaveTooltip,
                   ),
               ],
@@ -450,8 +467,11 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
               autofocus: false,
               decoration: InputDecoration(
                 hintText: l10n.locationSearchHint,
-                prefixIcon:
-                    Icon(Icons.search_rounded, size: 20, color: oc.icons),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: oc.icons,
+                ),
                 suffixIcon: filter != null
                     ? IconButton(
                         onPressed: () {
@@ -477,7 +497,11 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Icon(Icons.my_location_rounded, size: 18, color: oc.primary),
+                    : Icon(
+                        Icons.my_location_rounded,
+                        size: 18,
+                        color: oc.primary,
+                      ),
                 label: Text(l10n.locationUseMyPosition),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, 44),
@@ -501,19 +525,26 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                   shrinkWrap: true,
                   padding: EdgeInsets.zero,
                   itemCount: _suggestions.length,
-                  separatorBuilder: (_, __) =>
-                      Divider(height: 1, color: oc.border.withValues(alpha: 0.5)),
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: oc.border.withValues(alpha: 0.5),
+                  ),
                   itemBuilder: (_, i) {
                     final s = _suggestions[i];
                     return InkWell(
                       onTap: () => _selectSuggestion(s),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                         child: Row(
                           children: [
-                            Icon(Icons.location_on_outlined,
-                                size: 16, color: oc.secondaryText),
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 16,
+                              color: oc.secondaryText,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -540,10 +571,9 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                   const SizedBox(width: 6),
                   Text(
                     l10n.locationRadius,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelMedium
-                        ?.copyWith(color: oc.secondaryText),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelMedium?.copyWith(color: oc.secondaryText),
                   ),
                   Expanded(
                     child: Slider(
@@ -561,9 +591,9 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                     child: Text(
                       '${_radiusKm.round()} km',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: oc.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        color: oc.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                       textAlign: TextAlign.end,
                     ),
                   ),
@@ -663,17 +693,15 @@ class _SavedLocationTile extends StatelessWidget {
                 children: [
                   Text(
                     location.label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     '${location.address}, ${location.radiusKm.round()} km',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: oc.secondaryText),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -756,9 +784,7 @@ class _CategoryChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isActive ? oc.primary : oc.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isActive ? oc.primary : oc.border,
-          ),
+          border: Border.all(color: isActive ? oc.primary : oc.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -768,9 +794,9 @@ class _CategoryChip extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -794,15 +820,12 @@ class _ServiceGrid extends ConsumerWidget {
 
     return servicesAsync.when(
       loading: () => const _ServiceGridLoading(),
-      error: (_, __) => _ErrorState(
-        onRetry: () => ref.invalidate(serviceListProvider),
-      ),
+      error: (_, __) =>
+          _ErrorState(onRetry: () => ref.invalidate(serviceListProvider)),
       data: (services) {
         var filtered = selectedCategory == null
             ? services
-            : services
-                .where((s) => s.categoryId == selectedCategory)
-                .toList();
+            : services.where((s) => s.categoryId == selectedCategory).toList();
 
         if (locationFilter != null) {
           filtered = filtered
@@ -859,8 +882,9 @@ class _ServiceCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
-    final providerUser =
-        ref.watch(userByIdProvider(service.providerId)).valueOrNull;
+    final providerUser = ref
+        .watch(userByIdProvider(service.providerId))
+        .valueOrNull;
     final reviews =
         ref.watch(reviewsForUserProvider(service.providerId)).valueOrNull ?? [];
     final priceLabel = service.priceType.name == 'hourly'
@@ -889,8 +913,9 @@ class _ServiceCard extends ConsumerWidget {
             // Image — takes all remaining space
             Expanded(
               child: ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -924,16 +949,16 @@ class _ServiceCard extends ConsumerWidget {
                       left: 10,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: oc.primary,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           service.categoryId.label,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
+                          style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -960,13 +985,10 @@ class _ServiceCard extends ConsumerWidget {
                   const SizedBox(height: 2),
                   Text(
                     priceLabel,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(
-                          color: oc.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: oc.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -984,9 +1006,7 @@ class _ServiceCard extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           providerUser?.displayName ?? '\u2014',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
+                          style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: oc.secondaryText),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1003,8 +1023,8 @@ class _ServiceCard extends ConsumerWidget {
     );
   }
 
-  Widget _iconPlaceholder(dynamic oc) {
-    return Container(
+  Widget _iconPlaceholder(OutalmaColors oc) {
+    return ColoredBox(
       color: oc.primary.withValues(alpha: 0.08),
       child: Center(
         child: Icon(
@@ -1039,10 +1059,10 @@ class _RatingRow extends StatelessWidget {
             child: Text(
               'Nouveau',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.secondaryText,
-                    fontStyle: FontStyle.italic,
-                    fontSize: 11,
-                  ),
+                color: oc.secondaryText,
+                fontStyle: FontStyle.italic,
+                fontSize: 11,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1061,10 +1081,10 @@ class _RatingRow extends StatelessWidget {
           child: Text(
             '${avg.toStringAsFixed(1)} (${reviews.length})',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: oc.secondaryText,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 11,
-                ),
+              color: oc.secondaryText,
+              fontWeight: FontWeight.w500,
+              fontSize: 11,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1123,10 +1143,9 @@ class _EmptyState extends StatelessWidget {
             Text(
               l10n.servicesEmpty,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: oc.secondaryText),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
             ),
           ],
         ),
@@ -1154,14 +1173,15 @@ class _ModeBadge extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        final newMode =
-            isClient ? ActiveMode.provider : ActiveMode.client;
+        final newMode = isClient ? ActiveMode.provider : ActiveMode.client;
         ref.read(authNotifierProvider.notifier).switchMode(newMode);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(newMode == ActiveMode.client
-                ? l10n.modeClientActivated
-                : l10n.modeProviderActivated),
+            content: Text(
+              newMode == ActiveMode.client
+                  ? l10n.modeClientActivated
+                  : l10n.modeProviderActivated,
+            ),
           ),
         );
       },
@@ -1179,9 +1199,9 @@ class _ModeBadge extends ConsumerWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(width: 4),
             Icon(Icons.swap_horiz_rounded, size: 14, color: color),
@@ -1214,10 +1234,7 @@ class _ErrorState extends StatelessWidget {
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
-            TextButton(
-              onPressed: onRetry,
-              child: Text(l10n.retry),
-            ),
+            TextButton(onPressed: onRetry, child: Text(l10n.retry)),
           ],
         ),
       ),

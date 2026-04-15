@@ -98,9 +98,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     setState(() => _loading = true);
 
     try {
-      await ref.read(authNotifierProvider.notifier).signInWithPhone(
-            phoneE164: phone,
-          );
+      await ref
+          .read(authNotifierProvider.notifier)
+          .signInWithPhone(phoneE164: phone);
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e.code));
     } catch (_) {
@@ -116,16 +116,17 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _mapFirebaseError(String code) {
     final l10n = AppLocalizations.of(context)!;
     return switch (code) {
-      'user-not-found' || 'wrong-password' || 'invalid-credential' =>
-        l10n.authErrorInvalidCredential,
+      'user-not-found' ||
+      'wrong-password' ||
+      'invalid-credential' => l10n.authErrorInvalidCredential,
       'user-disabled' => l10n.authErrorAccountDisabled,
       'too-many-requests' => l10n.authErrorTooManyRequests,
       _ => l10n.authErrorSignInFailed,
@@ -164,16 +165,16 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                 Text(
                   l10n.signInWelcome,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    fontWeight: FontWeight.w800,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   l10n.signInSubtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: oc.secondaryText,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 28),
@@ -206,8 +207,10 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     onSubmitted: (_) => _signInEmail(),
                     decoration: InputDecoration(
                       hintText: l10n.signInPasswordHint,
-                      prefixIcon:
-                          const Icon(Icons.lock_outline_rounded, size: 20),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline_rounded,
+                        size: 20,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
@@ -217,7 +220,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                           size: 20,
                         ),
                         onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword),
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
                   ),
@@ -230,9 +234,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       onPressed: _forgotPassword,
                       child: Text(
                         l10n.signInForgotPassword,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: oc.primary,
-                            ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: oc.primary),
                       ),
                     ),
                   ),
@@ -269,16 +273,16 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                 Text.rich(
                   TextSpan(
                     text: l10n.signInNoAccount,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: oc.secondaryText,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                     children: [
                       TextSpan(
                         text: l10n.signInRegister,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: oc.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: oc.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                         recognizer: TapGestureRecognizer()
                           ..onTap = () => context.go(AppRoutes.signUp),
                       ),
@@ -313,9 +317,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (context.mounted) {
         messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.signInForgotEmailSent),
-          ),
+          SnackBar(content: Text(l10n.signInForgotEmailSent)),
         );
       }
     } catch (_) {
@@ -405,9 +407,9 @@ class _AuthModeToggle extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isActive ? Colors.white : oc.secondaryText,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? Colors.white : oc.secondaryText,
+                ),
               ),
             ],
           ),
@@ -465,28 +467,23 @@ class _ThemeToggleButton extends ConsumerWidget {
 
     final (icon, next, label) = switch (current) {
       ThemeMode.light => (
-          Icons.dark_mode_outlined,
-          ThemeMode.dark,
-          l10n.themeDark,
-        ),
+        Icons.dark_mode_outlined,
+        ThemeMode.dark,
+        l10n.themeDark,
+      ),
       ThemeMode.dark => (
-          Icons.brightness_auto_outlined,
-          ThemeMode.system,
-          l10n.themeAuto,
-        ),
-      _ => (
-          Icons.light_mode_outlined,
-          ThemeMode.light,
-          l10n.themeLight,
-        ),
+        Icons.brightness_auto_outlined,
+        ThemeMode.system,
+        l10n.themeAuto,
+      ),
+      _ => (Icons.light_mode_outlined, ThemeMode.light, l10n.themeLight),
     };
 
     return Tooltip(
       message: label,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () =>
-            ref.read(themeModeProvider.notifier).setThemeMode(next),
+        onTap: () => ref.read(themeModeProvider.notifier).setThemeMode(next),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -502,9 +499,9 @@ class _ThemeToggleButton extends ConsumerWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: oc.primaryText,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: oc.primaryText,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

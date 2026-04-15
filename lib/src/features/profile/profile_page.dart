@@ -109,7 +109,9 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
       final url = await service.pickAndUpload();
       if (url == null) return; // user cancelled
 
-      await ref.read(authNotifierProvider.notifier).updateProfile(
+      await ref
+          .read(authNotifierProvider.notifier)
+          .updateProfile(
             displayName: authState.user.displayName,
             photoPath: url,
           );
@@ -200,25 +202,27 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
                 Text(
                   user.displayName,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    fontWeight: FontWeight.w700,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   user.email,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: oc.secondaryText,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (user.country.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: oc.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
@@ -226,10 +230,10 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
                     child: Text(
                       CountryUtils.flagAndName(user.country),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: oc.primary,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
+                        color: oc.primary,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ],
@@ -262,10 +266,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
   late String _country;
   bool _saving = false;
 
-  static const _countries = [
-    ('FR', 'France'),
-    ('SN', 'Sénégal'),
-  ];
+  static const _countries = [('FR', 'France'), ('SN', 'Sénégal')];
 
   @override
   void initState() {
@@ -288,15 +289,17 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
     final saveErrMsg = l10n.profileSaveError;
     setState(() => _saving = true);
     try {
-      await ref.read(authNotifierProvider.notifier).updateProfile(
+      await ref
+          .read(authNotifierProvider.notifier)
+          .updateProfile(
             displayName: _nameCtrl.text.trim(),
             phoneE164: _phone,
             country: _country,
           );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(savedMsg)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(savedMsg)));
       }
     } catch (_) {
       if (mounted) {
@@ -351,10 +354,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
             const SizedBox(height: 14),
 
             // Phone
-            PhoneField(
-              initialValue: _phone,
-              onChanged: (v) => _phone = v,
-            ),
+            PhoneField(initialValue: _phone, onChanged: (v) => _phone = v),
             const SizedBox(height: 14),
 
             // Country picker
@@ -419,9 +419,9 @@ class _ReadOnlyField extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: oc.secondaryText,
-                fontWeight: FontWeight.w500,
-              ),
+            color: oc.secondaryText,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 6),
         Container(
@@ -438,9 +438,9 @@ class _ReadOnlyField extends StatelessWidget {
               Expanded(
                 child: Text(
                   value,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: oc.secondaryText,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                 ),
               ),
             ],
@@ -471,9 +471,9 @@ class _CountryPicker extends StatelessWidget {
         Text(
           AppLocalizations.of(context)!.fieldCountry,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: oc.secondaryText,
-                fontWeight: FontWeight.w500,
-              ),
+            color: oc.secondaryText,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 8),
         Row(
@@ -504,11 +504,11 @@ class _CountryPicker extends StatelessWidget {
                     child: Text(
                       '${CountryUtils.flag(code)} $label',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: isSelected ? oc.primary : oc.primaryText,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                          ),
+                        color: isSelected ? oc.primary : oc.primaryText,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                      ),
                     ),
                   ),
                 ),
@@ -578,9 +578,9 @@ class _ModeToggleState extends ConsumerState<_ModeToggle> {
       await ref.read(authNotifierProvider.notifier).switchMode(mode);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errMsg)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errMsg)));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -599,10 +599,7 @@ class _ModeToggleState extends ConsumerState<_ModeToggle> {
           child: SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: oc.primary,
-            ),
+            child: CircularProgressIndicator(strokeWidth: 2, color: oc.primary),
           ),
         ),
       );
@@ -685,17 +682,17 @@ class _ModeTile extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: isActive ? color : oc.primaryText,
-                  ),
+                fontWeight: FontWeight.w700,
+                color: isActive ? color : oc.primaryText,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.secondaryText,
-                    height: 1.3,
-                  ),
+                color: oc.secondaryText,
+                height: 1.3,
+              ),
               maxLines: 2,
             ),
           ],
@@ -749,7 +746,9 @@ class _ThemeSelector extends ConsumerWidget {
                     ref.read(themeModeProvider.notifier).setThemeMode(mode),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   child: Row(
                     children: [
                       Icon(
@@ -761,13 +760,9 @@ class _ThemeSelector extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           label,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
+                          style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
-                                color: isSelected
-                                    ? oc.primary
-                                    : oc.primaryText,
+                                color: isSelected ? oc.primary : oc.primaryText,
                                 fontWeight: isSelected
                                     ? FontWeight.w600
                                     : FontWeight.w400,
@@ -775,15 +770,13 @@ class _ThemeSelector extends ConsumerWidget {
                         ),
                       ),
                       if (isSelected)
-                        Icon(Icons.check_rounded,
-                            color: oc.primary, size: 18),
+                        Icon(Icons.check_rounded, color: oc.primary, size: 18),
                     ],
                   ),
                 ),
               ),
               if (i < options.length - 1)
-                Divider(
-                    height: 1, indent: 50, color: oc.border),
+                Divider(height: 1, indent: 50, color: oc.border),
             ],
           );
         }).toList(),
@@ -816,6 +809,7 @@ class _AccountSection extends ConsumerWidget {
         onTap: () async {
           final oc = context.oc;
           final l10n = AppLocalizations.of(context)!;
+          final messenger = ScaffoldMessenger.of(context);
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (ctx) => Dialog(
@@ -834,23 +828,26 @@ class _AccountSection extends ConsumerWidget {
                         color: oc.error.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.logout_rounded,
-                          color: oc.error, size: 28),
+                      child: Icon(
+                        Icons.logout_rounded,
+                        color: oc.error,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       l10n.signOutTitle,
                       style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       l10n.signOutContent,
                       textAlign: TextAlign.center,
-                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                            color: oc.secondaryText,
-                          ),
+                      style: Theme.of(
+                        ctx,
+                      ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -890,12 +887,20 @@ class _AccountSection extends ConsumerWidget {
             ),
           );
           if (confirmed == true) {
-            ref.read(authNotifierProvider.notifier).signOut();
+            try {
+              await ref.read(authNotifierProvider.notifier).signOut();
+            } catch (_) {
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(l10n.errorGeneral),
+                  backgroundColor: oc.error,
+                ),
+              );
+            }
           }
         },
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
             children: [
               Icon(Icons.logout_outlined, size: 20, color: oc.error),
@@ -903,9 +908,9 @@ class _AccountSection extends ConsumerWidget {
               Text(
                 AppLocalizations.of(context)!.signOut,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: oc.error,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: oc.error,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -953,17 +958,17 @@ class _MyReviewsSection extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Text(
                   l10n.reviewsEmpty,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: oc.secondaryText),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                 ),
               ],
             ),
           );
         }
 
-        final avg = reviews.map((r) => r.rating).reduce((a, b) => a + b) /
+        final avg =
+            reviews.map((r) => r.rating).reduce((a, b) => a + b) /
             reviews.length;
 
         return Column(
@@ -982,9 +987,9 @@ class _MyReviewsSection extends ConsumerWidget {
                   Text(
                     avg.toStringAsFixed(1),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: oc.primaryText,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      color: oc.primaryText,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Column(
@@ -1005,10 +1010,9 @@ class _MyReviewsSection extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         l10n.reviewsCount(reviews.length),
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: oc.secondaryText),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.secondaryText,
+                        ),
                       ),
                     ],
                   ),
@@ -1033,8 +1037,7 @@ class _ReviewTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
-    final reviewer =
-        ref.watch(userByIdProvider(review.reviewerId)).valueOrNull;
+    final reviewer = ref.watch(userByIdProvider(review.reviewerId)).valueOrNull;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1048,48 +1051,48 @@ class _ReviewTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => context.push(AppRoutes.providerProfile(review.reviewerId)),
+            onTap: () =>
+                context.push(AppRoutes.providerProfile(review.reviewerId)),
             child: Row(
-            children: [
-              UserAvatar(
-                displayName: reviewer?.displayName ?? '',
-                photoPath: reviewer?.photoPath,
-                radius: 16,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  reviewer?.displayName ?? '—',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+              children: [
+                UserAvatar(
+                  displayName: reviewer?.displayName ?? '',
+                  photoPath: reviewer?.photoPath,
+                  radius: 16,
                 ),
-              ),
-              Icon(Icons.chevron_right_rounded, size: 16, color: oc.icons),
-              Row(
-                children: List.generate(
-                  5,
-                  (i) => Icon(
-                    i < review.rating
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
-                    size: 14,
-                    color: const Color(0xFFFBBF24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    reviewer?.displayName ?? '—',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+                Icon(Icons.chevron_right_rounded, size: 16, color: oc.icons),
+                Row(
+                  children: List.generate(
+                    5,
+                    (i) => Icon(
+                      i < review.rating
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      size: 14,
+                      color: const Color(0xFFFBBF24),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           if (review.comment != null && review.comment!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
               review.comment!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.secondaryText,
-                    height: 1.5,
-                  ),
+                color: oc.secondaryText,
+                height: 1.5,
+              ),
             ),
           ],
         ],
@@ -1147,7 +1150,9 @@ class _LanguageSelector extends ConsumerWidget {
                     ref.read(localeProvider.notifier).setLocale(locale),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   child: Row(
                     children: [
                       Icon(
@@ -1159,9 +1164,7 @@ class _LanguageSelector extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           label,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
+                          style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 color: selected ? oc.primary : oc.primaryText,
                                 fontWeight: selected
@@ -1171,8 +1174,7 @@ class _LanguageSelector extends ConsumerWidget {
                         ),
                       ),
                       if (selected)
-                        Icon(Icons.check_rounded,
-                            color: oc.primary, size: 18),
+                        Icon(Icons.check_rounded, color: oc.primary, size: 18),
                     ],
                   ),
                 ),
@@ -1201,10 +1203,10 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: context.oc.secondaryText,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.8,
-          ),
+        color: context.oc.secondaryText,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.8,
+      ),
     );
   }
 }

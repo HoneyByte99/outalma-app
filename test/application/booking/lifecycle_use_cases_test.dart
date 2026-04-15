@@ -98,10 +98,7 @@ void main() {
     });
 
     test('completes without error on success', () async {
-      await expectLater(
-        ConfirmDoneUseCase(_fns(_callable()))('bk'),
-        completes,
-      );
+      await expectLater(ConfirmDoneUseCase(_fns(_callable()))('bk'), completes);
     });
 
     test('propagates FirebaseFunctionsException', () async {

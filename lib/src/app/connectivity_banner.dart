@@ -26,9 +26,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
     // Check current status immediately
     Connectivity().checkConnectivity().then(_handleResults);
     // Listen for changes
-    _sub = Connectivity()
-        .onConnectivityChanged
-        .listen(_handleResults);
+    _sub = Connectivity().onConnectivityChanged.listen(_handleResults);
   }
 
   void _handleResults(List<ConnectivityResult> results) {
@@ -51,9 +49,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
         AnimatedSize(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
-          child: _offline
-              ? _OfflineBanner()
-              : const SizedBox.shrink(),
+          child: _offline ? _OfflineBanner() : const SizedBox.shrink(),
         ),
         Expanded(child: widget.child),
       ],
@@ -81,9 +77,9 @@ class _OfflineBanner extends StatelessWidget {
           Text(
             'Pas de connexion internet',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

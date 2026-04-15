@@ -22,20 +22,20 @@ class SavedLocation {
   final double radiusKm;
 
   Map<String, dynamic> toJson() => {
-        'label': label,
-        'address': address,
-        'lat': lat,
-        'lng': lng,
-        'radiusKm': radiusKm,
-      };
+    'label': label,
+    'address': address,
+    'lat': lat,
+    'lng': lng,
+    'radiusKm': radiusKm,
+  };
 
   factory SavedLocation.fromJson(Map<String, dynamic> m) => SavedLocation(
-        label: m['label'] as String? ?? '',
-        address: m['address'] as String? ?? '',
-        lat: (m['lat'] as num?)?.toDouble() ?? 0,
-        lng: (m['lng'] as num?)?.toDouble() ?? 0,
-        radiusKm: (m['radiusKm'] as num?)?.toDouble() ?? 30,
-      );
+    label: m['label'] as String? ?? '',
+    address: m['address'] as String? ?? '',
+    lat: (m['lat'] as num?)?.toDouble() ?? 0,
+    lng: (m['lng'] as num?)?.toDouble() ?? 0,
+    radiusKm: (m['radiusKm'] as num?)?.toDouble() ?? 30,
+  );
 }
 
 class SavedLocationsNotifier extends Notifier<List<SavedLocation>> {
@@ -82,5 +82,5 @@ class SavedLocationsNotifier extends Notifier<List<SavedLocation>> {
 
 final savedLocationsProvider =
     NotifierProvider<SavedLocationsNotifier, List<SavedLocation>>(
-  SavedLocationsNotifier.new,
-);
+      SavedLocationsNotifier.new,
+    );

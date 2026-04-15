@@ -12,10 +12,9 @@ class FirestoreProviderRepository implements ProviderRepository {
 
   @override
   Stream<ProviderProfile?> watchByUid(String uid) {
-    return FirestoreCollections.providers(_db)
-        .doc(uid)
-        .snapshots()
-        .map((snap) => snap.exists ? snap.data() : null);
+    return FirestoreCollections.providers(
+      _db,
+    ).doc(uid).snapshots().map((snap) => snap.exists ? snap.data() : null);
   }
 
   @override
@@ -29,9 +28,9 @@ class FirestoreProviderRepository implements ProviderRepository {
 
   @override
   Future<void> upsert(ProviderProfile profile) async {
-    await FirestoreCollections.providers(_db)
-        .doc(profile.uid)
-        .set(profile, SetOptions(merge: true));
+    await FirestoreCollections.providers(
+      _db,
+    ).doc(profile.uid).set(profile, SetOptions(merge: true));
   }
 
   // -- Blocked slots --

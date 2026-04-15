@@ -6,9 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+# Opt into Node.js 24 to avoid deprecation warnings on Actions runners.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Pinned to match the local dev environment (Dart 3.11.3).
+  # pubspec.yaml requires sdk: ^3.11.3 — update this when upgrading Flutter.
+  FLUTTER_VERSION: "3.41.5"
+
 jobs:
-  flutter:
-    name: Analyze & Test
+  quality:
+    name: Format · Analyze · Test
     runs-on: ubuntu-latest
 
     steps:
@@ -17,21 +24,36 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.0"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: Flutter version
+        run: flutter --version
 
       - name: Install dependencies
         run: flutter pub get
 
+      # ── Format ────────────────────────────────────────────────────────────
+      # Fails if any file is not formatted — run `dart format lib/ test/` locally.
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib/ test/
+
+      # ── Analyze ───────────────────────────────────────────────────────────
+      # Uses analysis_options.yaml — warnings are fatal, errors block merge.
       - name: Analyze
         run: flutter analyze --fatal-warnings
 
+      # ── Test ──────────────────────────────────────────────────────────────
+      # PLACES_API_KEY is injected from GitHub Secrets so tests that exercise
+      # GeocodingService have a key available. Falls back to empty string when
+      # the secret is absent (forks / dependabot PRs).
       - name: Test
-        run: flutter test --coverage
+        run: flutter test --coverage --reporter expanded --dart-define=PLACES_API_KEY=${{ secrets.PLACES_API_KEY }}
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
+      # ── Coverage ──────────────────────────────────────────────────────────
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
         with:
           file: coverage/lcov.info
           fail_ci_if_error: false

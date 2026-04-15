@@ -11,14 +11,18 @@ final phoneShareRepositoryProvider = Provider<PhoneShareRepository>((ref) {
 });
 
 /// All phone shares for a booking.
-final phoneSharesProvider =
-    StreamProvider.family<List<PhoneShare>, String>((ref, bookingId) {
+final phoneSharesProvider = StreamProvider.family<List<PhoneShare>, String>((
+  ref,
+  bookingId,
+) {
   return ref.watch(phoneShareRepositoryProvider).watchForBooking(bookingId);
 });
 
 /// Whether the current user has already shared their phone for this booking.
-final hasSharedPhoneProvider =
-    StreamProvider.family<bool, String>((ref, bookingId) {
+final hasSharedPhoneProvider = StreamProvider.family<bool, String>((
+  ref,
+  bookingId,
+) {
   final authState = ref.watch(authNotifierProvider).valueOrNull;
   if (authState is! AuthAuthenticated) return Stream.value(false);
   final uid = authState.user.id;

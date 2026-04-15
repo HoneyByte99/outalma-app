@@ -101,7 +101,9 @@ class AppShell extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 List<BottomNavigationBarItem> _clientNavItems(
-    AppLocalizations l10n, int activeCount) {
+  AppLocalizations l10n,
+  int activeCount,
+) {
   return [
     BottomNavigationBarItem(
       icon: const Icon(Icons.home_outlined),
@@ -109,8 +111,14 @@ List<BottomNavigationBarItem> _clientNavItems(
       label: l10n.navHome,
     ),
     BottomNavigationBarItem(
-      icon: _BadgedIcon(count: activeCount, icon: Icons.calendar_today_outlined),
-      activeIcon: _BadgedIcon(count: activeCount, icon: Icons.calendar_today_rounded),
+      icon: _BadgedIcon(
+        count: activeCount,
+        icon: Icons.calendar_today_outlined,
+      ),
+      activeIcon: _BadgedIcon(
+        count: activeCount,
+        icon: Icons.calendar_today_rounded,
+      ),
       label: l10n.navBookings,
     ),
     BottomNavigationBarItem(
@@ -127,7 +135,9 @@ List<BottomNavigationBarItem> _clientNavItems(
 }
 
 List<BottomNavigationBarItem> _providerNavItems(
-    AppLocalizations l10n, int inboxCount) {
+  AppLocalizations l10n,
+  int inboxCount,
+) {
   return [
     BottomNavigationBarItem(
       icon: const Icon(Icons.dashboard_outlined),

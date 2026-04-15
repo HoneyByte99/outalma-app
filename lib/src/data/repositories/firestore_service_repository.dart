@@ -50,8 +50,8 @@ class FirestoreServiceRepository implements ServiceRepository {
 
   @override
   Future<void> update(Service service) async {
-    await FirestoreCollections.services(_db)
-        .doc(service.id)
-        .set(service, SetOptions(merge: true));
+    await FirestoreCollections.services(
+      _db,
+    ).doc(service.id).set(service, SetOptions(merge: true));
   }
 }
