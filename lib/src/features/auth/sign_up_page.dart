@@ -226,7 +226,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        backgroundColor: oc.surface,
+        backgroundColor: oc.background,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
