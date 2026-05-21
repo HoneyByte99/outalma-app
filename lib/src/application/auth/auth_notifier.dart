@@ -1,19 +1,53 @@
 import 'dart:async';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/auth/phone_otp_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_user.dart';
 import 'auth_providers.dart';
 import 'auth_state.dart';
 
+// ---------------------------------------------------------------------------
+// Email verification link — round-trip target after the user clicks the
+// "Verify your email" link sent by Firebase Auth.
+// ---------------------------------------------------------------------------
+
+/// Bundle identifiers used to deep-link back to the installed Outalma app
+/// via Universal Links / App Links.
+const _iosBundleId = 'com.honeybyte.outalmaApp';
+const _androidPackage = 'com.honeybyte.outalma_app';
+
+/// Continue URL — must point at a domain listed in the project's Firebase
+/// Authentication "Authorized domains" list and in the iOS Associated
+/// Domains / Android intent filters.
+const _emailVerifyContinueUrl =
+    'https://outalmaservice-d1e59.firebaseapp.com/__/auth/links';
+
 /// Thrown when a phone number is already associated with another account.
 class PhoneTakenException implements Exception {
   @override
   String toString() => 'PhoneTakenException: phone number already in use';
+}
+
+/// Thrown when the user typed an invalid OTP code or the code has expired.
+class InvalidOtpException implements Exception {
+  @override
+  String toString() => 'InvalidOtpException: invalid or expired code';
+}
+
+/// Result of [AuthNotifier.phoneSignInWithOtp].
+class PhoneSignInResult {
+  const PhoneSignInResult({required this.signedIn});
+
+  /// `true` when the OTP matched an existing Outalma account and the client
+  /// is now authenticated. `false` when the phone has no account yet — the
+  /// caller should redirect to the sign-up flow.
+  final bool signedIn;
+
+  bool get isNewUser => !signedIn;
 }
 
 class AuthNotifier extends AsyncNotifier<AuthState> {
@@ -47,11 +81,15 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     try {
       var appUser = await userRepo.getById(firebaseUser.uid);
       if (appUser == null) {
+        // Defensive: phone signups and email magic-link signups both create
+        // the Firestore user doc through dedicated paths (Cloud Function or
+        // [completeEmailMagicLink]). If we still end up here, write a minimal
+        // doc WITHOUT `phoneE164` — the Firestore rule blocks client writes
+        // to that field (security review C1).
         appUser = AppUser(
           id: firebaseUser.uid,
           displayName: firebaseUser.displayName ?? '',
           email: firebaseUser.email ?? '',
-          phoneE164: firebaseUser.phoneNumber,
           country: 'FR',
           activeMode: ActiveMode.client,
           createdAt: DateTime.now(),
@@ -65,8 +103,6 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
       return AuthAuthenticated(appUser);
     } catch (e, st) {
-      // Log the error so we can diagnose auth issues instead of silently
-      // treating every failure as "unauthenticated".
       debugPrint('[AuthNotifier] _resolveState error: $e\n$st');
       return const AuthUnauthenticated();
     }
@@ -77,188 +113,262 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   // ---------------------------------------------------------------------------
-  // Phone auth — OTP flow (disabled for MVP, ready to activate)
+  // Phone authentication via OTP — production flow (Twilio Verify backend)
+  // All flows are server-authoritative through Cloud Functions.
   // ---------------------------------------------------------------------------
 
-  /// Step 1 of phone auth — sends SMS OTP.
-  /// On success, transitions to [AuthPhoneVerification].
-  /// On Android auto-verification, stays silent (auth state updates automatically).
-  /// Throws on failure.
-  Future<void> sendPhoneOtp(String phoneE164) async {
-    final token = await platformSendOtp(
-      ref.read(firebaseAuthProvider),
-      phoneE164,
-    );
-    // null → Android auto-verified; authStateChanges handles the rest.
-    if (token != null) {
-      state = AsyncData(
-        AuthPhoneVerification(verificationId: token, phoneNumber: phoneE164),
-      );
+  /// Sends an OTP to [phoneE164] via Twilio (SMS by default).
+  ///
+  /// Throws [FirebaseFunctionsException] on Twilio failure or invalid input.
+  Future<void> requestPhoneOtp(
+    String phoneE164, {
+    String channel = 'sms',
+  }) async {
+    await ref
+        .read(functionsProvider)
+        .httpsCallable('requestPhoneOtp')
+        .call<Map<String, dynamic>>({
+          'phone': phoneE164,
+          'channel': channel,
+        });
+  }
+
+  /// Verifies [code] and signs in the existing Outalma account behind
+  /// [phoneE164]. Returns a [PhoneSignInResult] indicating whether the
+  /// account exists.
+  ///
+  /// On success, [authStateChanges] fires and [_resolveState] runs.
+  /// Throws [InvalidOtpException] when the code is wrong/expired.
+  Future<PhoneSignInResult> phoneSignInWithOtp(
+    String phoneE164,
+    String code,
+  ) async {
+    try {
+      final result = await ref
+          .read(functionsProvider)
+          .httpsCallable('verifyPhoneOtpAndSignIn')
+          .call<Map<String, dynamic>>({
+            'phone': phoneE164,
+            'code': code,
+          });
+
+      final newUser = result.data['newUser'] == true;
+      if (newUser) {
+        return const PhoneSignInResult(signedIn: false);
+      }
+
+      final token = result.data['customToken'] as String?;
+      if (token == null) {
+        throw StateError('verifyPhoneOtpAndSignIn returned no customToken');
+      }
+      await ref.read(firebaseAuthProvider).signInWithCustomToken(token);
+      return const PhoneSignInResult(signedIn: true);
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'permission-denied') throw InvalidOtpException();
+      rethrow;
     }
   }
 
-  /// Step 2 of phone auth — verifies the OTP entered by the user.
+  /// Verifies [code] and creates a new account for [phoneE164].
+  ///
   /// On success, [authStateChanges] fires and [_resolveState] runs.
-  Future<void> verifyPhoneOtp(String verificationId, String smsCode) async {
-    await platformVerifyOtp(
-      ref.read(firebaseAuthProvider),
-      verificationId,
-      smsCode,
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Phone auth — temporary no-OTP flow (MVP)
-  // Uses Firebase email auth under the hood with a deterministic email
-  // derived from the phone number. Replace with real OTP when ready.
-  // ---------------------------------------------------------------------------
-
-  static const _phoneDomain = 'phone.outalma.app';
-  static const _phonePasswordPrefix = 'outalma_ph_';
-
-  /// Derives a deterministic Firebase email from an E.164 phone number.
-  static String _phoneToEmail(String phoneE164) {
-    final digits = phoneE164.replaceAll(RegExp(r'[^\d]'), '');
-    return '$digits@$_phoneDomain';
-  }
-
-  static String _phoneToPassword(String phoneE164) {
-    final digits = phoneE164.replaceAll(RegExp(r'[^\d]'), '');
-    return '$_phonePasswordPrefix$digits';
-  }
-
-  /// Sign up with phone number (no OTP). Creates a Firebase email account
-  /// under the hood and stores the real phone in the user doc.
-  /// Throws [PhoneTakenException] if the number is already in use.
-  /// TODO: Replace with real OTP flow when ready.
-  Future<void> signUpWithPhone({
+  /// Throws [InvalidOtpException] when the code is wrong/expired.
+  /// Throws [PhoneTakenException] when the number is already registered.
+  Future<void> phoneSignUpWithOtp({
     required String phoneE164,
+    required String code,
     required String displayName,
+    required String country,
   }) async {
-    // Check phone uniqueness before creating the Firebase account.
-    final taken = await ref
-        .read(userRepositoryProvider)
-        .isPhoneTaken(phoneE164);
-    if (taken) throw PhoneTakenException();
+    try {
+      final result = await ref
+          .read(functionsProvider)
+          .httpsCallable('verifyPhoneOtpAndSignUp')
+          .call<Map<String, dynamic>>({
+            'phone': phoneE164,
+            'code': code,
+            'displayName': displayName,
+            'country': country,
+          });
 
-    final auth = ref.read(firebaseAuthProvider);
-    final email = _phoneToEmail(phoneE164);
-    final password = _phoneToPassword(phoneE164);
-
-    final credential = await auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-
-    final user = AppUser(
-      id: credential.user!.uid,
-      displayName: displayName,
-      email: '', // not a real email — phone-based account
-      phoneE164: phoneE164,
-      country: 'FR',
-      activeMode: ActiveMode.client,
-      createdAt: DateTime.now(),
-    );
-    await ref.read(userRepositoryProvider).upsert(user);
+      final token = result.data['customToken'] as String?;
+      if (token == null) {
+        throw StateError('verifyPhoneOtpAndSignUp returned no customToken');
+      }
+      await ref.read(firebaseAuthProvider).signInWithCustomToken(token);
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'permission-denied') throw InvalidOtpException();
+      if (e.code == 'already-exists') throw PhoneTakenException();
+      rethrow;
+    }
   }
 
-  /// Sign in with phone number (no OTP). Looks up the deterministic
-  /// email derived from the phone and signs in.
-  /// TODO: Replace with real OTP flow when ready.
-  Future<void> signInWithPhone({required String phoneE164}) async {
-    final auth = ref.read(firebaseAuthProvider);
-    final email = _phoneToEmail(phoneE164);
-    final password = _phoneToPassword(phoneE164);
-
-    await auth.signInWithEmailAndPassword(email: email, password: password);
-  }
+  // ---------------------------------------------------------------------------
+  // Profile mutations
+  // ---------------------------------------------------------------------------
 
   /// Switches the active mode for the current user.
-  /// Updates Firestore and syncs the in-memory AuthState immediately.
   Future<void> switchMode(ActiveMode mode) async {
     final current = state.valueOrNull;
     if (current is! AuthAuthenticated) return;
 
     final updated = current.user.copyWith(activeMode: mode);
-    // Optimistic local update.
     state = AsyncData(AuthAuthenticated(updated));
 
     try {
       await ref.read(userRepositoryProvider).upsert(updated);
     } catch (_) {
-      // Revert on failure.
       state = AsyncData(current);
       rethrow;
     }
   }
 
-  /// Updates mutable profile fields for the current user.
-  /// Throws [PhoneTakenException] if the new phone is already in use.
-  /// Performs an optimistic local update and reverts on failure.
+  /// Updates mutable profile fields. **Phone number is intentionally not
+  /// editable here** — changing the phone requires re-verification via OTP
+  /// and is handled by a dedicated flow (TBD).
   Future<void> updateProfile({
     required String displayName,
-    String? phoneE164,
     String? country,
     String? photoPath,
   }) async {
     final current = state.valueOrNull;
     if (current is! AuthAuthenticated) return;
 
-    // Check phone uniqueness if phone is changing.
-    final newPhone = phoneE164 ?? current.user.phoneE164;
-    if (newPhone != null &&
-        newPhone.isNotEmpty &&
-        newPhone != current.user.phoneE164) {
-      final taken = await ref
-          .read(userRepositoryProvider)
-          .isPhoneTaken(newPhone, excludeUid: current.user.id);
-      if (taken) throw PhoneTakenException();
-    }
-
     final updated = current.user.copyWith(
       displayName: displayName,
-      phoneE164: newPhone,
       country: country ?? current.user.country,
       photoPath: photoPath ?? current.user.photoPath,
     );
 
-    // Optimistic local update.
     state = AsyncData(AuthAuthenticated(updated));
 
     try {
       await ref.read(userRepositoryProvider).upsert(updated);
     } catch (_) {
-      // Revert on failure.
       state = AsyncData(current);
       rethrow;
     }
   }
 
-  /// Persist a user doc immediately after FirebaseAuth account creation,
-  /// so displayName is set before authStateChanges fires.
-  /// Throws [PhoneTakenException] if the phone number is already in use.
-  Future<void> createUserDoc({
-    required String uid,
+  // ---------------------------------------------------------------------------
+  // Email authentication — password-based with one-time email verification
+  // ---------------------------------------------------------------------------
+  //
+  // Sign-up: create Firebase Auth account with email+password, write Firestore
+  // user doc, then send a verification email. The user is signed in
+  // immediately but `firebaseUser.emailVerified` stays `false` until they
+  // click the link in their inbox.
+  //
+  // Sign-in: standard `signInWithEmailAndPassword`. Optional "forgot password"
+  // sends a reset link.
+  //
+  // The verification link round-trips through Firebase's action handler and
+  // back into the app via Universal Links / App Links — handled in
+  // [completeEmailVerification].
+
+  /// Creates a new account via email + password, then sends a one-time email
+  /// verification link to the new mailbox. The user is signed in on success
+  /// regardless of whether the email is verified yet.
+  Future<void> signUpWithEmailPassword({
     required String displayName,
     required String email,
-    String? phoneE164,
+    required String password,
   }) async {
-    if (phoneE164 != null && phoneE164.isNotEmpty) {
-      final taken = await ref
-          .read(userRepositoryProvider)
-          .isPhoneTaken(phoneE164);
-      if (taken) throw PhoneTakenException();
+    final auth = ref.read(firebaseAuthProvider);
+    final credential = await auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    final user = credential.user;
+    if (user == null) {
+      throw StateError('createUserWithEmailAndPassword returned no user');
     }
 
-    final user = AppUser(
-      id: uid,
-      displayName: displayName,
-      email: email,
-      phoneE164: phoneE164,
-      country: 'FR',
-      activeMode: ActiveMode.client,
-      createdAt: DateTime.now(),
+    // Set displayName on the Firebase Auth user first so the auth listener
+    // (in [_resolveState]) can pick it up if it runs before our upsert.
+    try {
+      await user.updateDisplayName(displayName);
+    } catch (e) {
+      debugPrint('[AuthNotifier] updateDisplayName failed: $e');
+    }
+
+    // Explicitly create the Firestore user doc. Read any doc the auth listener
+    // may have created in the meantime so we preserve `createdAt` (Firestore
+    // rule requires it unchanged on update).
+    final repo = ref.read(userRepositoryProvider);
+    final existing = await repo.getById(user.uid);
+    await repo.upsert(
+      AppUser(
+        id: user.uid,
+        displayName: displayName,
+        email: email,
+        country: existing?.country ?? 'FR',
+        activeMode: existing?.activeMode ?? ActiveMode.client,
+        createdAt: existing?.createdAt ?? DateTime.now(),
+      ),
     );
-    await ref.read(userRepositoryProvider).upsert(user);
+
+    // Send the verification mail. Failures here do NOT abort sign-up — the
+    // user is already in. UI can offer "Resend" via [resendVerificationEmail].
+    try {
+      await user.sendEmailVerification(
+        ActionCodeSettings(
+          url: _emailVerifyContinueUrl,
+          handleCodeInApp: true,
+          iOSBundleId: _iosBundleId,
+          androidPackageName: _androidPackage,
+          androidInstallApp: true,
+          androidMinimumVersion: '21',
+        ),
+      );
+    } catch (e) {
+      debugPrint('[AuthNotifier] sendEmailVerification failed: $e');
+    }
+  }
+
+  /// Signs the user in via email + password. No magic link involved.
+  Future<void> signInWithEmailPassword({
+    required String email,
+    required String password,
+  }) async {
+    await ref
+        .read(firebaseAuthProvider)
+        .signInWithEmailAndPassword(email: email, password: password);
+  }
+
+  /// Re-sends the verification email to the currently signed-in user.
+  /// Useful when the user closed the original mail or wants a fresh link.
+  Future<void> resendVerificationEmail() async {
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    if (user == null) return;
+    await user.sendEmailVerification(
+      ActionCodeSettings(
+        url: _emailVerifyContinueUrl,
+        handleCodeInApp: true,
+        iOSBundleId: _iosBundleId,
+        androidPackageName: _androidPackage,
+        androidInstallApp: true,
+        androidMinimumVersion: '21',
+      ),
+    );
+  }
+
+  /// Applies the verification oobCode embedded in a Universal Link the user
+  /// clicked from their inbox. Returns `true` if the address was verified.
+  ///
+  /// The caller (deep-link handler in [OutalmaServiceApp]) is expected to
+  /// pass the raw `oobCode` extracted from the URI query parameters.
+  Future<bool> completeEmailVerification(String oobCode) async {
+    final auth = ref.read(firebaseAuthProvider);
+    try {
+      await auth.applyActionCode(oobCode);
+      await auth.currentUser?.reload();
+      // Refresh state so the UI sees `emailVerified: true`.
+      state = AsyncData(await _resolveState(auth.currentUser));
+      return true;
+    } catch (e) {
+      debugPrint('[AuthNotifier] applyActionCode failed: $e');
+      return false;
+    }
   }
 }

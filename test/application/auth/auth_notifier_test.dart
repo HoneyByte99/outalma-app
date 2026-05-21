@@ -190,33 +190,9 @@ void main() {
       expect((state as AuthAuthenticated).user.country, 'SN');
     });
 
-    test('does not call isPhoneTaken when phone is not changing', () async {
+    test('updateProfile keeps phoneE164 unchanged (phone is read-only)',
+        () async {
       when(() => mockRepo.upsert(any())).thenAnswer((_) async {});
-      // user has no phone; updateProfile called without phone → no check needed
-      final container = _makeAuthenticatedContainer(
-        _makeUser(phoneE164: null),
-        mockRepo,
-      );
-      addTearDown(container.dispose);
-
-      await container.read(authNotifierProvider.future);
-      await container
-          .read(authNotifierProvider.notifier)
-          .updateProfile(displayName: 'Alice');
-
-      verifyNever(
-        () =>
-            mockRepo.isPhoneTaken(any(), excludeUid: any(named: 'excludeUid')),
-      );
-    });
-
-    test('calls isPhoneTaken when phone changes', () async {
-      when(
-        () =>
-            mockRepo.isPhoneTaken(any(), excludeUid: any(named: 'excludeUid')),
-      ).thenAnswer((_) async => false);
-      when(() => mockRepo.upsert(any())).thenAnswer((_) async {});
-
       final container = _makeAuthenticatedContainer(
         _makeUser(phoneE164: '+33600000000'),
         mockRepo,
@@ -226,38 +202,13 @@ void main() {
       await container.read(authNotifierProvider.future);
       await container
           .read(authNotifierProvider.notifier)
-          .updateProfile(
-            displayName: 'Alice',
-            phoneE164: '+33611111111', // different phone
-          );
+          .updateProfile(displayName: 'Alice', country: 'SN');
 
-      verify(
-        () => mockRepo.isPhoneTaken(
-          '+33611111111',
-          excludeUid: any(named: 'excludeUid'),
-        ),
-      ).called(1);
-    });
-
-    test('throws PhoneTakenException when new phone already in use', () async {
-      when(
-        () =>
-            mockRepo.isPhoneTaken(any(), excludeUid: any(named: 'excludeUid')),
-      ).thenAnswer((_) async => true);
-
-      final container = _makeAuthenticatedContainer(
-        _makeUser(phoneE164: '+33600000000'),
-        mockRepo,
-      );
-      addTearDown(container.dispose);
-
-      await container.read(authNotifierProvider.future);
-
-      await expectLater(
-        container
-            .read(authNotifierProvider.notifier)
-            .updateProfile(displayName: 'Alice', phoneE164: '+33699999999'),
-        throwsA(isA<PhoneTakenException>()),
+      final state = container.read(authNotifierProvider).valueOrNull;
+      expect(
+        (state as AuthAuthenticated).user.phoneE164,
+        '+33600000000',
+        reason: 'phone must not be mutated by updateProfile',
       );
     });
 

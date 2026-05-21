@@ -24,25 +24,11 @@ void main() {
       expect(state.user.activeMode, equals(ActiveMode.client));
     });
 
-    test('AuthPhoneVerification carries verificationId and phoneNumber', () {
-      const state = AuthPhoneVerification(
-        verificationId: 'vid-123',
-        phoneNumber: '+221701234567',
-      );
-      expect(state, isA<AuthState>());
-      expect(state.verificationId, equals('vid-123'));
-      expect(state.phoneNumber, equals('+221701234567'));
-    });
-
     test('pattern matching exhausts all states without default branch', () {
       final states = <AuthState>[
         const AuthLoading(),
         const AuthUnauthenticated(),
         AuthAuthenticated(_testUser()),
-        const AuthPhoneVerification(
-          verificationId: 'vid',
-          phoneNumber: '+221701234567',
-        ),
       ];
 
       for (final s in states) {
@@ -50,7 +36,6 @@ void main() {
           AuthLoading() => 'loading',
           AuthUnauthenticated() => 'unauthenticated',
           AuthAuthenticated() => 'authenticated',
-          AuthPhoneVerification() => 'phone-verification',
         };
         expect(label, isNotEmpty);
       }
