@@ -44,11 +44,7 @@ class ProviderDashboardPage extends ConsumerWidget {
               l10n.dashboardTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            actions: const [
-              ModeBadge(),
-              BellIconButton(),
-              SizedBox(width: 4),
-            ],
+            actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
           ),
 
           // State 1 — no profile yet : full-bleed onboarding, only CTA.
@@ -528,10 +524,7 @@ class _ProviderStatsRow extends ConsumerWidget {
     }) {
       return Expanded(
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 14,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           decoration: BoxDecoration(
             color: oc.cardSurface,
             borderRadius: BorderRadius.circular(14),
@@ -544,16 +537,16 @@ class _ProviderStatsRow extends ConsumerWidget {
               const SizedBox(height: 6),
               Text(
                 value,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 2),
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: oc.secondaryText,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -589,4 +582,3 @@ class _ProviderStatsRow extends ConsumerWidget {
     );
   }
 }
-

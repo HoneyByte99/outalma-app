@@ -24,11 +24,7 @@ class VerifiedBadge extends StatelessWidget {
     if (compact) {
       return Tooltip(
         message: l10n.verifiedBadgeLabel,
-        child: Icon(
-          Icons.verified_rounded,
-          size: 16,
-          color: color,
-        ),
+        child: Icon(Icons.verified_rounded, size: 16, color: color),
       );
     }
 
@@ -50,10 +46,10 @@ class VerifiedBadge extends StatelessWidget {
           Text(
             l10n.verifiedBadgeLabel,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                ),
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+            ),
           ),
         ],
       ),

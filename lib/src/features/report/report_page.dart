@@ -182,9 +182,7 @@ class _ReportPageState extends ConsumerState<ReportPage> {
                 controller: _detailsController,
                 maxLines: 3,
                 maxLength: 500,
-                decoration: InputDecoration(
-                  hintText: l10n.reportDetailsHint,
-                ),
+                decoration: InputDecoration(hintText: l10n.reportDetailsHint),
               ),
               const SizedBox(height: 12),
             ],

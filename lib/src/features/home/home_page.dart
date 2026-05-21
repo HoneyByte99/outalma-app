@@ -68,11 +68,7 @@ class HomePage extends ConsumerWidget {
       appBar: AppBar(
         titleSpacing: 0,
         title: const _LocationPill(),
-        actions: const [
-          ModeBadge(),
-          BellIconButton(),
-          SizedBox(width: 4),
-        ],
+        actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -850,8 +846,7 @@ class _ServiceGrid extends ConsumerWidget {
               onNotification: (notif) {
                 if (notif is ScrollEndNotification &&
                     notif.metrics.extentAfter < 200) {
-                  final currentLimit =
-                      ref.read(serviceListPageSizeProvider);
+                  final currentLimit = ref.read(serviceListPageSizeProvider);
                   if (services.length >= currentLimit) {
                     // Only request more if we've actually got the previous
                     // page filled — otherwise we're at the true end.
@@ -953,8 +948,9 @@ class _ServiceCard extends ConsumerWidget {
                         ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusSmall),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusSmall,
+                          ),
                         ),
                         child: Text(
                           service.categoryId.label,
@@ -995,9 +991,7 @@ class _ServiceCard extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           priceLabel,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 color: oc.primary,
                                 fontWeight: FontWeight.w700,
@@ -1012,9 +1006,9 @@ class _ServiceCard extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     providerUser?.displayName ?? '\u2014',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.secondaryText,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1157,7 +1151,6 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
-
 
 class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.onRetry});

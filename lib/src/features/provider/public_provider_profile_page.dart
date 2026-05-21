@@ -155,8 +155,9 @@ class _ProfileHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
     final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
-    final providerProfile =
-        ref.watch(providerProfileByIdProvider(providerId)).valueOrNull;
+    final providerProfile = ref
+        .watch(providerProfileByIdProvider(providerId))
+        .valueOrNull;
     final reviews = reviewsAsync.valueOrNull ?? [];
     final avgRating = reviews.isEmpty
         ? null
@@ -165,8 +166,8 @@ class _ProfileHeader extends ConsumerWidget {
     // their onboarding (profile exists) AND have a verified phone number on
     // file (phoneE164 set, which only happens through Twilio OTP or
     // sign-up).
-    final isVerified = providerProfile != null &&
-        (user?.phoneE164?.isNotEmpty ?? false);
+    final isVerified =
+        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
 
     return Container(
       color: oc.cardSurface,
@@ -191,8 +192,8 @@ class _ProfileHeader extends ConsumerWidget {
                       child: Text(
                         user?.displayName ?? '—',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                          fontWeight: FontWeight.w700,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

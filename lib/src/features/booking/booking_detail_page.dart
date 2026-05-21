@@ -704,7 +704,9 @@ class _AddressSection extends StatelessWidget {
       final closest = closestZoneKm(service!.serviceZones, lat, lng);
       if (closest != null) {
         final km = closest.km;
-        final formatted = km < 10 ? km.toStringAsFixed(1) : km.round().toString();
+        final formatted = km < 10
+            ? km.toStringAsFixed(1)
+            : km.round().toString();
         distanceLabel = l10n.bookingDistanceEstimate(formatted);
       }
     }

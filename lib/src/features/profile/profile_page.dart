@@ -292,10 +292,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
     try {
       await ref
           .read(authNotifierProvider.notifier)
-          .updateProfile(
-            displayName: _nameCtrl.text.trim(),
-            country: _country,
-          );
+          .updateProfile(displayName: _nameCtrl.text.trim(), country: _country);
       if (mounted) {
         ScaffoldMessenger.of(
           context,

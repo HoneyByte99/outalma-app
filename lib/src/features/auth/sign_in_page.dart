@@ -434,9 +434,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     onPressed: () => context.go(AppRoutes.otpLab),
                     child: Text(
                       '🔬 OTP Lab (debug)',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: oc.secondaryText,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                     ),
                   ),
                 const SizedBox(height: 24),
@@ -447,7 +447,6 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       ),
     );
   }
-
 }
 
 // ---------------------------------------------------------------------------

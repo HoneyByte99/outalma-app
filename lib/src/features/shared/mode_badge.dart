@@ -53,11 +53,10 @@ class ModeBadge extends ConsumerWidget {
             children: [
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 220),
-                style:
-                    Theme.of(context).textTheme.labelMedium!.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w600,
-                        ),
+                style: Theme.of(context).textTheme.labelMedium!.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
                 child: Text(label),
               ),
               const SizedBox(width: AppSpacing.xs),
@@ -81,9 +80,9 @@ class ModeBadge extends ConsumerWidget {
       await ref.read(authNotifierProvider.notifier).switchMode(newMode);
     } catch (_) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.errorGeneral)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.errorGeneral)));
       return;
     }
     if (!context.mounted) return;

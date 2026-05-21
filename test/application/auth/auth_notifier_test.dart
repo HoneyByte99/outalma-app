@@ -190,27 +190,29 @@ void main() {
       expect((state as AuthAuthenticated).user.country, 'SN');
     });
 
-    test('updateProfile keeps phoneE164 unchanged (phone is read-only)',
-        () async {
-      when(() => mockRepo.upsert(any())).thenAnswer((_) async {});
-      final container = _makeAuthenticatedContainer(
-        _makeUser(phoneE164: '+33600000000'),
-        mockRepo,
-      );
-      addTearDown(container.dispose);
+    test(
+      'updateProfile keeps phoneE164 unchanged (phone is read-only)',
+      () async {
+        when(() => mockRepo.upsert(any())).thenAnswer((_) async {});
+        final container = _makeAuthenticatedContainer(
+          _makeUser(phoneE164: '+33600000000'),
+          mockRepo,
+        );
+        addTearDown(container.dispose);
 
-      await container.read(authNotifierProvider.future);
-      await container
-          .read(authNotifierProvider.notifier)
-          .updateProfile(displayName: 'Alice', country: 'SN');
+        await container.read(authNotifierProvider.future);
+        await container
+            .read(authNotifierProvider.notifier)
+            .updateProfile(displayName: 'Alice', country: 'SN');
 
-      final state = container.read(authNotifierProvider).valueOrNull;
-      expect(
-        (state as AuthAuthenticated).user.phoneE164,
-        '+33600000000',
-        reason: 'phone must not be mutated by updateProfile',
-      );
-    });
+        final state = container.read(authNotifierProvider).valueOrNull;
+        expect(
+          (state as AuthAuthenticated).user.phoneE164,
+          '+33600000000',
+          reason: 'phone must not be mutated by updateProfile',
+        );
+      },
+    );
 
     test('reverts state on repo.upsert failure', () async {
       when(() => mockRepo.upsert(any())).thenThrow(Exception('Write failed'));

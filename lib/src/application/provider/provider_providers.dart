@@ -35,9 +35,9 @@ final currentProviderProfileProvider = StreamProvider<ProviderProfile?>((ref) {
 /// service cards, and trust signals.
 final providerProfileByIdProvider =
     StreamProvider.family<ProviderProfile?, String>((ref, uid) {
-  if (uid.isEmpty) return const Stream.empty();
-  return ref.watch(providerRepositoryProvider).watchByUid(uid);
-});
+      if (uid.isEmpty) return const Stream.empty();
+      return ref.watch(providerRepositoryProvider).watchByUid(uid);
+    });
 
 /// Current provider's own services.
 final providerServicesProvider = StreamProvider<List<Service>>((ref) {
@@ -143,8 +143,7 @@ final providerStatsProvider = Provider<ProviderStats>((ref) {
   final totalDecisions = accepted + rejected;
   return ProviderStats(
     bookingsThisMonth: monthCount,
-    acceptanceRate:
-        totalDecisions == 0 ? null : accepted / totalDecisions,
+    acceptanceRate: totalDecisions == 0 ? null : accepted / totalDecisions,
     upcomingThisWeek: upcoming,
   );
 });

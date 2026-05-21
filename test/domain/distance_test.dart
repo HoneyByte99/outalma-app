@@ -48,11 +48,7 @@ void main() {
       );
 
       // Target near Lyon — should pick Lyon.
-      final result = closestZoneKm(
-        [paris, lyon, marseille],
-        45.76,
-        4.84,
-      );
+      final result = closestZoneKm([paris, lyon, marseille], 45.76, 4.84);
       expect(result, isNotNull);
       expect(result!.zone.label, 'Lyon');
       expect(result.km, lessThan(5));

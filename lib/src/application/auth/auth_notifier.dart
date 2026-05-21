@@ -127,10 +127,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     await ref
         .read(functionsProvider)
         .httpsCallable('requestPhoneOtp')
-        .call<Map<String, dynamic>>({
-          'phone': phoneE164,
-          'channel': channel,
-        });
+        .call<Map<String, dynamic>>({'phone': phoneE164, 'channel': channel});
   }
 
   /// Verifies [code] and signs in the existing Outalma account behind
@@ -147,10 +144,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final result = await ref
           .read(functionsProvider)
           .httpsCallable('verifyPhoneOtpAndSignIn')
-          .call<Map<String, dynamic>>({
-            'phone': phoneE164,
-            'code': code,
-          });
+          .call<Map<String, dynamic>>({'phone': phoneE164, 'code': code});
 
       final newUser = result.data['newUser'] == true;
       if (newUser) {

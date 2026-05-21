@@ -62,8 +62,7 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
       'outalmaservice-d1e59.firebaseapp.com',
       'outalmaservice-d1e59.web.app',
     };
-    if (!allowedHosts.contains(uri.host) ||
-        !uri.path.startsWith('/__/auth/')) {
+    if (!allowedHosts.contains(uri.host) || !uri.path.startsWith('/__/auth/')) {
       return;
     }
 

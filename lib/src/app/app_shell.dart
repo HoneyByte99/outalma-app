@@ -105,8 +105,7 @@ class AppShell extends ConsumerWidget {
             }),
             surfaceTintColor: Colors.transparent,
             height: 64,
-            labelBehavior:
-                NavigationDestinationLabelBehavior.alwaysShow,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           ),
           child: NavigationBar(
             selectedIndex: currentLogical,

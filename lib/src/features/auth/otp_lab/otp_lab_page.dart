@@ -31,7 +31,11 @@ import '../../../data/auth/phone_otp_service.dart';
 enum OtpProvider { firebase, twilio, vonage }
 
 class OtpAttempt {
-  OtpAttempt({required this.provider, required this.phone, required this.sentAt});
+  OtpAttempt({
+    required this.provider,
+    required this.phone,
+    required this.sentAt,
+  });
 
   final OtpProvider provider;
   final String phone;
@@ -169,9 +173,7 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
           c.code = code;
           final newUser = result.data['newUser'] == true;
           if (newUser) {
-            _toast(
-              '✅ OTP Twilio vérifié — newUser (aucun compte Outalma lié)',
-            );
+            _toast('✅ OTP Twilio vérifié — newUser (aucun compte Outalma lié)');
           } else {
             // Sign in with the Firebase custom token, then sign out so the
             // lab stays usable.
@@ -262,7 +264,10 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
             title: 'Provider',
             child: SegmentedButton<OtpProvider>(
               segments: const [
-                ButtonSegment(value: OtpProvider.firebase, label: Text('Firebase')),
+                ButtonSegment(
+                  value: OtpProvider.firebase,
+                  label: Text('Firebase'),
+                ),
                 ButtonSegment(value: OtpProvider.twilio, label: Text('Twilio')),
                 ButtonSegment(value: OtpProvider.vonage, label: Text('Vonage')),
               ],
@@ -309,7 +314,9 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
                     ),
                   ),
                   TextButton.icon(
-                    onPressed: _current?.receivedAt == null ? _markReceived : null,
+                    onPressed: _current?.receivedAt == null
+                        ? _markReceived
+                        : null,
                     icon: const Icon(Icons.check_circle_outline, size: 18),
                     label: const Text('Marquer reçu'),
                   ),
@@ -339,18 +346,16 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Text(
                   'Aucun test pour le moment',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.secondaryText,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                 ),
               ),
             )
           else
             _Section(
               title: 'Historique (${attempts.length})',
-              child: Column(
-                children: attempts.map(_buildLogTile).toList(),
-              ),
+              child: Column(children: attempts.map(_buildLogTile).toList()),
             ),
         ],
       ),
@@ -402,32 +407,32 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
               const Spacer(),
               Text(
                 _fmt(a.sentAt),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: oc.secondaryText,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
             statusText,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: statusColor,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: statusColor),
           ),
           if (a.smsLatency != null)
             Text(
               'SMS reçu en ${a.smsLatency!.inSeconds}.${(a.smsLatency!.inMilliseconds % 1000).toString().padLeft(3, '0')} s',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: oc.secondaryText,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
           if (a.totalLatency != null)
             Text(
               'Total → vérif : ${a.totalLatency!.inSeconds} s',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: oc.secondaryText,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
         ],
       ),

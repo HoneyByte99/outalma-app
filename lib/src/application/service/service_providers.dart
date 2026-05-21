@@ -18,9 +18,7 @@ final serviceListPageSizeProvider = StateProvider<int>((_) => 30);
 /// the stream live so newly published services appear in real time.
 final serviceListProvider = StreamProvider<List<Service>>((ref) {
   final limit = ref.watch(serviceListPageSizeProvider);
-  return ref
-      .watch(serviceRepositoryProvider)
-      .watchAllPublished(limit: limit);
+  return ref.watch(serviceRepositoryProvider).watchAllPublished(limit: limit);
 });
 
 /// Single service by id — used for detail page.

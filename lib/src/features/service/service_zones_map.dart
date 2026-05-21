@@ -30,9 +30,9 @@ class _ServiceZonesMapState extends State<ServiceZonesMap> {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    final zones = widget.zones.where(
-      (z) => z.latitude != 0 || z.longitude != 0,
-    ).toList();
+    final zones = widget.zones
+        .where((z) => z.latitude != 0 || z.longitude != 0)
+        .toList();
 
     if (zones.isEmpty) return const SizedBox.shrink();
 
@@ -57,7 +57,9 @@ class _ServiceZonesMapState extends State<ServiceZonesMap> {
       if (z.radiusKm > 0) {
         circles.add(
           Circle(
-            circleId: CircleId('circle-${z.label}-${z.latitude}-${z.longitude}'),
+            circleId: CircleId(
+              'circle-${z.label}-${z.latitude}-${z.longitude}',
+            ),
             center: pos,
             radius: z.radiusKm * 1000.0,
             fillColor: oc.primary.withValues(alpha: 0.12),

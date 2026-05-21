@@ -99,9 +99,7 @@ Future<List<_MapsOption>> _availableIosOptions({
     );
   }
 
-  final wazeScheme = Uri.parse(
-    'waze://?ll=$destLat,$destLng&navigate=yes',
-  );
+  final wazeScheme = Uri.parse('waze://?ll=$destLat,$destLng&navigate=yes');
   if (await canLaunchUrl(wazeScheme)) {
     results.add(
       _MapsOption(

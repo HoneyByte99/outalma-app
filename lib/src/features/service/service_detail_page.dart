@@ -246,10 +246,11 @@ class _ProviderRow extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
-    final providerProfile =
-        ref.watch(providerProfileByIdProvider(providerId)).valueOrNull;
-    final isVerified = providerProfile != null &&
-        (user?.phoneE164?.isNotEmpty ?? false);
+    final providerProfile = ref
+        .watch(providerProfileByIdProvider(providerId))
+        .valueOrNull;
+    final isVerified =
+        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.providerProfile(providerId)),
@@ -283,7 +284,8 @@ class _ProviderRow extends ConsumerWidget {
                       Flexible(
                         child: Text(
                           user?.displayName ?? '—',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
                                 color: oc.primaryText,
                                 fontWeight: FontWeight.w600,
                               ),
