@@ -164,6 +164,7 @@
   "serviceCreate": "Create a service",
   "published": "Published",
   "notPublished": "Unpublished",
+  "ratingNew": "New",
   "tooltipProviderProfile": "My provider profile",
 
   "bookingsTitle": "My bookings",

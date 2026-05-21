@@ -18,6 +18,7 @@ import '../../core/utils/format_utils.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
 import '../../domain/enums/category_id.dart';
+import '../../domain/enums/price_type.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
 import '../../domain/utils/distance.dart';
@@ -727,10 +728,10 @@ class _CategoryChipsRow extends ConsumerWidget {
     ];
 
     return SizedBox(
-      height: 40,
+      height: AppSpacing.minTouchTarget,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
@@ -902,7 +903,7 @@ class _ServiceCard extends ConsumerWidget {
     final reviews =
         ref.watch(reviewsForUserProvider(service.providerId)).valueOrNull ?? [];
     final formattedPrice = formatPriceFromCents(service.price);
-    final priceLabel = service.priceType.name == 'hourly'
+    final priceLabel = service.priceType == PriceType.hourly
         ? '$formattedPrice/h'
         : formattedPrice;
 
@@ -929,7 +930,7 @@ class _ServiceCard extends ConsumerWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
+                  top: Radius.circular(AppSpacing.radiusLarge),
                 ),
                 child: Stack(
                   fit: StackFit.expand,
@@ -975,9 +976,9 @@ class _ServiceCard extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.m,
-                AppSpacing.s + 2,
+                AppSpacing.s,
                 AppSpacing.m,
-                AppSpacing.s + 2,
+                AppSpacing.s,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1049,6 +1050,7 @@ class _RatingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
 
     if (reviews.isEmpty) {
@@ -1058,7 +1060,7 @@ class _RatingRow extends StatelessWidget {
           Icon(Icons.star_outline_rounded, size: 12, color: oc.icons),
           const SizedBox(width: 3),
           Text(
-            'Nouveau',
+            l10n.ratingNew,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: oc.secondaryText,
               fontStyle: FontStyle.italic,
