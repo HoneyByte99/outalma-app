@@ -80,6 +80,13 @@
   },
   "homeGreetingNoName": "Hello",
   "homeSearchPrompt": "What are you looking for?",
+  "homeSearchHint": "Search for a service…",
+  "homeSearchEmpty": "No results for « {query} »",
+  "@homeSearchEmpty": {
+    "placeholders": {
+      "query": { "type": "String" }
+    }
+  },
   "categoryAll": "All",
   "servicesEmpty": "No services available\nright now",
   "modeClient": "Client",

@@ -33,6 +33,7 @@ import '../../../l10n/app_localizations.dart';
 // ---------------------------------------------------------------------------
 
 final _selectedCategoryProvider = StateProvider<CategoryId?>((ref) => null);
+final _searchQueryProvider = StateProvider<String>((ref) => '');
 
 bool _serviceMatchesLocation(Service service, LocationFilter filter) {
   for (final zone in service.serviceZones) {
@@ -75,38 +76,30 @@ class HomePage extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting
+          // Greeting — compact single line
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.l,
+              AppSpacing.m,
               AppSpacing.l,
-              AppSpacing.l,
-              AppSpacing.xs,
+              AppSpacing.s,
             ),
             child: Text(
               displayName.isNotEmpty
                   ? l10n.homeGreeting(displayName)
                   : l10n.homeGreetingNoName,
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.l,
-              0,
-              AppSpacing.l,
-              AppSpacing.l,
-            ),
-            child: Text(
-              l10n.homeSearchPrompt,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
-            ),
-          ),
+          // Search bar — replaces static subtitle
+          const _SearchBar(),
           // Category chips
           const _CategoryChipsRow(),
-          const SizedBox(height: AppSpacing.m),
+          const SizedBox(height: AppSpacing.l),
           // Service grid
           const Expanded(child: _ServiceGrid()),
         ],
@@ -711,6 +704,61 @@ class _SavedLocationTile extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Search bar
+// ---------------------------------------------------------------------------
+
+class _SearchBar extends ConsumerStatefulWidget {
+  const _SearchBar();
+
+  @override
+  ConsumerState<_SearchBar> createState() => _SearchBarState();
+}
+
+class _SearchBarState extends ConsumerState<_SearchBar> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final query = ref.watch(_searchQueryProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        0,
+        AppSpacing.l,
+        AppSpacing.m,
+      ),
+      child: TextField(
+        controller: _controller,
+        onChanged: (v) =>
+            ref.read(_searchQueryProvider.notifier).state = v.trim(),
+        decoration: InputDecoration(
+          hintText: l10n.homeSearchHint,
+          prefixIcon: const Icon(Icons.search_rounded, size: 20),
+          suffixIcon: query.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.close_rounded, size: 18, color: oc.icons),
+                  onPressed: () {
+                    _controller.clear();
+                    ref.read(_searchQueryProvider.notifier).state = '';
+                  },
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Category chips row
 // ---------------------------------------------------------------------------
 
@@ -808,6 +856,7 @@ class _ServiceGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedCategory = ref.watch(_selectedCategoryProvider);
     final locationFilter = ref.watch(locationFilterProvider);
+    final searchQuery = ref.watch(_searchQueryProvider).toLowerCase();
     final servicesAsync = ref.watch(serviceListProvider);
 
     return servicesAsync.when(
@@ -825,20 +874,25 @@ class _ServiceGrid extends ConsumerWidget {
               .toList();
         }
 
+        if (searchQuery.isNotEmpty) {
+          filtered = filtered
+              .where((s) => s.title.toLowerCase().contains(searchQuery))
+              .toList();
+        }
+
         if (filtered.isEmpty) {
-          return const _EmptyState();
+          return _EmptyState(searchQuery: searchQuery);
         }
 
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
             final columns = width > 700 ? 3 : 2;
-            const spacing = AppSpacing.l; // 16 — more breathing room (A.5)
+            const spacing = AppSpacing.l;
             const hPad = AppSpacing.l;
             final cardWidth =
                 (width - hPad * 2 - (columns - 1) * spacing) / columns;
-            // Image takes cardWidth height (square), info block ~100px
-            const infoHeight = 100.0;
+            const infoHeight = 112.0;
             final cardHeight = cardWidth + infoHeight;
             final ratio = cardWidth / cardHeight;
 
@@ -978,15 +1032,17 @@ class _ServiceCard extends ConsumerWidget {
                 AppSpacing.m,
                 AppSpacing.s,
                 AppSpacing.m,
-                AppSpacing.s,
+                AppSpacing.m,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     service.title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                    maxLines: 1,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: AppSpacing.xs),
@@ -1099,30 +1155,62 @@ class _RatingRow extends StatelessWidget {
 // Loading skeleton
 // ---------------------------------------------------------------------------
 
-class _ServiceGridLoading extends StatelessWidget {
+class _ServiceGridLoading extends StatefulWidget {
   const _ServiceGridLoading();
+
+  @override
+  State<_ServiceGridLoading> createState() => _ServiceGridLoadingState();
+}
+
+class _ServiceGridLoadingState extends State<_ServiceGridLoading>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.l,
-        AppSpacing.s,
-        AppSpacing.l,
-        AppSpacing.xxl,
-      ),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: AppSpacing.l,
-        mainAxisSpacing: AppSpacing.l,
-        childAspectRatio: 0.85,
-      ),
-      itemCount: 6,
-      itemBuilder: (_, __) => ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Container(color: oc.border),
-      ),
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, _) {
+        final shimmer = Color.lerp(oc.border, oc.surface, _anim.value)!;
+        return GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.l,
+            AppSpacing.s,
+            AppSpacing.l,
+            AppSpacing.xxl,
+          ),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: AppSpacing.l,
+            mainAxisSpacing: AppSpacing.l,
+            childAspectRatio: 0.62,
+          ),
+          itemCount: 6,
+          itemBuilder: (_, __) => ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+            child: Container(color: shimmer),
+          ),
+        );
+      },
     );
   }
 }
@@ -1132,22 +1220,27 @@ class _ServiceGridLoading extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({this.searchQuery = ''});
+
+  final String searchQuery;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+    final message = searchQuery.isNotEmpty
+        ? l10n.homeSearchEmpty(searchQuery)
+        : l10n.servicesEmpty;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xxxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.search_off_outlined, size: 56, color: oc.icons),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.l),
             Text(
-              l10n.servicesEmpty,
+              message,
               textAlign: TextAlign.center,
               style: Theme.of(
                 context,
