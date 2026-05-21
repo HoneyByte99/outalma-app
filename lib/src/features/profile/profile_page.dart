@@ -278,6 +278,20 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
   }
 
   @override
+  void didUpdateWidget(_ProfileForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.user.displayName != oldWidget.user.displayName) {
+      _nameCtrl.text = widget.user.displayName;
+    }
+    if (widget.user.phoneE164 != oldWidget.user.phoneE164) {
+      _phone = widget.user.phoneE164;
+    }
+    if (widget.user.country != oldWidget.user.country) {
+      _country = widget.user.country;
+    }
+  }
+
+  @override
   void dispose() {
     _nameCtrl.dispose();
     super.dispose();
