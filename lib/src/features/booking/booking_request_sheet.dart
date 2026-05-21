@@ -48,6 +48,9 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   @override
   void initState() {
     super.initState();
+    _messageController.text =
+        'Bonjour, je suis intéressé(e) par votre service « ${widget.serviceTitle} ».'
+        ' Pouvez-vous me contacter pour convenir d\'un rendez-vous ? Merci !';
     _messageController.addListener(_onMessageChanged);
   }
 
