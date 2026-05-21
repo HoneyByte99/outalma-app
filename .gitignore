@@ -58,9 +58,6 @@ secrets/
 # iOS secrets — copy Secrets.xcconfig.example → Secrets.xcconfig and fill in values
 ios/Flutter/Secrets.xcconfig
 
-# Node.js (root-level package.json for web tooling)
-node_modules/
-
 # Firebase config — injected by CI (GitHub Secrets); never commit live credentials.
 # Copy the .example versions, fill in real values, and add them as GitHub Secrets.
 ios/Runner/GoogleService-Info.plist
