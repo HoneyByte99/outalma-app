@@ -214,7 +214,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           path: path,
         );
       }
-      setState(() => _recording = true);
+      if (mounted) setState(() => _recording = true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
