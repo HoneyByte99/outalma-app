@@ -22,6 +22,7 @@ class CreateBookingUseCase {
     String? address,
     double? addressLat,
     double? addressLng,
+    String? audioMessageUrl,
   }) async {
     final callable = _functions.httpsCallable('createBooking');
 
@@ -41,6 +42,8 @@ class CreateBookingUseCase {
             'lng': addressLng,
           },
         },
+      if (audioMessageUrl != null && audioMessageUrl.isNotEmpty)
+        'audioMessageUrl': audioMessageUrl,
     };
 
     final result = await callable.call<Map<String, dynamic>>(payload);
