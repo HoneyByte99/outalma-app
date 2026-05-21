@@ -238,7 +238,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           actions: const [_ThemeToggleButton(), SizedBox(width: 8)],
         ),
         body: SafeArea(
-          top: false,
+          top: true,
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 28),
             child: Column(
