@@ -15,7 +15,12 @@ class PlaceSuggestion {
 /// Uses the new `places.googleapis.com/v1` endpoints which support CORS
 /// for browser-side requests (unlike the legacy maps.googleapis.com endpoints).
 class GeocodingService {
-  GeocodingService({required String apiKey}) : _apiKey = apiKey;
+  GeocodingService({required String apiKey}) : _apiKey = apiKey {
+    assert(
+      _apiKey.isNotEmpty,
+      'MAPS_API_KEY manquante — lance avec --dart-define=MAPS_API_KEY=... (cf. scripts/run.sh)',
+    );
+  }
 
   final String _apiKey;
 
@@ -166,11 +171,11 @@ class GeocodingService {
   }
 }
 
-/// Injected at build time via `--dart-define=PLACES_API_KEY=<key>`.
-/// In development, set the variable in your IDE run configuration or pass it
-/// to `flutter run`. In CI, inject via the PLACES_API_KEY GitHub Secret.
-const _placesApiKey = String.fromEnvironment('PLACES_API_KEY');
+/// Injected at build time via `--dart-define=MAPS_API_KEY=<key>`.
+/// Unified key name across Dart, iOS (Secrets.xcconfig) and Android.
+/// In dev: use scripts/run.sh. In CI: inject via the MAPS_API_KEY GitHub Secret.
+const _mapsApiKey = String.fromEnvironment('MAPS_API_KEY');
 
 final geocodingServiceProvider = Provider<GeocodingService>((ref) {
-  return GeocodingService(apiKey: _placesApiKey);
+  return GeocodingService(apiKey: _mapsApiKey);
 });
