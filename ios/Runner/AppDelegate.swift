@@ -11,6 +11,15 @@ import GoogleMaps
     // Read the Maps API key injected via Info.plist → Secrets.xcconfig.
     // Never hardcode billing-sensitive keys in source files.
     let mapsApiKey = Bundle.main.object(forInfoDictionaryKey: "MAPS_API_KEY") as? String ?? ""
+    #if DEBUG
+    guard !mapsApiKey.isEmpty else {
+      fatalError("MAPS_API_KEY is empty — create ios/Flutter/Secrets.xcconfig from Secrets.xcconfig.example (see scripts/run.sh).")
+    }
+    #else
+    if mapsApiKey.isEmpty {
+      NSLog("⚠️ MAPS_API_KEY is empty — Google Maps will not render. Check Secrets.xcconfig / CI injection.")
+    }
+    #endif
     GMSServices.provideAPIKey(mapsApiKey)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
