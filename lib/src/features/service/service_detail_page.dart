@@ -103,7 +103,7 @@ class _ServiceDetailContent extends ConsumerWidget {
           // ---- Body ----
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
