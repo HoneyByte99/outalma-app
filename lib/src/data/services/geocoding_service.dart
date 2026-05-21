@@ -20,9 +20,23 @@ class GeocodingService {
   final String _apiKey;
 
   /// Returns autocomplete suggestions for the given [input].
+  /// Tries Google Places API first; falls back to Nominatim if unavailable.
   Future<List<PlaceSuggestion>> autocomplete(String input) async {
     if (input.trim().length < 2) return const [];
 
+    if (_apiKey.isNotEmpty) {
+      try {
+        final results = await _googleAutocomplete(input);
+        if (results.isNotEmpty) return results;
+      } catch (_) {
+        // fall through to Nominatim
+      }
+    }
+
+    return _nominatimSearch(input);
+  }
+
+  Future<List<PlaceSuggestion>> _googleAutocomplete(String input) async {
     final uri = Uri.parse(
       'https://places.googleapis.com/v1/places:autocomplete',
     );
@@ -56,8 +70,62 @@ class GeocodingService {
         .toList();
   }
 
-  /// Returns lat/lng for a given [placeId] via Place Details (New).
+  /// Nominatim (OpenStreetMap) free geocoding — encodes lat/lng in the placeId
+  /// as "nominatim:<lat>,<lng>" so no second lookup is needed.
+  Future<List<PlaceSuggestion>> _nominatimSearch(String input) async {
+    try {
+      final uri = Uri.parse('https://nominatim.openstreetmap.org/search').replace(
+        queryParameters: {
+          'q': input,
+          'format': 'json',
+          'limit': '5',
+          'accept-language': 'fr',
+          'countrycodes': 'fr,sn',
+        },
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {'User-Agent': 'Outalma/1.0'},
+      );
+
+      if (response.statusCode != 200) return const [];
+
+      final results = jsonDecode(response.body) as List;
+      return results
+          .cast<Map<String, dynamic>>()
+          .map((r) {
+            final lat = r['lat'] as String;
+            final lng = r['lon'] as String;
+            final name = (r['display_name'] as String)
+                .split(',')
+                .take(3)
+                .join(',')
+                .trim();
+            return PlaceSuggestion(
+              placeId: 'nominatim:$lat,$lng',
+              description: name,
+            );
+          })
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Returns lat/lng for a given [placeId].
+  /// Nominatim placeIds are encoded as "nominatim:<lat>,<lng>".
   Future<({double lat, double lng})?> getPlaceLatLng(String placeId) async {
+    if (placeId.startsWith('nominatim:')) {
+      final coords = placeId.substring('nominatim:'.length).split(',');
+      if (coords.length == 2) {
+        final lat = double.tryParse(coords[0]);
+        final lng = double.tryParse(coords[1]);
+        if (lat != null && lng != null) return (lat: lat, lng: lng);
+      }
+      return null;
+    }
+
     final uri = Uri.parse('https://places.googleapis.com/v1/places/$placeId');
 
     final response = await http.get(
