@@ -162,6 +162,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authErrorPhoneTaken => 'This phone number is already in use.';
 
   @override
+  String get authErrorInvalidOtp => 'Invalid or expired code.';
+
+  @override
+  String get authErrorOtpSend => 'Could not send the code. Please retry.';
+
+  @override
+  String get phoneOtpSendCode => 'Get code';
+
+  @override
+  String get phoneOtpVerify => 'Verify';
+
+  @override
+  String get phoneOtpHint => '6-digit code';
+
+  @override
+  String get phoneOtpResend => 'Resend code';
+
+  @override
+  String get phoneOtpEditNumber => 'Edit number';
+
+  @override
+  String phoneOtpSentTo(String phone) {
+    return 'Code sent to $phone';
+  }
+
+  @override
+  String get phoneOtpNoAccount =>
+      'No account found for this number. Please sign up first.';
+
+  @override
+  String get signUpVerificationNotice =>
+      'After signing up, a verification email will be sent. Tap the link in your inbox to confirm your address.';
+
+  @override
+  String get signUpVerificationResent => 'Verification email re-sent.';
+
+  @override
   String homeGreeting(String name) {
     return 'Hello $name';
   }
@@ -189,6 +226,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get modeProviderActivated => 'Provider mode activated';
+
+  @override
+  String get modeBadgeTapToSwitch => 'Tap to switch mode';
+
+  @override
+  String get verifiedBadgeLabel => 'Verified';
+
+  @override
+  String get serviceZonesLabel => 'Service areas';
+
+  @override
+  String get reportDetailsLabel => 'Details (optional)';
+
+  @override
+  String get reportDetailsHint =>
+      'Add information that will help our moderation team…';
+
+  @override
+  String get dashboardStatsUpcomingWeek => 'Upcoming this week';
+
+  @override
+  String get dashboardStatsThisMonth => 'Bookings this month';
+
+  @override
+  String get dashboardStatsAcceptanceRate => 'Acceptance rate';
 
   @override
   String get locationTitle => 'Location';
@@ -271,6 +333,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fieldFullName => 'Full name';
+
+  @override
+  String get fieldPhone => 'Phone number';
 
   @override
   String get fieldRequired => 'Required field';
@@ -434,6 +499,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookingAddressUnspecified => 'Unspecified';
+
+  @override
+  String bookingDistanceEstimate(String km) {
+    return 'Estimated distance: ~$km km';
+  }
+
+  @override
+  String get bookingOpenDirections => 'Directions';
 
   @override
   String get bookingContact => 'Contact';

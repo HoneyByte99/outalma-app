@@ -55,6 +55,22 @@
   "authErrorWeakPassword": "Mot de passe trop faible (min. 6 caractères).",
   "authErrorSignUpFailed": "Inscription échouée. Vérifiez vos informations.",
   "authErrorPhoneTaken": "Ce numéro de téléphone est déjà utilisé.",
+  "authErrorInvalidOtp": "Code invalide ou expiré.",
+  "authErrorOtpSend": "Impossible d'envoyer le code. Réessayez.",
+  "phoneOtpSendCode": "Recevoir le code",
+  "phoneOtpVerify": "Vérifier",
+  "phoneOtpHint": "Code à 6 chiffres",
+  "phoneOtpResend": "Renvoyer le code",
+  "phoneOtpEditNumber": "Modifier le numéro",
+  "phoneOtpSentTo": "Code envoyé au {phone}",
+  "@phoneOtpSentTo": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
+  "phoneOtpNoAccount": "Aucun compte trouvé pour ce numéro. Inscrivez-vous d'abord.",
+  "signUpVerificationNotice": "À la création du compte, un email de vérification sera envoyé. Cliquez sur le lien dans votre boîte mail pour confirmer votre adresse.",
+  "signUpVerificationResent": "Email de vérification renvoyé.",
 
   "homeGreeting": "Bonjour {name}",
   "@homeGreeting": {
@@ -70,6 +86,14 @@
   "modeProvider": "Prestataire",
   "modeClientActivated": "Mode client activé",
   "modeProviderActivated": "Mode prestataire activé",
+  "modeBadgeTapToSwitch": "Toucher pour changer de mode",
+  "verifiedBadgeLabel": "Profil vérifié",
+  "serviceZonesLabel": "Zones d'intervention",
+  "reportDetailsLabel": "Détails (facultatif)",
+  "reportDetailsHint": "Ajoutez des informations qui aideront notre équipe de modération…",
+  "dashboardStatsUpcomingWeek": "À venir cette semaine",
+  "dashboardStatsThisMonth": "Réservations ce mois",
+  "dashboardStatsAcceptanceRate": "Taux d'acceptation",
 
   "locationTitle": "Localisation",
   "locationAllFrance": "Toute la France",
@@ -108,6 +132,7 @@
   "profileLanguage": "Langue",
   "fieldEmail": "Email",
   "fieldFullName": "Nom complet",
+  "fieldPhone": "Numéro de téléphone",
   "fieldRequired": "Champ requis",
   "fieldCountry": "Pays",
   "modeClientSubtitle": "Réserver des services",
@@ -175,6 +200,13 @@
   "bookingScheduleUnspecified": "Non précisé",
   "bookingAddress": "Adresse",
   "bookingAddressUnspecified": "Non précisée",
+  "bookingDistanceEstimate": "Distance estimée : ~{km} km",
+  "@bookingDistanceEstimate": {
+    "placeholders": {
+      "km": {"type": "String"}
+    }
+  },
+  "bookingOpenDirections": "Itinéraire",
   "bookingContact": "Contact",
   "bookingPhoneNotShared": "Numéro non encore partagé",
   "bookingAddPhoneInProfile": "Ajoutez votre numéro dans votre profil pour le partager.",

@@ -550,14 +550,52 @@ class _MessageBubble extends ConsumerWidget {
   }
 
   void _showFullImage(BuildContext context, String url) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        transitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (_, animation, __) {
+          return FadeTransition(
+            opacity: animation,
+            child: _FullImageViewer(url: url),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Full-screen image viewer (B.6) — black background, pinch-to-zoom, close
+// button, tap-to-dismiss.
+// ---------------------------------------------------------------------------
+
+class _FullImageViewer extends StatelessWidget {
+  const _FullImageViewer({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(16),
-        child: GestureDetector(
-          onTap: () => Navigator.of(context).pop(),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Center(
           child: InteractiveViewer(
+            minScale: 0.8,
+            maxScale: 4,
             child: AppNetworkImage(url: url, fit: BoxFit.contain),
           ),
         ),

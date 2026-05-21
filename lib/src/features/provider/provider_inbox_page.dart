@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
+import '../shared/mode_badge.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
@@ -51,11 +52,13 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
               style: Theme.of(context).textTheme.titleLarge,
             ),
             actions: [
+              const ModeBadge(),
               IconButton(
                 onPressed: () => context.push(AppRoutes.providerCalendar),
                 icon: const Icon(Icons.calendar_month_outlined),
                 tooltip: l10n.inboxCalendarTooltip,
               ),
+              const SizedBox(width: 4),
             ],
             bottom: TabBar(
               controller: _tabController,

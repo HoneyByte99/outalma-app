@@ -168,6 +168,43 @@ class AppLocalizationsFr extends AppLocalizations {
   String get authErrorPhoneTaken => 'Ce numéro de téléphone est déjà utilisé.';
 
   @override
+  String get authErrorInvalidOtp => 'Code invalide ou expiré.';
+
+  @override
+  String get authErrorOtpSend => 'Impossible d\'envoyer le code. Réessayez.';
+
+  @override
+  String get phoneOtpSendCode => 'Recevoir le code';
+
+  @override
+  String get phoneOtpVerify => 'Vérifier';
+
+  @override
+  String get phoneOtpHint => 'Code à 6 chiffres';
+
+  @override
+  String get phoneOtpResend => 'Renvoyer le code';
+
+  @override
+  String get phoneOtpEditNumber => 'Modifier le numéro';
+
+  @override
+  String phoneOtpSentTo(String phone) {
+    return 'Code envoyé au $phone';
+  }
+
+  @override
+  String get phoneOtpNoAccount =>
+      'Aucun compte trouvé pour ce numéro. Inscrivez-vous d\'abord.';
+
+  @override
+  String get signUpVerificationNotice =>
+      'À la création du compte, un email de vérification sera envoyé. Cliquez sur le lien dans votre boîte mail pour confirmer votre adresse.';
+
+  @override
+  String get signUpVerificationResent => 'Email de vérification renvoyé.';
+
+  @override
   String homeGreeting(String name) {
     return 'Bonjour $name';
   }
@@ -195,6 +232,31 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get modeProviderActivated => 'Mode prestataire activé';
+
+  @override
+  String get modeBadgeTapToSwitch => 'Toucher pour changer de mode';
+
+  @override
+  String get verifiedBadgeLabel => 'Profil vérifié';
+
+  @override
+  String get serviceZonesLabel => 'Zones d\'intervention';
+
+  @override
+  String get reportDetailsLabel => 'Détails (facultatif)';
+
+  @override
+  String get reportDetailsHint =>
+      'Ajoutez des informations qui aideront notre équipe de modération…';
+
+  @override
+  String get dashboardStatsUpcomingWeek => 'À venir cette semaine';
+
+  @override
+  String get dashboardStatsThisMonth => 'Réservations ce mois';
+
+  @override
+  String get dashboardStatsAcceptanceRate => 'Taux d\'acceptation';
 
   @override
   String get locationTitle => 'Localisation';
@@ -278,6 +340,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get fieldFullName => 'Nom complet';
+
+  @override
+  String get fieldPhone => 'Numéro de téléphone';
 
   @override
   String get fieldRequired => 'Champ requis';
@@ -441,6 +506,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bookingAddressUnspecified => 'Non précisée';
+
+  @override
+  String bookingDistanceEstimate(String km) {
+    return 'Distance estimée : ~$km km';
+  }
+
+  @override
+  String get bookingOpenDirections => 'Itinéraire';
 
   @override
   String get bookingContact => 'Contact';

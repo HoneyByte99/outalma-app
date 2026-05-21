@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,13 +16,14 @@ import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
-import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
+import '../../domain/utils/distance.dart';
+import '../../app/app_spacing.dart';
 import '../shared/category_icon.dart';
+import '../shared/mode_badge.dart';
 import '../shared/network_image.dart';
-import '../shared/user_avatar.dart';
 import '../../../l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
@@ -32,26 +32,10 @@ import '../../../l10n/app_localizations.dart';
 
 final _selectedCategoryProvider = StateProvider<CategoryId?>((ref) => null);
 
-/// Haversine distance in km between two lat/lng points.
-double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
-  const r = 6371.0;
-  final dLat = _deg2rad(lat2 - lat1);
-  final dLng = _deg2rad(lng2 - lng1);
-  final a =
-      math.sin(dLat / 2) * math.sin(dLat / 2) +
-      math.cos(_deg2rad(lat1)) *
-          math.cos(_deg2rad(lat2)) *
-          math.sin(dLng / 2) *
-          math.sin(dLng / 2);
-  return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-}
-
-double _deg2rad(double deg) => deg * (math.pi / 180);
-
 bool _serviceMatchesLocation(Service service, LocationFilter filter) {
   for (final zone in service.serviceZones) {
     if (zone.latitude == 0 && zone.longitude == 0) continue;
-    final dist = _haversineKm(
+    final dist = haversineKm(
       filter.lat,
       filter.lng,
       zone.latitude,
@@ -74,7 +58,6 @@ class HomePage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final authAsync = ref.watch(authNotifierProvider);
-    final activeMode = ref.watch(activeModeProvider);
 
     final displayName = authAsync.valueOrNull is AuthAuthenticated
         ? (authAsync.valueOrNull as AuthAuthenticated).user.displayName
@@ -85,10 +68,10 @@ class HomePage extends ConsumerWidget {
       appBar: AppBar(
         titleSpacing: 0,
         title: const _LocationPill(),
-        actions: [
-          _ModeBadge(activeMode: activeMode),
-          const BellIconButton(),
-          const SizedBox(width: 4),
+        actions: const [
+          ModeBadge(),
+          BellIconButton(),
+          SizedBox(width: 4),
         ],
       ),
       body: Column(
@@ -96,7 +79,12 @@ class HomePage extends ConsumerWidget {
         children: [
           // Greeting
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.l,
+              AppSpacing.l,
+              AppSpacing.l,
+              AppSpacing.xs,
+            ),
             child: Text(
               displayName.isNotEmpty
                   ? l10n.homeGreeting(displayName)
@@ -105,7 +93,12 @@ class HomePage extends ConsumerWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.l,
+              0,
+              AppSpacing.l,
+              AppSpacing.l,
+            ),
             child: Text(
               l10n.homeSearchPrompt,
               style: Theme.of(
@@ -115,7 +108,7 @@ class HomePage extends ConsumerWidget {
           ),
           // Category chips
           const _CategoryChipsRow(),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.m),
           // Service grid
           const Expanded(child: _ServiceGrid()),
         ],
@@ -841,8 +834,8 @@ class _ServiceGrid extends ConsumerWidget {
           builder: (context, constraints) {
             final width = constraints.maxWidth;
             final columns = width > 700 ? 3 : 2;
-            const spacing = 12.0;
-            const hPad = 16.0;
+            const spacing = AppSpacing.l; // 16 — more breathing room (A.5)
+            const hPad = AppSpacing.l;
             final cardWidth =
                 (width - hPad * 2 - (columns - 1) * spacing) / columns;
             // Image takes cardWidth height (square), info block ~100px
@@ -850,18 +843,42 @@ class _ServiceGrid extends ConsumerWidget {
             final cardHeight = cardWidth + infoHeight;
             final ratio = cardWidth / cardHeight;
 
-            return GridView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                crossAxisSpacing: spacing,
-                mainAxisSpacing: spacing,
-                childAspectRatio: ratio,
-              ),
-              itemCount: filtered.length,
-              itemBuilder: (context, i) {
-                return _ServiceCard(service: filtered[i]);
+            // Auto-load more services when the user scrolls near the bottom
+            // (B.4 pagination). We bump the page size by 30 each time, which
+            // makes the underlying Firestore stream extend its limit.
+            return NotificationListener<ScrollNotification>(
+              onNotification: (notif) {
+                if (notif is ScrollEndNotification &&
+                    notif.metrics.extentAfter < 200) {
+                  final currentLimit =
+                      ref.read(serviceListPageSizeProvider);
+                  if (services.length >= currentLimit) {
+                    // Only request more if we've actually got the previous
+                    // page filled — otherwise we're at the true end.
+                    ref.read(serviceListPageSizeProvider.notifier).state =
+                        currentLimit + 30;
+                  }
+                }
+                return false;
               },
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.l,
+                  AppSpacing.s,
+                  AppSpacing.l,
+                  AppSpacing.xxl,
+                ),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  childAspectRatio: ratio,
+                ),
+                itemCount: filtered.length,
+                itemBuilder: (context, i) {
+                  return _ServiceCard(service: filtered[i]);
+                },
+              ),
             );
           },
         );
@@ -896,14 +913,14 @@ class _ServiceCard extends ConsumerWidget {
       child: Container(
         decoration: BoxDecoration(
           color: oc.cardSurface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           border: Border.all(color: oc.border),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x1A1B3A4B),
+              color: oc.shadow,
               blurRadius: 16,
               spreadRadius: 1,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -927,34 +944,17 @@ class _ServiceCard extends ConsumerWidget {
                           )
                         : _iconPlaceholder(oc),
                     Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: 32,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              oc.cardSurface.withValues(alpha: 0.55),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 10,
-                      left: 10,
+                      top: AppSpacing.s,
+                      left: AppSpacing.s,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
+                          horizontal: AppSpacing.s,
+                          vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: oc.primary,
-                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusSmall),
                         ),
                         child: Text(
                           service.categoryId.label,
@@ -971,48 +971,52 @@ class _ServiceCard extends ConsumerWidget {
               ),
             ),
             // Info — intrinsic height, never overflows
+            // Info block \u2014 hierarchy A.4: title dominant, price+rating
+            // secondary on one row, provider name as discreet tertiary.
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.m,
+                AppSpacing.s + 2,
+                AppSpacing.m,
+                AppSpacing.s + 2,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     service.title,
-                    style: Theme.of(context).textTheme.titleSmall,
+                    style: Theme.of(context).textTheme.titleMedium,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    priceLabel,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: oc.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  _RatingRow(reviews: reviews),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Row(
                     children: [
-                      UserAvatar(
-                        displayName: providerUser?.displayName ?? '',
-                        photoPath: providerUser?.photoPath,
-                        radius: 10,
-                      ),
-                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          providerUser?.displayName ?? '\u2014',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: oc.secondaryText),
+                          priceLabel,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                color: oc.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      _RatingRow(reviews: reviews),
                     ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    providerUser?.displayName ?? '\u2014',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.secondaryText,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -1154,63 +1158,6 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Mode badge
-// ---------------------------------------------------------------------------
-
-class _ModeBadge extends ConsumerWidget {
-  const _ModeBadge({required this.activeMode});
-
-  final ActiveMode activeMode;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final oc = context.oc;
-    final isClient = activeMode == ActiveMode.client;
-    final label = isClient ? l10n.modeClient : l10n.modeProvider;
-    final color = isClient ? oc.primary : oc.success;
-
-    return GestureDetector(
-      onTap: () {
-        final newMode = isClient ? ActiveMode.provider : ActiveMode.client;
-        ref.read(authNotifierProvider.notifier).switchMode(newMode);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              newMode == ActiveMode.client
-                  ? l10n.modeClientActivated
-                  : l10n.modeProviderActivated,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(Icons.swap_horiz_rounded, size: 14, color: color),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.onRetry});

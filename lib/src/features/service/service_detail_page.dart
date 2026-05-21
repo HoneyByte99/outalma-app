@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../domain/enums/category_id.dart';
@@ -14,6 +16,8 @@ import '../../domain/enums/price_type.dart';
 import '../../domain/models/service.dart';
 import '../booking/booking_request_sheet.dart';
 import '../shared/network_image.dart';
+import '../shared/verified_badge.dart';
+import 'service_zones_map.dart';
 import '../shared/user_avatar.dart';
 
 class ServiceDetailPage extends ConsumerWidget {
@@ -137,8 +141,15 @@ class _ServiceDetailContent extends ConsumerWidget {
                     const SizedBox(height: 20),
                   ],
 
-                  // Service zones
+                  // Service zones — map + text legend (B.2).
                   if (service.serviceZones.isNotEmpty) ...[
+                    Text(
+                      l10n.serviceZonesLabel,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: AppSpacing.s),
+                    ServiceZonesMap(zones: service.serviceZones),
+                    const SizedBox(height: AppSpacing.s),
                     for (final zone in service.serviceZones)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 4),
@@ -235,14 +246,18 @@ class _ProviderRow extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
+    final providerProfile =
+        ref.watch(providerProfileByIdProvider(providerId)).valueOrNull;
+    final isVerified = providerProfile != null &&
+        (user?.phoneE164?.isNotEmpty ?? false);
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.providerProfile(providerId)),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.m),
         decoration: BoxDecoration(
           color: oc.cardSurface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium + 2),
           border: Border.all(color: oc.border),
         ),
         child: Row(
@@ -252,7 +267,7 @@ class _ProviderRow extends ConsumerWidget {
               photoPath: user?.photoPath,
               radius: 22,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.m),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,12 +278,24 @@ class _ProviderRow extends ConsumerWidget {
                       context,
                     ).textTheme.labelSmall?.copyWith(color: oc.secondaryText),
                   ),
-                  Text(
-                    user?.displayName ?? '—',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: oc.primaryText,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          user?.displayName ?? '—',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: oc.primaryText,
+                                fontWeight: FontWeight.w600,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isVerified) ...[
+                        const SizedBox(width: 4),
+                        const VerifiedBadge(compact: true),
+                      ],
+                    ],
                   ),
                 ],
               ),

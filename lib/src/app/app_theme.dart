@@ -109,26 +109,32 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     shadow: Color(0x1F1B3A4B),
   );
 
-  /// Dark palette — mint inverts with navy.
+  /// Dark palette — mint accent on warm-neutral surfaces.
+  ///
+  /// Rebalanced (mai 2026) after UX review: previous palette was too saturated
+  /// blue-navy, which made the app feel "tech terminal" instead of a service
+  /// marketplace. New surfaces are slightly desaturated and warmer; borders
+  /// are softened (less perceptible), secondary text is lighter for reduced
+  /// fatigue on long reading sessions.
   static const dark = OutalmaColors(
     primary: Color(0xFF6FE8CC),
     primaryLight: Color(0xFF9FF2DF),
     accent: Color(0xFF1B3A4B),
     accentLight: Color(0xFF2A5570),
-    primaryText: Color(0xFFE2EEF4),
-    secondaryText: Color(0xFF7AA3B5),
-    background: Color(0xFF0A1A24),
-    surface: Color(0xFF122230),
-    cardSurface: Color(0xFF162838),
-    surfaceVariant: Color(0xFF1A3040),
-    border: Color(0xFF2A4555),
-    inputFill: Color(0xFF0F1E28),
+    primaryText: Color(0xFFE5ECF1),
+    secondaryText: Color(0xFF95A7B5),
+    background: Color(0xFF121821),
+    surface: Color(0xFF1A2029),
+    cardSurface: Color(0xFF1F252F),
+    surfaceVariant: Color(0xFF252C37),
+    border: Color(0xFF2B323D),
+    inputFill: Color(0xFF181E27),
     success: Color(0xFF2DD17A),
     successAccent: Color(0x1A2DD17A),
     warning: Color(0xFFFFBB33),
     error: Color(0xFFFF6B68),
-    icons: Color(0xFF5A8090),
-    shadow: Color(0x1A000000),
+    icons: Color(0xFF7A8B98),
+    shadow: Color(0x33000000),
   );
 
   @override
@@ -527,34 +533,39 @@ abstract final class AppTheme {
         fontWeight: FontWeight.w600,
         color: oc.primaryText,
       ),
+      // Headings — page-level and section-level titles.
       headlineLarge: GoogleFonts.inter(
-        fontSize: 28,
-        fontWeight: FontWeight.bold,
+        fontSize: 30,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
         color: oc.primaryText,
       ),
       headlineMedium: GoogleFonts.inter(
         fontSize: 24,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
         color: oc.primaryText,
       ),
       headlineSmall: GoogleFonts.inter(
         fontSize: 20,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w700,
         color: oc.primaryText,
       ),
+      // Titles — card/component-level. Wider gap between Large and Medium
+      // so a card's primary line clearly outranks its secondary line.
       titleLarge: GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
         color: oc.primaryText,
       ),
       titleMedium: GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
         color: oc.primaryText,
       ),
       titleSmall: GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
         color: oc.primaryText,
       ),
       labelLarge: GoogleFonts.inter(

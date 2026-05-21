@@ -55,6 +55,22 @@
   "authErrorWeakPassword": "Password too weak (min. 6 characters).",
   "authErrorSignUpFailed": "Sign up failed. Check your information.",
   "authErrorPhoneTaken": "This phone number is already in use.",
+  "authErrorInvalidOtp": "Invalid or expired code.",
+  "authErrorOtpSend": "Could not send the code. Please retry.",
+  "phoneOtpSendCode": "Get code",
+  "phoneOtpVerify": "Verify",
+  "phoneOtpHint": "6-digit code",
+  "phoneOtpResend": "Resend code",
+  "phoneOtpEditNumber": "Edit number",
+  "phoneOtpSentTo": "Code sent to {phone}",
+  "@phoneOtpSentTo": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
+  "phoneOtpNoAccount": "No account found for this number. Please sign up first.",
+  "signUpVerificationNotice": "After signing up, a verification email will be sent. Tap the link in your inbox to confirm your address.",
+  "signUpVerificationResent": "Verification email re-sent.",
 
   "homeGreeting": "Hello {name}",
   "@homeGreeting": {
@@ -70,6 +86,14 @@
   "modeProvider": "Provider",
   "modeClientActivated": "Client mode activated",
   "modeProviderActivated": "Provider mode activated",
+  "modeBadgeTapToSwitch": "Tap to switch mode",
+  "verifiedBadgeLabel": "Verified",
+  "serviceZonesLabel": "Service areas",
+  "reportDetailsLabel": "Details (optional)",
+  "reportDetailsHint": "Add information that will help our moderation team…",
+  "dashboardStatsUpcomingWeek": "Upcoming this week",
+  "dashboardStatsThisMonth": "Bookings this month",
+  "dashboardStatsAcceptanceRate": "Acceptance rate",
 
   "locationTitle": "Location",
   "locationAllFrance": "All of France",
@@ -108,6 +132,7 @@
   "profileLanguage": "Language",
   "fieldEmail": "Email",
   "fieldFullName": "Full name",
+  "fieldPhone": "Phone number",
   "fieldRequired": "Required field",
   "fieldCountry": "Country",
   "modeClientSubtitle": "Book services",
@@ -175,6 +200,13 @@
   "bookingScheduleUnspecified": "Unspecified",
   "bookingAddress": "Address",
   "bookingAddressUnspecified": "Unspecified",
+  "bookingDistanceEstimate": "Estimated distance: ~{km} km",
+  "@bookingDistanceEstimate": {
+    "placeholders": {
+      "km": {"type": "String"}
+    }
+  },
+  "bookingOpenDirections": "Directions",
   "bookingContact": "Contact",
   "bookingPhoneNotShared": "Phone number not yet shared",
   "bookingAddPhoneInProfile": "Add your phone number in your profile to share it.",

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
+import '../shared/mode_badge.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
@@ -16,7 +17,6 @@ import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_user.dart';
 import '../../domain/models/review.dart';
 import '../../domain/utils/country_utils.dart';
-import '../shared/phone_field.dart';
 import '../shared/user_avatar.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -38,6 +38,7 @@ class ProfilePage extends ConsumerWidget {
         title: Text(l10n.profileTitle),
         backgroundColor: oc.background,
         surfaceTintColor: Colors.transparent,
+        actions: const [ModeBadge(), SizedBox(width: 4)],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
@@ -293,7 +294,6 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
           .read(authNotifierProvider.notifier)
           .updateProfile(
             displayName: _nameCtrl.text.trim(),
-            phoneE164: _phone,
             country: _country,
           );
       if (mounted) {
@@ -353,8 +353,13 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
             ),
             const SizedBox(height: 14),
 
-            // Phone
-            PhoneField(initialValue: _phone, onChanged: (v) => _phone = v),
+            // Phone — read-only. Changing the phone requires re-verification
+            // via OTP and will be handled by a dedicated flow.
+            _ReadOnlyField(
+              label: l10n.fieldPhone,
+              value: _phone == null || _phone!.isEmpty ? '—' : _phone!,
+              icon: Icons.phone_outlined,
+            ),
             const SizedBox(height: 14),
 
             // Country picker
@@ -1200,12 +1205,15 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Refined section header (A.6): less heavy than uppercase tracking.
+    // Same secondary color but normal weight + slight tracking only.
     return Text(
-      label,
-      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+      label.toUpperCase(),
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
         color: context.oc.secondaryText,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.8,
+        letterSpacing: 1.2,
+        fontSize: 11,
       ),
     );
   }
