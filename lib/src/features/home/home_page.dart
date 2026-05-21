@@ -1050,20 +1050,19 @@ class _RatingRow extends StatelessWidget {
 
     if (reviews.isEmpty) {
       return Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.star_outline_rounded, size: 12, color: oc.icons),
           const SizedBox(width: 3),
-          Flexible(
-            child: Text(
-              'Nouveau',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: oc.secondaryText,
-                fontStyle: FontStyle.italic,
-                fontSize: 11,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          Text(
+            'Nouveau',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: oc.secondaryText,
+              fontStyle: FontStyle.italic,
+              fontSize: 11,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       );
@@ -1072,20 +1071,19 @@ class _RatingRow extends StatelessWidget {
     final avg = reviews.fold<int>(0, (s, r) => s + r.rating) / reviews.length;
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.star_rounded, size: 12, color: Color(0xFFFBBF24)),
         const SizedBox(width: 2),
-        Flexible(
-          child: Text(
-            '${avg.toStringAsFixed(1)} (${reviews.length})',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: oc.secondaryText,
-              fontWeight: FontWeight.w500,
-              fontSize: 11,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        Text(
+          '${avg.toStringAsFixed(1)} (${reviews.length})',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: oc.secondaryText,
+            fontWeight: FontWeight.w500,
+            fontSize: 11,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
