@@ -216,10 +216,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeSearchPrompt => 'Que recherchez-vous ?';
 
   @override
+  String get homeSearchHint => 'Rechercher un service…';
+
+  @override
+  String homeSearchEmpty(String query) {
+    return 'Aucun résultat pour « $query »';
+  }
+
+  @override
   String get categoryAll => 'Tout';
 
   @override
   String get servicesEmpty => 'Aucun service disponible\npour le moment';
+
+  @override
+  String get clearFilters => 'Effacer les filtres';
 
   @override
   String get modeClient => 'Client';
@@ -432,6 +443,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notPublished => 'Non publié';
 
   @override
+  String get ratingNew => 'Nouveau';
+
+  @override
   String get tooltipProviderProfile => 'Mon profil prestataire';
 
   @override
@@ -627,6 +641,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bookingCancelError => 'Impossible d\'annuler. Réessayez.';
 
   @override
+  String get bookingCancelSuccess => 'Demande annulée.';
+
+  @override
   String get bookingConfirmDoneTitle => 'Confirmer la fin ?';
 
   @override
@@ -655,6 +672,11 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get bookingStep1Hint =>
       'Ex: J\'ai besoin d\'un nettoyage complet de mon appartement…';
+
+  @override
+  String bookingDefaultMessage(String serviceTitle) {
+    return 'Bonjour, je suis intéressé(e) par votre service « $serviceTitle ». Pouvez-vous me contacter pour convenir d\'un rendez-vous ? Merci !';
+  }
 
   @override
   String get bookingStep2Title => 'Date et heure souhaitées';
@@ -686,6 +708,23 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bookingSend => 'Envoyer la demande';
+
+  @override
+  String get bookingVoiceMessageLabel => 'Message vocal';
+
+  @override
+  String get bookingRecordPrompt => 'Appuyez pour enregistrer';
+
+  @override
+  String get bookingDeleteRecording => 'Supprimer l\'enregistrement';
+
+  @override
+  String get bookingVoicePermissionDenied =>
+      'Permission micro refusée. Vérifiez les réglages.';
+
+  @override
+  String get bookingVoiceUploadFailed =>
+      'Échec de l\'envoi du message vocal. Réessayez.';
 
   @override
   String get bookingSentSuccess => 'Demande envoyée avec succès ✓';

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
@@ -1007,6 +1008,7 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
     final cancelNo = l10n.bookingCancelNo;
     final cancelYes = l10n.bookingCancelYes;
     final cancelErr = l10n.bookingCancelError;
+    final cancelSuccess = l10n.bookingCancelSuccess;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1022,7 +1024,7 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: context.oc.error,
-              minimumSize: Size.zero,
+              minimumSize: const Size(0, AppSpacing.minTouchTarget),
             ),
             child: Text(cancelYes),
           ),
@@ -1034,6 +1036,12 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
     setState(() => _loading = true);
     try {
       await ref.read(cancelBookingUseCaseProvider).call(widget.booking.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(cancelSuccess)),
+        );
+        context.pop();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1116,7 +1124,7 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
     setState(() => _loading = true);
     try {

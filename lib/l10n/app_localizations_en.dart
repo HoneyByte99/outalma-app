@@ -210,10 +210,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSearchPrompt => 'What are you looking for?';
 
   @override
+  String get homeSearchHint => 'Search for a service…';
+
+  @override
+  String homeSearchEmpty(String query) {
+    return 'No results for « $query »';
+  }
+
+  @override
   String get categoryAll => 'All';
 
   @override
   String get servicesEmpty => 'No services available\nright now';
+
+  @override
+  String get clearFilters => 'Clear filters';
 
   @override
   String get modeClient => 'Client';
@@ -425,6 +436,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notPublished => 'Unpublished';
 
   @override
+  String get ratingNew => 'New';
+
+  @override
   String get tooltipProviderProfile => 'My provider profile';
 
   @override
@@ -620,6 +634,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingCancelError => 'Could not cancel. Please try again.';
 
   @override
+  String get bookingCancelSuccess => 'Request cancelled.';
+
+  @override
   String get bookingConfirmDoneTitle => 'Confirm completion?';
 
   @override
@@ -647,6 +664,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookingStep1Hint => 'E.g. I need a full cleaning of my apartment…';
+
+  @override
+  String bookingDefaultMessage(String serviceTitle) {
+    return 'Hello, I am interested in your service « $serviceTitle ». Could you contact me to arrange an appointment? Thank you!';
+  }
 
   @override
   String get bookingStep2Title => 'Preferred date and time';
@@ -678,6 +700,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookingSend => 'Send request';
+
+  @override
+  String get bookingVoiceMessageLabel => 'Voice message';
+
+  @override
+  String get bookingRecordPrompt => 'Tap to record';
+
+  @override
+  String get bookingDeleteRecording => 'Delete recording';
+
+  @override
+  String get bookingVoicePermissionDenied =>
+      'Microphone permission denied. Check your settings.';
+
+  @override
+  String get bookingVoiceUploadFailed =>
+      'Voice message upload failed. Please try again.';
 
   @override
   String get bookingSentSuccess => 'Request sent successfully ✓';

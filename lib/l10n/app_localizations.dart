@@ -482,6 +482,18 @@ abstract class AppLocalizations {
   /// **'What are you looking for?'**
   String get homeSearchPrompt;
 
+  /// No description provided for @homeSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for a service…'**
+  String get homeSearchHint;
+
+  /// No description provided for @homeSearchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No results for « {query} »'**
+  String homeSearchEmpty(String query);
+
   /// No description provided for @categoryAll.
   ///
   /// In en, this message translates to:
@@ -493,6 +505,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No services available\nright now'**
   String get servicesEmpty;
+
+  /// No description provided for @clearFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get clearFilters;
 
   /// No description provided for @modeClient.
   ///
@@ -878,6 +896,12 @@ abstract class AppLocalizations {
   /// **'Unpublished'**
   String get notPublished;
 
+  /// No description provided for @ratingNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get ratingNew;
+
   /// No description provided for @tooltipProviderProfile.
   ///
   /// In en, this message translates to:
@@ -1250,6 +1274,12 @@ abstract class AppLocalizations {
   /// **'Could not cancel. Please try again.'**
   String get bookingCancelError;
 
+  /// No description provided for @bookingCancelSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Request cancelled.'**
+  String get bookingCancelSuccess;
+
   /// No description provided for @bookingConfirmDoneTitle.
   ///
   /// In en, this message translates to:
@@ -1303,6 +1333,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'E.g. I need a full cleaning of my apartment…'**
   String get bookingStep1Hint;
+
+  /// No description provided for @bookingDefaultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello, I am interested in your service « {serviceTitle} ». Could you contact me to arrange an appointment? Thank you!'**
+  String bookingDefaultMessage(String serviceTitle);
 
   /// No description provided for @bookingStep2Title.
   ///
@@ -1363,6 +1399,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send request'**
   String get bookingSend;
+
+  /// No description provided for @bookingVoiceMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice message'**
+  String get bookingVoiceMessageLabel;
+
+  /// No description provided for @bookingRecordPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to record'**
+  String get bookingRecordPrompt;
+
+  /// No description provided for @bookingDeleteRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete recording'**
+  String get bookingDeleteRecording;
+
+  /// No description provided for @bookingVoicePermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission denied. Check your settings.'**
+  String get bookingVoicePermissionDenied;
+
+  /// No description provided for @bookingVoiceUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice message upload failed. Please try again.'**
+  String get bookingVoiceUploadFailed;
 
   /// No description provided for @bookingSentSuccess.
   ///

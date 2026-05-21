@@ -257,6 +257,7 @@
   "bookingCancelNo": "Non",
   "bookingCancelButton": "Annuler la demande",
   "bookingCancelError": "Impossible d'annuler. Réessayez.",
+  "bookingCancelSuccess": "Demande annulée.",
   "bookingConfirmDoneTitle": "Confirmer la fin ?",
   "bookingConfirmDoneContent": "En confirmant, le service sera marqué comme terminé. Vous pourrez ensuite laisser un avis.",
   "bookingConfirmDoneButton": "Confirmer la fin du service",

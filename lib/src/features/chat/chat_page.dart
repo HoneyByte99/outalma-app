@@ -43,6 +43,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _sending = false;
   bool _recording = false;
   int _lastMarkedReadCount = 0;
+  int _lastScrolledCount = 0;
 
   @override
   void initState() {
@@ -126,6 +127,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     String url, {
     String? caption,
   }) async {
+    if (_sending) return;
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
@@ -232,7 +234,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     setState(() => _recording = false);
     if (path == null || !mounted) return;
 
-    setState(() => _sending = true);
     try {
       final media = ref.read(chatMediaServiceProvider);
       // path is a blob URL on web (fetch via http) or a filesystem path on
@@ -248,14 +249,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
         );
       }
-    } finally {
-      if (mounted) setState(() => _sending = false);
     }
   }
 
   void _cancelRecording() async {
-    await _recorder.stop();
-    setState(() => _recording = false);
+    try {
+      await _recorder.stop();
+    } catch (_) {}
+    if (mounted) setState(() => _recording = false);
   }
 
   @override
@@ -314,12 +315,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 if (messages.isEmpty) {
                   return _EmptyChat();
                 }
-                // Auto-scroll when new messages arrive. _markRead is triggered
-                // via ref.listen above (on message count change), not here, to
-                // avoid one Firestore write per frame.
-                SchedulerBinding.instance.addPostFrameCallback((_) {
-                  _scrollToBottom();
-                });
+                // Auto-scroll only when new messages arrive, not on every
+                // rebuild (e.g. keystrokes), to avoid scroll fighting.
+                if (messages.length > _lastScrolledCount) {
+                  _lastScrolledCount = messages.length;
+                  SchedulerBinding.instance.addPostFrameCallback((_) {
+                    _scrollToBottom();
+                  });
+                }
 
                 return ListView.builder(
                   controller: _scrollController,

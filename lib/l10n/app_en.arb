@@ -257,6 +257,7 @@
   "bookingCancelNo": "No",
   "bookingCancelButton": "Cancel request",
   "bookingCancelError": "Could not cancel. Please try again.",
+  "bookingCancelSuccess": "Request cancelled.",
   "bookingConfirmDoneTitle": "Confirm completion?",
   "bookingConfirmDoneContent": "By confirming, the service will be marked as completed. You can then leave a review.",
   "bookingConfirmDoneButton": "Confirm service completion",

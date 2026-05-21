@@ -11,7 +11,10 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../shared/mode_badge.dart';
 import '../../application/booking/booking_providers.dart';
+import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
+import '../../application/user/user_providers.dart';
+import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
 
@@ -89,12 +92,17 @@ class _BookingTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bookingsAsync = ref.watch(customerBookingsProvider);
+    final isProvider = ref.watch(activeModeProvider) == ActiveMode.provider;
+    final bookingsAsync = isProvider
+        ? ref.watch(providerBookingHistoryProvider)
+        : ref.watch(customerBookingsProvider);
 
     return bookingsAsync.when(
       loading: () => const _BookingListLoading(),
       error: (_, __) => _BookingListError(
-        onRetry: () => ref.invalidate(customerBookingsProvider),
+        onRetry: () => isProvider
+            ? ref.invalidate(providerBookingHistoryProvider)
+            : ref.invalidate(customerBookingsProvider),
       ),
       data: (bookings) {
         final filtered = bookings.where((b) {
@@ -192,7 +200,7 @@ class _ActiveBookingsWithCalendarState
                 _focusedDay = focused;
               });
             },
-            onPageChanged: (focused) => _focusedDay = focused,
+            onPageChanged: (focused) => setState(() => _focusedDay = focused),
             eventLoader: (day) => widget.bookings
                 .where(
                   (b) =>
