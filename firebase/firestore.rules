@@ -31,11 +31,26 @@ service cloud.firestore {
 
     // ---------- USERS ----------
     // Any signed-in user may read profiles (needed to display provider names/avatars
-    // on service cards, chat tiles, etc.). Writes remain self-only.
+    // on service cards, chat tiles, etc.). Writes remain self-only AND must not
+    // touch security-sensitive fields (phoneE164, email, id, createdAt). Those
+    // fields are server-managed (Cloud Functions via admin SDK bypass these rules).
+    // This is the primary defence against account-takeover via phone-claim attacks
+    // (cf. security review C1 / C2).
     match /users/{uid} {
+      function isUserUpdateSafe() {
+        return request.resource.data.phoneE164 == resource.data.phoneE164
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.id == resource.data.id
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+      function isUserCreateSafe() {
+        return request.resource.data.id == uid
+          && !('phoneE164' in request.resource.data);
+      }
+
       allow read: if signedIn();
-      allow create: if isAdmin() || isSelf(uid);
-      allow update: if isAdmin() || isSelf(uid);
+      allow create: if isAdmin() || (isSelf(uid) && isUserCreateSafe());
+      allow update: if isAdmin() || (isSelf(uid) && isUserUpdateSafe());
       allow delete: if isAdmin();
     }
 
@@ -176,6 +191,8 @@ service cloud.firestore {
     }
 
     // ---------- REVIEWS ----------
+    // Reviews are only allowed after a booking reaches "done" status.
+    // Reviewer must be a participant of the referenced booking.
     match /reviews/{reviewId} {
       allow read: if true;
 
@@ -184,7 +201,11 @@ service cloud.firestore {
         && request.resource.data.bookingId is string
         && request.resource.data.rating is int
         && request.resource.data.rating >= 1
-        && request.resource.data.rating <= 5;
+        && request.resource.data.rating <= 5
+        && bookingExists(request.resource.data.bookingId)
+        && bookingData(request.resource.data.bookingId).status == "done"
+        && (bookingData(request.resource.data.bookingId).customerId == request.auth.uid
+            || bookingData(request.resource.data.bookingId).providerId == request.auth.uid);
 
       allow update, delete: if isAdmin();
     }

@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "623675424162",
+    "project_number": "YOUR_PROJECT_NUMBER",
     "project_id": "outalmaservice-d1e59",
     "storage_bucket": "outalmaservice-d1e59.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:623675424162:android:6c5cf9efb8af1917c506fb",
+        "mobilesdk_app_id": "YOUR_ANDROID_APP_ID",
         "android_client_info": {
-          "package_name": "com.honeybyte.outalma_app"
+          "package_name": "com.honeybyte.outalmaApp"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAJoSegWh2DoALcQ6v8AU5C8smkhgcnnAA"
+          "current_key": "YOUR_ANDROID_API_KEY"
         }
       ],
       "services": {

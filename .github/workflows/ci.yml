@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-# Opt into Node.js 24 to avoid deprecation warnings on Actions runners.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # Pinned to match the local dev environment (Dart 3.11.3).
@@ -20,6 +19,37 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # ── Firebase config injection ──────────────────────────────────────────
+      # Files are gitignored. Stored as base64-encoded GitHub Secrets.
+      # To update secrets locally:
+      #   base64 -i ios/Runner/GoogleService-Info.plist | gh secret set GOOGLE_SERVICE_INFO_PLIST
+      #   base64 -i android/app/google-services.json   | gh secret set GOOGLE_SERVICES_JSON
+      #   base64 -i lib/firebase_options.dart           | gh secret set FIREBASE_OPTIONS_DART
+      - name: Inject Firebase config
+        env:
+          GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
+        run: |
+          echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          echo "$GOOGLE_SERVICES_JSON"       | base64 --decode > android/app/google-services.json
+          echo "$FIREBASE_OPTIONS_DART"      | base64 --decode > lib/firebase_options.dart
+
+      # ── Maps API key injection ─────────────────────────────────────────────
+      # MAPS_API_KEY  — Google Maps SDK key for native iOS + Android rendering.
+      # PLACES_API_KEY — Google Places HTTP API key for address autocomplete.
+      # Both are injected here; PLACES_API_KEY is also passed as --dart-define
+      # so the Dart layer can read it via String.fromEnvironment.
+      - name: Inject Maps config
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          # Android: build.gradle.kts reads MAPS_API_KEY from local.properties
+          # or System.getenv — writing local.properties covers both paths.
+          echo "MAPS_API_KEY=$MAPS_API_KEY" >> android/local.properties
+          # iOS: Secrets.xcconfig is read by the Xcode build via xcconfig chain.
+          echo "MAPS_API_KEY = $MAPS_API_KEY" > ios/Flutter/Secrets.xcconfig
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -35,21 +65,19 @@ jobs:
         run: flutter pub get
 
       # ── Format ────────────────────────────────────────────────────────────
-      # Fails if any file is not formatted — run `dart format lib/ test/` locally.
       - name: Check formatting
         run: dart format --output=none --set-exit-if-changed lib/ test/
 
       # ── Analyze ───────────────────────────────────────────────────────────
-      # Uses analysis_options.yaml — warnings are fatal, errors block merge.
       - name: Analyze
         run: flutter analyze --fatal-warnings
 
       # ── Test ──────────────────────────────────────────────────────────────
-      # PLACES_API_KEY is injected from GitHub Secrets so tests that exercise
-      # GeocodingService have a key available. Falls back to empty string when
-      # the secret is absent (forks / dependabot PRs).
       - name: Test
-        run: flutter test --coverage --reporter expanded --dart-define=PLACES_API_KEY=${{ secrets.PLACES_API_KEY }}
+        run: |
+          flutter test --coverage --reporter expanded \
+            --dart-define=PLACES_API_KEY=${{ secrets.PLACES_API_KEY }} \
+            --dart-define=MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}
 
       # ── Coverage ──────────────────────────────────────────────────────────
       - name: Upload coverage to Codecov

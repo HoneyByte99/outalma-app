@@ -44,8 +44,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Seed script credentials
+# Seed/admin script credentials — never commit
 scripts/service-account.json
+**/service-account*.json
+**/*firebase-adminsdk*.json
+secrets/
 
 # Environment / secrets — never commit billing-sensitive keys
 .env
@@ -54,3 +57,9 @@ scripts/service-account.json
 
 # iOS secrets — copy Secrets.xcconfig.example → Secrets.xcconfig and fill in values
 ios/Flutter/Secrets.xcconfig
+
+# Firebase config — injected by CI (GitHub Secrets); never commit live credentials.
+# Copy the .example versions, fill in real values, and add them as GitHub Secrets.
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+lib/firebase_options.dart

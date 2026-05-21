@@ -31,17 +31,17 @@ service firebase.storage {
 
     // Public service images
     // Path: /public/services/{serviceId}/{filename}
-    // Note: allow write for any authenticated user with valid image.
-    // Ownership is enforced at the Firestore service-doc level — the
-    // photo path includes the serviceId which the user generated client-side.
-    // A malicious user could upload to an arbitrary serviceId path but
-    // cannot link it to someone else's service (Firestore rules block that).
+    // Write restricted to the provider who owns the service document.
+    // This prevents arbitrary uploads to other providers' service paths.
+    // Note: if the service doc does not exist yet (new service flow), the
+    // upload must happen after the Firestore service doc is created.
     match /public/services/{serviceId}/{filename} {
       allow read: if true;
       allow write: if isAdmin() || (
         signedIn()
         && isImage()
         && smallEnough(5 * 1024 * 1024)
+        && firestore.get(/databases/(default)/documents/services/$(serviceId)).data.providerId == request.auth.uid
       );
     }
 
@@ -56,14 +56,20 @@ service firebase.storage {
 
     // Chat media (images + voice messages)
     // Path: /private/chats/{chatId}/media/{filename}
-    // Note: participant check is enforced at the app layer (Firestore chat
-    // rules already restrict who can read/write messages). Storage rules
-    // allow any authenticated user to upload — cross-service Firestore
-    // lookups from Storage rules fail on web (CORS).
+    // Restricted to chat participants via cross-service Firestore lookup.
+    // Note: firestore.get() works on native iOS/Android SDKs (our primary
+    // target). The web SDK has CORS limitations for cross-service lookups
+    // but the web build is not the production target for this app.
     match /private/chats/{chatId}/media/{filename} {
-      allow read: if signedIn();
+      function isChatParticipant() {
+        return signedIn()
+          && request.auth.uid in
+             firestore.get(/databases/(default)/documents/chats/$(chatId)).data.participantIds;
+      }
+
+      allow read: if isAdmin() || isChatParticipant();
       allow write: if isAdmin() || (
-        signedIn()
+        isChatParticipant()
         && (request.resource.contentType.matches('image/.*')
             || request.resource.contentType.matches('audio/.*'))
         && smallEnough(20 * 1024 * 1024)
