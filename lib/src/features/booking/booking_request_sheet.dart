@@ -1,14 +1,23 @@
+import 'dart:async';
+import 'dart:io' show File;
+
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/booking/booking_providers.dart';
 import '../../application/provider/provider_providers.dart';
+import '../../data/services/chat_media_service.dart';
 import '../../data/services/geocoding_service.dart';
 
 class BookingRequestSheet extends ConsumerStatefulWidget {
@@ -37,6 +46,16 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   final _messageFocus = FocusNode();
   final _addressFocus = FocusNode();
 
+  // Voice message state
+  bool _voiceMode = false;
+  final _recorder = AudioRecorder();
+  bool _recording = false;
+  Uint8List? _recordedBytes;
+  int _recordingSeconds = 0;
+  Timer? _recordingTimer;
+  AudioPlayer? _player;
+  bool _playing = false;
+
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   String? _scheduleConflict; // warning message if slot is busy
@@ -63,7 +82,100 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     _addressController.dispose();
     _messageFocus.dispose();
     _addressFocus.dispose();
+    _recorder.dispose();
+    _recordingTimer?.cancel();
+    _player?.dispose();
     super.dispose();
+  }
+
+  // ---- Voice recording helpers ----
+
+  Future<void> _startRecording() async {
+    try {
+      if (kIsWeb) {
+        await _recorder.start(
+          const RecordConfig(encoder: AudioEncoder.opus),
+          path: '',
+        );
+      } else {
+        if (!await _recorder.hasPermission()) return;
+        final dir = await getTemporaryDirectory();
+        final path =
+            '${dir.path}/booking_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        await _recorder.start(
+          const RecordConfig(encoder: AudioEncoder.aacLc),
+          path: path,
+        );
+      }
+      _recordingSeconds = 0;
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() => _recordingSeconds++);
+      });
+      if (mounted) setState(() => _recording = true);
+    } catch (_) {
+      // Permission denied or mic unavailable — stay in text mode silently.
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    _recordingTimer?.cancel();
+    final path = await _recorder.stop();
+    if (mounted) setState(() => _recording = false);
+    if (path == null) return;
+    try {
+      final Uint8List bytes = kIsWeb
+          ? (await http.get(Uri.parse(path))).bodyBytes
+          : await File(path).readAsBytes();
+      if (mounted) setState(() => _recordedBytes = bytes);
+    } catch (_) {}
+  }
+
+  Future<void> _playPreview() async {
+    final bytes = _recordedBytes;
+    if (bytes == null) return;
+    unawaited(_player?.dispose());
+    final player = AudioPlayer();
+    _player = player;
+    player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        if (mounted) setState(() => _playing = false);
+      }
+    });
+    setState(() => _playing = true);
+    try {
+      await player.setAudioSource(
+        AudioSource.uri(
+          Uri.dataFromBytes(bytes, mimeType: 'audio/mp4'),
+        ),
+      );
+      await player.play();
+    } catch (_) {
+      if (mounted) setState(() => _playing = false);
+    }
+  }
+
+  Future<void> _stopPreview() async {
+    await _player?.stop();
+    if (mounted) setState(() => _playing = false);
+  }
+
+  void _deleteRecording() {
+    unawaited(_player?.dispose());
+    _player = null;
+    if (mounted) {
+      setState(() {
+        _recordedBytes = null;
+        _recording = false;
+        _playing = false;
+        _recordingSeconds = 0;
+      });
+    }
+  }
+
+  String _formatDuration(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   DateTime? get _scheduledAt {
@@ -81,6 +193,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   bool get _canAdvance {
     switch (_step) {
       case 0:
+        if (_voiceMode) return _recordedBytes != null;
         return _messageController.text.trim().isNotEmpty;
       case 1:
         return true; // schedule is optional
@@ -114,15 +227,27 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
           // Non-blocking: the booking can still be created without coords.
         }
       }
+
+      String requestMessage;
+      String? audioMessageUrl;
+      if (_voiceMode && _recordedBytes != null) {
+        final media = ref.read(chatMediaServiceProvider);
+        audioMessageUrl = await media.uploadBookingVoice(_recordedBytes!);
+        requestMessage = '[Message vocal]';
+      } else {
+        requestMessage = _messageController.text.trim();
+      }
+
       final useCase = ref.read(createBookingUseCaseProvider);
       await useCase(
         providerId: widget.providerId,
         serviceId: widget.serviceId,
-        requestMessage: _messageController.text.trim(),
+        requestMessage: requestMessage,
         scheduledAt: _scheduledAt,
         address: _addressController.text.trim(),
         addressLat: lat,
         addressLng: lng,
+        audioMessageUrl: audioMessageUrl,
       );
       if (mounted) {
         ScaffoldMessenger.of(
@@ -357,6 +482,22 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         return _StepMessage(
           controller: _messageController,
           focus: _messageFocus,
+          voiceMode: _voiceMode,
+          onToggleMode: (v) => setState(() {
+            _voiceMode = v;
+            // Reset voice state when switching modes
+            if (!v) _deleteRecording();
+          }),
+          recording: _recording,
+          recordedBytes: _recordedBytes,
+          recordingSeconds: _recordingSeconds,
+          playing: _playing,
+          onStartRecording: _startRecording,
+          onStopRecording: _stopRecording,
+          onPlay: _playPreview,
+          onStopPlay: _stopPreview,
+          onDeleteRecording: _deleteRecording,
+          formatDuration: _formatDuration,
         );
       case 1:
         return _StepSchedule(
@@ -411,18 +552,46 @@ class _StepIndicator extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Step 1 — Message
+// Step 1 — Message (text or voice)
 // ---------------------------------------------------------------------------
 
 class _StepMessage extends StatelessWidget {
-  const _StepMessage({required this.controller, required this.focus});
+  const _StepMessage({
+    required this.controller,
+    required this.focus,
+    required this.voiceMode,
+    required this.onToggleMode,
+    required this.recording,
+    required this.recordedBytes,
+    required this.recordingSeconds,
+    required this.playing,
+    required this.onStartRecording,
+    required this.onStopRecording,
+    required this.onPlay,
+    required this.onStopPlay,
+    required this.onDeleteRecording,
+    required this.formatDuration,
+  });
 
   final TextEditingController controller;
   final FocusNode focus;
+  final bool voiceMode;
+  final ValueChanged<bool> onToggleMode;
+  final bool recording;
+  final Uint8List? recordedBytes;
+  final int recordingSeconds;
+  final bool playing;
+  final VoidCallback onStartRecording;
+  final VoidCallback onStopRecording;
+  final VoidCallback onPlay;
+  final VoidCallback onStopPlay;
+  final VoidCallback onDeleteRecording;
+  final String Function(int) formatDuration;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -435,19 +604,253 @@ class _StepMessage extends StatelessWidget {
           l10n.bookingStep1Subtitle,
           style: Theme.of(
             context,
-          ).textTheme.bodySmall?.copyWith(color: context.oc.secondaryText),
+          ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
         ),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: controller,
-          focusNode: focus,
-          autofocus: true,
-          maxLines: 5,
-          maxLength: 500,
-          textInputAction: TextInputAction.newline,
-          decoration: InputDecoration(hintText: l10n.bookingStep1Hint),
+
+        // Toggle: Texte / Vocal
+        Container(
+          decoration: BoxDecoration(
+            color: oc.inputFill,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.all(3),
+          child: Row(
+            children: [
+              _ModeChip(
+                label: 'Texte',
+                icon: Icons.text_fields_rounded,
+                selected: !voiceMode,
+                onTap: () => onToggleMode(false),
+              ),
+              _ModeChip(
+                label: 'Vocal',
+                icon: Icons.mic_none_rounded,
+                selected: voiceMode,
+                onTap: () => onToggleMode(true),
+              ),
+            ],
+          ),
         ),
+        const SizedBox(height: 16),
+
+        if (!voiceMode)
+          TextFormField(
+            controller: controller,
+            focusNode: focus,
+            autofocus: true,
+            maxLines: 5,
+            maxLength: 500,
+            textInputAction: TextInputAction.newline,
+            decoration: InputDecoration(hintText: l10n.bookingStep1Hint),
+          )
+        else
+          _VoiceRecorder(
+            recording: recording,
+            recordedBytes: recordedBytes,
+            recordingSeconds: recordingSeconds,
+            playing: playing,
+            onStartRecording: onStartRecording,
+            onStopRecording: onStopRecording,
+            onPlay: onPlay,
+            onStopPlay: onStopPlay,
+            onDelete: onDeleteRecording,
+            formatDuration: formatDuration,
+          ),
       ],
+    );
+  }
+}
+
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? oc.cardSurface : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? oc.primary : oc.secondaryText,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: selected ? oc.primary : oc.secondaryText,
+                  fontWeight:
+                      selected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VoiceRecorder extends StatelessWidget {
+  const _VoiceRecorder({
+    required this.recording,
+    required this.recordedBytes,
+    required this.recordingSeconds,
+    required this.playing,
+    required this.onStartRecording,
+    required this.onStopRecording,
+    required this.onPlay,
+    required this.onStopPlay,
+    required this.onDelete,
+    required this.formatDuration,
+  });
+
+  final bool recording;
+  final Uint8List? recordedBytes;
+  final int recordingSeconds;
+  final bool playing;
+  final VoidCallback onStartRecording;
+  final VoidCallback onStopRecording;
+  final VoidCallback onPlay;
+  final VoidCallback onStopPlay;
+  final VoidCallback onDelete;
+  final String Function(int) formatDuration;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+
+    if (recordedBytes != null) {
+      // Playback / delete UI
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: oc.primary.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: oc.primary.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            // Play / stop button
+            GestureDetector(
+              onTap: playing ? onStopPlay : onPlay,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: oc.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  playing ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Message vocal',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    formatDuration(recordingSeconds),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: oc.secondaryText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Delete button
+            IconButton(
+              icon: Icon(Icons.delete_outline_rounded, color: oc.error),
+              onPressed: onDelete,
+              tooltip: 'Supprimer',
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Record UI
+    return Center(
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: recording ? onStopRecording : onStartRecording,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: recording
+                    ? oc.error.withValues(alpha: 0.12)
+                    : oc.primary.withValues(alpha: 0.10),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: recording ? oc.error : oc.primary,
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                recording ? Icons.stop_rounded : Icons.mic_rounded,
+                size: 32,
+                color: recording ? oc.error : oc.primary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            recording
+                ? formatDuration(recordingSeconds)
+                : 'Appuyez pour enregistrer',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: recording ? oc.error : oc.secondaryText,
+              fontWeight: recording ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 }
