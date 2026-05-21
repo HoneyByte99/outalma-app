@@ -33,46 +33,4 @@ class FirestoreBookingRepository implements BookingRepository {
         .map((qs) => qs.docs.map((d) => d.data()).toList());
   }
 
-  /// Creates a booking document directly in Firestore.
-  ///
-  /// For server-authoritative creation prefer the `createBooking` Cloud
-  /// Function. This method exists for local development and testing.
-  @override
-  Future<Booking> create(Booking booking) async {
-    final col = FirestoreCollections.bookings(_db);
-    if (booking.id.isEmpty) {
-      final ref = col.doc();
-      // The Booking model's id is immutable via copyWith, but the Firestore
-      // converter reads snap.id, so the returned object will have the correct id.
-      await ref.set(booking);
-      final snap = await ref.get();
-      if (!snap.exists || snap.data() == null) {
-        throw Exception(
-          'Booking creation failed: document not found after set',
-        );
-      }
-      return snap.data()!;
-    } else {
-      await col.doc(booking.id).set(booking);
-      return booking;
-    }
-  }
-
-  @override
-  Future<void> update(Booking booking) async {
-    await FirestoreCollections.bookings(
-      _db,
-    ).doc(booking.id).set(booking, SetOptions(merge: true));
-  }
-
-  @override
-  Future<void> cancel(String bookingId) async {
-    // Critical status transitions are handled by the cancelBooking Cloud
-    // Function. This method exists as a convenience shim; in production the
-    // application layer should call the Function directly.
-    await FirestoreCollections.bookings(_db).doc(bookingId).update({
-      'status': 'cancelled',
-      'cancelledAt': FieldValue.serverTimestamp(),
-    });
-  }
 }

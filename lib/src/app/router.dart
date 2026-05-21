@@ -125,6 +125,14 @@ class RouterNotifier extends ChangeNotifier {
           if (!isSharedTab && mode == ActiveMode.client && isProviderTab) {
             return AppRoutes.home;
           }
+          // Block deep-link access to provider-only screens when in client mode.
+          final isProviderOnlyRoute =
+              loc.startsWith('/provider/onboarding') ||
+              loc.startsWith('/provider/calendar') ||
+              loc.startsWith('/provider/services');
+          if (mode == ActiveMode.client && isProviderOnlyRoute) {
+            return AppRoutes.home;
+          }
         }
         return null;
       },
