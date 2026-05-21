@@ -107,11 +107,15 @@ class RouterNotifier extends ChangeNotifier {
           if (isAuthRoute) return AppRoutes.home;
 
           // When switching modes, redirect to the right home tab.
+          // Uses startsWith to catch sub-routes (e.g. /bookings/:id,
+          // /provider/inbox/bookings/:id) that live inside the shell branch.
           final mode = _ref.read(activeModeProvider);
-          final isClientTab =
-              loc == AppRoutes.home || loc == AppRoutes.bookings;
-          final isProviderTab =
-              loc == AppRoutes.providerHome || loc == AppRoutes.providerInbox;
+          final isClientTab = loc == AppRoutes.home ||
+              loc == AppRoutes.bookings ||
+              loc.startsWith('${AppRoutes.bookings}/');
+          final isProviderTab = loc == AppRoutes.providerHome ||
+              loc == AppRoutes.providerInbox ||
+              loc.startsWith('${AppRoutes.providerInbox}/');
           final isSharedTab =
               loc == AppRoutes.chatsList || loc == AppRoutes.profile;
 
