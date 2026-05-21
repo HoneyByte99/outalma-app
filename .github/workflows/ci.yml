@@ -38,10 +38,9 @@ jobs:
           echo "$FIREBASE_OPTIONS_DART"      | base64 --decode > lib/firebase_options.dart
 
       # ── Maps API key injection ─────────────────────────────────────────────
-      # MAPS_API_KEY  — Google Maps SDK key for native iOS + Android rendering.
-      # PLACES_API_KEY — Google Places HTTP API key for address autocomplete.
-      # Both are injected here; PLACES_API_KEY is also passed as --dart-define
-      # so the Dart layer can read it via String.fromEnvironment.
+      # MAPS_API_KEY — unified Google Maps SDK + Places HTTP key, consumed by
+      # Dart (via --dart-define / String.fromEnvironment), iOS (Secrets.xcconfig)
+      # and Android (local.properties).
       - name: Inject Maps config
         env:
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
@@ -77,7 +76,6 @@ jobs:
       - name: Test
         run: |
           flutter test --coverage --reporter expanded \
-            --dart-define=PLACES_API_KEY=${{ secrets.PLACES_API_KEY }} \
             --dart-define=MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}
 
       # ── Coverage ──────────────────────────────────────────────────────────

@@ -8,10 +8,10 @@ The MVP is not releasable until every item below is true.
 
 - [x] Firebase config files gitignored — injected via GitHub Secrets in CI
 - [x] Maps API key rotated — new key restricted to Maps SDK iOS + Android only
-- [x] Places API key injected via `--dart-define=PLACES_API_KEY` (never hardcoded)
+- [x] Places API key injected via `--dart-define=MAPS_API_KEY` (unified key, never hardcoded)
 - [x] All GCP keys restricted: iOS by bundle ID, Android by package + SHA-1, Browser by domain
 - [x] `android/local.properties` and `ios/Flutter/Secrets.xcconfig` gitignored
-- [x] GitHub Secrets: `MAPS_API_KEY`, `PLACES_API_KEY`, `FIREBASE_OPTIONS_DART`, `GOOGLE_SERVICES_JSON`, `GOOGLE_SERVICE_INFO_PLIST`
+- [x] GitHub Secrets: `MAPS_API_KEY`, `FIREBASE_OPTIONS_DART`, `GOOGLE_SERVICES_JSON`, `GOOGLE_SERVICE_INFO_PLIST`
 - [x] Firestore rules: status immutable from client, default deny, participant-only access
 - [x] Storage rules: participant-only chat media, owner-only service images
 - [ ] Firebase App Check enabled (DeviceCheck iOS / Play Integrity Android) — defer to post-TestFlight
