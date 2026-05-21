@@ -1104,11 +1104,16 @@ class _ServiceGridLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     final oc = context.oc;
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        AppSpacing.s,
+        AppSpacing.l,
+        AppSpacing.xxl,
+      ),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+        crossAxisSpacing: AppSpacing.l,
+        mainAxisSpacing: AppSpacing.l,
         childAspectRatio: 0.85,
       ),
       itemCount: 6,
