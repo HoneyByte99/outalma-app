@@ -18,10 +18,10 @@ class FirestoreServiceRepository implements ServiceRepository {
   }
 
   @override
-  Stream<List<Service>> watchAllPublished() {
+  Stream<List<Service>> watchAllPublished({int limit = 30}) {
     return FirestoreCollections.services(_db)
         .where('published', isEqualTo: true)
-        .limit(100)
+        .limit(limit)
         .snapshots()
         .map((qs) => qs.docs.map((d) => d.data()).toList());
   }

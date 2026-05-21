@@ -136,7 +136,7 @@ Firestore collection: `bookings/{bookingId}` (top-level, not subcollection)
 | `requestMessage` | String | Free-text message from client |
 | `scheduledAt` | Timestamp? | Structured date/time for the appointment (preferred) |
 | `schedule` | Map? | Legacy slot info (freeform, kept for backwards compat) |
-| `addressSnapshot` | Map? | Client address at time of booking |
+| `addressSnapshot` | Map? | Client address at time of booking. Shape: `{address: string, lat?: number, lng?: number}` — coordinates come from Google Places when the user picks an autocomplete suggestion and power the distance estimate + directions button on the booking detail page. |
 | `chatId` | String? | Set by `acceptBooking()` Cloud Function |
 | `reminded24h` | bool | Flag for 24h reminder (set by sendBookingReminders) |
 | `reminded1h` | bool | Flag for 1h reminder (set by sendBookingReminders) |

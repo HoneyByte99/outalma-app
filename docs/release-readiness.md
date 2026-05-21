@@ -61,3 +61,17 @@ The MVP is not releasable until every item below is true.
 - [ ] Cloud Functions deployed (Gen2)
 - [ ] Firebase App Check enabled
 - [ ] App icons and splash screens set
+
+---
+
+## Security
+
+- [ ] **⚠️ ACTION REQUIRED — Google Cloud Console : restreindre les clés API**
+  - Aller sur https://console.cloud.google.com → APIs & Services → Credentials
+  - Clé Maps Android (`AIzaSyBm5...`) → Application restrictions → Android apps → ajouter le bundle ID `com.honeybyte.outalma_app`
+  - Clé Maps iOS (`AIzaSyBm5...`) → Application restrictions → iOS apps → ajouter le bundle ID `com.honeybyte.outalma_app`
+  - Clé Places (`AIzaSyA8L...`) → Application restrictions → IP addresses ou HTTP referrers selon usage serveur/client
+  - Sans restriction, les clés exposées dans l'historique git peuvent être utilisées par des tiers et générer des frais
+- [ ] Secrets GitHub configurés (`PLACES_API_KEY`, `MAPS_API_KEY`) ✅ fait
+- [ ] `local.properties` et `Secrets.xcconfig` jamais commités ✅ gitignored
+- [ ] `firebase_options.dart` — client-side IDs, sécurité assurée par les Firestore Rules (OK à commiter)

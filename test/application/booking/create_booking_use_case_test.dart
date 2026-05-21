@@ -125,6 +125,46 @@ void main() {
       });
     });
 
+    test('includes lat/lng in addressSnapshot when provided', () async {
+      final callable = _FakeCallable(response: {'bookingId': 'booking_abc'});
+      final functions = _FakeFunctions(callable);
+      final useCase = CreateBookingUseCase(functions);
+
+      await useCase(
+        providerId: 'p',
+        serviceId: 's',
+        requestMessage: 'm',
+        address: '12 rue de la Paix',
+        addressLat: 48.8688,
+        addressLng: 2.3322,
+      );
+
+      expect(callable.capturedPayload!['addressSnapshot'], {
+        'address': '12 rue de la Paix',
+        'lat': 48.8688,
+        'lng': 2.3322,
+      });
+    });
+
+    test('omits lat/lng when only one of them is provided', () async {
+      final callable = _FakeCallable(response: {'bookingId': 'booking_abc'});
+      final functions = _FakeFunctions(callable);
+      final useCase = CreateBookingUseCase(functions);
+
+      await useCase(
+        providerId: 'p',
+        serviceId: 's',
+        requestMessage: 'm',
+        address: '12 rue de la Paix',
+        addressLat: 48.8688,
+        // addressLng intentionally omitted
+      );
+
+      expect(callable.capturedPayload!['addressSnapshot'], {
+        'address': '12 rue de la Paix',
+      });
+    });
+
     test('omits addressSnapshot when address is empty', () async {
       final callable = _FakeCallable(response: {'bookingId': 'booking_abc'});
       final functions = _FakeFunctions(callable);

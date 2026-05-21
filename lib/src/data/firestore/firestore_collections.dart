@@ -475,6 +475,7 @@ class FirestoreCollections {
       targetType: (data['targetType'] as String?) ?? 'user',
       targetId: (data['targetId'] as String?) ?? '',
       reason: (data['reason'] as String?) ?? '',
+      details: data['details'] as String?,
       status: (data['status'] as String?) ?? 'open',
       createdAt: dateTimeFromFirestore(data['createdAt']),
     );
@@ -486,6 +487,8 @@ class FirestoreCollections {
       'targetType': report.targetType,
       'targetId': report.targetId,
       'reason': report.reason,
+      if (report.details != null && report.details!.isNotEmpty)
+        'details': report.details,
       'status': report.status,
       'createdAt': dateTimeToFirestore(report.createdAt),
     };

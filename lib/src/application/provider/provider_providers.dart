@@ -31,6 +31,14 @@ final currentProviderProfileProvider = StreamProvider<ProviderProfile?>((ref) {
   return ref.watch(providerRepositoryProvider).watchByUid(uid);
 });
 
+/// Any provider's profile by uid — used by public provider profile pages,
+/// service cards, and trust signals.
+final providerProfileByIdProvider =
+    StreamProvider.family<ProviderProfile?, String>((ref, uid) {
+  if (uid.isEmpty) return const Stream.empty();
+  return ref.watch(providerRepositoryProvider).watchByUid(uid);
+});
+
 /// Current provider's own services.
 final providerServicesProvider = StreamProvider<List<Service>>((ref) {
   final uid = ref.watch(_stableUidProvider);
@@ -83,6 +91,62 @@ final providerBookingHistoryProvider = StreamProvider<List<Booking>>((ref) {
   final uid = ref.watch(_stableUidProvider);
   if (uid == null) return const Stream.empty();
   return ref.watch(bookingRepositoryProvider).watchForProvider(uid);
+});
+
+/// Lightweight provider-side dashboard KPIs derived from history (B.5).
+class ProviderStats {
+  const ProviderStats({
+    required this.bookingsThisMonth,
+    required this.acceptanceRate,
+    required this.upcomingThisWeek,
+  });
+
+  /// Number of bookings *received* this calendar month.
+  final int bookingsThisMonth;
+
+  /// Acceptance rate over the lifetime: accepted / (accepted + rejected).
+  /// Null when neither has happened yet (no signal).
+  final double? acceptanceRate;
+
+  /// Number of accepted/inProgress bookings scheduled in the next 7 days.
+  final int upcomingThisWeek;
+}
+
+final providerStatsProvider = Provider<ProviderStats>((ref) {
+  final history = ref.watch(providerBookingHistoryProvider).valueOrNull ?? [];
+  final now = DateTime.now();
+  final monthStart = DateTime(now.year, now.month);
+  final weekEnd = now.add(const Duration(days: 7));
+
+  var monthCount = 0;
+  var accepted = 0;
+  var rejected = 0;
+  var upcoming = 0;
+  for (final b in history) {
+    if (!b.createdAt.isBefore(monthStart)) monthCount++;
+    if (b.status == BookingStatus.accepted ||
+        b.status == BookingStatus.inProgress ||
+        b.status == BookingStatus.done) {
+      accepted++;
+    } else if (b.status == BookingStatus.rejected) {
+      rejected++;
+    }
+    final sched = b.scheduledAt;
+    if (sched != null &&
+        sched.isAfter(now) &&
+        sched.isBefore(weekEnd) &&
+        (b.status == BookingStatus.accepted ||
+            b.status == BookingStatus.inProgress)) {
+      upcoming++;
+    }
+  }
+  final totalDecisions = accepted + rejected;
+  return ProviderStats(
+    bookingsThisMonth: monthCount,
+    acceptanceRate:
+        totalDecisions == 0 ? null : accepted / totalDecisions,
+    upcomingThisWeek: upcoming,
+  );
 });
 
 /// Current provider's blocked slots.

@@ -2,7 +2,11 @@ import '../models/service.dart';
 
 abstract interface class ServiceRepository {
   Stream<Service?> watchById(String serviceId);
-  Stream<List<Service>> watchAllPublished();
+
+  /// Real-time stream of the first [limit] published services (default 30).
+  /// Increase [limit] to load more — Firestore will push updates as needed.
+  Stream<List<Service>> watchAllPublished({int limit = 30});
+
   Stream<List<Service>> watchForProvider(String providerId);
 
   Future<Service> create(Service service);

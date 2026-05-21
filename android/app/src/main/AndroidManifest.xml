@@ -26,6 +26,21 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- App Links — handles email magic links from Firebase Auth.
+                 Scoped to /__/auth/ path only to avoid intercepting unrelated
+                 links on the project's Firebase Hosting domain (security
+                 review H6). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"
+                      android:host="outalmaservice-d1e59.firebaseapp.com"
+                      android:pathPrefix="/__/auth/"/>
+                <data android:scheme="https"
+                      android:host="outalmaservice-d1e59.web.app"
+                      android:pathPrefix="/__/auth/"/>
+            </intent-filter>
         </activity>
         <meta-data
             android:name="com.google.android.geo.API_KEY"
