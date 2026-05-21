@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../shared/mode_badge.dart';
 import '../../app/router.dart';
@@ -594,9 +595,12 @@ class _ModeToggleState extends ConsumerState<_ModeToggle> {
       await ref.read(authNotifierProvider.notifier).switchMode(mode);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errMsg)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errMsg),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -694,7 +698,7 @@ class _ModeTile extends StatelessWidget {
                   Icon(Icons.check_circle_rounded, color: color, size: 18),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.m),
             Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -1221,8 +1225,8 @@ class _SectionLabel extends StatelessWidget {
     return Text(
       label.toUpperCase(),
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: context.oc.secondaryText,
-        fontWeight: FontWeight.w600,
+        color: context.oc.primaryText,
+        fontWeight: FontWeight.w700,
         letterSpacing: 1.2,
         fontSize: 11,
       ),

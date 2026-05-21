@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/booking/booking_providers.dart';
@@ -918,7 +919,7 @@ class _StepSchedule extends StatelessWidget {
           filled: selectedDate != null,
           onTap: onPickDate,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.m),
 
         // Time picker button
         _PickerButton(
