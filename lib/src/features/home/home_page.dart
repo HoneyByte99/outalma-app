@@ -508,7 +508,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
             if (_suggestions.isNotEmpty)
               Container(
                 constraints: const BoxConstraints(maxHeight: 160),
-                margin: const EdgeInsets.only(bottom: 8),
+                margin: const EdgeInsets.only(bottom: AppSpacing.s),
                 decoration: BoxDecoration(
                   color: oc.cardSurface,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
@@ -668,18 +668,21 @@ class _SavedLocationTile extends StatelessWidget {
     final oc = context.oc;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.m,
+          vertical: AppSpacing.s + 2,
+        ),
         decoration: BoxDecoration(
           color: oc.cardSurface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
           border: Border.all(color: oc.border),
         ),
         child: Row(
           children: [
             Icon(Icons.star_rounded, size: 18, color: oc.warning),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.s),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -745,6 +748,13 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final query = ref.watch(_searchQueryProvider);
+
+    // Keep controller in sync when filters are cleared externally.
+    ref.listen<String>(_searchQueryProvider, (_, next) {
+      if (next.isEmpty && _controller.text.isNotEmpty) {
+        _controller.clear();
+      }
+    });
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -843,29 +853,29 @@ class _CategoryChip extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? oc.primary : oc.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isActive ? oc.primary : oc.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
+          duration: const Duration(milliseconds: 150),
+          constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isActive ? oc.primary : oc.surface,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
+            border: Border.all(color: isActive ? oc.primary : oc.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1324,17 +1334,17 @@ class _ErrorState extends StatelessWidget {
     final oc = context.oc;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xxxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.wifi_off_outlined, size: 56, color: oc.icons),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.l),
             Text(
               l10n.errorLoading,
               style: Theme.of(context).textTheme.titleSmall,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.s),
             TextButton(onPressed: onRetry, child: Text(l10n.retry)),
           ],
         ),
