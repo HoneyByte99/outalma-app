@@ -82,8 +82,8 @@ The MVP is not releasable until every item below is true.
 ## TestFlight distribution
 
 - [x] `ios/ExportOptions.plist` created — app-store, automatic signing, team 88K4254XLD
-- [x] `flutter build ipa --release` — archive in progress
-- [ ] Apple Distribution certificate (Xcode automatic signing will create if missing)
-- [ ] App Store Connect app record created for `com.honeybyte.outalmaApp`
-- [ ] IPA uploaded to App Store Connect
-- [ ] Internal TestFlight group set up and testers invited
+- [x] `flutter build ipa --release` — builds 2 and 3 archived and uploaded
+- [x] Apple Distribution certificate — created automatically by Xcode (`Apple Distribution: Papa Amath BA`)
+- [x] App Store Connect app record created for `com.honeybyte.outalmaApp` (App ID: 6771747896)
+- [x] IPA uploaded to App Store Connect — build 1.0.0 (3) active
+- [x] Internal TestFlight group "Internal Testers" created; amathba2@gmail.com invited

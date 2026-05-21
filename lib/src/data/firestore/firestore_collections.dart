@@ -171,7 +171,10 @@ class FirestoreCollections {
       'displayName': user.displayName,
       'email': user.email,
       'photoPath': user.photoPath,
-      'phoneE164': user.phoneE164,
+      // Never write phoneE164 as null — the create rule requires the field to
+      // be absent for email-only accounts, and the update rule blocks any
+      // client-side change to this field (security review C1/C2).
+      if (user.phoneE164 != null) 'phoneE164': user.phoneE164,
       'country': user.country,
       'activeMode': user.activeMode.name,
       'pushToken': user.pushToken,

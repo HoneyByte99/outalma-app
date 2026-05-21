@@ -37,15 +37,20 @@ service cloud.firestore {
     // This is the primary defence against account-takeover via phone-claim attacks
     // (cf. security review C1 / C2).
     match /users/{uid} {
+      // `id` is not stored as a document field (it is the document path), so
+      // never include it in field-level checks. `isSelf(uid)` already binds the
+      // path wildcard to the authenticated user's uid.
       function isUserUpdateSafe() {
         return request.resource.data.phoneE164 == resource.data.phoneE164
           && request.resource.data.email == resource.data.email
-          && request.resource.data.id == resource.data.id
           && request.resource.data.createdAt == resource.data.createdAt;
       }
+      // Email-only accounts must not carry a phoneE164 field on create — phone
+      // numbers are written exclusively by Cloud Functions (admin SDK, bypasses
+      // these rules). The path-level isSelf(uid) guard already ensures the user
+      // can only write their own document.
       function isUserCreateSafe() {
-        return request.resource.data.id == uid
-          && !('phoneE164' in request.resource.data);
+        return !('phoneE164' in request.resource.data);
       }
 
       allow read: if signedIn();
