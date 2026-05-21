@@ -124,37 +124,44 @@ class _LocationPill extends ConsumerWidget {
         ? '${filter.label}, ${filter.radiusKm.round()} km'
         : l10n.locationAllFrance;
 
-    return GestureDetector(
-      onTap: () => _showLocationSheet(context, ref),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: oc.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.location_on, size: 16, color: oc.primary),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: oc.primary,
-                  fontWeight: FontWeight.w600,
+    return Semantics(
+      label: label,
+      button: true,
+      child: InkWell(
+        onTap: () => _showLocationSheet(context, ref),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: oc.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.location_on, size: 16, color: oc.primary),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: oc.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 18,
-              color: oc.primary,
-            ),
-          ],
+              const SizedBox(width: 4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: oc.primary,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -166,7 +173,9 @@ class _LocationPill extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: context.oc.background,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.radiusXLarge),
+        ),
       ),
       builder: (_) => const _LocationSheet(),
     );
@@ -405,7 +414,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
       maxChildSize: 0.9,
       expand: false,
       builder: (_, scrollController) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.m, AppSpacing.xl, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -420,7 +429,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.l),
 
             // Title row
             Row(
@@ -443,7 +452,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                   ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.m),
 
             // Search field
             TextField(
@@ -468,7 +477,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
               ),
               onChanged: _onSearchChanged,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.s),
 
             // "Use my location" button
             SizedBox(
@@ -488,12 +497,12 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                       ),
                 label: Text(l10n.locationUseMyPosition),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 44),
+                  minimumSize: const Size(0, AppSpacing.minTouchTarget),
                   side: BorderSide(color: oc.primary.withValues(alpha: 0.4)),
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
 
             // Suggestions
             if (_suggestions.isNotEmpty)
@@ -502,7 +511,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
                   color: oc.cardSurface,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
                   border: Border.all(color: oc.border),
                 ),
                 child: ListView.separated(
@@ -548,7 +557,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
 
             // Radius slider + validate button
             if (filter != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s),
               Row(
                 children: [
                   Icon(Icons.radar_outlined, size: 16, color: oc.secondaryText),
@@ -583,7 +592,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.m),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -594,7 +603,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
               ),
             ],
 
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.m),
 
             // "Toute la France" button
             SizedBox(
@@ -604,7 +613,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                 icon: const Icon(Icons.public_outlined, size: 18),
                 label: Text(l10n.locationAllFrance),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 44),
+                  minimumSize: const Size(0, AppSpacing.minTouchTarget),
                   side: BorderSide(color: oc.border),
                 ),
               ),
@@ -612,12 +621,12 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
 
             // Saved locations
             if (savedLocations.isNotEmpty) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
               Text(
                 l10n.locationMyAddresses,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s),
               Expanded(
                 child: ListView.separated(
                   controller: scrollController,
@@ -692,9 +701,15 @@ class _SavedLocationTile extends StatelessWidget {
                 ],
               ),
             ),
-            GestureDetector(
-              onTap: onDelete,
-              child: Icon(Icons.close, size: 16, color: oc.secondaryText),
+            IconButton(
+              onPressed: onDelete,
+              iconSize: 18,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                minWidth: AppSpacing.minTouchTarget,
+                minHeight: AppSpacing.minTouchTarget,
+              ),
+              icon: Icon(Icons.close, size: 18, color: oc.secondaryText),
             ),
           ],
         ),
@@ -716,9 +731,11 @@ class _SearchBar extends ConsumerStatefulWidget {
 
 class _SearchBarState extends ConsumerState<_SearchBar> {
   final _controller = TextEditingController();
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -738,8 +755,12 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
       ),
       child: TextField(
         controller: _controller,
-        onChanged: (v) =>
-            ref.read(_searchQueryProvider.notifier).state = v.trim(),
+        onChanged: (v) {
+          _debounce?.cancel();
+          _debounce = Timer(const Duration(milliseconds: 150), () {
+            ref.read(_searchQueryProvider.notifier).state = v.trim();
+          });
+        },
         decoration: InputDecoration(
           hintText: l10n.homeSearchHint,
           prefixIcon: const Icon(Icons.search_rounded, size: 20),
@@ -815,9 +836,13 @@ class _CategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final oc = context.oc;
     final color = isActive ? oc.surface : oc.primaryText;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
+    return Semantics(
+      label: label,
+      button: true,
+      selected: isActive,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -840,6 +865,7 @@ class _CategoryChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -961,9 +987,12 @@ class _ServiceCard extends ConsumerWidget {
         ? '$formattedPrice/h'
         : formattedPrice;
 
-    return GestureDetector(
-      onTap: () => context.push(AppRoutes.serviceDetail(service.id)),
-      child: Container(
+    return Semantics(
+      label: service.title,
+      button: true,
+      child: GestureDetector(
+        onTap: () => context.push(AppRoutes.serviceDetail(service.id)),
+        child: Container(
         decoration: BoxDecoration(
           color: oc.cardSurface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
@@ -1051,7 +1080,7 @@ class _ServiceCard extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           priceLabel,
-                          style: Theme.of(context).textTheme.titleMedium
+                          style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 color: oc.primary,
                                 fontWeight: FontWeight.w700,
@@ -1076,6 +1105,7 @@ class _ServiceCard extends ConsumerWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -1134,7 +1164,7 @@ class _RatingRow extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.star_rounded, size: 12, color: Color(0xFFFBBF24)),
+        Icon(Icons.star_rounded, size: 12, color: oc.warning),
         const SizedBox(width: 2),
         Text(
           '${avg.toStringAsFixed(1)} (${reviews.length})',
@@ -1186,29 +1216,42 @@ class _ServiceGridLoadingState extends State<_ServiceGridLoading>
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    return AnimatedBuilder(
-      animation: _anim,
-      builder: (context, _) {
-        final shimmer = Color.lerp(oc.border, oc.surface, _anim.value)!;
-        return GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.l,
-            AppSpacing.s,
-            AppSpacing.l,
-            AppSpacing.xxl,
-          ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: AppSpacing.l,
-            mainAxisSpacing: AppSpacing.l,
-            childAspectRatio: 0.62,
-          ),
-          itemCount: 6,
-          itemBuilder: (_, __) => ClipRRect(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-            child: Container(color: shimmer),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const columns = 2;
+        const spacing = AppSpacing.l;
+        const hPad = AppSpacing.l;
+        final cardWidth =
+            (constraints.maxWidth - hPad * 2 - (columns - 1) * spacing) /
+            columns;
+        const infoHeight = 112.0;
+        final ratio = cardWidth / (cardWidth + infoHeight);
+
+        return AnimatedBuilder(
+          animation: _anim,
+          builder: (context, _) {
+            final shimmer = Color.lerp(oc.border, oc.surface, _anim.value)!;
+            return GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.l,
+                AppSpacing.s,
+                AppSpacing.l,
+                AppSpacing.xxl,
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+                childAspectRatio: ratio,
+              ),
+              itemCount: 6,
+              itemBuilder: (_, __) => ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+                child: Container(color: shimmer),
+              ),
+            );
+          },
         );
       },
     );
@@ -1219,18 +1262,23 @@ class _ServiceGridLoadingState extends State<_ServiceGridLoading>
 // Empty + error states
 // ---------------------------------------------------------------------------
 
-class _EmptyState extends StatelessWidget {
+class _EmptyState extends ConsumerWidget {
   const _EmptyState({this.searchQuery = ''});
 
   final String searchQuery;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final message = searchQuery.isNotEmpty
         ? l10n.homeSearchEmpty(searchQuery)
         : l10n.servicesEmpty;
+
+    final hasActiveFilters = ref.watch(_selectedCategoryProvider) != null ||
+        ref.watch(_searchQueryProvider).isNotEmpty ||
+        ref.watch(locationFilterProvider) != null;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxxl),
@@ -1246,6 +1294,18 @@ class _EmptyState extends StatelessWidget {
                 context,
               ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
             ),
+            if (hasActiveFilters) ...[
+              const SizedBox(height: AppSpacing.l),
+              OutlinedButton.icon(
+                onPressed: () {
+                  ref.read(_selectedCategoryProvider.notifier).state = null;
+                  ref.read(_searchQueryProvider.notifier).state = '';
+                  ref.read(locationFilterProvider.notifier).state = null;
+                },
+                icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+                label: Text(l10n.clearFilters),
+              ),
+            ],
           ],
         ),
       ),

@@ -89,6 +89,7 @@
   },
   "categoryAll": "All",
   "servicesEmpty": "No services available\nright now",
+  "clearFilters": "Clear filters",
   "modeClient": "Client",
   "modeProvider": "Provider",
   "modeClientActivated": "Client mode activated",
