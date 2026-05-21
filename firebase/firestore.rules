@@ -177,6 +177,25 @@ service cloud.firestore {
 
         allow delete: if isAdmin();
       }
+
+      // ---------- TYPING INDICATORS ----------
+      // Each user writes their own doc (uid == auth.uid).
+      // Read is open to any chat participant.
+      // Abuse risk: negligible — one tiny doc per participant, no data exposed.
+      match /typing/{uid} {
+        function isParticipantViaChatForTyping() {
+          return signedIn()
+            && (request.auth.uid in
+                get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
+        }
+
+        allow read: if isAdminOrModerator() || isParticipantViaChatForTyping();
+        allow write: if isParticipantViaChatForTyping()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['updatedAt'])
+          && request.resource.data.updatedAt is timestamp;
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
     }
 
     // ---------- PHONE SHARE (unlock after accept or beyond) ----------

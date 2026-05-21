@@ -44,6 +44,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _recording = false;
   int _lastMarkedReadCount = 0;
   int _lastScrolledCount = 0;
+  Timer? _typingCooldown;
 
   @override
   void initState() {
@@ -54,10 +55,26 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   void dispose() {
+    _typingCooldown?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     _recorder.dispose();
     super.dispose();
+  }
+
+  /// Writes typing presence at most once every 2 seconds (leading debounce).
+  void _notifyTyping() {
+    if (_typingCooldown != null) return;
+    final authState = ref.read(authNotifierProvider).valueOrNull;
+    if (authState is! AuthAuthenticated) return;
+    ref.read(chatRepositoryProvider).setTyping(
+      chatId: widget.chatId,
+      uid: authState.user.id,
+    );
+    _typingCooldown = Timer(
+      const Duration(seconds: 2),
+      () => _typingCooldown = null,
+    );
   }
 
   Future<void> _markRead() async {
@@ -352,18 +369,21 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               onSend: _sendPendingImage,
               onCancel: _cancelPendingImage,
             )
-          else
+          else ...[
+            _TypingIndicatorBar(chatId: widget.chatId),
             _InputBar(
               controller: _controller,
               sending: _sending,
               recording: _recording,
               onSend: _send,
+              onTyping: _notifyTyping,
               onPickGallery: _pickImage,
               onTakePhoto: _takePhoto,
               onStartRecording: _startRecording,
               onStopRecording: _stopAndSendRecording,
               onCancelRecording: _cancelRecording,
             ),
+          ],
         ],
       ),
     );
@@ -877,6 +897,7 @@ class _InputBar extends StatefulWidget {
     required this.sending,
     required this.recording,
     required this.onSend,
+    required this.onTyping,
     required this.onPickGallery,
     required this.onTakePhoto,
     required this.onStartRecording,
@@ -888,6 +909,7 @@ class _InputBar extends StatefulWidget {
   final bool sending;
   final bool recording;
   final VoidCallback onSend;
+  final VoidCallback onTyping;
   final VoidCallback onPickGallery;
   final VoidCallback onTakePhoto;
   final VoidCallback onStartRecording;
@@ -916,6 +938,7 @@ class _InputBarState extends State<_InputBar> {
   void _onTextChanged() {
     final has = widget.controller.text.trim().isNotEmpty;
     if (has != _hasText) setState(() => _hasText = has);
+    if (has) widget.onTyping();
   }
 
   @override
@@ -1106,6 +1129,98 @@ class _EmptyChat extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Typing indicator
+// ---------------------------------------------------------------------------
+
+class _TypingIndicatorBar extends ConsumerStatefulWidget {
+  const _TypingIndicatorBar({required this.chatId});
+  final String chatId;
+
+  @override
+  ConsumerState<_TypingIndicatorBar> createState() =>
+      _TypingIndicatorBarState();
+}
+
+class _TypingIndicatorBarState extends ConsumerState<_TypingIndicatorBar>
+    with SingleTickerProviderStateMixin {
+  Timer? _ticker;
+  late final AnimationController _dotController;
+
+  @override
+  void initState() {
+    super.initState();
+    _dotController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+    _ticker = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) { if (mounted) setState(() {}); },
+    );
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    _dotController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final timestamp = ref.watch(otherTypingProvider(widget.chatId)).valueOrNull;
+    if (timestamp == null) return const SizedBox.shrink();
+    if (DateTime.now().toUtc().difference(timestamp) >
+        const Duration(seconds: 5)) {
+      return const SizedBox.shrink();
+    }
+
+    final oc = context.oc;
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: oc.cardSurface,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: AnimatedBuilder(
+              animation: _dotController,
+              builder: (context, _) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(3, (i) {
+                    final offset = (i / 3);
+                    final phase = (_dotController.value - offset).abs() % 1.0;
+                    final scale = 1.0 + 0.4 * (phase < 0.5 ? phase * 2 : (1 - phase) * 2);
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Transform.scale(
+                        scale: scale,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: oc.secondaryText,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

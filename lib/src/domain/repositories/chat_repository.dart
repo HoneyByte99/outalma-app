@@ -16,4 +16,15 @@ abstract interface class ChatRepository {
 
   /// Marks all messages in [chatId] not sent by [uid] as read by [uid].
   Future<void> markMessagesRead({required String chatId, required String uid});
+
+  /// Writes (or refreshes) the caller's typing presence in [chatId].
+  /// Should be called at most every 2 seconds while the user is typing.
+  Future<void> setTyping({required String chatId, required String uid});
+
+  /// Streams the [updatedAt] timestamp of the other participant's typing doc.
+  /// Returns null when the other participant is not typing.
+  Stream<DateTime?> watchOtherTyping({
+    required String chatId,
+    required String myUid,
+  });
 }

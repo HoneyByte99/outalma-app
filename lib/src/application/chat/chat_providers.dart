@@ -61,6 +61,19 @@ final chatsForModeProvider = Provider<AsyncValue<List<Chat>>>((ref) {
   });
 });
 
+/// Streams the other participant's typing timestamp for [chatId].
+/// Returns null when the other user is not typing (or TTL has expired).
+final otherTypingProvider = StreamProvider.family<DateTime?, String>((
+  ref,
+  chatId,
+) {
+  final auth = ref.watch(authNotifierProvider).valueOrNull;
+  if (auth is! AuthAuthenticated) return const Stream.empty();
+  return ref
+      .watch(chatRepositoryProvider)
+      .watchOtherTyping(chatId: chatId, myUid: auth.user.id);
+});
+
 /// Unread messages count across all chats (messages not sent by me and not in readBy).
 final totalUnreadMessagesCountProvider = Provider<int>((ref) {
   // We use the chat list to know which chats exist; detailed unread count

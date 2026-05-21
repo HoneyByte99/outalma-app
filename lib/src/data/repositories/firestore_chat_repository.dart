@@ -76,4 +76,36 @@ class FirestoreChatRepository implements ChatRepository {
     }
     if (count > 0) await batch.commit();
   }
+
+  @override
+  Future<void> setTyping({
+    required String chatId,
+    required String uid,
+  }) {
+    return _db
+        .collection('chats')
+        .doc(chatId)
+        .collection('typing')
+        .doc(uid)
+        .set({'updatedAt': FieldValue.serverTimestamp()});
+  }
+
+  @override
+  Stream<DateTime?> watchOtherTyping({
+    required String chatId,
+    required String myUid,
+  }) {
+    return _db
+        .collection('chats')
+        .doc(chatId)
+        .collection('typing')
+        .snapshots()
+        .map((qs) {
+          final other = qs.docs.where((d) => d.id != myUid).firstOrNull;
+          if (other == null) return null;
+          final ts = other.data()['updatedAt'];
+          if (ts is Timestamp) return ts.toDate().toUtc();
+          return null;
+        });
+  }
 }
