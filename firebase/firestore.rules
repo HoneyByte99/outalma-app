@@ -32,8 +32,11 @@ service cloud.firestore {
     // ---------- USERS ----------
     // Any signed-in user may read profiles (needed to display provider names/avatars
     // on service cards, chat tiles, etc.). Writes remain self-only AND must not
-    // touch security-sensitive fields (phoneE164, email, id, createdAt). Those
-    // fields are server-managed (Cloud Functions via admin SDK bypass these rules).
+    // touch security-sensitive fields (phoneE164, email, id). Those fields are
+    // server-managed (Cloud Functions via admin SDK bypass these rules).
+    // `createdAt` is intentionally not checked: Dart DateTime↔Timestamp round-trip
+    // loses nanosecond precision, so equality always fails even when the value is
+    // genuinely unchanged. phoneE164 and email are the real account-takeover guards.
     // This is the primary defence against account-takeover via phone-claim attacks
     // (cf. security review C1 / C2).
     match /users/{uid} {
@@ -41,9 +44,11 @@ service cloud.firestore {
       // never include it in field-level checks. `isSelf(uid)` already binds the
       // path wildcard to the authenticated user's uid.
       function isUserUpdateSafe() {
-        return request.resource.data.phoneE164 == resource.data.phoneE164
-          && request.resource.data.email == resource.data.email
-          && request.resource.data.createdAt == resource.data.createdAt;
+        // Use .get() with a sentinel default for phoneE164 because dot-notation on an
+        // absent field does not compare equal to null in Firestore rules — only .get()
+        // guarantees a safe fallback that makes null==null evaluate to true.
+        return request.resource.data.get('phoneE164', '__absent__') == resource.data.get('phoneE164', '__absent__')
+          && request.resource.data.email == resource.data.email;
       }
       // Email-only accounts must not carry a phoneE164 field on create — phone
       // numbers are written exclusively by Cloud Functions (admin SDK, bypasses
