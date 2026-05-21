@@ -15,8 +15,6 @@
 	<key>stripSwiftSymbols</key>
 	<true/>
 	<key>destination</key>
-	<string>upload</string>
-	<key>manageAppVersionAndBuildNumber</key>
-	<true/>
+	<string>export</string>
 </dict>
 </plist>
