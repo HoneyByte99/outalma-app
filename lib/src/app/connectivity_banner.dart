@@ -30,6 +30,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   }
 
   void _handleResults(List<ConnectivityResult> results) {
+    if (!mounted) return;
     final nowOffline = results.every((r) => r == ConnectivityResult.none);
     if (nowOffline != _offline) {
       setState(() => _offline = nowOffline);
