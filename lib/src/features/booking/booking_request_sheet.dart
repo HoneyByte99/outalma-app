@@ -233,23 +233,26 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final mediaQuery = MediaQuery.of(context);
+    final bottomInset = mediaQuery.viewInsets.bottom;
+    final bottomPadding = mediaQuery.padding.bottom;
+    final maxHeight = mediaQuery.size.height * 0.85;
 
     return Container(
       decoration: BoxDecoration(
         color: oc.cardSurface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.only(bottom: bottomInset),
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Handle
               Center(
                 child: Container(
@@ -338,6 +341,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
               ),
               SizedBox(height: bottomPadding > 0 ? 0 : 12),
             ],
+            ),
           ),
         ),
       ),
@@ -557,30 +561,35 @@ class _PickerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: filled ? oc.primary.withValues(alpha: 0.06) : oc.inputFill,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: filled ? oc.primary.withValues(alpha: 0.3) : oc.border,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: filled ? oc.primary : oc.icons),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: filled ? oc.primary : oc.secondaryText,
-                fontWeight: filled ? FontWeight.w500 : FontWeight.w400,
-              ),
+    final radius = BorderRadius.circular(12);
+    return Material(
+      color: filled ? oc.primary.withValues(alpha: 0.06) : oc.inputFill,
+      borderRadius: radius,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: filled ? oc.primary.withValues(alpha: 0.3) : oc.border,
             ),
-          ],
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: filled ? oc.primary : oc.icons),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: filled ? oc.primary : oc.secondaryText,
+                  fontWeight: filled ? FontWeight.w500 : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
