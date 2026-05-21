@@ -10,6 +10,7 @@ import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/user/user_providers.dart';
+import '../../core/utils/format_utils.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
 import '../../domain/utils/country_utils.dart';
@@ -338,9 +339,10 @@ class _PublicServiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final formattedPrice = formatPriceFromCents(service.price);
     final priceLabel = service.priceType.name == 'hourly'
-        ? '${(service.price / 100).toStringAsFixed(0)} €/h'
-        : '${(service.price / 100).toStringAsFixed(0)} €';
+        ? '$formattedPrice/h'
+        : formattedPrice;
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.serviceDetail(service.id)),

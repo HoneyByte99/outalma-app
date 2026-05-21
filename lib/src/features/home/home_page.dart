@@ -14,6 +14,7 @@ import '../../application/home/location_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
+import '../../core/utils/format_utils.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
 import '../../domain/enums/category_id.dart';
@@ -899,9 +900,10 @@ class _ServiceCard extends ConsumerWidget {
         .valueOrNull;
     final reviews =
         ref.watch(reviewsForUserProvider(service.providerId)).valueOrNull ?? [];
+    final formattedPrice = formatPriceFromCents(service.price);
     final priceLabel = service.priceType.name == 'hourly'
-        ? '${(service.price / 100).toStringAsFixed(0)} \u20ac/h'
-        : '${(service.price / 100).toStringAsFixed(0)} \u20ac';
+        ? '$formattedPrice/h'
+        : formattedPrice;
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.serviceDetail(service.id)),
