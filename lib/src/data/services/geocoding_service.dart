@@ -15,12 +15,7 @@ class PlaceSuggestion {
 /// Uses the new `places.googleapis.com/v1` endpoints which support CORS
 /// for browser-side requests (unlike the legacy maps.googleapis.com endpoints).
 class GeocodingService {
-  GeocodingService({required String apiKey}) : _apiKey = apiKey {
-    assert(
-      _apiKey.isNotEmpty,
-      'MAPS_API_KEY manquante — lance avec --dart-define=MAPS_API_KEY=... (cf. scripts/run.sh)',
-    );
-  }
+  GeocodingService({required String apiKey}) : _apiKey = apiKey;
 
   final String _apiKey;
 
