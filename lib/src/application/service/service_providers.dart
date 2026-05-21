@@ -9,9 +9,16 @@ final serviceRepositoryProvider = Provider<ServiceRepository>((ref) {
   return FirestoreServiceRepository(ref.watch(firestoreProvider));
 });
 
+/// Current "page size" for the discovery list — incremented by the UI to
+/// load more services. Resets to 30 on each app start.
+final serviceListPageSizeProvider = StateProvider<int>((_) => 30);
+
 /// All published services — used as the canonical source for discovery.
+/// Re-subscribes when [serviceListPageSizeProvider] grows; Firestore keeps
+/// the stream live so newly published services appear in real time.
 final serviceListProvider = StreamProvider<List<Service>>((ref) {
-  return ref.watch(serviceRepositoryProvider).watchAllPublished();
+  final limit = ref.watch(serviceListPageSizeProvider);
+  return ref.watch(serviceRepositoryProvider).watchAllPublished(limit: limit);
 });
 
 /// Single service by id — used for detail page.

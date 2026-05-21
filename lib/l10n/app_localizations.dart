@@ -398,6 +398,72 @@ abstract class AppLocalizations {
   /// **'This phone number is already in use.'**
   String get authErrorPhoneTaken;
 
+  /// No description provided for @authErrorInvalidOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid or expired code.'**
+  String get authErrorInvalidOtp;
+
+  /// No description provided for @authErrorOtpSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send the code. Please retry.'**
+  String get authErrorOtpSend;
+
+  /// No description provided for @phoneOtpSendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Get code'**
+  String get phoneOtpSendCode;
+
+  /// No description provided for @phoneOtpVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get phoneOtpVerify;
+
+  /// No description provided for @phoneOtpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'6-digit code'**
+  String get phoneOtpHint;
+
+  /// No description provided for @phoneOtpResend.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code'**
+  String get phoneOtpResend;
+
+  /// No description provided for @phoneOtpEditNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit number'**
+  String get phoneOtpEditNumber;
+
+  /// No description provided for @phoneOtpSentTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Code sent to {phone}'**
+  String phoneOtpSentTo(String phone);
+
+  /// No description provided for @phoneOtpNoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'No account found for this number. Please sign up first.'**
+  String get phoneOtpNoAccount;
+
+  /// No description provided for @signUpVerificationNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'After signing up, a verification email will be sent. Tap the link in your inbox to confirm your address.'**
+  String get signUpVerificationNotice;
+
+  /// No description provided for @signUpVerificationResent.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email re-sent.'**
+  String get signUpVerificationResent;
+
   /// No description provided for @homeGreeting.
   ///
   /// In en, this message translates to:
@@ -451,6 +517,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Provider mode activated'**
   String get modeProviderActivated;
+
+  /// No description provided for @modeBadgeTapToSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to switch mode'**
+  String get modeBadgeTapToSwitch;
+
+  /// No description provided for @verifiedBadgeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get verifiedBadgeLabel;
+
+  /// No description provided for @serviceZonesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Service areas'**
+  String get serviceZonesLabel;
+
+  /// No description provided for @reportDetailsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Details (optional)'**
+  String get reportDetailsLabel;
+
+  /// No description provided for @reportDetailsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add information that will help our moderation team…'**
+  String get reportDetailsHint;
+
+  /// No description provided for @dashboardStatsUpcomingWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming this week'**
+  String get dashboardStatsUpcomingWeek;
+
+  /// No description provided for @dashboardStatsThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings this month'**
+  String get dashboardStatsThisMonth;
+
+  /// No description provided for @dashboardStatsAcceptanceRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Acceptance rate'**
+  String get dashboardStatsAcceptanceRate;
 
   /// No description provided for @locationTitle.
   ///
@@ -607,6 +721,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Full name'**
   String get fieldFullName;
+
+  /// No description provided for @fieldPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get fieldPhone;
 
   /// No description provided for @fieldRequired.
   ///
@@ -901,6 +1021,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unspecified'**
   String get bookingAddressUnspecified;
+
+  /// No description provided for @bookingDistanceEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated distance: ~{km} km'**
+  String bookingDistanceEstimate(String km);
+
+  /// No description provided for @bookingOpenDirections.
+  ///
+  /// In en, this message translates to:
+  /// **'Directions'**
+  String get bookingOpenDirections;
 
   /// No description provided for @bookingContact.
   ///

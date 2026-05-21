@@ -9,6 +9,21 @@ admin.initializeApp();
 const db = admin.firestore();
 
 // ---------------------------------------------------------------------------
+// Phone authentication — production OTP flow (Twilio Verify backend)
+// ---------------------------------------------------------------------------
+export {
+  requestPhoneOtp,
+  verifyPhoneOtpAndSignIn,
+  verifyPhoneOtpAndSignUp,
+} from './auth_phone';
+
+// NOTE: legacy `sendOtpTwilio` / `verifyOtpTwilio` callables (file
+// `otp_twilio.ts`) are intentionally NOT exported. They share the canonical
+// pipeline's surface area but lack the hardening done in `auth_phone.ts`
+// (Auth-side uniqueness, displayName sanitisation, race protection).
+// Re-enable behind a feature flag only if a future benchmark needs them.
+
+// ---------------------------------------------------------------------------
 // Push notification helper
 // ---------------------------------------------------------------------------
 

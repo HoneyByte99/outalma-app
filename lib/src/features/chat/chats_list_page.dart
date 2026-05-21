@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_shell.dart';
 import '../../app/app_theme.dart';
+import '../shared/mode_badge.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
@@ -67,7 +68,7 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage>
         title: Text(l10n.messagesTitle),
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
-        actions: const [BellIconButton()],
+        actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
         bottom: TabBar(
           controller: _tabController,
           tabs: [

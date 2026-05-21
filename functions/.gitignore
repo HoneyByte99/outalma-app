@@ -2,3 +2,11 @@ lib/
 node_modules/
 *.log
 .firebase/
+
+# Secrets — never commit
+**/service-account*.json
+**/*firebase-adminsdk*.json
+.env
+.env.*
+!.env.example
+scripts/service-account.json

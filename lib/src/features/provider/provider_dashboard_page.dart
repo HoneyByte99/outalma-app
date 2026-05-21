@@ -7,10 +7,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../app/app_shell.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
-import '../../application/auth/auth_providers.dart';
 import '../../application/provider/provider_providers.dart';
-import '../../application/user/user_providers.dart';
-import '../../domain/enums/active_mode.dart';
+import '../shared/mode_badge.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/models/provider_profile.dart';
 import '../shared/category_icon.dart';
@@ -25,7 +23,14 @@ class ProviderDashboardPage extends ConsumerWidget {
     final oc = context.oc;
     final profileAsync = ref.watch(currentProviderProfileProvider);
     final servicesAsync = ref.watch(providerServicesProvider);
-    final activeMode = ref.watch(activeModeProvider);
+
+    // Resolve the dashboard state with explicit priority: profile setup
+    // first, then "create first service" if there are none, then the normal
+    // services dashboard. Only the screen for the current state shows a
+    // strong CTA — no competing primary actions (security review A.3).
+    final hasProfile = profileAsync.valueOrNull != null;
+    final servicesCount = servicesAsync.valueOrNull?.length ?? 0;
+    final showFab = hasProfile && servicesCount > 0;
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -39,82 +44,80 @@ class ProviderDashboardPage extends ConsumerWidget {
               l10n.dashboardTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            actions: [
-              _ModeBadge(activeMode: activeMode),
-              IconButton(
-                icon: const Icon(Icons.person_outline),
-                onPressed: () => context.push(AppRoutes.providerOnboarding),
-                tooltip: l10n.tooltipProviderProfile,
+            actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
+          ),
+
+          // State 1 — no profile yet : full-bleed onboarding, only CTA.
+          if (!hasProfile)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: profileAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) =>
+                    _ErrorState(message: l10n.dashboardServicesError),
+                data: (_) => _OnboardingBanner(),
               ),
-              const BellIconButton(),
-              const SizedBox(width: 4),
-            ],
-          ),
-
-          // ---- Profile banner (onboarding prompt if no profile) ----
-          SliverToBoxAdapter(
-            child: profileAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-              data: (profile) => profile == null
-                  ? _OnboardingBanner()
-                  : _ProfileCard(profile: profile),
-            ),
-          ),
-
-          // ---- Services header ----
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            sliver: SliverToBoxAdapter(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            )
+          // State 2 — profile OK but no service : compact profile card +
+          // single dominant CTA to create the first service.
+          else if (servicesCount == 0)
+            SliverToBoxAdapter(
+              child: Column(
                 children: [
-                  Text(
-                    l10n.dashboardMyServices,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  TextButton.icon(
-                    onPressed: () => context.push(AppRoutes.serviceNew),
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: Text(l10n.dashboardAdd),
+                  _ProfileCard(profile: profileAsync.value!),
+                  servicesAsync.when(
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: CircularProgressIndicator(),
+                    ),
+                    error: (_, __) =>
+                        _ErrorState(message: l10n.dashboardServicesError),
+                    data: (_) => const _EmptyServices(),
                   ),
                 ],
               ),
+            )
+          // State 3 — profile + services : normal dashboard.
+          else ...[
+            SliverToBoxAdapter(
+              child: _ProfileCard(profile: profileAsync.value!),
             ),
-          ),
-
-          // ---- Services list ----
-          servicesAsync.when(
-            loading: () => const SliverToBoxAdapter(
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(),
+            const SliverToBoxAdapter(child: _ProviderStatsRow()),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              sliver: SliverToBoxAdapter(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      l10n.dashboardMyServices,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
                 ),
               ),
             ),
-            error: (_, __) => SliverToBoxAdapter(
-              child: _ErrorState(message: l10n.dashboardServicesError),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) =>
+                      _ServiceTile(service: servicesAsync.value![i]),
+                  childCount: servicesCount,
+                ),
+              ),
             ),
-            data: (services) => services.isEmpty
-                ? const SliverToBoxAdapter(child: _EmptyServices())
-                : SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, i) => _ServiceTile(service: services[i]),
-                        childCount: services.length,
-                      ),
-                    ),
-                  ),
-          ),
+          ],
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push(AppRoutes.serviceNew),
-        backgroundColor: oc.primary,
-        child: const Icon(Icons.add_rounded, color: Colors.white),
-      ),
+      floatingActionButton: showFab
+          ? FloatingActionButton(
+              onPressed: () => context.push(AppRoutes.serviceNew),
+              backgroundColor: oc.primary,
+              tooltip: l10n.dashboardAdd,
+              child: const Icon(Icons.add_rounded, color: Colors.white),
+            )
+          : null,
     );
   }
 }
@@ -496,58 +499,85 @@ class _ErrorState extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Mode badge — AppBar shortcut to profile/switch tab
+// Provider stats row (B.5) — KPIs for the provider dashboard.
 // ---------------------------------------------------------------------------
 
-class _ModeBadge extends ConsumerWidget {
-  const _ModeBadge({required this.activeMode});
-
-  final ActiveMode activeMode;
+class _ProviderStatsRow extends ConsumerWidget {
+  const _ProviderStatsRow();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final isClient = activeMode == ActiveMode.client;
-    final label = isClient ? l10n.modeClient : l10n.modeProvider;
-    final color = isClient ? oc.primary : oc.success;
+    final stats = ref.watch(providerStatsProvider);
 
-    return GestureDetector(
-      onTap: () {
-        final newMode = isClient ? ActiveMode.provider : ActiveMode.client;
-        ref.read(authNotifierProvider.notifier).switchMode(newMode);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              newMode == ActiveMode.client
-                  ? l10n.modeClientActivated
-                  : l10n.modeProviderActivated,
-            ),
+    String acceptanceLabel() {
+      final r = stats.acceptanceRate;
+      if (r == null) return '—';
+      return '${(r * 100).round()}%';
+    }
+
+    Widget tile({
+      required IconData icon,
+      required String value,
+      required String label,
+    }) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            color: oc.cardSurface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: oc.border),
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 18, color: oc.primary),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
-            ),
-            const SizedBox(width: 4),
-            Icon(Icons.swap_horiz_rounded, size: 14, color: color),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Row(
+        children: [
+          tile(
+            icon: Icons.event_available_rounded,
+            value: '${stats.upcomingThisWeek}',
+            label: l10n.dashboardStatsUpcomingWeek,
+          ),
+          const SizedBox(width: 10),
+          tile(
+            icon: Icons.calendar_today_outlined,
+            value: '${stats.bookingsThisMonth}',
+            label: l10n.dashboardStatsThisMonth,
+          ),
+          const SizedBox(width: 10),
+          tile(
+            icon: Icons.check_circle_outline_rounded,
+            value: acceptanceLabel(),
+            label: l10n.dashboardStatsAcceptanceRate,
+          ),
+        ],
       ),
     );
   }

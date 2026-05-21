@@ -16,6 +16,9 @@ import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
+import '../../domain/models/service.dart';
+import '../../domain/utils/distance.dart';
+import '../shared/maps_launcher.dart';
 
 String _formatSchedule(DateTime dt, String locale) {
   final dateFmt = DateFormat('EEE d MMMM yyyy', locale);
@@ -152,14 +155,9 @@ class _DetailContent extends ConsumerWidget {
 
           // ---- Address ----
           if (booking.addressSnapshot != null) ...[
-            _Section(
-              title: l10n.bookingAddress,
-              child: _InfoRow(
-                icon: Icons.location_on_outlined,
-                label:
-                    booking.addressSnapshot!['address'] as String? ??
-                    l10n.bookingAddressUnspecified,
-              ),
+            _AddressSection(
+              booking: booking,
+              service: serviceAsync.valueOrNull,
             ),
             const SizedBox(height: 16),
           ],
@@ -670,6 +668,77 @@ class _InfoRow extends StatelessWidget {
           child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Address section (with optional distance + directions)
+// ---------------------------------------------------------------------------
+
+class _AddressSection extends StatelessWidget {
+  const _AddressSection({required this.booking, required this.service});
+
+  final Booking booking;
+  final Service? service;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final snapshot = booking.addressSnapshot;
+    final address =
+        (snapshot?['address'] as String?) ?? l10n.bookingAddressUnspecified;
+
+    final lat = (snapshot?['lat'] as num?)?.toDouble();
+    final lng = (snapshot?['lng'] as num?)?.toDouble();
+    final hasCoords = lat != null && lng != null;
+
+    final canShowDirections =
+        hasCoords &&
+        (booking.status == BookingStatus.accepted ||
+            booking.status == BookingStatus.inProgress ||
+            booking.status == BookingStatus.done);
+
+    String? distanceLabel;
+    if (hasCoords && service != null && service!.serviceZones.isNotEmpty) {
+      final closest = closestZoneKm(service!.serviceZones, lat, lng);
+      if (closest != null) {
+        final km = closest.km;
+        final formatted = km < 10
+            ? km.toStringAsFixed(1)
+            : km.round().toString();
+        distanceLabel = l10n.bookingDistanceEstimate(formatted);
+      }
+    }
+
+    return _Section(
+      title: l10n.bookingAddress,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _InfoRow(icon: Icons.location_on_outlined, label: address),
+          if (distanceLabel != null) ...[
+            const SizedBox(height: 6),
+            _InfoRow(icon: Icons.straighten_outlined, label: distanceLabel),
+          ],
+          if (canShowDirections) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () => openDirections(
+                  context,
+                  destLat: lat,
+                  destLng: lng,
+                  destLabel: address,
+                ),
+                icon: const Icon(Icons.directions_outlined, size: 18),
+                label: Text(l10n.bookingOpenDirections),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

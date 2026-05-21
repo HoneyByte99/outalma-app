@@ -18,6 +18,8 @@ export 'models/review.dart';
 export 'models/service.dart';
 export 'models/service_zone.dart';
 
+export 'utils/distance.dart';
+
 export 'repositories/booking_repository.dart';
 export 'repositories/chat_repository.dart';
 export 'repositories/provider_repository.dart';

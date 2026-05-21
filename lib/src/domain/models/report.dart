@@ -6,6 +6,7 @@ class Report {
     required this.targetId,
     required this.reason,
     required this.createdAt,
+    this.details,
     this.status = 'open',
   });
 
@@ -17,6 +18,9 @@ class Report {
   final String targetId;
   final String reason;
 
+  /// Optional free-text from the reporter giving more context.
+  final String? details;
+
   /// "open", "resolved", or "dismissed"
   final String status;
   final DateTime createdAt;
@@ -26,6 +30,7 @@ class Report {
     String? targetType,
     String? targetId,
     String? reason,
+    String? details,
     String? status,
     DateTime? createdAt,
   }) {
@@ -35,6 +40,7 @@ class Report {
       targetType: targetType ?? this.targetType,
       targetId: targetId ?? this.targetId,
       reason: reason ?? this.reason,
+      details: details ?? this.details,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
     );

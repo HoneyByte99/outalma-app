@@ -41,6 +41,10 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   TimeOfDay? _selectedTime;
   String? _scheduleConflict; // warning message if slot is busy
 
+  // Place id of the selected suggestion, if any. Cleared as soon as the user
+  // edits the address text by hand.
+  String? _selectedPlaceId;
+
   @override
   void initState() {
     super.initState();
@@ -92,6 +96,21 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
 
     setState(() => _loading = true);
     try {
+      double? lat;
+      double? lng;
+      final placeId = _selectedPlaceId;
+      if (placeId != null && placeId.isNotEmpty) {
+        try {
+          final geocoding = ref.read(geocodingServiceProvider);
+          final coords = await geocoding.getPlaceLatLng(placeId);
+          if (coords != null) {
+            lat = coords.lat;
+            lng = coords.lng;
+          }
+        } catch (_) {
+          // Non-blocking: the booking can still be created without coords.
+        }
+      }
       final useCase = ref.read(createBookingUseCaseProvider);
       await useCase(
         providerId: widget.providerId,
@@ -99,6 +118,8 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         requestMessage: _messageController.text.trim(),
         scheduledAt: _scheduledAt,
         address: _addressController.text.trim(),
+        addressLat: lat,
+        addressLng: lng,
       );
       if (mounted) {
         ScaffoldMessenger.of(
@@ -342,6 +363,8 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         return _StepAddress(
           controller: _addressController,
           focus: _addressFocus,
+          onPlaceSelected: (placeId) =>
+              setState(() => _selectedPlaceId = placeId),
         );
       default:
         return const SizedBox.shrink();
@@ -569,10 +592,18 @@ class _PickerButton extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _StepAddress extends ConsumerStatefulWidget {
-  const _StepAddress({required this.controller, required this.focus});
+  const _StepAddress({
+    required this.controller,
+    required this.focus,
+    required this.onPlaceSelected,
+  });
 
   final TextEditingController controller;
   final FocusNode focus;
+
+  /// Called with the selected suggestion's placeId, or null when the user
+  /// edits the address by hand (so the cached id is no longer valid).
+  final ValueChanged<String?> onPlaceSelected;
 
   @override
   ConsumerState<_StepAddress> createState() => _StepAddressState();
@@ -582,6 +613,8 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
   List<PlaceSuggestion> _suggestions = [];
 
   Future<void> _onChanged(String input) async {
+    // Manual edits invalidate the previously selected place.
+    widget.onPlaceSelected(null);
     if (input.trim().length < 3) {
       setState(() => _suggestions = []);
       return;
@@ -595,6 +628,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
 
   void _selectSuggestion(PlaceSuggestion s) {
     widget.controller.text = s.description;
+    widget.onPlaceSelected(s.placeId);
     setState(() => _suggestions = []);
   }
 

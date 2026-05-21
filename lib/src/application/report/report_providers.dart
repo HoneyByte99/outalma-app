@@ -19,6 +19,7 @@ class CreateReportUseCase {
     required String targetType,
     required String targetId,
     required String reason,
+    String? details,
   }) async {
     final report = Report(
       id: '',
@@ -26,6 +27,7 @@ class CreateReportUseCase {
       targetType: targetType,
       targetId: targetId,
       reason: reason,
+      details: details,
       createdAt: DateTime.now(),
     );
     await _repo.create(report);

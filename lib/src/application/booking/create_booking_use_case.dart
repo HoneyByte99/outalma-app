@@ -20,6 +20,8 @@ class CreateBookingUseCase {
     DateTime? scheduledAt,
     String? schedule,
     String? address,
+    double? addressLat,
+    double? addressLng,
   }) async {
     final callable = _functions.httpsCallable('createBooking');
 
@@ -32,7 +34,13 @@ class CreateBookingUseCase {
       if (schedule != null && schedule.isNotEmpty)
         'schedule': {'description': schedule},
       if (address != null && address.isNotEmpty)
-        'addressSnapshot': {'address': address},
+        'addressSnapshot': <String, Object?>{
+          'address': address,
+          if (addressLat != null && addressLng != null) ...{
+            'lat': addressLat,
+            'lng': addressLng,
+          },
+        },
     };
 
     final result = await callable.call<Map<String, dynamic>>(payload);

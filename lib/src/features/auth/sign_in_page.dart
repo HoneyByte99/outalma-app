@@ -1,4 +1,6 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
+import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -17,6 +20,8 @@ import '../shared/phone_field.dart';
 
 enum _AuthMode { mail, phone }
 
+enum _PhoneStep { enterPhone, enterOtp }
+
 class SignInPage extends ConsumerStatefulWidget {
   const SignInPage({super.key});
 
@@ -26,6 +31,7 @@ class SignInPage extends ConsumerStatefulWidget {
 
 class _SignInPageState extends ConsumerState<SignInPage> {
   _AuthMode _mode = _AuthMode.mail;
+  _PhoneStep _phoneStep = _PhoneStep.enterPhone;
 
   // Email fields
   final _emailController = TextEditingController();
@@ -34,6 +40,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
   // Phone fields
   String? _phoneE164;
+  final _otpController = TextEditingController();
 
   bool _loading = false;
 
@@ -41,11 +48,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
   // ---------------------------------------------------------------------------
-  // Email sign-in
+  // Email sign-in — password
   // ---------------------------------------------------------------------------
 
   Future<void> _signInEmail() async {
@@ -58,28 +66,59 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       return;
     }
 
-    final errorGeneral = l10n.errorGeneral;
     setState(() => _loading = true);
-
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      await ref
+          .read(authNotifierProvider.notifier)
+          .signInWithEmailPassword(email: email, password: password);
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e.code));
     } catch (_) {
-      _showError(errorGeneral);
+      _showError(l10n.errorGeneral);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  Future<void> _forgotPassword() async {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final messenger = ScaffoldMessenger.of(context);
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.signInForgotEnterEmail),
+          backgroundColor: oc.error,
+        ),
+      );
+      return;
+    }
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.signInForgotEmailSent)),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.signInForgotEmailError),
+            backgroundColor: oc.error,
+          ),
+        );
+      }
+    }
+  }
+
   // ---------------------------------------------------------------------------
-  // Phone sign-in (no OTP for now — uses temp email auth under the hood)
+  // Phone sign-in — OTP flow (Twilio Verify backend)
   // ---------------------------------------------------------------------------
 
-  Future<void> _signInPhone() async {
+  /// Step 1: validate the phone, ask Twilio for an OTP, transition to step 2.
+  Future<void> _requestOtp() async {
     final l10n = AppLocalizations.of(context)!;
     final phone = _phoneE164;
 
@@ -87,27 +126,79 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       _showError(l10n.signInErrorEmptyFields);
       return;
     }
-
     final phoneError = PhoneField.validate(phone);
     if (phoneError != null) {
       _showError(phoneError);
       return;
     }
 
-    final errorGeneral = l10n.errorGeneral;
     setState(() => _loading = true);
-
     try {
-      await ref
-          .read(authNotifierProvider.notifier)
-          .signInWithPhone(phoneE164: phone);
-    } on FirebaseAuthException catch (e) {
-      _showError(_mapFirebaseError(e.code));
+      await ref.read(authNotifierProvider.notifier).requestPhoneOtp(phone);
+      if (!mounted) return;
+      setState(() {
+        _phoneStep = _PhoneStep.enterOtp;
+        _otpController.clear();
+      });
+    } on FirebaseFunctionsException {
+      _showError(l10n.authErrorOtpSend);
     } catch (_) {
-      _showError(errorGeneral);
+      _showError(l10n.errorGeneral);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Step 2: verify the code; on success the user is signed in. If the phone
+  /// has no Outalma account yet, route to the sign-up screen.
+  Future<void> _verifyOtp() async {
+    final l10n = AppLocalizations.of(context)!;
+    final phone = _phoneE164;
+    final code = _otpController.text.trim();
+
+    if (phone == null || code.isEmpty) {
+      _showError(l10n.signInErrorEmptyFields);
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final result = await ref
+          .read(authNotifierProvider.notifier)
+          .phoneSignInWithOtp(phone, code);
+      if (!result.signedIn) {
+        // Account not yet created — send the user to sign-up.
+        if (!mounted) return;
+        _showError(l10n.phoneOtpNoAccount);
+        context.go(AppRoutes.signUp);
+      }
+      // signedIn = true → authStateChanges handles redirect to /home.
+    } on InvalidOtpException {
+      _showError(l10n.authErrorInvalidOtp);
+    } catch (_) {
+      _showError(l10n.errorGeneral);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _editPhone() {
+    setState(() {
+      _phoneStep = _PhoneStep.enterPhone;
+      _otpController.clear();
+    });
+  }
+
+  VoidCallback? _ctaAction() {
+    if (_mode == _AuthMode.mail) return _signInEmail;
+    return _phoneStep == _PhoneStep.enterPhone ? _requestOtp : _verifyOtp;
+  }
+
+  String _ctaLabel(AppLocalizations l10n) {
+    if (_mode == _AuthMode.mail) return l10n.signInButton;
+    return _phoneStep == _PhoneStep.enterPhone
+        ? l10n.phoneOtpSendCode
+        : l10n.phoneOtpVerify;
   }
 
   // ---------------------------------------------------------------------------
@@ -188,7 +279,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
                 // ---- Form ----
                 if (_mode == _AuthMode.mail) ...[
-                  // Email fields
+                  // Email + password
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -226,8 +317,6 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-
-                  // Forgot password
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -240,14 +329,64 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                ] else ...[
-                  // Phone field
+                  const SizedBox(height: 12),
+                ] else if (_phoneStep == _PhoneStep.enterPhone) ...[
+                  // Step 1 — phone number
                   PhoneField(
                     initialValue: _phoneE164,
                     onChanged: (v) => setState(() => _phoneE164 = v),
                   ),
                   const SizedBox(height: 28),
+                ] else ...[
+                  // Step 2 — OTP code
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: oc.inputFill,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: oc.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.phone_outlined, size: 18, color: oc.icons),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _phoneE164 ?? '',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _loading ? null : _editPhone,
+                          child: Text(l10n.phoneOtpEditNumber),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _otpController,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _verifyOtp(),
+                    decoration: InputDecoration(
+                      hintText: l10n.phoneOtpHint,
+                      prefixIcon: const Icon(Icons.sms_outlined, size: 20),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _loading ? null : _requestOtp,
+                      child: Text(l10n.phoneOtpResend),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                 ],
 
                 // ---- CTA ----
@@ -261,10 +400,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     : SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _mode == _AuthMode.mail
-                              ? _signInEmail
-                              : _signInPhone,
-                          child: Text(l10n.signInButton),
+                          onPressed: _ctaAction(),
+                          child: Text(_ctaLabel(l10n)),
                         ),
                       ),
                 const SizedBox(height: 24),
@@ -290,46 +427,25 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 16),
+                // Debug-only link to the OTP lab. Hidden in release builds.
+                if (kDebugMode)
+                  TextButton(
+                    onPressed: () => context.go(AppRoutes.otpLab),
+                    child: Text(
+                      '🔬 OTP Lab (debug)',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                    ),
+                  ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _forgotPassword() async {
-    final l10n = AppLocalizations.of(context)!;
-    final oc = context.oc;
-    final messenger = ScaffoldMessenger.of(context);
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.signInForgotEnterEmail),
-          backgroundColor: oc.error,
-        ),
-      );
-      return;
-    }
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.signInForgotEmailSent)),
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.signInForgotEmailError),
-            backgroundColor: oc.error,
-          ),
-        );
-      }
-    }
   }
 }
 

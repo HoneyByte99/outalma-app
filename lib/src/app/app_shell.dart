@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -46,6 +47,7 @@ class AppShell extends ConsumerWidget {
     final currentLogical = branches.indexOf(currentBranch).clamp(0, 3);
 
     void onTap(int logicalIndex) {
+      HapticFeedback.selectionClick();
       final branchIndex = branches[logicalIndex];
       shell.goBranch(
         branchIndex,
@@ -58,12 +60,16 @@ class AppShell extends ConsumerWidget {
         ref.watch(providerInboxProvider).valueOrNull?.length ?? 0;
     final clientActiveCount = ref.watch(clientActiveBookingsCountProvider);
 
-    final items = isProvider
-        ? _providerNavItems(l10n, providerInboxCount)
-        : _clientNavItems(l10n, clientActiveCount);
+    final destinations = isProvider
+        ? _providerDestinations(l10n, providerInboxCount)
+        : _clientDestinations(l10n, clientActiveCount);
 
     final oc = context.oc;
+    final accent = isProvider ? oc.success : oc.primary;
 
+    // Material 3 NavigationBar (A.7): cleaner active state via a pill
+    // indicator behind the selected icon, smoother transitions, better
+    // dark-mode contrast than the legacy BottomNavigationBar.
     return Scaffold(
       body: shell,
       bottomNavigationBar: DecoratedBox(
@@ -77,19 +83,35 @@ class AppShell extends ConsumerWidget {
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: currentLogical,
-          onTap: onTap,
-          backgroundColor: oc.surface,
-          selectedItemColor: isProvider ? oc.success : oc.primary,
-          unselectedItemColor: oc.icons,
-          selectedLabelStyle: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            backgroundColor: oc.surface,
+            indicatorColor: accent.withValues(alpha: 0.16),
+            iconTheme: WidgetStateProperty.resolveWith((states) {
+              final selected = states.contains(WidgetState.selected);
+              return IconThemeData(
+                color: selected ? accent : oc.icons,
+                size: 22,
+              );
+            }),
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              final selected = states.contains(WidgetState.selected);
+              return TextStyle(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected ? accent : oc.secondaryText,
+                letterSpacing: 0.1,
+              );
+            }),
+            surfaceTintColor: Colors.transparent,
+            height: 64,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           ),
-          unselectedLabelStyle: const TextStyle(fontSize: 12),
-          elevation: 0,
-          items: items,
+          child: NavigationBar(
+            selectedIndex: currentLogical,
+            onDestinationSelected: onTap,
+            destinations: destinations,
+          ),
         ),
       ),
     );
@@ -100,63 +122,63 @@ class AppShell extends ConsumerWidget {
 // Nav item builders with badge support
 // ---------------------------------------------------------------------------
 
-List<BottomNavigationBarItem> _clientNavItems(
+List<NavigationDestination> _clientDestinations(
   AppLocalizations l10n,
   int activeCount,
 ) {
   return [
-    BottomNavigationBarItem(
+    NavigationDestination(
       icon: const Icon(Icons.home_outlined),
-      activeIcon: const Icon(Icons.home_rounded),
+      selectedIcon: const Icon(Icons.home_rounded),
       label: l10n.navHome,
     ),
-    BottomNavigationBarItem(
+    NavigationDestination(
       icon: _BadgedIcon(
         count: activeCount,
         icon: Icons.calendar_today_outlined,
       ),
-      activeIcon: _BadgedIcon(
+      selectedIcon: _BadgedIcon(
         count: activeCount,
         icon: Icons.calendar_today_rounded,
       ),
       label: l10n.navBookings,
     ),
-    BottomNavigationBarItem(
+    NavigationDestination(
       icon: const Icon(Icons.chat_bubble_outline_rounded),
-      activeIcon: const Icon(Icons.chat_bubble_rounded),
+      selectedIcon: const Icon(Icons.chat_bubble_rounded),
       label: l10n.navChats,
     ),
-    BottomNavigationBarItem(
+    NavigationDestination(
       icon: const Icon(Icons.person_outline_rounded),
-      activeIcon: const Icon(Icons.person_rounded),
+      selectedIcon: const Icon(Icons.person_rounded),
       label: l10n.navProfile,
     ),
   ];
 }
 
-List<BottomNavigationBarItem> _providerNavItems(
+List<NavigationDestination> _providerDestinations(
   AppLocalizations l10n,
   int inboxCount,
 ) {
   return [
-    BottomNavigationBarItem(
+    NavigationDestination(
       icon: const Icon(Icons.dashboard_outlined),
-      activeIcon: const Icon(Icons.dashboard_rounded),
+      selectedIcon: const Icon(Icons.dashboard_rounded),
       label: l10n.navDashboard,
     ),
-    BottomNavigationBarItem(
+    NavigationDestination(
       icon: _BadgedIcon(count: inboxCount, icon: Icons.inbox_outlined),
-      activeIcon: _BadgedIcon(count: inboxCount, icon: Icons.inbox_rounded),
+      selectedIcon: _BadgedIcon(count: inboxCount, icon: Icons.inbox_rounded),
       label: l10n.navMissions,
     ),
-    BottomNavigationBarItem(
+    NavigationDestination(
       icon: const Icon(Icons.chat_bubble_outline_rounded),
-      activeIcon: const Icon(Icons.chat_bubble_rounded),
+      selectedIcon: const Icon(Icons.chat_bubble_rounded),
       label: l10n.navChats,
     ),
-    BottomNavigationBarItem(
+    NavigationDestination(
       icon: const Icon(Icons.person_outline_rounded),
-      activeIcon: const Icon(Icons.person_rounded),
+      selectedIcon: const Icon(Icons.person_rounded),
       label: l10n.navProfile,
     ),
   ];

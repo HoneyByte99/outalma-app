@@ -121,7 +121,7 @@ Collection de référence — définit les catégories de services autorisées. 
 | Champ | Type | Notes |
 |---|---|---|
 | `displayName` | String | Nom public |
-| `email` | String | Sync depuis Firebase Auth |
+| `email` | String | Sync depuis Firebase Auth (vide pour les comptes créés via OTP téléphone) |
 | `photoPath` | String? | Chemin Firebase Storage (pas d'URL) |
 | `phoneE164` | String? | Privé — jamais exposé publiquement |
 | `country` | String | "FR" ou "SN" |
@@ -190,7 +190,7 @@ Collection racine (pas de sous-collection).
 | `requestMessage` | String | Message libre du client |
 | `scheduledAt` | Timestamp? | Date/heure structurée du RDV (remplace `schedule` freeform) |
 | `schedule` | Map? | Legacy — créneau freeform (conservé pour rétrocompatibilité) |
-| `addressSnapshot` | Map? | Adresse du client au moment du booking |
+| `addressSnapshot` | Map? | Adresse du client au moment du booking. Contient `address` (string) et optionnellement `lat`/`lng` (doubles) issus de Google Places, utilisés pour afficher la distance et un bouton itinéraire dans la page de détail. |
 | `chatId` | String? | Défini par `acceptBooking()` |
 | `reminded24h` | bool | Flag pour le reminder 24h avant |
 | `reminded1h` | bool | Flag pour le reminder 1h avant |

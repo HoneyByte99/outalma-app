@@ -28,6 +28,13 @@ class ReportPage extends ConsumerStatefulWidget {
 class _ReportPageState extends ConsumerState<ReportPage> {
   String? _selectedReason;
   bool _submitting = false;
+  final _detailsController = TextEditingController();
+
+  @override
+  void dispose() {
+    _detailsController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     if (_selectedReason == null || _submitting) return;
@@ -37,6 +44,7 @@ class _ReportPageState extends ConsumerState<ReportPage> {
 
     setState(() => _submitting = true);
     try {
+      final detailsRaw = _detailsController.text.trim();
       await ref
           .read(createReportUseCaseProvider)
           .call(
@@ -44,6 +52,7 @@ class _ReportPageState extends ConsumerState<ReportPage> {
             targetType: widget.targetType,
             targetId: widget.targetId,
             reason: _selectedReason!,
+            details: detailsRaw.isEmpty ? null : detailsRaw,
           );
       if (mounted) {
         Navigator.of(context).pop();
@@ -105,7 +114,7 @@ class _ReportPageState extends ConsumerState<ReportPage> {
             const SizedBox(height: 28),
 
             // Reason chips
-            Expanded(
+            Flexible(
               child: ListView.separated(
                 itemCount: reasons.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -159,7 +168,24 @@ class _ReportPageState extends ConsumerState<ReportPage> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+
+            // Optional details — only shown once a reason is selected to
+            // avoid cluttering the screen during the initial choice.
+            if (_selectedReason != null) ...[
+              Text(
+                l10n.reportDetailsLabel,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _detailsController,
+                maxLines: 3,
+                maxLength: 500,
+                decoration: InputDecoration(hintText: l10n.reportDetailsHint),
+              ),
+              const SizedBox(height: 12),
+            ],
 
             ElevatedButton(
               onPressed: (_selectedReason == null || _submitting)

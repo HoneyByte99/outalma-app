@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -13,10 +14,19 @@ import '../../../l10n/app_localizations.dart';
 import '../shared/phone_field.dart';
 
 // ---------------------------------------------------------------------------
-// Auth mode enum
+// Auth mode + phone step enums
 // ---------------------------------------------------------------------------
 
 enum _AuthMode { mail, phone }
+
+enum _PhoneStep { enterDetails, enterOtp }
+
+/// Best-effort country detection from an E.164 phone prefix.
+/// Defaults to FR if the prefix is anything other than +221 (Senegal).
+String _countryFromPhone(String phoneE164) {
+  if (phoneE164.startsWith('+221')) return 'SN';
+  return 'FR';
+}
 
 class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
@@ -27,6 +37,7 @@ class SignUpPage extends ConsumerStatefulWidget {
 
 class _SignUpPageState extends ConsumerState<SignUpPage> {
   _AuthMode _mode = _AuthMode.mail;
+  _PhoneStep _phoneStep = _PhoneStep.enterDetails;
 
   // Shared
   final _nameController = TextEditingController();
@@ -38,6 +49,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
 
   // Phone fields
   String? _phoneE164;
+  final _otpController = TextEditingController();
 
   bool _loading = false;
 
@@ -46,11 +58,12 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
   // ---------------------------------------------------------------------------
-  // Email sign-up
+  // Email sign-up — password + one-time verification email
   // ---------------------------------------------------------------------------
 
   Future<void> _signUpEmail() async {
@@ -68,71 +81,117 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       return;
     }
 
-    final errorGeneral = l10n.errorGeneral;
     setState(() => _loading = true);
-
     try {
-      final credential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
-
       await ref
           .read(authNotifierProvider.notifier)
-          .createUserDoc(
-            uid: credential.user!.uid,
+          .signUpWithEmailPassword(
             displayName: name,
             email: email,
+            password: password,
           );
-    } on PhoneTakenException {
-      _showError(l10n.authErrorPhoneTaken);
+      // authStateChanges fires; router redirects to /home. The verification
+      // mail has been dispatched and can be re-sent from the profile screen.
     } on FirebaseAuthException catch (e) {
       _showError(_mapFirebaseError(e.code));
     } catch (_) {
-      _showError(errorGeneral);
+      _showError(l10n.errorGeneral);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Phone sign-up (no OTP for now — uses temp email auth under the hood)
+  // Phone sign-up — OTP flow (Twilio Verify backend)
   // ---------------------------------------------------------------------------
 
-  Future<void> _signUpPhone() async {
+  /// Step 1: validate name + phone, request an OTP, transition to step 2.
+  Future<void> _requestOtp() async {
     final l10n = AppLocalizations.of(context)!;
     final name = _nameController.text.trim();
     final phone = _phoneE164;
 
-    if (name.isEmpty) {
+    if (name.isEmpty || phone == null || phone.isEmpty) {
       _showError(l10n.signUpErrorEmptyFields);
       return;
     }
-    if (phone == null || phone.isEmpty) {
-      _showError(l10n.signUpErrorEmptyFields);
-      return;
-    }
-
     final phoneError = PhoneField.validate(phone);
     if (phoneError != null) {
       _showError(phoneError);
       return;
     }
 
-    final errorGeneral = l10n.errorGeneral;
     setState(() => _loading = true);
-
     try {
-      await ref
-          .read(authNotifierProvider.notifier)
-          .signUpWithPhone(phoneE164: phone, displayName: name);
-    } on PhoneTakenException {
-      _showError(l10n.authErrorPhoneTaken);
-    } on FirebaseAuthException catch (e) {
-      _showError(_mapFirebaseError(e.code));
+      await ref.read(authNotifierProvider.notifier).requestPhoneOtp(phone);
+      if (!mounted) return;
+      setState(() {
+        _phoneStep = _PhoneStep.enterOtp;
+        _otpController.clear();
+      });
+    } on FirebaseFunctionsException {
+      _showError(l10n.authErrorOtpSend);
     } catch (_) {
-      _showError(errorGeneral);
+      _showError(l10n.errorGeneral);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Step 2: verify the code; on success creates the account server-side and
+  /// signs the user in via custom token.
+  Future<void> _verifyAndSignUp() async {
+    final l10n = AppLocalizations.of(context)!;
+    final name = _nameController.text.trim();
+    final phone = _phoneE164;
+    final code = _otpController.text.trim();
+
+    if (name.isEmpty || phone == null || code.isEmpty) {
+      _showError(l10n.signUpErrorEmptyFields);
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(authNotifierProvider.notifier)
+          .phoneSignUpWithOtp(
+            phoneE164: phone,
+            code: code,
+            displayName: name,
+            country: _countryFromPhone(phone),
+          );
+      // authStateChanges handles redirect.
+    } on InvalidOtpException {
+      _showError(l10n.authErrorInvalidOtp);
+    } on PhoneTakenException {
+      _showError(l10n.authErrorPhoneTaken);
+    } catch (_) {
+      _showError(l10n.errorGeneral);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _editDetails() {
+    setState(() {
+      _phoneStep = _PhoneStep.enterDetails;
+      _otpController.clear();
+    });
+  }
+
+  VoidCallback? _ctaAction() {
+    if (_mode == _AuthMode.mail) return _signUpEmail;
+    return _phoneStep == _PhoneStep.enterDetails
+        ? _requestOtp
+        : _verifyAndSignUp;
+  }
+
+  String _ctaLabel(AppLocalizations l10n) {
+    if (_mode == _AuthMode.mail) return l10n.signUpButton;
+    return _phoneStep == _PhoneStep.enterDetails
+        ? l10n.phoneOtpSendCode
+        : l10n.signUpButton;
   }
 
   // ---------------------------------------------------------------------------
@@ -169,6 +228,13 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
+          // Explicit back button — context.go() to /sign-in replaces the stack
+          // so the default Material back arrow wouldn't be shown.
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: l10n.signUpSignIn,
+            onPressed: () => context.go(AppRoutes.signIn),
+          ),
           actions: const [_ThemeToggleButton(), SizedBox(width: 8)],
         ),
         body: SafeArea(
@@ -209,23 +275,22 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 ),
                 const SizedBox(height: 28),
 
-                // ---- Name (shared between both modes) ----
-                TextField(
-                  controller: _nameController,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    hintText: l10n.signUpNameHint,
-                    prefixIcon: const Icon(
-                      Icons.person_outline_rounded,
-                      size: 20,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
                 // ---- Mode-specific fields ----
                 if (_mode == _AuthMode.mail) ...[
+                  // Name + email + password
+                  TextField(
+                    controller: _nameController,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      hintText: l10n.signUpNameHint,
+                      prefixIcon: const Icon(
+                        Icons.person_outline_rounded,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -262,10 +327,98 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                       ),
                     ),
                   ),
-                ] else ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: oc.primary.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.mark_email_read_outlined,
+                          color: oc.primary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l10n.signUpVerificationNotice,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (_phoneStep == _PhoneStep.enterDetails) ...[
+                  // Step 1 — name + phone
+                  TextField(
+                    controller: _nameController,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      hintText: l10n.signUpNameHint,
+                      prefixIcon: const Icon(
+                        Icons.person_outline_rounded,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   PhoneField(
                     initialValue: _phoneE164,
                     onChanged: (v) => setState(() => _phoneE164 = v),
+                  ),
+                ] else ...[
+                  // Step 2 — OTP code
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: oc.inputFill,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: oc.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.phone_outlined, size: 18, color: oc.icons),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _phoneE164 ?? '',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _loading ? null : _editDetails,
+                          child: Text(l10n.phoneOtpEditNumber),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _otpController,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _verifyAndSignUp(),
+                    decoration: InputDecoration(
+                      hintText: l10n.phoneOtpHint,
+                      prefixIcon: const Icon(Icons.sms_outlined, size: 20),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _loading ? null : _requestOtp,
+                      child: Text(l10n.phoneOtpResend),
+                    ),
                   ),
                 ],
                 const SizedBox(height: 28),
@@ -281,10 +434,8 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     : SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _mode == _AuthMode.mail
-                              ? _signUpEmail
-                              : _signUpPhone,
-                          child: Text(l10n.signUpButton),
+                          onPressed: _ctaAction(),
+                          child: Text(_ctaLabel(l10n)),
                         ),
                       ),
                 const SizedBox(height: 24),

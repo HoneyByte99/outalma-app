@@ -5,8 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../app/app_shell.dart';
+import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
+import '../shared/mode_badge.dart';
 import '../../application/booking/booking_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
@@ -43,6 +46,7 @@ class _BookingListPageState extends ConsumerState<BookingListPage>
       backgroundColor: oc.background,
       appBar: AppBar(
         title: Text(l10n.bookingsTitle),
+        actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
         bottom: TabBar(
           controller: _tabController,
           tabs: [
@@ -328,13 +332,17 @@ class _BookingCard extends ConsumerWidget {
     final serviceTitle = serviceAsync.valueOrNull?.title ?? '---';
     final dateLabel = _formatDate(booking.createdAt);
 
+    // Card hierarchy A.4:
+    //   Dominant   = service title + status chip
+    //   Secondary  = scheduled date (with icon accent)
+    //   Tertiary   = request message (truncated metadata)
     return GestureDetector(
       onTap: () => context.push(AppRoutes.bookingDetail(booking.id)),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.l),
         decoration: BoxDecoration(
           color: oc.cardSurface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
           border: Border.all(color: oc.border),
           boxShadow: [
             BoxShadow(
@@ -353,32 +361,25 @@ class _BookingCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     serviceTitle,
-                    style: Theme.of(context).textTheme.titleSmall,
+                    style: Theme.of(context).textTheme.titleMedium,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.s),
                 _StatusChip(status: booking.status),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.bookingRequestedAt(dateLabel),
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
-            ),
             if (booking.scheduledAt != null) ...[
-              const SizedBox(height: 2),
+              const SizedBox(height: AppSpacing.s),
               Row(
                 children: [
                   Icon(
                     Icons.calendar_today_outlined,
-                    size: 12,
+                    size: 14,
                     color: oc.primary,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: AppSpacing.xs),
                   Text(
                     l10n.bookingScheduledAt(
                       DateFormat(
@@ -386,16 +387,23 @@ class _BookingCard extends ConsumerWidget {
                         locale,
                       ).format(booking.scheduledAt!),
                     ),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: oc.primary,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ],
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              l10n.bookingRequestedAt(dateLabel),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+            ),
             if (booking.requestMessage.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.s),
               Text(
                 booking.requestMessage,
                 style: Theme.of(

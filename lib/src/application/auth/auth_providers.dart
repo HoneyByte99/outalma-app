@@ -23,8 +23,12 @@ final userRepositoryProvider = Provider<UserRepository>(
   (ref) => FirestoreUserRepository(ref.watch(firestoreProvider)),
 );
 
+final functionsProvider = Provider<FirebaseFunctions>(
+  (ref) => FirebaseFunctions.instance,
+);
+
 final logSessionServiceProvider = Provider<LogSessionService>(
-  (ref) => LogSessionService(FirebaseFunctions.instance),
+  (ref) => LogSessionService(ref.watch(functionsProvider)),
 );
 
 final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, AuthState>(

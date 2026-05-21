@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../shared/network_image.dart';
+import '../shared/verified_badge.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
@@ -154,10 +155,19 @@ class _ProfileHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
     final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
+    final providerProfile = ref
+        .watch(providerProfileByIdProvider(providerId))
+        .valueOrNull;
     final reviews = reviewsAsync.valueOrNull ?? [];
     final avgRating = reviews.isEmpty
         ? null
         : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
+    // A.8 — trust signal: a provider is "verified" once they have completed
+    // their onboarding (profile exists) AND have a verified phone number on
+    // file (phoneE164 set, which only happens through Twilio OTP or
+    // sign-up).
+    final isVerified =
+        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
 
     return Container(
       color: oc.cardSurface,
@@ -176,11 +186,23 @@ class _ProfileHeader extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  user?.displayName ?? '—',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        user?.displayName ?? '—',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isVerified) ...[
+                      const SizedBox(width: 6),
+                      const VerifiedBadge(compact: true),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 6),
                 if (avgRating != null) ...[
