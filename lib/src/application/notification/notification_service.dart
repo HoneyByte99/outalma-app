@@ -21,6 +21,7 @@ class NotificationService {
   final FirebaseMessaging _messaging;
   final FirebaseFirestore _db;
   final String _uid;
+  StreamSubscription<String>? _tokenRefreshSub;
 
   Future<void> initialize() async {
     // FCM on Flutter Web requires a VAPID key — skip until configured.
@@ -33,8 +34,12 @@ class NotificationService {
     final token = await _messaging.getToken();
     if (token != null) await _saveToken(token);
 
-    // 3. Listen for token refreshes
-    _messaging.onTokenRefresh.listen(_saveToken);
+    // 3. Listen for token refreshes — store subscription so it can be cancelled.
+    _tokenRefreshSub = _messaging.onTokenRefresh.listen(_saveToken);
+  }
+
+  void dispose() {
+    _tokenRefreshSub?.cancel();
   }
 
   Future<void> _saveToken(String token) async {

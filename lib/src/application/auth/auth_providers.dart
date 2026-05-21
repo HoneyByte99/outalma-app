@@ -46,5 +46,6 @@ final notificationInitProvider = FutureProvider<void>((ref) async {
     db: FirebaseFirestore.instance,
     uid: authState.user.id,
   );
+  ref.onDispose(service.dispose);
   await service.initialize();
 });
