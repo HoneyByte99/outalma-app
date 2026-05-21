@@ -15,23 +15,30 @@ import '../../domain/enums/active_mode.dart';
 /// the mode with a quick fade, haptic feedback, and a snackbar confirmation.
 /// The color reflects the mode (primary = client, success-green = provider)
 /// and animates smoothly during transitions.
-class ModeBadge extends ConsumerWidget {
+class ModeBadge extends ConsumerStatefulWidget {
   const ModeBadge({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ModeBadge> createState() => _ModeBadgeState();
+}
+
+class _ModeBadgeState extends ConsumerState<ModeBadge> {
+  bool _switching = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final activeMode = ref.watch(activeModeProvider);
     final isClient = activeMode == ActiveMode.client;
     final label = isClient ? l10n.modeClient : l10n.modeProvider;
-    final color = isClient ? oc.primary : oc.success;
+    final color = _switching ? oc.icons : (isClient ? oc.primary : oc.success);
 
     return Semantics(
       button: true,
       label: '$label. ${l10n.modeBadgeTapToSwitch}',
       child: GestureDetector(
-        onTap: () => _toggle(context, ref, isClient, l10n),
+        onTap: _switching ? null : () => _toggle(isClient, l10n),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
@@ -60,7 +67,16 @@ class ModeBadge extends ConsumerWidget {
                 child: Text(label),
               ),
               const SizedBox(width: AppSpacing.xs),
-              Icon(Icons.swap_horiz_rounded, size: 14, color: color),
+              _switching
+                  ? SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: oc.icons,
+                      ),
+                    )
+                  : Icon(Icons.swap_horiz_rounded, size: 14, color: color),
             ],
           ),
         ),
@@ -68,24 +84,26 @@ class ModeBadge extends ConsumerWidget {
     );
   }
 
-  Future<void> _toggle(
-    BuildContext context,
-    WidgetRef ref,
-    bool isClient,
-    AppLocalizations l10n,
-  ) async {
+  Future<void> _toggle(bool isClient, AppLocalizations l10n) async {
+    if (_switching) return;
+    setState(() => _switching = true);
     await HapticFeedback.selectionClick();
     final newMode = isClient ? ActiveMode.provider : ActiveMode.client;
     try {
       await ref.read(authNotifierProvider.notifier).switchMode(newMode);
     } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.errorGeneral)));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.errorGeneral),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
       return;
+    } finally {
+      if (mounted) setState(() => _switching = false);
     }
-    if (!context.mounted) return;
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
