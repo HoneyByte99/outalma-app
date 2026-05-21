@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../application/auth/auth_state.dart';
 import '../application/service/service_providers.dart';
 import '../application/user/user_providers.dart';
 import '../domain/enums/active_mode.dart';
+import '../features/auth/otp_lab/otp_lab_page.dart';
 import '../features/auth/sign_in_page.dart';
 import '../features/auth/sign_up_page.dart';
 import '../features/booking/booking_detail_page.dart';
@@ -34,6 +36,7 @@ import 'app_shell.dart';
 abstract final class AppRoutes {
   static const signIn = '/sign-in';
   static const signUp = '/sign-up';
+  static const otpLab = '/otp-lab';
   static const home = '/home';
   static const bookings = '/bookings';
   static const providerHome = '/provider';
@@ -89,6 +92,9 @@ class RouterNotifier extends ChangeNotifier {
       error: (_, __) => AppRoutes.signIn,
       data: (authState) {
         final loc = state.matchedLocation;
+        // OTP lab is debug-only — block in release builds.
+        if (kDebugMode && loc == AppRoutes.otpLab) return null;
+        if (!kDebugMode && loc == AppRoutes.otpLab) return AppRoutes.signIn;
         final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
 
         // ---- Unauthenticated ----
@@ -168,6 +174,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'sign-up',
         builder: (_, __) => const SignUpPage(),
       ),
+      // ---- OTP Lab (debug only — stripped from release builds) ----
+      if (kDebugMode)
+        GoRoute(
+          path: AppRoutes.otpLab,
+          name: 'otp-lab',
+          builder: (_, __) => const OtpLabPage(),
+        ),
       // ---- Provider onboarding (outside shell — full screen) ----
       GoRoute(
         path: AppRoutes.providerOnboarding,
