@@ -21,12 +21,11 @@ jobs:
       - uses: actions/checkout@v4
 
       # ── Firebase config injection ──────────────────────────────────────────
-      # These files are gitignored to keep API keys out of version control.
-      # Store base64-encoded file contents as GitHub Secrets (Settings > Secrets):
-      #   GOOGLE_SERVICE_INFO_PLIST  — base64 of ios/Runner/GoogleService-Info.plist
-      #   GOOGLE_SERVICES_JSON       — base64 of android/app/google-services.json
-      #   FIREBASE_OPTIONS_DART      — base64 of lib/firebase_options.dart
-      # Generate with: base64 -i GoogleService-Info.plist | pbcopy
+      # Files are gitignored. Stored as base64-encoded GitHub Secrets.
+      # To update secrets locally:
+      #   base64 -i ios/Runner/GoogleService-Info.plist | gh secret set GOOGLE_SERVICE_INFO_PLIST
+      #   base64 -i android/app/google-services.json   | gh secret set GOOGLE_SERVICES_JSON
+      #   base64 -i lib/firebase_options.dart           | gh secret set FIREBASE_OPTIONS_DART
       - name: Inject Firebase config
         env:
           GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
@@ -36,6 +35,21 @@ jobs:
           echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
           echo "$GOOGLE_SERVICES_JSON"       | base64 --decode > android/app/google-services.json
           echo "$FIREBASE_OPTIONS_DART"      | base64 --decode > lib/firebase_options.dart
+
+      # ── Maps API key injection ─────────────────────────────────────────────
+      # MAPS_API_KEY  — Google Maps SDK key for native iOS + Android rendering.
+      # PLACES_API_KEY — Google Places HTTP API key for address autocomplete.
+      # Both are injected here; PLACES_API_KEY is also passed as --dart-define
+      # so the Dart layer can read it via String.fromEnvironment.
+      - name: Inject Maps config
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          # Android: build.gradle.kts reads MAPS_API_KEY from local.properties
+          # or System.getenv — writing local.properties covers both paths.
+          echo "MAPS_API_KEY=$MAPS_API_KEY" >> android/local.properties
+          # iOS: Secrets.xcconfig is read by the Xcode build via xcconfig chain.
+          echo "MAPS_API_KEY = $MAPS_API_KEY" > ios/Flutter/Secrets.xcconfig
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -60,7 +74,10 @@ jobs:
 
       # ── Test ──────────────────────────────────────────────────────────────
       - name: Test
-        run: flutter test --coverage --reporter expanded --dart-define=PLACES_API_KEY=${{ secrets.PLACES_API_KEY }}
+        run: |
+          flutter test --coverage --reporter expanded \
+            --dart-define=PLACES_API_KEY=${{ secrets.PLACES_API_KEY }} \
+            --dart-define=MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}
 
       # ── Coverage ──────────────────────────────────────────────────────────
       - name: Upload coverage to Codecov
