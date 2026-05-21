@@ -258,6 +258,12 @@
   "bookingStep1Title": "Décrivez votre besoin",
   "bookingStep1Subtitle": "Donnez des détails pour aider le prestataire à comprendre votre demande.",
   "bookingStep1Hint": "Ex: J'ai besoin d'un nettoyage complet de mon appartement…",
+  "bookingDefaultMessage": "Bonjour, je suis intéressé(e) par votre service « {serviceTitle} ». Pouvez-vous me contacter pour convenir d'un rendez-vous ? Merci !",
+  "@bookingDefaultMessage": {
+    "placeholders": {
+      "serviceTitle": { "type": "String" }
+    }
+  },
   "bookingStep2Title": "Date et heure souhaitées",
   "bookingStep2Subtitle": "Sélectionnez un créneau (optionnel).",
   "bookingStep2PickDate": "Choisir une date",

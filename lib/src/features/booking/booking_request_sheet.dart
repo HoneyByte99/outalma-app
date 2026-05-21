@@ -64,13 +64,22 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   // edits the address text by hand.
   String? _selectedPlaceId;
 
+  bool _defaultMessageSet = false;
+
   @override
   void initState() {
     super.initState();
-    _messageController.text =
-        'Bonjour, je suis intéressé(e) par votre service « ${widget.serviceTitle} ».'
-        ' Pouvez-vous me contacter pour convenir d\'un rendez-vous ? Merci !';
     _messageController.addListener(_onMessageChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_defaultMessageSet) {
+      _defaultMessageSet = true;
+      final l10n = AppLocalizations.of(context)!;
+      _messageController.text = l10n.bookingDefaultMessage(widget.serviceTitle);
+    }
   }
 
   void _onMessageChanged() => setState(() {});

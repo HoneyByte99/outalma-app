@@ -258,6 +258,12 @@
   "bookingStep1Title": "Describe your need",
   "bookingStep1Subtitle": "Give details to help the provider understand your request.",
   "bookingStep1Hint": "E.g. I need a full cleaning of my apartment…",
+  "bookingDefaultMessage": "Hello, I am interested in your service « {serviceTitle} ». Could you contact me to arrange an appointment? Thank you!",
+  "@bookingDefaultMessage": {
+    "placeholders": {
+      "serviceTitle": { "type": "String" }
+    }
+  },
   "bookingStep2Title": "Preferred date and time",
   "bookingStep2Subtitle": "Select a time slot (optional).",
   "bookingStep2PickDate": "Choose a date",
