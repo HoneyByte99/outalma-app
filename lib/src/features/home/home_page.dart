@@ -631,7 +631,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                 child: ListView.separated(
                   controller: scrollController,
                   itemCount: savedLocations.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
                   itemBuilder: (_, i) {
                     final loc = savedLocations[i];
                     return _SavedLocationTile(
@@ -892,7 +892,8 @@ class _ServiceGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedCategory = ref.watch(_selectedCategoryProvider);
     final locationFilter = ref.watch(locationFilterProvider);
-    final searchQuery = ref.watch(_searchQueryProvider).toLowerCase();
+    final rawQuery = ref.watch(_searchQueryProvider);
+    final searchQuery = rawQuery.toLowerCase();
     final servicesAsync = ref.watch(serviceListProvider);
 
     return servicesAsync.when(
@@ -917,7 +918,7 @@ class _ServiceGrid extends ConsumerWidget {
         }
 
         if (filtered.isEmpty) {
-          return _EmptyState(searchQuery: searchQuery);
+          return _EmptyState(searchQuery: rawQuery);
         }
 
         return LayoutBuilder(
