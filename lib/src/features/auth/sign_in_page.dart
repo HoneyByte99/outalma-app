@@ -240,7 +240,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
           actions: const [_ThemeToggleButton(), SizedBox(width: 8)],
         ),
         body: SafeArea(
-          top: false,
+          top: true,
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 28),
             child: Column(
@@ -390,20 +390,22 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                 ],
 
                 // ---- CTA ----
-                _loading
-                    ? const Center(
-                        child: SizedBox(
-                          height: 48,
-                          child: CircularProgressIndicator(),
-                        ),
-                      )
-                    : SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _ctaAction(),
-                          child: Text(_ctaLabel(l10n)),
-                        ),
-                      ),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _ctaAction(),
+                    child: _loading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(_ctaLabel(l10n)),
+                  ),
+                ),
                 const SizedBox(height: 24),
 
                 // ---- Footer link ----
