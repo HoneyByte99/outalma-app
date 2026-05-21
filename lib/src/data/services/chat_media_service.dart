@@ -45,6 +45,17 @@ class ChatMediaService {
     return _uploadVoiceBytes(chatId, bytes);
   }
 
+  /// Upload a booking voice message before the booking is created
+  /// (no bookingId available yet).
+  ///
+  /// Storage path: private/bookings/voice/{timestamp}_voice.m4a
+  Future<String> uploadBookingVoice(Uint8List bytes) async {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final ref = _storage.ref('private/bookings/voice/${ts}_voice.m4a');
+    await ref.putData(bytes, SettableMetadata(contentType: 'audio/mp4'));
+    return ref.getDownloadURL();
+  }
+
   Future<String> _uploadVoiceBytes(String chatId, Uint8List bytes) async {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final ref = _storage.ref('private/chats/$chatId/media/${ts}_voice.webm');
