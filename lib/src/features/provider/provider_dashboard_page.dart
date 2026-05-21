@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_shell.dart';
+import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
@@ -85,7 +86,12 @@ class ProviderDashboardPage extends ConsumerWidget {
             ),
             const SliverToBoxAdapter(child: _ProviderStatsRow()),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.xl,
+                AppSpacing.xl,
+                AppSpacing.s,
+              ),
               sliver: SliverToBoxAdapter(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -99,7 +105,12 @@ class ProviderDashboardPage extends ConsumerWidget {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                0,
+                AppSpacing.xl,
+                AppSpacing.xxxl,
+              ),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, i) =>
@@ -362,8 +373,8 @@ class _ServiceTile extends ConsumerWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _PublishedDot(published: service.published),
-            const SizedBox(width: 4),
+            _PublishedBadge(published: service.published),
+            const SizedBox(width: AppSpacing.xs),
             Icon(Icons.chevron_right_rounded, color: oc.icons, size: 20),
           ],
         ),
@@ -414,8 +425,8 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-class _PublishedDot extends StatelessWidget {
-  const _PublishedDot({required this.published});
+class _PublishedBadge extends StatelessWidget {
+  const _PublishedBadge({required this.published});
 
   final bool published;
 
@@ -423,14 +434,25 @@ class _PublishedDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    return Tooltip(
-      message: published ? l10n.published : l10n.notPublished,
-      child: Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: published ? oc.success : oc.border,
+    final label = published ? l10n.published : l10n.notPublished;
+    final color = published ? oc.success : oc.secondaryText;
+    final bg = published
+        ? oc.success.withValues(alpha: 0.12)
+        : oc.border.withValues(alpha: 0.6);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -479,21 +501,38 @@ class _EmptyServices extends StatelessWidget {
   }
 }
 
-class _ErrorState extends StatelessWidget {
+class _ErrorState extends ConsumerWidget {
   const _ErrorState({required this.message});
   final String message;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
     return Padding(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(AppSpacing.xxxl),
       child: Center(
-        child: Text(
-          message,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: context.oc.secondaryText),
-          textAlign: TextAlign.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.wifi_off_outlined, size: 40, color: oc.icons),
+            const SizedBox(height: AppSpacing.m),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: oc.secondaryText,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.m),
+            TextButton(
+              onPressed: () {
+                ref.invalidate(currentProviderProfileProvider);
+                ref.invalidate(providerServicesProvider);
+              },
+              child: Text(l10n.retry),
+            ),
+          ],
         ),
       ),
     );
@@ -559,7 +598,12 @@ class _ProviderStatsRow extends ConsumerWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.l,
+        AppSpacing.xl,
+        0,
+      ),
       child: Row(
         children: [
           tile(
@@ -567,13 +611,13 @@ class _ProviderStatsRow extends ConsumerWidget {
             value: '${stats.upcomingThisWeek}',
             label: l10n.dashboardStatsUpcomingWeek,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.s),
           tile(
             icon: Icons.calendar_today_outlined,
             value: '${stats.bookingsThisMonth}',
             label: l10n.dashboardStatsThisMonth,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.s),
           tile(
             icon: Icons.check_circle_outline_rounded,
             value: acceptanceLabel(),
