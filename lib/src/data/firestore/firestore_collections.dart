@@ -284,6 +284,7 @@ class FirestoreCollections {
       doneAt: data['doneAt'] != null
           ? dateTimeFromFirestore(data['doneAt'])
           : null,
+      audioMessageUrl: data['audioMessageUrl'] as String?,
     );
   }
 
@@ -316,6 +317,8 @@ class FirestoreCollections {
       'doneAt': booking.doneAt != null
           ? dateTimeToFirestore(booking.doneAt!)
           : null,
+      if (booking.audioMessageUrl != null)
+        'audioMessageUrl': booking.audioMessageUrl,
     };
   }
 
