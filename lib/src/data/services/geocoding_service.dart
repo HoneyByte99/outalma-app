@@ -80,7 +80,6 @@ class GeocodingService {
           'format': 'json',
           'limit': '5',
           'accept-language': 'fr',
-          'countrycodes': 'fr,sn',
         },
       );
 
