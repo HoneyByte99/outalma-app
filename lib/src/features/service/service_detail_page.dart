@@ -32,11 +32,11 @@ class ServiceDetailPage extends ConsumerWidget {
 
     return serviceAsync.when(
       loading: () => const _ServiceDetailLoading(),
-      error: (_, __) => const _ServiceDetailError(),
+      error: (_, __) => _ServiceDetailError(
+        onRetry: () => ref.invalidate(serviceDetailProvider(serviceId)),
+      ),
       data: (service) {
-        if (service == null) {
-          return const _ServiceDetailError();
-        }
+        if (service == null) return const _ServiceDetailError();
         return _ServiceDetailContent(service: service);
       },
     );
@@ -65,7 +65,7 @@ class _ServiceDetailContent extends ConsumerWidget {
     final formattedPrice = formatPriceFromCents(service.price);
     final priceLabel = service.priceType == PriceType.hourly
         ? '$formattedPrice/h'
-        : '$formattedPrice (forfait)';
+        : '$formattedPrice (${l10n.priceFixed})';
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -77,10 +77,14 @@ class _ServiceDetailContent extends ConsumerWidget {
             pinned: true,
             backgroundColor: oc.surface,
             leading: Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(AppSpacing.s),
               child: CircleAvatar(
+                radius: 22,
                 backgroundColor: oc.surface.withValues(alpha: 0.9),
                 child: IconButton(
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                   icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
                   color: oc.primaryText,
                   onPressed: () => Navigator.of(context).pop(),
@@ -103,20 +107,25 @@ class _ServiceDetailContent extends ConsumerWidget {
           // ---- Body ----
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.xl,
+                AppSpacing.xl,
+                80,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Category badge
                   _CategoryBadge(categoryId: service.categoryId),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.m),
 
                   // Title
                   Text(
                     service.title,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.s),
 
                   // Price
                   Text(
@@ -125,11 +134,11 @@ class _ServiceDetailContent extends ConsumerWidget {
                       context,
                     ).textTheme.titleLarge?.copyWith(color: oc.primary),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.xl),
 
                   // Provider info
                   _ProviderRow(providerId: service.providerId),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.xl),
 
                   // Description
                   if (service.description != null &&
@@ -138,12 +147,12 @@ class _ServiceDetailContent extends ConsumerWidget {
                       l10n.serviceDescription,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.s),
                     _ExpandableText(text: service.description!),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppSpacing.xl),
                   ],
 
-                  // Service zones — map + text legend (B.2).
+                  // Service zones
                   if (service.serviceZones.isNotEmpty) ...[
                     Text(
                       l10n.serviceZonesLabel,
@@ -154,7 +163,7 @@ class _ServiceDetailContent extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.s),
                     for (final zone in service.serviceZones)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
+                        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                         child: Row(
                           children: [
                             Icon(
@@ -162,7 +171,7 @@ class _ServiceDetailContent extends ConsumerWidget {
                               size: 16,
                               color: oc.secondaryText,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: AppSpacing.xs),
                             Text(
                               zone.radiusKm > 0
                                   ? '${zone.label}, ${zone.radiusKm} km'
@@ -215,13 +224,16 @@ class _CategoryBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final oc = context.oc;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: oc.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
       ),
       child: Text(
-        _label(categoryId),
+        categoryId.label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: oc.primary,
           fontWeight: FontWeight.w600,
@@ -229,13 +241,10 @@ class _CategoryBadge extends StatelessWidget {
       ),
     );
   }
-
-  String _label(CategoryId id) => id.label;
 }
 
 // ---------------------------------------------------------------------------
-// Provider row — loads display name from auth user state if it's the same UID,
-// otherwise falls back to a placeholder.
+// Provider row
 // ---------------------------------------------------------------------------
 
 class _ProviderRow extends ConsumerWidget {
@@ -254,70 +263,75 @@ class _ProviderRow extends ConsumerWidget {
     final isVerified =
         providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
 
-    return GestureDetector(
-      onTap: () => context.push(AppRoutes.providerProfile(providerId)),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.m),
-        decoration: BoxDecoration(
-          color: oc.cardSurface,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium + 2),
-          border: Border.all(color: oc.border),
-        ),
-        child: Row(
-          children: [
-            UserAvatar(
-              displayName: user?.displayName ?? '',
-              photoPath: user?.photoPath,
-              radius: 22,
-            ),
-            const SizedBox(width: AppSpacing.m),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Semantics(
+      label: '${user?.displayName ?? ''} — ${l10n.serviceViewProfile}',
+      button: true,
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.providerProfile(providerId)),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.m),
+          decoration: BoxDecoration(
+            color: oc.cardSurface,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+            border: Border.all(color: oc.border),
+          ),
+          child: Row(
+            children: [
+              UserAvatar(
+                displayName: user?.displayName ?? '',
+                photoPath: user?.photoPath,
+                radius: 22,
+              ),
+              const SizedBox(width: AppSpacing.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.serviceProviderLabel,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelSmall?.copyWith(color: oc.secondaryText),
+                    ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            user?.displayName ?? '—',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: oc.primaryText,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isVerified) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          const VerifiedBadge(compact: true),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Row(
                 children: [
                   Text(
-                    l10n.serviceProviderLabel,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.labelSmall?.copyWith(color: oc.secondaryText),
+                    l10n.serviceViewProfile,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: oc.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          user?.displayName ?? '—',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: oc.primaryText,
-                                fontWeight: FontWeight.w600,
-                              ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isVerified) ...[
-                        const SizedBox(width: 4),
-                        const VerifiedBadge(compact: true),
-                      ],
-                    ],
-                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Icon(Icons.chevron_right_rounded, size: 16, color: oc.primary),
                 ],
               ),
-            ),
-            Row(
-              children: [
-                Text(
-                  l10n.serviceViewProfile,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: oc.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(Icons.chevron_right_rounded, size: 16, color: oc.primary),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -358,14 +372,27 @@ class _ExpandableTextState extends State<_ExpandableText> {
           ),
         ),
         if (widget.text.length > 200) ...[
-          const SizedBox(height: 4),
-          GestureDetector(
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Text(
-              _expanded ? l10n.seeLess : l10n.seeMore,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: oc.primary,
-                fontWeight: FontWeight.w600,
+          const SizedBox(height: AppSpacing.xs),
+          Semantics(
+            button: true,
+            expanded: _expanded,
+            label: _expanded ? l10n.seeLess : l10n.seeMore,
+            excludeSemantics: true,
+            child: InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.s,
+                  horizontal: AppSpacing.xs,
+                ),
+                child: Text(
+                  _expanded ? l10n.seeLess : l10n.seeMore,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: oc.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ),
@@ -390,7 +417,12 @@ class _BookingBottomBar extends StatelessWidget {
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPadding),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.m,
+        AppSpacing.xl,
+        AppSpacing.m + bottomPadding,
+      ),
       decoration: BoxDecoration(
         color: oc.cardSurface,
         border: Border(top: BorderSide(color: oc.border)),
@@ -431,7 +463,12 @@ class _EditBottomBar extends StatelessWidget {
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPadding),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.m,
+        AppSpacing.xl,
+        AppSpacing.m + bottomPadding,
+      ),
       decoration: BoxDecoration(
         color: oc.cardSurface,
         border: Border(top: BorderSide(color: oc.border)),
@@ -446,36 +483,90 @@ class _EditBottomBar extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Loading state
+// Loading state — animated shimmer skeleton
 // ---------------------------------------------------------------------------
 
-class _ServiceDetailLoading extends StatelessWidget {
+class _ServiceDetailLoading extends StatefulWidget {
   const _ServiceDetailLoading();
+
+  @override
+  State<_ServiceDetailLoading> createState() => _ServiceDetailLoadingState();
+}
+
+class _ServiceDetailLoadingState extends State<_ServiceDetailLoading>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    return Scaffold(
-      backgroundColor: oc.background,
-      body: Column(
-        children: [
-          Container(height: 240, color: oc.border),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(height: 16, width: 80, color: oc.border),
-                const SizedBox(height: 12),
-                Container(height: 24, width: 200, color: oc.border),
-                const SizedBox(height: 8),
-                Container(height: 20, width: 100, color: oc.border),
-              ],
-            ),
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, _) {
+        final shimmer = Color.lerp(oc.border, oc.surface, _anim.value)!;
+        return Scaffold(
+          backgroundColor: oc.background,
+          appBar: AppBar(leading: const BackButton()),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(height: 240, color: shimmer),
+              const SizedBox(height: AppSpacing.xl),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 16,
+                      width: 80,
+                      decoration: BoxDecoration(
+                        color: shimmer,
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.m),
+                    Container(
+                      height: 24,
+                      width: 200,
+                      decoration: BoxDecoration(
+                        color: shimmer,
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s),
+                    Container(
+                      height: 20,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: shimmer,
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -485,30 +576,43 @@ class _ServiceDetailLoading extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _ServiceDetailError extends StatelessWidget {
-  const _ServiceDetailError();
+  const _ServiceDetailError({this.onRetry});
+
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
     return Scaffold(
-      backgroundColor: context.oc.background,
+      backgroundColor: oc.background,
       appBar: AppBar(),
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 56, color: context.oc.icons),
-            const SizedBox(height: 16),
-            Text(
-              l10n.serviceNotFound,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.back),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xxxl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 56, color: oc.icons),
+              const SizedBox(height: AppSpacing.l),
+              Text(
+                l10n.serviceNotFound,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: AppSpacing.s),
+              if (onRetry != null)
+                ElevatedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(l10n.retry),
+                )
+              else
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.back),
+                ),
+            ],
+          ),
         ),
       ),
     );
