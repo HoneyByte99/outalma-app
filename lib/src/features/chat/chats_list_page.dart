@@ -80,11 +80,20 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage>
       body: chatsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => Center(
-          child: Text(
-            l10n.chatLoadError,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.chatLoadError,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+              ),
+              TextButton(
+                onPressed: () => ref.invalidate(chatsForModeProvider),
+                child: Text(l10n.retry),
+              ),
+            ],
           ),
         ),
         data: (chats) {
@@ -161,6 +170,7 @@ class _ChatTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final authState = ref.watch(authNotifierProvider).valueOrNull;
     final myUid = authState is AuthAuthenticated ? authState.user.id : null;
@@ -203,7 +213,7 @@ class _ChatTile extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          otherUser?.displayName ?? 'Conversation',
+                          otherUser?.displayName ?? l10n.chatConversation,
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(fontWeight: FontWeight.w600),
                           maxLines: 1,
