@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show File;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
@@ -234,10 +235,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     setState(() => _sending = true);
     try {
       final media = ref.read(chatMediaServiceProvider);
-      String url;
-      // path is a blob URL on web or file path on native — fetch bytes via HTTP
-      final response = await http.get(Uri.parse(path));
-      url = await media.uploadVoiceBytes(widget.chatId, response.bodyBytes);
+      // path is a blob URL on web (fetch via http) or a filesystem path on
+      // native (read directly — http.get cannot resolve file paths).
+      final Uint8List bytes = kIsWeb
+          ? (await http.get(Uri.parse(path))).bodyBytes
+          : await File(path).readAsBytes();
+      final url = await media.uploadVoiceBytes(widget.chatId, bytes);
       await _sendMedia(MessageType.voice, url);
     } catch (_) {
       if (mounted) {
