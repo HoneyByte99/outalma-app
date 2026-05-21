@@ -18,6 +18,7 @@ class Booking {
     this.cancelledAt,
     this.startedAt,
     this.doneAt,
+    this.audioMessageUrl,
   });
 
   final String id;
@@ -36,6 +37,7 @@ class Booking {
   final DateTime? cancelledAt;
   final DateTime? startedAt;
   final DateTime? doneAt;
+  final String? audioMessageUrl;
 
   Booking copyWith({
     String? customerId,
@@ -53,6 +55,7 @@ class Booking {
     DateTime? cancelledAt,
     DateTime? startedAt,
     DateTime? doneAt,
+    String? audioMessageUrl,
   }) {
     return Booking(
       id: id,
@@ -71,6 +74,7 @@ class Booking {
       cancelledAt: cancelledAt ?? this.cancelledAt,
       startedAt: startedAt ?? this.startedAt,
       doneAt: doneAt ?? this.doneAt,
+      audioMessageUrl: audioMessageUrl ?? this.audioMessageUrl,
     );
   }
 }
