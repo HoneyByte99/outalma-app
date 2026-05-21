@@ -115,6 +115,9 @@ export const createBooking = onCall(async (request) => {
   // schedule/addressSnapshot are intentionally permissive for MVP; validate in app + tighten later.
   const schedule = request.data?.schedule ?? null;
   const addressSnapshot = request.data?.addressSnapshot ?? null;
+  const audioMessageUrl = typeof request.data?.audioMessageUrl === 'string'
+    ? request.data.audioMessageUrl.trim()
+    : null;
   const scheduledAtRaw = request.data?.scheduledAt ?? null;
   let scheduledAt: admin.firestore.Timestamp | null = null;
   if (scheduledAtRaw) {
@@ -138,6 +141,7 @@ export const createBooking = onCall(async (request) => {
     scheduledAt,
     schedule,
     addressSnapshot,
+    ...(audioMessageUrl ? { audioMessageUrl } : {}),
     reminded24h: false,
     reminded1h: false,
     createdAt: admin.firestore.FieldValue.serverTimestamp()
