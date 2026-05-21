@@ -123,7 +123,15 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       });
       if (mounted) setState(() => _recording = true);
     } catch (_) {
-      // Permission denied or mic unavailable — stay in text mode silently.
+      if (mounted) {
+        setState(() => _voiceMode = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.bookingVoicePermissionDenied),
+            backgroundColor: context.oc.error,
+          ),
+        );
+      }
     }
   }
 
@@ -242,7 +250,20 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       String? audioMessageUrl;
       if (_voiceMode && _recordedBytes != null) {
         final media = ref.read(chatMediaServiceProvider);
-        audioMessageUrl = await media.uploadBookingVoice(_recordedBytes!);
+        try {
+          audioMessageUrl = await media.uploadBookingVoice(_recordedBytes!);
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.bookingVoiceUploadFailed),
+                backgroundColor: errorColor,
+              ),
+            );
+            setState(() => _loading = false);
+          }
+          return;
+        }
         requestMessage = '[Message vocal]';
       } else {
         requestMessage = _messageController.text.trim();
@@ -296,7 +317,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     );
     if (picked != null && mounted) {
       setState(() => _selectedDate = picked);
-      _checkConflict();
+      await _checkConflict();
     }
   }
 
@@ -307,64 +328,60 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     );
     if (picked != null && mounted) {
       setState(() => _selectedTime = picked);
-      _checkConflict();
+      await _checkConflict();
     }
   }
 
-  void _checkConflict() {
+  Future<void> _checkConflict() async {
     final dt = _scheduledAt;
     if (dt == null) {
       setState(() => _scheduleConflict = null);
       return;
     }
-
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-
-    // Invalidate to force fresh data, then read
     final dateKey = (providerId: widget.providerId, date: dt);
     ref.invalidate(providerBookingsForDateProvider(dateKey));
 
-    final bookingsAsync = ref.read(providerBookingsForDateProvider(dateKey));
-
-    final blockedAsync = ref.read(
-      blockedSlotsForProviderProvider(widget.providerId),
-    );
-
     String? conflict;
-
-    // Check bookings
-    final bookings = bookingsAsync.valueOrNull ?? [];
-    for (final b in bookings) {
-      if (b.scheduledAt != null) {
-        final diff = (b.scheduledAt!.difference(dt).inMinutes).abs();
-        if (diff < 120) {
-          conflict = l10n.bookingConflictBusy;
-          break;
+    try {
+      final bookings =
+          await ref.read(providerBookingsForDateProvider(dateKey).future);
+      for (final b in bookings) {
+        if (b.scheduledAt != null) {
+          final diff = (b.scheduledAt!.difference(dt).inMinutes).abs();
+          if (diff < 120) {
+            conflict = l10n.bookingConflictBusy;
+            break;
+          }
         }
       }
-    }
 
-    // Check blocked slots
-    if (conflict == null) {
-      final slots = blockedAsync.valueOrNull ?? [];
-      for (final slot in slots) {
-        if (slot.isFullDay &&
-            slot.date.year == dt.year &&
-            slot.date.month == dt.month &&
-            slot.date.day == dt.day) {
-          conflict = l10n.bookingConflictUnavailableDay;
-          break;
-        }
-        if (slot.endDate != null &&
-            dt.isAfter(slot.date) &&
-            dt.isBefore(slot.endDate!)) {
-          conflict = l10n.bookingConflictUnavailableSlot;
-          break;
+      if (conflict == null) {
+        final slots = await ref.read(
+          blockedSlotsForProviderProvider(widget.providerId).future,
+        );
+        for (final slot in slots) {
+          if (slot.isFullDay &&
+              slot.date.year == dt.year &&
+              slot.date.month == dt.month &&
+              slot.date.day == dt.day) {
+            conflict = l10n.bookingConflictUnavailableDay;
+            break;
+          }
+          if (slot.endDate != null &&
+              dt.isAfter(slot.date) &&
+              dt.isBefore(slot.endDate!)) {
+            conflict = l10n.bookingConflictUnavailableSlot;
+            break;
+          }
         }
       }
+    } catch (_) {
+      // Non-blocking — conflict detection failure should not block submission.
     }
 
-    setState(() => _scheduleConflict = conflict);
+    if (mounted) setState(() => _scheduleConflict = conflict);
   }
 
   @override
@@ -453,7 +470,6 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                     const SizedBox(width: 12),
                   ],
                   Expanded(
-                    flex: _step > 0 ? 1 : 1,
                     child: _step < 2
                         ? ElevatedButton(
                             onPressed: _canAdvance
@@ -607,7 +623,7 @@ class _StepMessage extends StatelessWidget {
       children: [
         Text(
           l10n.bookingStep1Title,
-          style: Theme.of(context).textTheme.titleSmall,
+          style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 4),
         Text(
@@ -622,7 +638,7 @@ class _StepMessage extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: oc.inputFill,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
           ),
           padding: const EdgeInsets.all(3),
           child: Row(
@@ -689,42 +705,47 @@ class _ModeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final oc = context.oc;
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? oc.cardSurface : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                : [],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: selected ? oc.primary : oc.secondaryText,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+      child: Semantics(
+        label: label,
+        button: true,
+        selected: selected,
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+            decoration: BoxDecoration(
+              color: selected ? oc.cardSurface : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: oc.shadow,
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
                   color: selected ? oc.primary : oc.secondaryText,
-                  fontWeight:
-                      selected ? FontWeight.w600 : FontWeight.w400,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: selected ? oc.primary : oc.secondaryText,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -784,7 +805,7 @@ class _VoiceRecorder extends StatelessWidget {
                 ),
                 child: Icon(
                   playing ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                  color: Colors.white,
+                  color: oc.background,
                   size: 22,
                 ),
               ),
@@ -795,7 +816,7 @@ class _VoiceRecorder extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Message vocal',
+                    AppLocalizations.of(context)!.bookingVoiceMessageLabel,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w500,
                     ),
@@ -813,7 +834,7 @@ class _VoiceRecorder extends StatelessWidget {
             IconButton(
               icon: Icon(Icons.delete_outline_rounded, color: oc.error),
               onPressed: onDelete,
-              tooltip: 'Supprimer',
+              tooltip: AppLocalizations.of(context)!.bookingDeleteRecording,
             ),
           ],
         ),
@@ -852,7 +873,7 @@ class _VoiceRecorder extends StatelessWidget {
           Text(
             recording
                 ? formatDuration(recordingSeconds)
-                : 'Appuyez pour enregistrer',
+                : AppLocalizations.of(context)!.bookingRecordPrompt,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: recording ? oc.error : oc.secondaryText,
               fontWeight: recording ? FontWeight.w600 : FontWeight.w400,
@@ -901,7 +922,7 @@ class _StepSchedule extends StatelessWidget {
       children: [
         Text(
           l10n.bookingStep2Title,
-          style: Theme.of(context).textTheme.titleSmall,
+          style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 4),
         Text(
@@ -1066,7 +1087,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
       children: [
         Text(
           l10n.bookingAddressLabel,
-          style: Theme.of(context).textTheme.titleSmall,
+          style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 4),
         Text(
@@ -1097,7 +1118,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
             constraints: const BoxConstraints(maxHeight: 150),
             decoration: BoxDecoration(
               color: oc.cardSurface,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
               border: Border.all(color: oc.border),
             ),
             child: ListView.separated(
@@ -1108,12 +1129,15 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
                   Divider(height: 1, color: oc.border.withValues(alpha: 0.5)),
               itemBuilder: (_, i) {
                 final s = _suggestions[i];
-                return InkWell(
+                return Semantics(
+                  label: s.description,
+                  button: true,
+                  child: InkWell(
                   onTap: () => _selectSuggestion(s),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                      horizontal: AppSpacing.m,
+                      vertical: AppSpacing.l,
                     ),
                     child: Row(
                       children: [
@@ -1133,6 +1157,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
                         ),
                       ],
                     ),
+                  ),
                   ),
                 );
               },
