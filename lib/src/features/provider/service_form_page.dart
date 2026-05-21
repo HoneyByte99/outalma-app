@@ -293,7 +293,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
                         hintText: '0',
-                        suffixText: '€',
+                        suffixText: 'F CFA',
                       ),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
