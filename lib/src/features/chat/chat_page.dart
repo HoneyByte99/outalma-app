@@ -41,6 +41,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   final _recorder = AudioRecorder();
   bool _sending = false;
   bool _recording = false;
+  int _lastMarkedReadCount = 0;
 
   @override
   void initState() {
@@ -262,6 +263,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final authState = ref.watch(authNotifierProvider).valueOrNull;
     final myUid = authState is AuthAuthenticated ? authState.user.id : null;
 
+    // Mark messages read only when the message count actually grows — not on
+    // every rebuild. Prevents a runaway Firestore write loop in the chat view.
+    ref.listen<AsyncValue<List<ChatMessage>>>(
+      chatMessagesProvider(widget.chatId),
+      (_, next) {
+        final msgs = next.valueOrNull;
+        if (msgs == null) return;
+        if (msgs.length != _lastMarkedReadCount) {
+          _lastMarkedReadCount = msgs.length;
+          _markRead();
+        }
+      },
+    );
+
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
@@ -296,10 +311,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 if (messages.isEmpty) {
                   return _EmptyChat();
                 }
-                // Auto-scroll when new messages arrive and mark them read.
+                // Auto-scroll when new messages arrive. _markRead is triggered
+                // via ref.listen above (on message count change), not here, to
+                // avoid one Firestore write per frame.
                 SchedulerBinding.instance.addPostFrameCallback((_) {
                   _scrollToBottom();
-                  _markRead();
                 });
 
                 return ListView.builder(
