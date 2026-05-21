@@ -8,6 +8,7 @@ import '../../app/app_shell.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
+import '../../core/utils/format_utils.dart';
 import '../shared/mode_badge.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/models/provider_profile.dart';
@@ -309,9 +310,10 @@ class _ServiceTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final formattedPrice = formatPriceFromCents(service.price);
     final priceLabel = service.priceType.name == 'hourly'
-        ? '${(service.price / 100).toStringAsFixed(0)} €/h'
-        : '${(service.price / 100).toStringAsFixed(0)} € (forfait)';
+        ? '$formattedPrice/h'
+        : '$formattedPrice (forfait)';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

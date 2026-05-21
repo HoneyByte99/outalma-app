@@ -11,6 +11,7 @@ import '../../application/auth/auth_state.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
+import '../../core/utils/format_utils.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/enums/price_type.dart';
 import '../../domain/models/service.dart';
@@ -61,9 +62,10 @@ class _ServiceDetailContent extends ConsumerWidget {
               .id
         : null;
     final isOwner = uid != null && uid == service.providerId;
+    final formattedPrice = formatPriceFromCents(service.price);
     final priceLabel = service.priceType == PriceType.hourly
-        ? '${(service.price / 100).toStringAsFixed(0)} €/h'
-        : '${(service.price / 100).toStringAsFixed(0)} € (forfait)';
+        ? '$formattedPrice/h'
+        : '$formattedPrice (forfait)';
 
     return Scaffold(
       backgroundColor: oc.background,
