@@ -26,6 +26,7 @@ import '../../app/app_spacing.dart';
 import '../shared/category_icon.dart';
 import '../shared/mode_badge.dart';
 import '../shared/network_image.dart';
+import '../shared/user_avatar.dart';
 import '../../../l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
@@ -1104,13 +1105,26 @@ class _ServiceCard extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    providerUser?.displayName ?? '\u2014',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      UserAvatar(
+                        displayName: providerUser?.displayName ?? '',
+                        photoPath: providerUser?.photoPath,
+                        radius: 10,
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          providerUser?.displayName.isNotEmpty == true
+                              ? providerUser!.displayName
+                              : '\u2014',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: oc.secondaryText),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
