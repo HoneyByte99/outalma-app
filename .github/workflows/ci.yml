@@ -79,6 +79,20 @@ jobs:
             --dart-define=MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}
 
       # ── Coverage ──────────────────────────────────────────────────────────
+      # Graduated threshold: raise floor as coverage improves.
+      # Current target: 25%. Next: 35% → 45%.
+      - name: Coverage threshold check
+        run: |
+          sudo apt-get install -y lcov --quiet
+          pct=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | grep -oP '[\d.]+(?=%)' | head -1)
+          echo "Line coverage: ${pct}%"
+          if [ -z "$pct" ]; then echo "Could not parse coverage"; exit 1; fi
+          result=$(echo "$pct < 25" | bc -l)
+          if [ "$result" -eq 1 ]; then
+            echo "Coverage ${pct}% is below the 25% threshold"
+            exit 1
+          fi
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
