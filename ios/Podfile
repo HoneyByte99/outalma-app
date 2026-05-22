@@ -1,3 +1,11 @@
+# Override Firebase iOS SDK version to 11.16.0+ to fix the Swift Concurrency
+# crash in HTTPSCallable.SendableHTTPSCallable.call observed in TestFlight Build 4
+# (iOS 26.4.2 / Firebase iOS 11.15.0 hits a fatalError inside
+# asyncLet_finish_after_task_completion → swift_task_dealloc_specific).
+# Mechanism: every FlutterFire podspec respects $FirebaseSDKVersion if defined
+# (see cloud_functions.podspec, firebase_core.podspec, etc.).
+$FirebaseSDKVersion = '11.16.0'
+
 platform :ios, '14.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
@@ -38,6 +46,7 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
     end
   end
 end

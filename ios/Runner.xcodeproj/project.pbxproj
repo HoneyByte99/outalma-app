@@ -181,6 +181,7 @@
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
+				319508E9840747C3A9643538 /* Fix objective_c.framework platform */,
 				02216A53902F4B4143F7EE87 /* [CP] Embed Pods Frameworks */,
 				D8750963A8803D48089351D8 /* [CP] Copy Pods Resources */,
 			);
@@ -259,6 +260,20 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		319508E9840747C3A9643538 /* Fix objective_c.framework platform */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Fix objective_c.framework platform";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "OBJC_FW=\"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/objective_c.framework\"\nOBJC_BIN=\"$OBJC_FW/objective_c\"\nif [ -f \"$OBJC_BIN\" ]; then\n  plat=$(vtool -show \"$OBJC_BIN\" 2>/dev/null | grep ' platform ' | awk '{print $2}')\n  if [ \"$plat\" = \"IOSSIMULATOR\" ]; then\n    SDK_VER=$(xcrun --sdk iphoneos --show-sdk-version 2>/dev/null || echo \"17.0\")\n    vtool -set-build-version ios 13.0 \"$SDK_VER\" -replace -output \"$OBJC_BIN\" \"$OBJC_BIN\" 2>/dev/null || true\n    plutil -replace MinimumOSVersion -string \"13.0\" \"$OBJC_FW/Info.plist\" 2>/dev/null || true\n  fi\nfi\n";
+		};
 		02216A53902F4B4143F7EE87 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;

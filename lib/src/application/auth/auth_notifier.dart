@@ -97,10 +97,6 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         await userRepo.upsert(appUser);
       }
 
-      // Fire-and-forget: log the session (IP, country, device). Never blocks.
-      // ignore: unawaited_futures
-      ref.read(logSessionServiceProvider).log();
-
       return AuthAuthenticated(appUser);
     } catch (e, st) {
       debugPrint('[AuthNotifier] _resolveState error: $e\n$st');
