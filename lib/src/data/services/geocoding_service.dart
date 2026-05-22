@@ -15,9 +15,12 @@ class PlaceSuggestion {
 /// Uses the new `places.googleapis.com/v1` endpoints which support CORS
 /// for browser-side requests (unlike the legacy maps.googleapis.com endpoints).
 class GeocodingService {
-  GeocodingService({required String apiKey}) : _apiKey = apiKey;
+  GeocodingService({required String apiKey, http.Client? httpClient})
+      : _apiKey = apiKey,
+        _client = httpClient ?? http.Client();
 
   final String _apiKey;
+  final http.Client _client;
 
   /// Returns autocomplete suggestions for the given [input].
   /// Tries Google Places API first; falls back to Nominatim if unavailable.
@@ -41,7 +44,7 @@ class GeocodingService {
       'https://places.googleapis.com/v1/places:autocomplete',
     );
 
-    final response = await http.post(
+    final response = await _client.post(
       uri,
       headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': _apiKey},
       body: jsonEncode({
@@ -83,7 +86,7 @@ class GeocodingService {
         },
       );
 
-      final response = await http.get(
+      final response = await _client.get(
         uri,
         headers: {'User-Agent': 'Outalma/1.0'},
       );
@@ -127,7 +130,7 @@ class GeocodingService {
 
     final uri = Uri.parse('https://places.googleapis.com/v1/places/$placeId');
 
-    final response = await http.get(
+    final response = await _client.get(
       uri,
       headers: {'X-Goog-Api-Key': _apiKey, 'X-Goog-FieldMask': 'location'},
     );
@@ -152,7 +155,7 @@ class GeocodingService {
       '?latlng=$lat,$lng&language=fr&key=$_apiKey',
     );
     try {
-      final response = await http.get(uri);
+      final response = await _client.get(uri);
       if (response.statusCode != 200) return null;
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final results = json['results'] as List?;
