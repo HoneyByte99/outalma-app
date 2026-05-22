@@ -7,5 +7,7 @@
 		<string>applinks:outalmaservice-d1e59.firebaseapp.com</string>
 		<string>applinks:outalmaservice-d1e59.web.app</string>
 	</array>
+	<key>aps-environment</key>
+	<string>production</string>
 </dict>
 </plist>
