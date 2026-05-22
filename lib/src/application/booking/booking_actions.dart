@@ -1,62 +1,58 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../data/services/callable_function_client.dart';
 
 /// Calls the server-authoritative `acceptBooking` Cloud Function.
 /// Creates the chat document and sets chatId on the booking.
 class AcceptBookingUseCase {
-  const AcceptBookingUseCase(this._functions);
-  final FirebaseFunctions _functions;
+  const AcceptBookingUseCase();
 
   Future<void> call(String bookingId) async {
-    final callable = _functions.httpsCallable('acceptBooking');
-    await callable.call<void>({'bookingId': bookingId});
+    await const CallableFunctionClient()
+        .call('acceptBooking', data: {'bookingId': bookingId});
   }
 }
 
 /// Calls the server-authoritative `rejectBooking` Cloud Function.
 class RejectBookingUseCase {
-  const RejectBookingUseCase(this._functions);
-  final FirebaseFunctions _functions;
+  const RejectBookingUseCase();
 
   Future<void> call(String bookingId) async {
-    final callable = _functions.httpsCallable('rejectBooking');
-    await callable.call<void>({'bookingId': bookingId});
+    await const CallableFunctionClient()
+        .call('rejectBooking', data: {'bookingId': bookingId});
   }
 }
 
 /// Calls the server-authoritative `markInProgress` Cloud Function.
 /// Provider-only. Booking must be in `accepted` status.
 class MarkInProgressUseCase {
-  const MarkInProgressUseCase(this._functions);
-  final FirebaseFunctions _functions;
+  const MarkInProgressUseCase();
 
   Future<void> call(String bookingId) async {
-    final callable = _functions.httpsCallable('markInProgress');
-    await callable.call<void>({'bookingId': bookingId});
+    await const CallableFunctionClient()
+        .call('markInProgress', data: {'bookingId': bookingId});
   }
 }
 
 /// Calls the server-authoritative `confirmDone` Cloud Function.
 /// Client-only. Booking must be in `in_progress` status.
 class ConfirmDoneUseCase {
-  const ConfirmDoneUseCase(this._functions);
-  final FirebaseFunctions _functions;
+  const ConfirmDoneUseCase();
 
   Future<void> call(String bookingId) async {
-    final callable = _functions.httpsCallable('confirmDone');
-    await callable.call<void>({'bookingId': bookingId});
+    await const CallableFunctionClient()
+        .call('confirmDone', data: {'bookingId': bookingId});
   }
 }
 
 /// Calls the server-authoritative `cancelBooking` Cloud Function.
 /// Only valid when booking status = `requested`.
 class CancelBookingUseCase {
-  const CancelBookingUseCase(this._functions);
-  final FirebaseFunctions _functions;
+  const CancelBookingUseCase();
 
   Future<void> call(String bookingId) async {
-    final callable = _functions.httpsCallable('cancelBooking');
-    await callable.call<void>({'bookingId': bookingId});
+    await const CallableFunctionClient()
+        .call('cancelBooking', data: {'bookingId': bookingId});
   }
 }
 
@@ -64,22 +60,22 @@ class CancelBookingUseCase {
 // Providers
 // ---------------------------------------------------------------------------
 
-final acceptBookingUseCaseProvider = Provider<AcceptBookingUseCase>((ref) {
-  return AcceptBookingUseCase(FirebaseFunctions.instance);
-});
+final acceptBookingUseCaseProvider = Provider<AcceptBookingUseCase>(
+  (_) => const AcceptBookingUseCase(),
+);
 
-final rejectBookingUseCaseProvider = Provider<RejectBookingUseCase>((ref) {
-  return RejectBookingUseCase(FirebaseFunctions.instance);
-});
+final rejectBookingUseCaseProvider = Provider<RejectBookingUseCase>(
+  (_) => const RejectBookingUseCase(),
+);
 
-final markInProgressUseCaseProvider = Provider<MarkInProgressUseCase>((ref) {
-  return MarkInProgressUseCase(FirebaseFunctions.instance);
-});
+final markInProgressUseCaseProvider = Provider<MarkInProgressUseCase>(
+  (_) => const MarkInProgressUseCase(),
+);
 
-final confirmDoneUseCaseProvider = Provider<ConfirmDoneUseCase>((ref) {
-  return ConfirmDoneUseCase(FirebaseFunctions.instance);
-});
+final confirmDoneUseCaseProvider = Provider<ConfirmDoneUseCase>(
+  (_) => const ConfirmDoneUseCase(),
+);
 
-final cancelBookingUseCaseProvider = Provider<CancelBookingUseCase>((ref) {
-  return CancelBookingUseCase(FirebaseFunctions.instance);
-});
+final cancelBookingUseCaseProvider = Provider<CancelBookingUseCase>(
+  (_) => const CancelBookingUseCase(),
+);

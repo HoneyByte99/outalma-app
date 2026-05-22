@@ -1,4 +1,3 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/auth/auth_providers.dart';
@@ -44,7 +43,7 @@ final clientActiveBookingsCountProvider = Provider<int>((ref) {
 });
 
 /// Injectable use case — features layer must consume this, never instantiate
-/// CreateBookingUseCase or FirebaseFunctions directly.
-final createBookingUseCaseProvider = Provider<CreateBookingUseCase>((ref) {
-  return CreateBookingUseCase(FirebaseFunctions.instance);
-});
+/// CreateBookingUseCase directly.
+final createBookingUseCaseProvider = Provider<CreateBookingUseCase>(
+  (_) => const CreateBookingUseCase(),
+);

@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/services/callable_function_client.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_user.dart';
 import 'auth_providers.dart';
@@ -120,10 +121,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     String phoneE164, {
     String channel = 'sms',
   }) async {
-    await ref
-        .read(functionsProvider)
-        .httpsCallable('requestPhoneOtp')
-        .call<Map<String, dynamic>>({'phone': phoneE164, 'channel': channel});
+    await const CallableFunctionClient().call(
+      'requestPhoneOtp',
+      data: {'phone': phoneE164, 'channel': channel},
+    );
   }
 
   /// Verifies [code] and signs in the existing Outalma account behind
@@ -137,17 +138,17 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     String code,
   ) async {
     try {
-      final result = await ref
-          .read(functionsProvider)
-          .httpsCallable('verifyPhoneOtpAndSignIn')
-          .call<Map<String, dynamic>>({'phone': phoneE164, 'code': code});
+      final result = await const CallableFunctionClient().call(
+        'verifyPhoneOtpAndSignIn',
+        data: {'phone': phoneE164, 'code': code},
+      );
 
-      final newUser = result.data['newUser'] == true;
+      final newUser = result['newUser'] == true;
       if (newUser) {
         return const PhoneSignInResult(signedIn: false);
       }
 
-      final token = result.data['customToken'] as String?;
+      final token = result['customToken'] as String?;
       if (token == null) {
         throw StateError('verifyPhoneOtpAndSignIn returned no customToken');
       }
@@ -171,17 +172,17 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String country,
   }) async {
     try {
-      final result = await ref
-          .read(functionsProvider)
-          .httpsCallable('verifyPhoneOtpAndSignUp')
-          .call<Map<String, dynamic>>({
-            'phone': phoneE164,
-            'code': code,
-            'displayName': displayName,
-            'country': country,
-          });
+      final result = await const CallableFunctionClient().call(
+        'verifyPhoneOtpAndSignUp',
+        data: {
+          'phone': phoneE164,
+          'code': code,
+          'displayName': displayName,
+          'country': country,
+        },
+      );
 
-      final token = result.data['customToken'] as String?;
+      final token = result['customToken'] as String?;
       if (token == null) {
         throw StateError('verifyPhoneOtpAndSignUp returned no customToken');
       }

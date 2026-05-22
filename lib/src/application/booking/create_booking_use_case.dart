@@ -1,5 +1,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
 
+import '../../data/services/callable_function_client.dart';
+
 /// Calls the server-authoritative `createBooking` Cloud Function.
 ///
 /// All booking creation must go through the server to enforce
@@ -9,9 +11,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 /// Throws [FirebaseFunctionsException] on known server errors.
 /// Throws [Exception] on unexpected errors.
 class CreateBookingUseCase {
-  const CreateBookingUseCase(this._functions);
-
-  final FirebaseFunctions _functions;
+  const CreateBookingUseCase();
 
   Future<String> call({
     required String providerId,
@@ -24,8 +24,6 @@ class CreateBookingUseCase {
     double? addressLng,
     String? audioMessageUrl,
   }) async {
-    final callable = _functions.httpsCallable('createBooking');
-
     final payload = <String, Object?>{
       'providerId': providerId,
       'serviceId': serviceId,
@@ -46,8 +44,8 @@ class CreateBookingUseCase {
         'audioMessageUrl': audioMessageUrl,
     };
 
-    final result = await callable.call<Map<String, dynamic>>(payload);
-    final data = result.data;
+    final data = await const CallableFunctionClient()
+        .call('createBooking', data: payload);
 
     final bookingId = data['bookingId'] as String?;
     if (bookingId == null || bookingId.isEmpty) {
