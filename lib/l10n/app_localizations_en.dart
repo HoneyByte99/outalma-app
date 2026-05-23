@@ -1196,4 +1196,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookingAddressLabel => 'Service address';
+
+  @override
+  String get introSlide1Title => 'Welcome to Outalma';
+
+  @override
+  String get introSlide1Body =>
+      'Find the best service providers near you, quickly and with confidence.';
+
+  @override
+  String get introSlide2Title => 'Book in seconds';
+
+  @override
+  String get introSlide2Body =>
+      'Pick a service, choose a time slot, and confirm in just a few taps.';
+
+  @override
+  String get introSlide3Title => 'Track in real time';
+
+  @override
+  String get introSlide3Body =>
+      'Stay informed at every step: confirmation, travel, and service completion.';
+
+  @override
+  String get introSlide4Title => 'Ready to start';
+
+  @override
+  String get introSlide4Body =>
+      'By continuing, you accept our terms of use and privacy policy.';
+
+  @override
+  String get introTermsAccept => 'I accept the terms of use';
+
+  @override
+  String get introNext => 'Next';
+
+  @override
+  String get introGetStarted => 'Get started';
+
+  @override
+  String get introTermsRequired => 'Please accept the terms to continue.';
 }

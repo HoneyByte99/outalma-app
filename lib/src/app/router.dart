@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../application/auth/auth_providers.dart';
 import '../application/auth/auth_state.dart';
+import '../application/onboarding/onboarding_provider.dart';
 import '../application/service/service_providers.dart';
 import '../application/user/user_providers.dart';
 import '../domain/enums/active_mode.dart';
@@ -17,6 +18,7 @@ import '../features/booking/booking_list_page.dart';
 import '../features/chat/chat_page.dart';
 import '../features/chat/chats_list_page.dart';
 import '../features/home/home_page.dart';
+import '../features/onboarding/onboarding_page.dart';
 import '../features/profile/profile_page.dart';
 import '../features/provider/provider_dashboard_page.dart';
 import '../features/provider/provider_inbox_page.dart';
@@ -34,6 +36,7 @@ import 'app_shell.dart';
 // ---------------------------------------------------------------------------
 
 abstract final class AppRoutes {
+  static const onboarding = '/onboarding';
   static const signIn = '/sign-in';
   static const signUp = '/sign-up';
   static const otpLab = '/otp-lab';
@@ -80,6 +83,7 @@ class RouterNotifier extends ChangeNotifier {
       (_, __) => notifyListeners(),
     );
     _ref.listen<ActiveMode>(activeModeProvider, (_, __) => notifyListeners());
+    _ref.listen<bool>(onboardingDoneProvider, (_, __) => notifyListeners());
   }
 
   final Ref _ref;
@@ -96,14 +100,23 @@ class RouterNotifier extends ChangeNotifier {
         if (kDebugMode && loc == AppRoutes.otpLab) return null;
         if (!kDebugMode && loc == AppRoutes.otpLab) return AppRoutes.signIn;
         final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
+        final isOnboardingRoute = loc == AppRoutes.onboarding;
 
         // ---- Unauthenticated ----
         if (authState is AuthUnauthenticated) {
+          if (isOnboardingRoute) return null; // allow onboarding before auth
           return isAuthRoute ? null : AppRoutes.signIn;
         }
 
         // ---- Authenticated ----
         if (authState is AuthAuthenticated) {
+          // Show onboarding on first launch (before anything else).
+          final onboardingDone = _ref.read(onboardingDoneProvider);
+          if (!onboardingDone) {
+            return isOnboardingRoute ? null : AppRoutes.onboarding;
+          }
+
+          if (isOnboardingRoute) return AppRoutes.home;
           if (isAuthRoute) return AppRoutes.home;
 
           // When switching modes, redirect to the right home tab.
@@ -175,6 +188,13 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: notifier,
     redirect: notifier.redirect,
     routes: [
+      // ---- First-launch onboarding ----
+      GoRoute(
+        path: AppRoutes.onboarding,
+        name: 'onboarding',
+        builder: (_, __) => const OnboardingPage(),
+      ),
+
       // ---- Auth ----
       GoRoute(
         path: AppRoutes.signIn,

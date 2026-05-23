@@ -1209,4 +1209,45 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bookingAddressLabel => 'Adresse d\'intervention';
+
+  @override
+  String get introSlide1Title => 'Bienvenue sur Outalma';
+
+  @override
+  String get introSlide1Body =>
+      'Trouvez les meilleurs prestataires de services près de chez vous, rapidement et en toute confiance.';
+
+  @override
+  String get introSlide2Title => 'Réservez en un instant';
+
+  @override
+  String get introSlide2Body =>
+      'Sélectionnez un service, choisissez un créneau et confirmez en quelques tapotements.';
+
+  @override
+  String get introSlide3Title => 'Suivez en temps réel';
+
+  @override
+  String get introSlide3Body =>
+      'Restez informé à chaque étape : confirmation, déplacement et fin de prestation.';
+
+  @override
+  String get introSlide4Title => 'Prêt à commencer';
+
+  @override
+  String get introSlide4Body =>
+      'En continuant, vous acceptez nos conditions d\'utilisation et notre politique de confidentialité.';
+
+  @override
+  String get introTermsAccept => 'J\'accepte les conditions d\'utilisation';
+
+  @override
+  String get introNext => 'Suivant';
+
+  @override
+  String get introGetStarted => 'Commencer';
+
+  @override
+  String get introTermsRequired =>
+      'Veuillez accepter les conditions pour continuer.';
 }

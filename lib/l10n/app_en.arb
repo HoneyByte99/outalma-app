@@ -482,5 +482,18 @@
 
   "reviewsLabel": "Reviews",
   "servicesOffered": "Services offered",
-  "bookingAddressLabel": "Service address"
+  "bookingAddressLabel": "Service address",
+
+  "introSlide1Title": "Welcome to Outalma",
+  "introSlide1Body": "Find the best service providers near you, quickly and with confidence.",
+  "introSlide2Title": "Book in seconds",
+  "introSlide2Body": "Pick a service, choose a time slot, and confirm in just a few taps.",
+  "introSlide3Title": "Track in real time",
+  "introSlide3Body": "Stay informed at every step: confirmation, travel, and service completion.",
+  "introSlide4Title": "Ready to start",
+  "introSlide4Body": "By continuing, you accept our terms of use and privacy policy.",
+  "introTermsAccept": "I accept the terms of use",
+  "introNext": "Next",
+  "introGetStarted": "Get started",
+  "introTermsRequired": "Please accept the terms to continue."
 }

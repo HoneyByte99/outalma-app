@@ -81,12 +81,12 @@ flutter_launcher_icons:
 flutter_native_splash:
   color: "#F4F7F9"
   image: assets/images/logo_icon_cropped.png
-  color_dark: "#0A1A24"
+  color_dark: "#F4F7F9"
   image_dark: assets/images/logo_icon_cropped.png
   android_12:
     color: "#F4F7F9"
     image: assets/images/logo_icon_cropped.png
-    color_dark: "#0A1A24"
+    color_dark: "#F4F7F9"
     image_dark: assets/images/logo_icon_cropped.png
   web: true
 

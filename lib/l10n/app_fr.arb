@@ -482,5 +482,18 @@
 
   "reviewsLabel": "Avis",
   "servicesOffered": "Services proposés",
-  "bookingAddressLabel": "Adresse d'intervention"
+  "bookingAddressLabel": "Adresse d'intervention",
+
+  "introSlide1Title": "Bienvenue sur Outalma",
+  "introSlide1Body": "Trouvez les meilleurs prestataires de services près de chez vous, rapidement et en toute confiance.",
+  "introSlide2Title": "Réservez en un instant",
+  "introSlide2Body": "Sélectionnez un service, choisissez un créneau et confirmez en quelques tapotements.",
+  "introSlide3Title": "Suivez en temps réel",
+  "introSlide3Body": "Restez informé à chaque étape : confirmation, déplacement et fin de prestation.",
+  "introSlide4Title": "Prêt à commencer",
+  "introSlide4Body": "En continuant, vous acceptez nos conditions d'utilisation et notre politique de confidentialité.",
+  "introTermsAccept": "J'accepte les conditions d'utilisation",
+  "introNext": "Suivant",
+  "introGetStarted": "Commencer",
+  "introTermsRequired": "Veuillez accepter les conditions pour continuer."
 }

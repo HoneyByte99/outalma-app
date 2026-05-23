@@ -10,6 +10,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'firebase_options.dart';
 import 'src/app/app.dart';
+import 'src/application/onboarding/onboarding_provider.dart';
 
 Future<void> main() async {
   // Catch all uncaught async errors. runZonedGuarded is intentionally
@@ -20,10 +21,13 @@ Future<void> main() async {
       final binding = WidgetsFlutterBinding.ensureInitialized();
       FlutterNativeSplash.preserve(widgetsBinding: binding);
 
-      await Future.wait([
+      final results = await Future.wait([
         Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
         initializeDateFormatting('fr_FR'),
+        readOnboardingDone(),
       ]);
+
+      final onboardingDone = results[2] as bool;
 
       final crashlytics = FirebaseCrashlytics.instance;
 
@@ -40,7 +44,14 @@ Future<void> main() async {
       };
 
       FlutterNativeSplash.remove();
-      runApp(const ProviderScope(child: OutalmaServiceApp()));
+      runApp(
+        ProviderScope(
+          overrides: [
+            onboardingDoneProvider.overrideWith((_) => onboardingDone),
+          ],
+          child: const OutalmaServiceApp(),
+        ),
+      );
     },
     (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);

@@ -2335,6 +2335,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Service address'**
   String get bookingAddressLabel;
+
+  /// No description provided for @introSlide1Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Outalma'**
+  String get introSlide1Title;
+
+  /// No description provided for @introSlide1Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the best service providers near you, quickly and with confidence.'**
+  String get introSlide1Body;
+
+  /// No description provided for @introSlide2Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Book in seconds'**
+  String get introSlide2Title;
+
+  /// No description provided for @introSlide2Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a service, choose a time slot, and confirm in just a few taps.'**
+  String get introSlide2Body;
+
+  /// No description provided for @introSlide3Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Track in real time'**
+  String get introSlide3Title;
+
+  /// No description provided for @introSlide3Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay informed at every step: confirmation, travel, and service completion.'**
+  String get introSlide3Body;
+
+  /// No description provided for @introSlide4Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to start'**
+  String get introSlide4Title;
+
+  /// No description provided for @introSlide4Body.
+  ///
+  /// In en, this message translates to:
+  /// **'By continuing, you accept our terms of use and privacy policy.'**
+  String get introSlide4Body;
+
+  /// No description provided for @introTermsAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'I accept the terms of use'**
+  String get introTermsAccept;
+
+  /// No description provided for @introNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get introNext;
+
+  /// No description provided for @introGetStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get introGetStarted;
+
+  /// No description provided for @introTermsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please accept the terms to continue.'**
+  String get introTermsRequired;
 }
 
 class _AppLocalizationsDelegate
