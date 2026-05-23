@@ -888,8 +888,17 @@ class _AccountSection extends ConsumerWidget {
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
-                      child: TextButton(
+                      child: OutlinedButton(
                         onPressed: () => Navigator.of(ctx).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: oc.primary,
+                          backgroundColor: Colors.transparent,
+                          side: BorderSide(color: oc.primary),
+                          minimumSize: const Size(0, 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                         child: Text(l10n.cancel),
                       ),
                     ),

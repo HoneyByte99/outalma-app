@@ -560,10 +560,6 @@ class _AuthModeToggle extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Logo — white card wrapper in dark mode so the dark navy logo stays visible
-// ---------------------------------------------------------------------------
-
 class _AuthLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
