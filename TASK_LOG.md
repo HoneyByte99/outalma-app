@@ -1,7 +1,28 @@
 # TASK_LOG — Batch 1 : Bugs Critiques
 
 Branch: `fix/qe-critical-bugs` (UX batch on `fix/ux-batch1`)
-Last update: 2026-05-21
+Last update: 2026-05-29
+
+---
+
+## Chat Media iOS Fixes — 2026-05-29
+
+Branch: `fix/chat-media-ios`
+Commit: `84e81c9`
+
+| Fix | Status | Detail |
+|-----|--------|--------|
+| Voice messages unplayable on iOS | Fixed | `chat_media_service.dart:_uploadVoiceBytes` — was hardcoded to `.webm`/`audio/webm` regardless of platform. Now uses `kIsWeb` to branch: web keeps `.webm`/`audio/webm`, native uses `.m4a`/`audio/mp4` matching the `AudioEncoder.aacLc` output. Old `.webm` messages from web remain playable via `just_audio`. |
+| Image picker crashes silently on iOS | Fixed | `chat_page.dart:_pickImage` and `_takePhoto` — had zero error handling. Permission denial or picker errors caused unhandled exceptions. Wrapped both in try/catch with `debugPrint` + user-facing snackbar (`chatFileError`). No new dependency needed — `image_picker` handles runtime permissions internally. |
+| Silent error swallowing in voice send | Fixed | `chat_page.dart:_stopAndSendRecording` — `catch (_)` replaced with `catch (e, st)` + `debugPrint('Chat media error: $e\n$st')`. User-facing snackbar preserved. |
+
+### Validation
+
+- `flutter analyze` — 0 new warnings from changes (pre-existing warnings in unrelated files)
+- `flutter test` — 635 pass, 3 skipped, 0 failures
+- `flutter build web` — succeeds (full Dart compilation clean)
+- iOS simulator test — **blocked** by pre-existing environment issue: Xcode 26 beta only exposes iOS 26 simulator (arm64) but Firebase CocoaPods don't support arm64 simulators yet; iOS 17.2 simulators are x86_64-only on this Apple Silicon Mac. Requires `xcodebuild -downloadPlatform iOS -architectureVariant universal` or a physical device for runtime testing.
+- iOS device build — compiling (no code errors, Xcode retry due to concurrent builds)
 
 ---
 
