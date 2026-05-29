@@ -58,8 +58,10 @@ class ChatMediaService {
 
   Future<String> _uploadVoiceBytes(String chatId, Uint8List bytes) async {
     final ts = DateTime.now().millisecondsSinceEpoch;
-    final ref = _storage.ref('private/chats/$chatId/media/${ts}_voice.webm');
-    await ref.putData(bytes, SettableMetadata(contentType: 'audio/webm'));
+    const ext = kIsWeb ? 'webm' : 'm4a';
+    const contentType = kIsWeb ? 'audio/webm' : 'audio/mp4';
+    final ref = _storage.ref('private/chats/$chatId/media/${ts}_voice.$ext');
+    await ref.putData(bytes, SettableMetadata(contentType: contentType));
     return ref.getDownloadURL();
   }
 

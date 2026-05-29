@@ -183,18 +183,42 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _pickImage() async {
-    final media = ref.read(chatMediaServiceProvider);
-    final url = await media.pickImageFromGallery(widget.chatId);
-    if (url != null && mounted) {
-      setState(() => _pendingImageUrl = url);
+    try {
+      final media = ref.read(chatMediaServiceProvider);
+      final url = await media.pickImageFromGallery(widget.chatId);
+      if (url != null && mounted) {
+        setState(() => _pendingImageUrl = url);
+      }
+    } catch (e, st) {
+      debugPrint('Image pick error: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.chatFileError),
+            backgroundColor: context.oc.error,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _takePhoto() async {
-    final media = ref.read(chatMediaServiceProvider);
-    final url = await media.takePhoto(widget.chatId);
-    if (url != null && mounted) {
-      setState(() => _pendingImageUrl = url);
+    try {
+      final media = ref.read(chatMediaServiceProvider);
+      final url = await media.takePhoto(widget.chatId);
+      if (url != null && mounted) {
+        setState(() => _pendingImageUrl = url);
+      }
+    } catch (e, st) {
+      debugPrint('Camera error: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.chatFileError),
+            backgroundColor: context.oc.error,
+          ),
+        );
+      }
     }
   }
 
@@ -260,7 +284,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           : await File(path).readAsBytes();
       final url = await media.uploadVoiceBytes(widget.chatId, bytes);
       await _sendMedia(MessageType.voice, url);
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('Chat media error: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
