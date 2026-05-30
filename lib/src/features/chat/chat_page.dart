@@ -42,6 +42,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   final _recorder = AudioRecorder();
   bool _sending = false;
   bool _recording = false;
+  int _recordingSeconds = 0;
+  Timer? _recordingTimer;
   int _lastMarkedReadCount = 0;
   int _lastScrolledCount = 0;
   Timer? _typingCooldown;
@@ -56,6 +58,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   @override
   void dispose() {
     _typingCooldown?.cancel();
+    _recordingTimer?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     _recorder.dispose();
@@ -257,7 +260,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           path: path,
         );
       }
-      if (mounted) setState(() => _recording = true);
+      if (mounted) {
+        setState(() {
+          _recording = true;
+          _recordingSeconds = 0;
+        });
+        _recordingTimer?.cancel();
+        _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+          if (mounted) setState(() => _recordingSeconds++);
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -270,10 +282,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Future<void> _stopAndSendRecording() async {
     final l10n = AppLocalizations.of(context)!;
     final errorMsg = l10n.chatVoiceError;
+    final chatId = widget.chatId;
+
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
 
     final path = await _recorder.stop();
-    setState(() => _recording = false);
-    if (path == null || !mounted) return;
+    if (mounted) setState(() => _recording = false);
+    if (path == null) {
+      debugPrint('Voice send: recorder.stop() returned null path');
+      return;
+    }
+    if (!mounted) return;
 
     try {
       final media = ref.read(chatMediaServiceProvider);
@@ -282,10 +302,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       final Uint8List bytes = kIsWeb
           ? (await http.get(Uri.parse(path))).bodyBytes
           : await File(path).readAsBytes();
-      final url = await media.uploadVoiceBytes(widget.chatId, bytes);
+      debugPrint(
+        'Voice send: chatId=$chatId path=$path bytes=${bytes.length}',
+      );
+      if (chatId.isEmpty) {
+        throw StateError('Voice send aborted: empty chatId');
+      }
+      if (bytes.isEmpty) {
+        throw StateError('Voice send aborted: empty recording bytes');
+      }
+      final url = await media.uploadVoiceBytes(chatId, bytes);
       await _sendMedia(MessageType.voice, url);
     } catch (e, st) {
-      debugPrint('Chat media error: $e\n$st');
+      debugPrint('Voice send error: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
@@ -295,6 +324,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _cancelRecording() async {
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
     try {
       await _recorder.stop();
     } catch (_) {}
@@ -344,13 +375,29 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           // ---- Messages ----
           Expanded(
             child: messagesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: oc.primary,
+                ),
+              ),
               error: (_, __) => Center(
-                child: Text(
-                  l10n.chatLoadError,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.cloud_off_rounded,
+                      size: 40,
+                      color: oc.icons,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.chatLoadError,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: oc.secondaryText,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               data: (messages) {
@@ -400,6 +447,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               controller: _controller,
               sending: _sending,
               recording: _recording,
+              recordingSeconds: _recordingSeconds,
               onSend: _send,
               onTyping: _notifyTyping,
               onPickGallery: _pickImage,
@@ -508,22 +556,23 @@ class _MessageBubble extends ConsumerWidget {
                 ),
                 child: _buildBubbleContent(context, oc, fg),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     _formatTime(message.createdAt),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
+                      fontSize: 10,
+                      letterSpacing: 0.2,
                       color: oc.icons,
                     ),
                   ),
                   if (isMe) ...[
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 3),
                     Icon(
-                      isRead ? Icons.done_all : Icons.done,
-                      size: 14,
+                      isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                      size: 13,
                       color: isRead ? oc.primary : oc.icons,
                     ),
                   ],
@@ -548,36 +597,33 @@ class _MessageBubble extends ConsumerWidget {
             if (message.mediaUrl != null)
               GestureDetector(
                 onTap: () => _showFullImage(context, message.mediaUrl!),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: message.mediaUrl!,
+                child: CachedNetworkImage(
+                  imageUrl: message.mediaUrl!,
+                  width: 220,
+                  height: 180,
+                  fit: BoxFit.cover,
+                  // 2× for Retina — 440×360 keeps memory reasonable
+                  memCacheWidth: 440,
+                  memCacheHeight: 360,
+                  httpHeaders: const {'Accept': '*/*'},
+                  placeholder: (_, __) => SizedBox(
                     width: 220,
                     height: 180,
-                    fit: BoxFit.cover,
-                    // 2× for Retina — 440×360 keeps memory reasonable
-                    memCacheWidth: 440,
-                    memCacheHeight: 360,
-                    httpHeaders: const {'Accept': '*/*'},
-                    placeholder: (_, __) => SizedBox(
-                      width: 220,
-                      height: 180,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: fg,
-                        ),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: fg.withValues(alpha: 0.5),
                       ),
                     ),
-                    errorWidget: (_, __, ___) => SizedBox(
-                      width: 220,
-                      height: 80,
-                      child: Center(
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          color: fg,
-                          size: 32,
-                        ),
+                  ),
+                  errorWidget: (_, __, ___) => SizedBox(
+                    width: 220,
+                    height: 80,
+                    child: Center(
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: fg.withValues(alpha: 0.5),
+                        size: 32,
                       ),
                     ),
                   ),
@@ -585,7 +631,7 @@ class _MessageBubble extends ConsumerWidget {
               ),
             if (message.text != null && message.text!.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
                 child: Text(
                   message.text!,
                   style: Theme.of(
@@ -598,7 +644,7 @@ class _MessageBubble extends ConsumerWidget {
 
       case MessageType.voice:
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: _VoicePlayer(url: message.mediaUrl ?? '', fg: fg),
         );
 
@@ -921,6 +967,7 @@ class _InputBar extends StatefulWidget {
     required this.controller,
     required this.sending,
     required this.recording,
+    required this.recordingSeconds,
     required this.onSend,
     required this.onTyping,
     required this.onPickGallery,
@@ -933,6 +980,7 @@ class _InputBar extends StatefulWidget {
   final TextEditingController controller;
   final bool sending;
   final bool recording;
+  final int recordingSeconds;
   final VoidCallback onSend;
   final VoidCallback onTyping;
   final VoidCallback onPickGallery;
@@ -966,6 +1014,8 @@ class _InputBarState extends State<_InputBar> {
     if (has) widget.onTyping();
   }
 
+  String _fmt(int v) => v.toString().padLeft(2, '0');
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -987,11 +1037,22 @@ class _InputBarState extends State<_InputBar> {
             Icon(Icons.mic, color: oc.error, size: 24),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                l10n.chatRecording,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: oc.error),
+              child: Row(
+                children: [
+                  Text(
+                    l10n.chatRecording,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: oc.error),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${_fmt(widget.recordingSeconds ~/ 60)}:${_fmt(widget.recordingSeconds % 60)}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: oc.error),
+                  ),
+                ],
               ),
             ),
             IconButton(
