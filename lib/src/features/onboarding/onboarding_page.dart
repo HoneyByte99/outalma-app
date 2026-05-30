@@ -59,7 +59,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     final slides = _buildSlides(l10n, oc);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F9),
+      backgroundColor: oc.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -123,7 +123,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                                 Expanded(
                                   child: Text(
                                     l10n.introTermsAccept,
-                                    style: Theme.of(context).textTheme.bodyMedium,
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: oc.primaryText,
+                                    ),
                                   ),
                                 ),
                               ],
