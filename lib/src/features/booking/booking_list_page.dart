@@ -15,6 +15,7 @@ import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../domain/enums/active_mode.dart';
+import '../../core/utils/date_utils.dart' as date_utils;
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
 
@@ -338,7 +339,7 @@ class _BookingCard extends ConsumerWidget {
     final serviceAsync = ref.watch(serviceDetailProvider(booking.serviceId));
 
     final serviceTitle = serviceAsync.valueOrNull?.title ?? '---';
-    final dateLabel = _formatDate(booking.createdAt);
+    final dateLabel = date_utils.formatAbsoluteDate(booking.createdAt);
 
     // Card hierarchy A.4:
     //   Dominant   = service title + status chip
@@ -426,28 +427,6 @@ class _BookingCard extends ConsumerWidget {
       ),
     );
   }
-}
-
-// ---------------------------------------------------------------------------
-// Date formatting helper (no intl dependency)
-// ---------------------------------------------------------------------------
-
-String _formatDate(DateTime dt) {
-  const months = [
-    'jan',
-    'fév',
-    'mars',
-    'avr',
-    'mai',
-    'juin',
-    'juil',
-    'août',
-    'sep',
-    'oct',
-    'nov',
-    'déc',
-  ];
-  return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
 }
 
 // ---------------------------------------------------------------------------

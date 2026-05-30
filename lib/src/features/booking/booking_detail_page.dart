@@ -18,6 +18,7 @@ import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
 import '../../domain/models/service.dart';
+import '../../core/utils/date_utils.dart' as date_utils;
 import '../../domain/utils/distance.dart';
 import '../shared/maps_launcher.dart';
 
@@ -549,7 +550,7 @@ class _TimelineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final oc = context.oc;
     final color = isActive ? oc.primary : oc.border;
-    final dateLabel = date != null ? _formatDateTime(date!) : '';
+    final dateLabel = date != null ? date_utils.formatAbsoluteDateTime(date!) : '';
 
     return IntrinsicHeight(
       child: Row(
@@ -742,30 +743,6 @@ class _AddressSection extends StatelessWidget {
       ),
     );
   }
-}
-
-// ---------------------------------------------------------------------------
-// Date formatting helpers
-// ---------------------------------------------------------------------------
-
-String _formatDateTime(DateTime dt) {
-  const months = [
-    'jan',
-    'fév',
-    'mars',
-    'avr',
-    'mai',
-    'juin',
-    'juil',
-    'août',
-    'sep',
-    'oct',
-    'nov',
-    'déc',
-  ];
-  final h = dt.hour.toString().padLeft(2, '0');
-  final m = dt.minute.toString().padLeft(2, '0');
-  return '${dt.day} ${months[dt.month - 1]}, $h:$m';
 }
 
 // ---------------------------------------------------------------------------

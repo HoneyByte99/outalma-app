@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
+import '../../core/utils/date_utils.dart' as date_utils;
 import '../shared/mode_badge.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
@@ -193,7 +194,7 @@ class _InboxCard extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        _formatDate(booking.createdAt),
+                        date_utils.formatAbsoluteDate(booking.createdAt),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: oc.secondaryText,
                         ),
@@ -307,28 +308,6 @@ class _StatusChip extends StatelessWidget {
       ),
     );
   }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-String _formatDate(DateTime dt) {
-  const months = [
-    'jan',
-    'fév',
-    'mars',
-    'avr',
-    'mai',
-    'juin',
-    'juil',
-    'août',
-    'sep',
-    'oct',
-    'nov',
-    'déc',
-  ];
-  return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
 }
 
 // ---------------------------------------------------------------------------

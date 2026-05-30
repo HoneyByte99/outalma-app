@@ -23,6 +23,7 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/chat/chat_providers.dart';
 import '../../application/user/user_providers.dart';
+import '../../core/utils/date_utils.dart' as date_utils;
 import '../../data/services/chat_media_service.dart';
 import '../../domain/enums/message_type.dart';
 import '../../domain/models/chat_message.dart';
@@ -252,7 +253,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           path: '',
         );
       } else {
-        if (!await _recorder.hasPermission()) return;
+        if (!await _recorder.hasPermission()) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  'Accès au microphone refusé. Activez-le dans Réglages.',
+                ),
+                backgroundColor: context.oc.error,
+              ),
+            );
+          }
+          return;
+        }
         final dir = await getTemporaryDirectory();
         final path =
             '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
@@ -285,16 +298,22 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final errorMsg = l10n.chatVoiceError;
     final chatId = widget.chatId;
 
-    _recordingTimer?.cancel();
-    _recordingTimer = null;
-
-    final path = await _recorder.stop();
-    if (mounted) setState(() => _recording = false);
-    if (path == null) {
-      debugPrint('Voice send: recorder.stop() returned null path');
+    String? path;
+    try {
+      path = await _recorder.stop();
+    } catch (e, st) {
+      debugPrint('Recorder stop error: $e\n$st');
+    } finally {
+      _recordingTimer?.cancel();
+      _recordingTimer = null;
+      if (mounted) setState(() => _recording = false);
+    }
+    if (path == null || path.isEmpty || !mounted) {
+      if (path == null) {
+        debugPrint('Voice send: recorder.stop() returned null path');
+      }
       return;
     }
-    if (!mounted) return;
 
     try {
       final media = ref.read(chatMediaServiceProvider);
@@ -562,7 +581,7 @@ class _MessageBubble extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _formatTime(message.createdAt),
+                    date_utils.formatTime(message.createdAt),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 10,
                       letterSpacing: 0.2,
@@ -734,6 +753,7 @@ class _VoicePlayer extends StatefulWidget {
 class _VoicePlayerState extends State<_VoicePlayer> {
   final _player = AudioPlayer();
   bool _playing = false;
+  bool _hasError = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
   StreamSubscription<Duration>? _positionSub;
@@ -755,7 +775,11 @@ class _VoicePlayerState extends State<_VoicePlayer> {
     try {
       final dur = await _player.setUrl(widget.url);
       if (dur != null && mounted) setState(() => _duration = dur);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('VoicePlayer setUrl error: $e — url: ${widget.url}');
+      if (mounted) setState(() => _hasError = true);
+      return;
+    }
 
     _positionSub = _player.positionStream.listen((pos) {
       if (mounted) setState(() => _position = pos);
@@ -793,6 +817,28 @@ class _VoicePlayerState extends State<_VoicePlayer> {
   @override
   Widget build(BuildContext context) {
     final fg = widget.fg;
+
+    if (_hasError) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.cloud_off_rounded,
+            color: fg.withValues(alpha: 0.5),
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Format non supporté',
+            style: TextStyle(
+              color: fg.withValues(alpha: 0.5),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      );
+    }
+
     // Show remaining time while playing, total duration otherwise
     final timeLabel = (_playing && _duration > _position)
         ? _fmt(_duration - _position)
@@ -829,23 +875,25 @@ class _VoicePlayerState extends State<_VoicePlayer> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Tappable waveform — tap to seek
-                GestureDetector(
-                  onTapDown: (details) {
-                    final box = context.findRenderObject() as RenderBox?;
-                    if (box == null || _duration == Duration.zero) return;
-                    // Offset accounts for play-button + gap on the left
-                    const leadingOffset = 50.0;
-                    final waveWidth = box.size.width - leadingOffset;
-                    if (waveWidth <= 0) return;
-                    final localX = details.localPosition.dx - leadingOffset;
-                    final frac = (localX / waveWidth).clamp(0.0, 1.0);
-                    _player.seek(
-                      Duration(
-                        milliseconds:
-                            (frac * _duration.inMilliseconds).round(),
-                      ),
-                    );
-                  },
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final waveWidth = constraints.maxWidth;
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTapDown: (details) {
+                        if (_duration == Duration.zero || waveWidth <= 0) {
+                          return;
+                        }
+                        final frac =
+                            (details.localPosition.dx / waveWidth)
+                                .clamp(0.0, 1.0);
+                        _player.seek(
+                          Duration(
+                            milliseconds:
+                                (frac * _duration.inMilliseconds).round(),
+                          ),
+                        );
+                      },
                   child: SizedBox(
                     height: 28,
                     child: Row(
@@ -872,6 +920,8 @@ class _VoicePlayerState extends State<_VoicePlayer> {
                       }),
                     ),
                   ),
+                );
+                  },
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1458,12 +1508,3 @@ class _PulsingRecordDotState extends State<_PulsingRecordDot>
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-String _formatTime(DateTime dt) {
-  final h = dt.hour.toString().padLeft(2, '0');
-  final m = dt.minute.toString().padLeft(2, '0');
-  return '$h:$m';
-}

@@ -13,6 +13,7 @@ import '../../application/booking/booking_providers.dart';
 import '../../application/chat/chat_providers.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/user/user_providers.dart';
+import '../../core/utils/date_utils.dart' as date_utils;
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/chat.dart';
 import '../../domain/models/chat_message.dart';
@@ -222,7 +223,7 @@ class _ChatTile extends ConsumerWidget {
                       ),
                       if (chat.lastMessageAt != null)
                         Text(
-                          _formatTime(chat.lastMessageAt!),
+                          date_utils.formatRelativeTime(chat.lastMessageAt!),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: hasUnread ? oc.primary : oc.icons,
@@ -347,38 +348,3 @@ class _EmptyChats extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Time formatting
-// ---------------------------------------------------------------------------
-
-String _formatTime(DateTime dt) {
-  final now = DateTime.now();
-  final diff = now.difference(dt);
-
-  if (diff.inMinutes < 1) return 'maintenant';
-  if (diff.inHours < 1) return 'il y a ${diff.inMinutes} min';
-  if (diff.inDays < 1) {
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
-  if (diff.inDays < 7) {
-    const days = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
-    return days[dt.weekday - 1];
-  }
-  const months = [
-    'jan',
-    'f\u00e9v',
-    'mars',
-    'avr',
-    'mai',
-    'juin',
-    'juil',
-    'ao\u00fbt',
-    'sep',
-    'oct',
-    'nov',
-    'd\u00e9c',
-  ];
-  return '${dt.day} ${months[dt.month - 1]}';
-}
