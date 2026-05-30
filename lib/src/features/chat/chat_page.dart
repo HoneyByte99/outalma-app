@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show File;
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
@@ -738,9 +739,15 @@ class _VoicePlayerState extends State<_VoicePlayer> {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<PlayerState>? _playerStateSub;
 
+  // Pseudo-random waveform bars seeded by URL hash — stable across rebuilds
+  static const int _barCount = 22;
+  late final List<double> _bars;
+
   @override
   void initState() {
     super.initState();
+    final rng = math.Random(widget.url.hashCode);
+    _bars = List.generate(_barCount, (_) => 0.25 + rng.nextDouble() * 0.75);
     _init();
   }
 
@@ -779,46 +786,107 @@ class _VoicePlayerState extends State<_VoicePlayer> {
     return '$m:$s';
   }
 
+  double get _progress => _duration.inMilliseconds > 0
+      ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
+      : 0.0;
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: () => _playing ? _player.pause() : _player.play(),
-          child: Icon(
-            _playing ? Icons.pause_circle_filled : Icons.play_circle_filled,
-            size: 36,
-            color: widget.fg,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 4,
-                child: LinearProgressIndicator(
-                  value: _duration.inMilliseconds > 0
-                      ? _position.inMilliseconds / _duration.inMilliseconds
-                      : 0,
-                  backgroundColor: widget.fg.withValues(alpha: 0.2),
-                  valueColor: AlwaysStoppedAnimation(widget.fg),
-                ),
+    final fg = widget.fg;
+    // Show remaining time while playing, total duration otherwise
+    final timeLabel = (_playing && _duration > _position)
+        ? _fmt(_duration - _position)
+        : _fmt(_duration);
+
+    return SizedBox(
+      width: 188,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Play / pause button
+          GestureDetector(
+            onTap: () => _playing ? _player.pause() : _player.play(),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: fg.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 4),
-              Text(
-                '${_fmt(_position)} / ${_fmt(_duration)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: widget.fg.withValues(alpha: 0.7),
-                  fontSize: 11,
-                ),
+              child: Icon(
+                _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                size: 24,
+                color: fg,
               ),
-            ],
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 10),
+
+          // Waveform bars + time label
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Tappable waveform — tap to seek
+                GestureDetector(
+                  onTapDown: (details) {
+                    final box = context.findRenderObject() as RenderBox?;
+                    if (box == null || _duration == Duration.zero) return;
+                    // Offset accounts for play-button + gap on the left
+                    const leadingOffset = 50.0;
+                    final waveWidth = box.size.width - leadingOffset;
+                    if (waveWidth <= 0) return;
+                    final localX = details.localPosition.dx - leadingOffset;
+                    final frac = (localX / waveWidth).clamp(0.0, 1.0);
+                    _player.seek(
+                      Duration(
+                        milliseconds:
+                            (frac * _duration.inMilliseconds).round(),
+                      ),
+                    );
+                  },
+                  child: SizedBox(
+                    height: 28,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: List.generate(_barCount, (i) {
+                        final barProgress = i / _barCount;
+                        final isPlayed = barProgress < _progress;
+                        return Expanded(
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 1),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 80),
+                              height: 28 * _bars[i],
+                              decoration: BoxDecoration(
+                                color: isPlayed
+                                    ? fg
+                                    : fg.withValues(alpha: 0.22),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  timeLabel,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: fg.withValues(alpha: 0.6),
+                    fontSize: 10,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1025,52 +1093,64 @@ class _InputBarState extends State<_InputBar> {
     // Recording mode
     if (widget.recording) {
       return Container(
-        padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + bottomPadding),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
         decoration: BoxDecoration(
-          color: oc.error.withValues(alpha: 0.06),
+          color: oc.error.withValues(alpha: 0.05),
           border: Border(
-            top: BorderSide(color: oc.error.withValues(alpha: 0.3)),
+            top: BorderSide(color: oc.error.withValues(alpha: 0.25)),
           ),
         ),
         child: Row(
           children: [
-            Icon(Icons.mic, color: oc.error, size: 24),
+            // Pulsing mic dot
+            _PulsingRecordDot(color: oc.error),
             const SizedBox(width: 10),
             Expanded(
               child: Row(
                 children: [
                   Text(
                     l10n.chatRecording,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: oc.error),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: oc.error,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     '${_fmt(widget.recordingSeconds ~/ 60)}:${_fmt(widget.recordingSeconds % 60)}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: oc.error),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: oc.error,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ],
               ),
             ),
+            // Cancel (trash)
             IconButton(
               onPressed: widget.onCancelRecording,
-              icon: Icon(Icons.delete_outline, color: oc.error),
+              icon: Icon(Icons.delete_outline_rounded, color: oc.error),
               tooltip: l10n.cancel,
+              padding: EdgeInsets.zero,
+              constraints:
+                  const BoxConstraints(minWidth: 40, minHeight: 40),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
+            // Send recording
             GestureDetector(
               onTap: widget.onStopRecording,
               child: Container(
-                width: 44,
-                height: 44,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   color: oc.error,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.stop_rounded, color: oc.surface, size: 24),
+                child: Icon(
+                  Icons.send_rounded,
+                  color: oc.surface,
+                  size: 22,
+                ),
               ),
             ),
           ],
@@ -1195,23 +1275,41 @@ class _EmptyChat extends StatelessWidget {
     final oc = context.oc;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.chat_bubble_outline_rounded, size: 56, color: oc.icons),
-            const SizedBox(height: 16),
+            // Icon wrapped in a soft circle
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: oc.primary.withValues(alpha: 0.07),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 36,
+                color: oc.primary.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 20),
             Text(
               l10n.chatStartConversation,
-              style: Theme.of(context).textTheme.titleSmall,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: oc.primaryText,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               l10n.chatSubtitle,
               textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: oc.secondaryText,
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -1307,6 +1405,54 @@ class _TypingIndicatorBarState extends ConsumerState<_TypingIndicatorBar>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pulsing record indicator dot
+// ---------------------------------------------------------------------------
+
+class _PulsingRecordDot extends StatefulWidget {
+  const _PulsingRecordDot({required this.color});
+  final Color color;
+
+  @override
+  State<_PulsingRecordDot> createState() => _PulsingRecordDotState();
+}
+
+class _PulsingRecordDotState extends State<_PulsingRecordDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 0.75, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
       ),
     );
   }
