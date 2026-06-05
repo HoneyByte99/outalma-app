@@ -284,10 +284,7 @@ class _StatusChip extends StatelessWidget {
     final (label, color) = switch (status) {
       BookingStatus.requested => (l10n.statusPending, oc.warning),
       BookingStatus.accepted => (l10n.statusAccepted, oc.primary),
-      BookingStatus.inProgress => (
-        l10n.statusInProgress,
-        const Color(0xFF7B2FBE),
-      ),
+      BookingStatus.inProgress => (l10n.statusInProgress, oc.statusInProgress),
       BookingStatus.done => (l10n.statusDone, oc.success),
       BookingStatus.rejected => (l10n.statusRejected, oc.secondaryText),
       BookingStatus.cancelled => (l10n.statusCancelled, oc.secondaryText),

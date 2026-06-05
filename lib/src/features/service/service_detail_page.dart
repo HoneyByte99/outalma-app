@@ -79,12 +79,15 @@ class _ServiceDetailContent extends ConsumerWidget {
             leading: Padding(
               padding: const EdgeInsets.all(AppSpacing.s),
               child: CircleAvatar(
-                radius: 22,
+                radius: 24,
                 backgroundColor: oc.surface.withValues(alpha: 0.9),
                 child: IconButton(
                   tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  constraints: const BoxConstraints(
+                    minWidth: 48,
+                    minHeight: 48,
+                  ),
                   icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
                   color: oc.primaryText,
                   onPressed: () => Navigator.of(context).pop(),

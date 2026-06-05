@@ -24,16 +24,18 @@ class ReviewFormPage extends ConsumerWidget {
     final bookingAsync = ref.watch(bookingDetailProvider(bookingId));
 
     return bookingAsync.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => Scaffold(
+        appBar: AppBar(title: Text(l10n.reviewTitle)),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
       error: (_, __) => Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(title: Text(l10n.reviewTitle)),
         body: Center(child: Text(l10n.reviewBookingNotFound)),
       ),
       data: (booking) {
         if (booking == null || booking.status != BookingStatus.done) {
           return Scaffold(
-            appBar: AppBar(),
+            appBar: AppBar(title: Text(l10n.reviewTitle)),
             body: Center(child: Text(l10n.reviewOnlyAfterDone)),
           );
         }

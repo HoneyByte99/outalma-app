@@ -15,6 +15,12 @@ final activeModeProvider = Provider<ActiveMode>((ref) {
 
 /// Streams a single [AppUser] by uid. Returns null if the document does not
 /// exist. Used by chat widgets to resolve participant profiles.
-final userByIdProvider = StreamProvider.family<AppUser?, String>((ref, uid) {
+///
+/// autoDispose: chats reference one provider instance per distinct senderId,
+/// which would otherwise accumulate Firestore listeners for the app's lifetime.
+final userByIdProvider = StreamProvider.autoDispose.family<AppUser?, String>((
+  ref,
+  uid,
+) {
   return ref.watch(userRepositoryProvider).watchById(uid);
 });

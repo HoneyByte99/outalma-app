@@ -244,32 +244,42 @@ class _ActiveBookingsWithCalendarState
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: oc.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.calendar_today, size: 14, color: oc.primary),
-                        const SizedBox(width: 6),
-                        Text(
-                          DateFormat('EEE d MMM', locale).format(_selectedDay!),
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(
-                                color: oc.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => setState(() => _selectedDay = null),
-                          child: Container(
+                  // The whole chip clears the date filter — a large tap target
+                  // without inflating the compact pill height.
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedDay = null),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: oc.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 14,
+                            color: oc.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            DateFormat(
+                              'EEE d MMM',
+                              locale,
+                            ).format(_selectedDay!),
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: oc.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
                             width: 20,
                             height: 20,
                             decoration: BoxDecoration(
@@ -282,8 +292,8 @@ class _ActiveBookingsWithCalendarState
                               color: oc.primary,
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -471,7 +481,7 @@ class _StatusChip extends StatelessWidget {
       case BookingStatus.accepted:
         return (l10n.statusAccepted, oc.primary);
       case BookingStatus.inProgress:
-        return (l10n.statusInProgress, const Color(0xFF7B2FBE));
+        return (l10n.statusInProgress, oc.statusInProgress);
       case BookingStatus.done:
         return (l10n.statusDone, oc.success);
       case BookingStatus.rejected:

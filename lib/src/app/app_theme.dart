@@ -62,6 +62,8 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     required this.error,
     required this.icons,
     required this.shadow,
+    required this.statusInProgress,
+    required this.star,
   });
 
   final Color primary;
@@ -87,6 +89,13 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
   final Color icons;
   final Color shadow;
 
+  /// Booking "in progress" status accent (purple). Distinct from primary so the
+  /// status chip reads as its own state in both light and dark modes.
+  final Color statusInProgress;
+
+  /// Rating star color (amber).
+  final Color star;
+
   /// Light palette — mirrors AppColors static values.
   static const light = OutalmaColors(
     primary: Color(0xFF1B3A4B),
@@ -107,6 +116,8 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     error: Color(0xFFE03D3A),
     icons: Color(0xFF8AAAB8),
     shadow: Color(0x1F1B3A4B),
+    statusInProgress: Color(0xFF7B2FBE),
+    star: Color(0xFFFBBF24),
   );
 
   /// Dark palette — mint accent on warm-neutral surfaces.
@@ -135,6 +146,8 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     error: Color(0xFFFF6B68),
     icons: Color(0xFF7A8B98),
     shadow: Color(0x33000000),
+    statusInProgress: Color(0xFFC79BF0),
+    star: Color(0xFFFBBF24),
   );
 
   @override
@@ -157,6 +170,8 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     Color? error,
     Color? icons,
     Color? shadow,
+    Color? statusInProgress,
+    Color? star,
   }) {
     return OutalmaColors(
       primary: primary ?? this.primary,
@@ -177,6 +192,8 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
       error: error ?? this.error,
       icons: icons ?? this.icons,
       shadow: shadow ?? this.shadow,
+      statusInProgress: statusInProgress ?? this.statusInProgress,
+      star: star ?? this.star,
     );
   }
 
@@ -202,6 +219,12 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
       error: Color.lerp(error, other.error, t)!,
       icons: Color.lerp(icons, other.icons, t)!,
       shadow: Color.lerp(shadow, other.shadow, t)!,
+      statusInProgress: Color.lerp(
+        statusInProgress,
+        other.statusInProgress,
+        t,
+      )!,
+      star: Color.lerp(star, other.star, t)!,
     );
   }
 }

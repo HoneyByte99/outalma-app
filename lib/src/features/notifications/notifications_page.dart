@@ -63,6 +63,12 @@ class NotificationsPage extends ConsumerWidget {
                     context,
                   ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                 ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () => ref.invalidate(notificationsProvider),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: Text(l10n.retry),
+                ),
               ],
             ),
           ),

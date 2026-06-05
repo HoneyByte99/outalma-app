@@ -355,6 +355,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final authState = ref.watch(authNotifierProvider).valueOrNull;
     final myUid = authState is AuthAuthenticated ? authState.user.id : null;
 
+    // Resolve the other participant's name for the AppBar title.
+    final chat = ref.watch(chatDetailProvider(widget.chatId)).valueOrNull;
+    final otherUid = (chat == null || myUid == null)
+        ? null
+        : chat.participantIds.firstWhere((id) => id != myUid, orElse: () => '');
+    final otherUser = (otherUid != null && otherUid.isNotEmpty)
+        ? ref.watch(userByIdProvider(otherUid)).valueOrNull
+        : null;
+    final chatTitle = (otherUser != null && otherUser.displayName.isNotEmpty)
+        ? otherUser.displayName
+        : l10n.chatConversation;
+
     // Mark messages read only when the message count actually grows — not on
     // every rebuild. Prevents a runaway Firestore write loop in the chat view.
     ref.listen<AsyncValue<List<ChatMessage>>>(
@@ -372,7 +384,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: Text(l10n.chatConversation),
+        title: Text(chatTitle),
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
         actions: [
@@ -1016,42 +1028,52 @@ class _ImagePreviewBar extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   GestureDetector(
                     onTap: onCancel,
                     child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: oc.error.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
+                      width: 48,
+                      height: 48,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: oc.error.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.close, size: 18, color: oc.error),
                       ),
-                      child: Icon(Icons.close, size: 18, color: oc.error),
                     ),
                   ),
-                  const SizedBox(height: 6),
                   GestureDetector(
                     onTap: sending ? null : onSend,
                     child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: sending ? oc.border : oc.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: sending
-                          ? Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
+                      width: 48,
+                      height: 48,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: sending ? oc.border : oc.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: sending
+                            ? Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: oc.surface,
+                                ),
+                              )
+                            : Icon(
+                                Icons.send_rounded,
+                                size: 16,
                                 color: oc.surface,
                               ),
-                            )
-                          : Icon(
-                              Icons.send_rounded,
-                              size: 16,
-                              color: oc.surface,
-                            ),
+                      ),
                     ),
                   ),
                 ],
@@ -1170,7 +1192,7 @@ class _InputBarState extends State<_InputBar> {
               icon: Icon(Icons.delete_outline_rounded, color: oc.error),
               tooltip: l10n.cancel,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             ),
             const SizedBox(width: 6),
             // Send recording
@@ -1207,7 +1229,7 @@ class _InputBarState extends State<_InputBar> {
             onPressed: widget.sending ? null : widget.onPickGallery,
             icon: Icon(Icons.photo_outlined, color: oc.icons, size: 24),
             tooltip: l10n.chatGallery,
-            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             padding: EdgeInsets.zero,
           ),
 

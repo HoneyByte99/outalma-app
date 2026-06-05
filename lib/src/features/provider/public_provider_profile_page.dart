@@ -216,7 +216,7 @@ class _ProfileHeader extends ConsumerWidget {
                               ? Icons.star_rounded
                               : Icons.star_outline_rounded,
                           size: 16,
-                          color: const Color(0xFFFBBF24),
+                          color: context.oc.star,
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -305,7 +305,7 @@ class _ReviewTile extends ConsumerWidget {
                         ? Icons.star_rounded
                         : Icons.star_outline_rounded,
                     size: 14,
-                    color: const Color(0xFFFBBF24),
+                    color: context.oc.star,
                   ),
                 ),
               ),

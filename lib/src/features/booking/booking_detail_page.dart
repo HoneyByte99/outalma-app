@@ -397,7 +397,7 @@ class _SharePhoneButtonState extends ConsumerState<_SharePhoneButton> {
             : const Icon(Icons.phone_outlined, size: 16),
         label: Text(l10n.bookingSharePhone(widget.phone)),
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, 44),
+          minimumSize: const Size(0, 48),
           textStyle: const TextStyle(fontSize: 13),
         ),
       ),

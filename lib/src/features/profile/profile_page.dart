@@ -1024,7 +1024,7 @@ class _MyReviewsSection extends ConsumerWidget {
                                 ? Icons.star_rounded
                                 : Icons.star_outline_rounded,
                             size: 18,
-                            color: const Color(0xFFFBBF24),
+                            color: context.oc.star,
                           ),
                         ),
                       ),
@@ -1099,7 +1099,7 @@ class _ReviewTile extends ConsumerWidget {
                           ? Icons.star_rounded
                           : Icons.star_outline_rounded,
                       size: 14,
-                      color: const Color(0xFFFBBF24),
+                      color: context.oc.star,
                     ),
                   ),
                 ),
