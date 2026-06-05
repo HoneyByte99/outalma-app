@@ -7,10 +7,10 @@ service firebase.storage {
     function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
 
     function bookingDoc(bookingId) {
-      return firestore.get(/databases/$(database)/documents/bookings/$(bookingId));
+      return firestore.get(/databases/(default)/documents/bookings/$(bookingId));
     }
     function bookingExists(bookingId) {
-      return firestore.exists(/databases/$(database)/documents/bookings/$(bookingId));
+      return firestore.exists(/databases/(default)/documents/bookings/$(bookingId));
     }
     function bookingData(bookingId) {
       return bookingDoc(bookingId).data;

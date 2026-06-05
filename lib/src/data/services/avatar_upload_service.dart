@@ -44,7 +44,6 @@ class AvatarUploadService {
     await ref.putData(bytes, SettableMetadata(contentType: contentType));
 
     final url = await ref.getDownloadURL();
-    debugPrint('[AvatarUpload] download URL: $url');
     return url;
   }
 

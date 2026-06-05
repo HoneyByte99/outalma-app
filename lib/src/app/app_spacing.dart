@@ -29,8 +29,8 @@ abstract final class AppSpacing {
   static const EdgeInsets cardCompact = EdgeInsets.all(m);
   static const EdgeInsets section = EdgeInsets.symmetric(vertical: xl);
 
-  // Touch targets — minimum tappable height per platform HIG.
-  static const double minTouchTarget = 44;
+  // Touch targets — minimum tappable height (Material 48dp; ≥ iOS HIG 44pt).
+  static const double minTouchTarget = 48;
 
   // Border radius scale.
   static const double radiusSmall = 8;

@@ -66,3 +66,6 @@ node_modules/
 ios/Runner/GoogleService-Info.plist
 android/app/google-services.json
 lib/firebase_options.dart
+
+# Seed data — contains test-account credentials and tester PII; never commit.
+seed/
