@@ -42,11 +42,13 @@ String? _redirect({
       final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
       if (isAuthRoute) return AppRoutes.home;
 
-      final isClientTab = loc == AppRoutes.home ||
+      final isClientTab =
+          loc == AppRoutes.home ||
           loc == AppRoutes.bookings ||
           loc.startsWith('${AppRoutes.bookings}/');
 
-      final isProviderTab = loc == AppRoutes.providerHome ||
+      final isProviderTab =
+          loc == AppRoutes.providerHome ||
           loc == AppRoutes.providerInbox ||
           loc.startsWith('${AppRoutes.providerInbox}/');
 
@@ -80,13 +82,13 @@ enum _AuthScenario { loading, error, unauthenticated, authenticated }
 // ---------------------------------------------------------------------------
 
 AppUser _makeUser({ActiveMode activeMode = ActiveMode.client}) => AppUser(
-      id: 'uid-router-full',
-      displayName: 'Router Test User',
-      email: 'router@example.com',
-      country: 'FR',
-      activeMode: activeMode,
-      createdAt: DateTime(2024).toUtc(),
-    );
+  id: 'uid-router-full',
+  displayName: 'Router Test User',
+  email: 'router@example.com',
+  country: 'FR',
+  activeMode: activeMode,
+  createdAt: DateTime(2024).toUtc(),
+);
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -294,10 +296,7 @@ void main() {
       '/some/unknown',
     ]) {
       test('loading at $loc → null', () {
-        expect(
-          _redirect(authAsync: _AuthScenario.loading, loc: loc),
-          isNull,
-        );
+        expect(_redirect(authAsync: _AuthScenario.loading, loc: loc), isNull);
       });
     }
   });
@@ -314,56 +313,60 @@ void main() {
       );
     });
 
-    test('/sign-in during auth error still goes to /sign-in (same location)',
-        () {
-      expect(
-        _redirect(authAsync: _AuthScenario.error, loc: AppRoutes.signIn),
-        equals(AppRoutes.signIn),
-      );
-    });
+    test(
+      '/sign-in during auth error still goes to /sign-in (same location)',
+      () {
+        expect(
+          _redirect(authAsync: _AuthScenario.error, loc: AppRoutes.signIn),
+          equals(AppRoutes.signIn),
+        );
+      },
+    );
   });
 
   // -------------------------------------------------------------------------
   // 6. Authenticated in provider mode — provider-only routes are allowed
   // -------------------------------------------------------------------------
 
-  group('authenticated + provider mode + provider-only routes → no redirect',
-      () {
-    const providerMode = ActiveMode.provider;
+  group(
+    'authenticated + provider mode + provider-only routes → no redirect',
+    () {
+      const providerMode = ActiveMode.provider;
 
-    test('/provider/onboarding → no redirect in provider mode', () {
-      expect(
-        _redirect(
-          authAsync: _AuthScenario.authenticated,
-          mode: providerMode,
-          loc: AppRoutes.providerOnboarding,
-        ),
-        isNull,
-      );
-    });
+      test('/provider/onboarding → no redirect in provider mode', () {
+        expect(
+          _redirect(
+            authAsync: _AuthScenario.authenticated,
+            mode: providerMode,
+            loc: AppRoutes.providerOnboarding,
+          ),
+          isNull,
+        );
+      });
 
-    test('/provider/calendar → no redirect in provider mode', () {
-      expect(
-        _redirect(
-          authAsync: _AuthScenario.authenticated,
-          mode: providerMode,
-          loc: AppRoutes.providerCalendar,
-        ),
-        isNull,
-      );
-    });
+      test('/provider/calendar → no redirect in provider mode', () {
+        expect(
+          _redirect(
+            authAsync: _AuthScenario.authenticated,
+            mode: providerMode,
+            loc: AppRoutes.providerCalendar,
+          ),
+          isNull,
+        );
+      });
 
-    test('/provider/services/new → no redirect in provider mode', () {
-      expect(
-        _redirect(
-          authAsync: _AuthScenario.authenticated,
-          mode: providerMode,
-          loc: AppRoutes.serviceNew,
-        ),
-        isNull,
-      );
-    });
-  });
+      test('/provider/services/new → no redirect in provider mode', () {
+        expect(
+          _redirect(
+            authAsync: _AuthScenario.authenticated,
+            mode: providerMode,
+            loc: AppRoutes.serviceNew,
+          ),
+          isNull,
+        );
+      });
+    },
+  );
 
   // -------------------------------------------------------------------------
   // 7. AppUser and AuthState construction sanity (matches existing pattern)
@@ -378,10 +381,7 @@ void main() {
     });
 
     test('AuthUnauthenticated is value-equal', () {
-      expect(
-        const AuthUnauthenticated(),
-        equals(const AuthUnauthenticated()),
-      );
+      expect(const AuthUnauthenticated(), equals(const AuthUnauthenticated()));
     });
 
     test('AuthLoading is value-equal', () {

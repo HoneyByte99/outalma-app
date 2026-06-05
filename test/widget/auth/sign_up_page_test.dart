@@ -24,17 +24,17 @@ class _FakeThemeNotifier extends ThemeModeNotifier {
 }
 
 Widget _wrap() => ProviderScope(
-      overrides: [
-        authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        themeModeProvider.overrideWith(_FakeThemeNotifier.new),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const SignUpPage(),
-      ),
-    );
+  overrides: [
+    authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
+    themeModeProvider.overrideWith(_FakeThemeNotifier.new),
+  ],
+  child: MaterialApp(
+    theme: AppTheme.light(),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const SignUpPage(),
+  ),
+);
 
 void main() {
   group('SignUpPage', () {
@@ -44,8 +44,9 @@ void main() {
       expect(find.byType(SignUpPage), findsOneWidget);
     });
 
-    testWidgets('at least one TextField (name/email) is present',
-        (tester) async {
+    testWidgets('at least one TextField (name/email) is present', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       expect(find.byType(TextField), findsWidgets);

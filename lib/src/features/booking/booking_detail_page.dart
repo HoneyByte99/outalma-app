@@ -549,7 +549,9 @@ class _TimelineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final oc = context.oc;
     final color = isActive ? oc.primary : oc.border;
-    final dateLabel = date != null ? date_utils.formatAbsoluteDateTime(date!) : '';
+    final dateLabel = date != null
+        ? date_utils.formatAbsoluteDateTime(date!)
+        : '';
 
     return IntrinsicHeight(
       child: Row(
@@ -1006,11 +1008,7 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
                     color: oc.error.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.cancel_outlined,
-                    color: oc.error,
-                    size: 28,
-                  ),
+                  child: Icon(Icons.cancel_outlined, color: oc.error, size: 28),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -1024,9 +1022,9 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
                 Text(
                   cancelContent,
                   textAlign: TextAlign.center,
-                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                    color: oc.secondaryText,
-                  ),
+                  style: Theme.of(
+                    ctx,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -1064,9 +1062,9 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
     try {
       await ref.read(cancelBookingUseCaseProvider).call(widget.booking.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(cancelSuccess)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(cancelSuccess)));
         context.pop();
       }
     } catch (e) {
@@ -1138,7 +1136,9 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
       builder: (ctx) {
         final oc = ctx.oc;
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
             child: Column(
@@ -1151,19 +1151,27 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
                     color: oc.success.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.check_circle_outline, color: oc.success, size: 28),
+                  child: Icon(
+                    Icons.check_circle_outline,
+                    color: oc.success,
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   doneTitle,
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   doneContent,
                   textAlign: TextAlign.center,
-                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                  style: Theme.of(
+                    ctx,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -1174,7 +1182,9 @@ class _ConfirmDoneBarState extends ConsumerState<_ConfirmDoneBar> {
                       backgroundColor: oc.success,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(0, 48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(confirmLabel),
                   ),

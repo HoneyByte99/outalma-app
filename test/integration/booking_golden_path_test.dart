@@ -221,45 +221,50 @@ void main() {
     });
 
     // Steps 1 & 3: client creates a booking request → status: requested
-    test('Step 1-3 — client creates booking request, status is requested',
-        () async {
-      final bookingId = await _simulateCreateBooking(
-        fakeDb: fakeDb,
-        clientId: clientId,
-        providerId: providerId,
-        serviceId: serviceId,
-        requestMessage: 'Besoin d\'un ménage complet',
-      );
+    test(
+      'Step 1-3 — client creates booking request, status is requested',
+      () async {
+        final bookingId = await _simulateCreateBooking(
+          fakeDb: fakeDb,
+          clientId: clientId,
+          providerId: providerId,
+          serviceId: serviceId,
+          requestMessage: 'Besoin d\'un ménage complet',
+        );
 
-      // Verify via the booking repository stream
-      final booking = await bookingRepo.watchById(bookingId).first;
-      expect(booking, isNotNull);
-      expect(booking!.status, BookingStatus.requested);
-      expect(booking.customerId, clientId);
-      expect(booking.providerId, providerId);
-      expect(booking.serviceId, serviceId);
-      expect(booking.requestMessage, 'Besoin d\'un ménage complet');
-      expect(booking.chatId, isNull);
-    });
+        // Verify via the booking repository stream
+        final booking = await bookingRepo.watchById(bookingId).first;
+        expect(booking, isNotNull);
+        expect(booking!.status, BookingStatus.requested);
+        expect(booking.customerId, clientId);
+        expect(booking.providerId, providerId);
+        expect(booking.serviceId, serviceId);
+        expect(booking.requestMessage, 'Besoin d\'un ménage complet');
+        expect(booking.chatId, isNull);
+      },
+    );
 
     // Step 4: provider sees the booking in their inbox (watchForProvider)
-    test('Step 4 — provider sees booking in their watchForProvider stream',
-        () async {
-      await _simulateCreateBooking(
-        fakeDb: fakeDb,
-        clientId: clientId,
-        providerId: providerId,
-        serviceId: serviceId,
-        requestMessage: 'Test message',
-      );
+    test(
+      'Step 4 — provider sees booking in their watchForProvider stream',
+      () async {
+        await _simulateCreateBooking(
+          fakeDb: fakeDb,
+          clientId: clientId,
+          providerId: providerId,
+          serviceId: serviceId,
+          requestMessage: 'Test message',
+        );
 
-      // Provider's inbox should contain this booking
-      final providerBookings =
-          await bookingRepo.watchForProvider(providerId).first;
-      expect(providerBookings.length, 1);
-      expect(providerBookings.first.status, BookingStatus.requested);
-      expect(providerBookings.first.customerId, clientId);
-    });
+        // Provider's inbox should contain this booking
+        final providerBookings = await bookingRepo
+            .watchForProvider(providerId)
+            .first;
+        expect(providerBookings.length, 1);
+        expect(providerBookings.first.status, BookingStatus.requested);
+        expect(providerBookings.first.customerId, clientId);
+      },
+    );
 
     // Step 5: provider accepts → status: accepted, chat created with chatId
     test('Step 5 — provider accepts: status accepted, chatId set', () async {
@@ -286,31 +291,33 @@ void main() {
     });
 
     // Step 6: chat is accessible after acceptance
-    test('Step 6 — chat is accessible via watchChat after acceptance',
-        () async {
-      final bookingId = await _simulateCreateBooking(
-        fakeDb: fakeDb,
-        clientId: clientId,
-        providerId: providerId,
-        serviceId: serviceId,
-        requestMessage: 'Chat accessible test',
-      );
+    test(
+      'Step 6 — chat is accessible via watchChat after acceptance',
+      () async {
+        final bookingId = await _simulateCreateBooking(
+          fakeDb: fakeDb,
+          clientId: clientId,
+          providerId: providerId,
+          serviceId: serviceId,
+          requestMessage: 'Chat accessible test',
+        );
 
-      final chatId = await _simulateAcceptBooking(
-        fakeDb: fakeDb,
-        bookingId: bookingId,
-        clientId: clientId,
-        providerId: providerId,
-      );
+        final chatId = await _simulateAcceptBooking(
+          fakeDb: fakeDb,
+          bookingId: bookingId,
+          clientId: clientId,
+          providerId: providerId,
+        );
 
-      // Chat should be watchable
-      final chat = await chatRepo.watchChat(chatId).first;
-      expect(chat, isNotNull);
-      expect(chat!.bookingId, bookingId);
-      expect(chat.participantIds, containsAll([clientId, providerId]));
-      expect(chat.customerId, clientId);
-      expect(chat.providerId, providerId);
-    });
+        // Chat should be watchable
+        final chat = await chatRepo.watchChat(chatId).first;
+        expect(chat, isNotNull);
+        expect(chat!.bookingId, bookingId);
+        expect(chat.participantIds, containsAll([clientId, providerId]));
+        expect(chat.customerId, clientId);
+        expect(chat.providerId, providerId);
+      },
+    );
 
     // Step 7: client and provider exchange messages
     test('Step 7 — client and provider send messages in the chat', () async {
@@ -367,34 +374,36 @@ void main() {
     });
 
     // Step 8: provider marks in_progress, client confirms done
-    test('Step 8 — booking transitions: accepted → in_progress → done',
-        () async {
-      final bookingId = await _simulateCreateBooking(
-        fakeDb: fakeDb,
-        clientId: clientId,
-        providerId: providerId,
-        serviceId: serviceId,
-        requestMessage: 'Service à effectuer',
-      );
-      await _simulateAcceptBooking(
-        fakeDb: fakeDb,
-        bookingId: bookingId,
-        clientId: clientId,
-        providerId: providerId,
-      );
+    test(
+      'Step 8 — booking transitions: accepted → in_progress → done',
+      () async {
+        final bookingId = await _simulateCreateBooking(
+          fakeDb: fakeDb,
+          clientId: clientId,
+          providerId: providerId,
+          serviceId: serviceId,
+          requestMessage: 'Service à effectuer',
+        );
+        await _simulateAcceptBooking(
+          fakeDb: fakeDb,
+          bookingId: bookingId,
+          clientId: clientId,
+          providerId: providerId,
+        );
 
-      // Provider marks in progress
-      await _simulateMarkInProgress(fakeDb: fakeDb, bookingId: bookingId);
-      var booking = await bookingRepo.watchById(bookingId).first;
-      expect(booking!.status, BookingStatus.inProgress);
-      expect(booking.startedAt, isNotNull);
+        // Provider marks in progress
+        await _simulateMarkInProgress(fakeDb: fakeDb, bookingId: bookingId);
+        var booking = await bookingRepo.watchById(bookingId).first;
+        expect(booking!.status, BookingStatus.inProgress);
+        expect(booking.startedAt, isNotNull);
 
-      // Client confirms done
-      await _simulateConfirmDone(fakeDb: fakeDb, bookingId: bookingId);
-      booking = await bookingRepo.watchById(bookingId).first;
-      expect(booking!.status, BookingStatus.done);
-      expect(booking.doneAt, isNotNull);
-    });
+        // Client confirms done
+        await _simulateConfirmDone(fakeDb: fakeDb, bookingId: bookingId);
+        booking = await bookingRepo.watchById(bookingId).first;
+        expect(booking!.status, BookingStatus.done);
+        expect(booking.doneAt, isNotNull);
+      },
+    );
 
     // Step 9: client submits a review (5 stars)
     test('Step 9 — client submits a 5-star review for the provider', () async {
@@ -435,41 +444,42 @@ void main() {
     });
 
     // Step 10: review is visible in the provider's watchForUser stream
-    test('Step 10 — review is visible in watchForUser stream for provider',
-        () async {
-      final bookingId = await _simulateCreateBooking(
-        fakeDb: fakeDb,
-        clientId: clientId,
-        providerId: providerId,
-        serviceId: serviceId,
-        requestMessage: 'Test visibility',
-      );
-      await _simulateAcceptBooking(
-        fakeDb: fakeDb,
-        bookingId: bookingId,
-        clientId: clientId,
-        providerId: providerId,
-      );
-      await _simulateMarkInProgress(fakeDb: fakeDb, bookingId: bookingId);
-      await _simulateConfirmDone(fakeDb: fakeDb, bookingId: bookingId);
+    test(
+      'Step 10 — review is visible in watchForUser stream for provider',
+      () async {
+        final bookingId = await _simulateCreateBooking(
+          fakeDb: fakeDb,
+          clientId: clientId,
+          providerId: providerId,
+          serviceId: serviceId,
+          requestMessage: 'Test visibility',
+        );
+        await _simulateAcceptBooking(
+          fakeDb: fakeDb,
+          bookingId: bookingId,
+          clientId: clientId,
+          providerId: providerId,
+        );
+        await _simulateMarkInProgress(fakeDb: fakeDb, bookingId: bookingId);
+        await _simulateConfirmDone(fakeDb: fakeDb, bookingId: bookingId);
 
-      final useCase = CreateReviewUseCase(reviewRepo);
-      await useCase(
-        bookingId: bookingId,
-        reviewerId: clientId,
-        revieweeId: providerId,
-        reviewerRole: ReviewerRole.client,
-        rating: 4,
-        comment: 'Bon travail',
-      );
+        final useCase = CreateReviewUseCase(reviewRepo);
+        await useCase(
+          bookingId: bookingId,
+          reviewerId: clientId,
+          revieweeId: providerId,
+          reviewerRole: ReviewerRole.client,
+          rating: 4,
+          comment: 'Bon travail',
+        );
 
-      // Provider watches their own reviews (they are the reviewee)
-      final providerReviews =
-          await reviewRepo.watchForUser(providerId).first;
-      expect(providerReviews.length, 1);
-      expect(providerReviews.first.revieweeId, providerId);
-      expect(providerReviews.first.rating, 4);
-    });
+        // Provider watches their own reviews (they are the reviewee)
+        final providerReviews = await reviewRepo.watchForUser(providerId).first;
+        expect(providerReviews.length, 1);
+        expect(providerReviews.first.revieweeId, providerId);
+        expect(providerReviews.first.rating, 4);
+      },
+    );
 
     // Full end-to-end: single sequential test covering all 10 steps
     test('Full golden path — all 10 steps in sequence', () async {
@@ -491,8 +501,10 @@ void main() {
         'updatedAt': now.toIso8601String(),
       });
 
-      final serviceSnap =
-          await fakeDb.collection('services').doc(serviceId).get();
+      final serviceSnap = await fakeDb
+          .collection('services')
+          .doc(serviceId)
+          .get();
       expect(serviceSnap.data()!['categoryId'], 'menage');
 
       // --- Step 3: client creates a booking → status: requested ---
@@ -505,14 +517,21 @@ void main() {
       );
 
       var booking = await bookingRepo.watchById(bookingId).first;
-      expect(booking!.status, BookingStatus.requested,
-          reason: 'Step 3: booking starts as requested');
+      expect(
+        booking!.status,
+        BookingStatus.requested,
+        reason: 'Step 3: booking starts as requested',
+      );
 
       // --- Step 4: provider sees the booking in their inbox ---
-      final providerInbox =
-          await bookingRepo.watchForProvider(providerId).first;
-      expect(providerInbox.any((b) => b.id == bookingId), isTrue,
-          reason: 'Step 4: booking visible to provider');
+      final providerInbox = await bookingRepo
+          .watchForProvider(providerId)
+          .first;
+      expect(
+        providerInbox.any((b) => b.id == bookingId),
+        isTrue,
+        reason: 'Step 4: booking visible to provider',
+      );
 
       // --- Step 5: provider accepts → status: accepted, chat created ---
       final chatId = await _simulateAcceptBooking(
@@ -523,16 +542,21 @@ void main() {
       );
 
       booking = await bookingRepo.watchById(bookingId).first;
-      expect(booking!.status, BookingStatus.accepted,
-          reason: 'Step 5: booking accepted');
-      expect(booking.chatId, chatId,
-          reason: 'Step 5: chatId set on booking');
+      expect(
+        booking!.status,
+        BookingStatus.accepted,
+        reason: 'Step 5: booking accepted',
+      );
+      expect(booking.chatId, chatId, reason: 'Step 5: chatId set on booking');
 
       // --- Step 6: chat is accessible via stream ---
       final chat = await chatRepo.watchChat(chatId).first;
       expect(chat, isNotNull, reason: 'Step 6: chat document exists');
-      expect(chat!.participantIds, containsAll([clientId, providerId]),
-          reason: 'Step 6: both participants in chat');
+      expect(
+        chat!.participantIds,
+        containsAll([clientId, providerId]),
+        reason: 'Step 6: both participants in chat',
+      );
 
       // --- Step 7: client and provider exchange messages ---
       final clientMessage = ChatMessage(
@@ -555,8 +579,9 @@ void main() {
       );
       await chatRepo.sendMessage(providerMessage);
 
-      final messages =
-          await chatRepo.watchMessages(chatId: chatId, limit: 50).first;
+      final messages = await chatRepo
+          .watchMessages(chatId: chatId, limit: 50)
+          .first;
       expect(messages.length, 2, reason: 'Step 7: two messages exchanged');
       expect(messages.first.senderId, clientId);
       expect(messages.last.senderId, providerId);
@@ -564,13 +589,19 @@ void main() {
       // --- Step 8: provider marks in_progress then client confirms done ---
       await _simulateMarkInProgress(fakeDb: fakeDb, bookingId: bookingId);
       booking = await bookingRepo.watchById(bookingId).first;
-      expect(booking!.status, BookingStatus.inProgress,
-          reason: 'Step 8a: in_progress after markInProgress');
+      expect(
+        booking!.status,
+        BookingStatus.inProgress,
+        reason: 'Step 8a: in_progress after markInProgress',
+      );
 
       await _simulateConfirmDone(fakeDb: fakeDb, bookingId: bookingId);
       booking = await bookingRepo.watchById(bookingId).first;
-      expect(booking!.status, BookingStatus.done,
-          reason: 'Step 8b: done after confirmDone');
+      expect(
+        booking!.status,
+        BookingStatus.done,
+        reason: 'Step 8b: done after confirmDone',
+      );
 
       // --- Step 9: client submits a 5-star review ---
       final useCase = CreateReviewUseCase(reviewRepo);
@@ -583,17 +614,18 @@ void main() {
         comment: 'Service impeccable, je recommande !',
       );
 
-      final bookingReviews =
-          await reviewRepo.watchForBooking(bookingId).first;
+      final bookingReviews = await reviewRepo.watchForBooking(bookingId).first;
       expect(bookingReviews.length, 1, reason: 'Step 9: review created');
       expect(bookingReviews.first.rating, 5);
       expect(bookingReviews.first.reviewerRole, ReviewerRole.client);
 
       // --- Step 10: review visible in provider's watchForUser stream ---
-      final providerReviews =
-          await reviewRepo.watchForUser(providerId).first;
-      expect(providerReviews.length, 1,
-          reason: 'Step 10: review visible to provider');
+      final providerReviews = await reviewRepo.watchForUser(providerId).first;
+      expect(
+        providerReviews.length,
+        1,
+        reason: 'Step 10: review visible to provider',
+      );
       expect(providerReviews.first.revieweeId, providerId);
       expect(providerReviews.first.rating, 5);
     });

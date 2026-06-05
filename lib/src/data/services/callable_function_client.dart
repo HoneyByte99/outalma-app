@@ -22,17 +22,14 @@ const _region = 'us-central1';
 class CallableFunctionClient {
   const CallableFunctionClient();
 
-  static Uri _uri(String name) => Uri.parse(
-    'https://$_region-$_projectId.cloudfunctions.net/$name',
-  );
+  static Uri _uri(String name) =>
+      Uri.parse('https://$_region-$_projectId.cloudfunctions.net/$name');
 
   Future<Map<String, dynamic>> call(
     String name, {
     Map<String, dynamic> data = const {},
   }) async {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {

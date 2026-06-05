@@ -61,24 +61,26 @@ void main() {
       expect(snap.docs.length, 1);
     });
 
-    test('persists correct reporterId, targetType, targetId, and reason',
-        () async {
-      final report = _makeReport(
-        reporterId: 'user_X',
-        targetType: 'service',
-        targetId: 'service_42',
-        reason: 'inappropriate',
-      );
+    test(
+      'persists correct reporterId, targetType, targetId, and reason',
+      () async {
+        final report = _makeReport(
+          reporterId: 'user_X',
+          targetType: 'service',
+          targetId: 'service_42',
+          reason: 'inappropriate',
+        );
 
-      await repo.create(report);
+        await repo.create(report);
 
-      final snap = await fakeDb.collection('reports').get();
-      final data = snap.docs.first.data();
-      expect(data['reporterId'], 'user_X');
-      expect(data['targetType'], 'service');
-      expect(data['targetId'], 'service_42');
-      expect(data['reason'], 'inappropriate');
-    });
+        final snap = await fakeDb.collection('reports').get();
+        final data = snap.docs.first.data();
+        expect(data['reporterId'], 'user_X');
+        expect(data['targetType'], 'service');
+        expect(data['targetId'], 'service_42');
+        expect(data['reason'], 'inappropriate');
+      },
+    );
 
     test('persists status field', () async {
       final report = _makeReport(status: 'open');
@@ -89,9 +91,7 @@ void main() {
     });
 
     test('includes details when non-null and non-empty', () async {
-      final report = _makeReport(
-        details: 'This user sent fake photos.',
-      );
+      final report = _makeReport(details: 'This user sent fake photos.');
       await repo.create(report);
 
       final snap = await fakeDb.collection('reports').get();

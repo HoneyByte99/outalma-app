@@ -2,13 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/src/domain/models/app_notification.dart';
 
 AppNotification _unread() => AppNotification(
-      id: 'n1',
-      type: 'booking_accepted',
-      title: 'Réservation acceptée',
-      body: 'Votre réservation a été acceptée.',
-      read: false,
-      createdAt: DateTime(2024, 3, 15),
-    );
+  id: 'n1',
+  type: 'booking_accepted',
+  title: 'Réservation acceptée',
+  body: 'Votre réservation a été acceptée.',
+  read: false,
+  createdAt: DateTime(2024, 3, 15),
+);
 
 void main() {
   group('AppNotification.isRead behavior', () {

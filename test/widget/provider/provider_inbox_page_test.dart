@@ -19,31 +19,31 @@ import 'package:outalma_app/src/features/provider/provider_inbox_page.dart';
 class _FakeAuthNotifier extends AuthNotifier {
   @override
   Future<AuthState> build() async => AuthAuthenticated(
-        AppUser(
-          id: 'prov_1',
-          displayName: 'Provider User',
-          email: 'prov@test.com',
-          country: 'FR',
-          activeMode: ActiveMode.provider,
-          createdAt: DateTime(2024, 1, 1),
-        ),
-      );
+    AppUser(
+      id: 'prov_1',
+      displayName: 'Provider User',
+      email: 'prov@test.com',
+      country: 'FR',
+      activeMode: ActiveMode.provider,
+      createdAt: DateTime(2024, 1, 1),
+    ),
+  );
 }
 
 Widget _wrap() => ProviderScope(
-      overrides: [
-        authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        activeModeProvider.overrideWith((_) => ActiveMode.provider),
-        providerInboxProvider.overrideWith((_) => Stream.value([])),
-        providerActiveBookingsProvider.overrideWith((_) => Stream.value([])),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const ProviderInboxPage(),
-      ),
-    );
+  overrides: [
+    authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
+    activeModeProvider.overrideWith((_) => ActiveMode.provider),
+    providerInboxProvider.overrideWith((_) => Stream.value([])),
+    providerActiveBookingsProvider.overrideWith((_) => Stream.value([])),
+  ],
+  child: MaterialApp(
+    theme: AppTheme.light(),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const ProviderInboxPage(),
+  ),
+);
 
 void main() {
   group('ProviderInboxPage', () {

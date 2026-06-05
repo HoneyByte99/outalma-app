@@ -49,7 +49,11 @@ class LegalPage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.error_outline, color: oc.secondaryText, size: 40),
+                    Icon(
+                      Icons.error_outline,
+                      color: oc.secondaryText,
+                      size: 40,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       'Document indisponible.',
@@ -125,93 +129,108 @@ class _MarkdownView extends StatelessWidget {
       }
 
       if (trimmed == '---') {
-        widgets.add(Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Divider(color: oc.border, height: 1),
-        ));
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(color: oc.border, height: 1),
+          ),
+        );
         continue;
       }
 
       if (trimmed.startsWith('### ')) {
-        widgets.add(_block(
-          text: trimmed.substring(4),
-          style: theme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: oc.primaryText,
+        widgets.add(
+          _block(
+            text: trimmed.substring(4),
+            style: theme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: oc.primaryText,
+            ),
+            top: 10,
           ),
-          top: 10,
-        ));
+        );
         continue;
       }
       if (trimmed.startsWith('## ')) {
-        widgets.add(_block(
-          text: trimmed.substring(3),
-          style: theme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: oc.primaryText,
+        widgets.add(
+          _block(
+            text: trimmed.substring(3),
+            style: theme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: oc.primaryText,
+            ),
+            top: 16,
           ),
-          top: 16,
-        ));
+        );
         continue;
       }
       if (trimmed.startsWith('# ')) {
-        widgets.add(_block(
-          text: trimmed.substring(2),
-          style: theme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: oc.primaryText,
+        widgets.add(
+          _block(
+            text: trimmed.substring(2),
+            style: theme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: oc.primaryText,
+            ),
+            top: 4,
           ),
-          top: 4,
-        ));
+        );
         continue;
       }
 
       if (trimmed.startsWith('> ')) {
-        widgets.add(Container(
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-          decoration: BoxDecoration(
-            color: oc.surface,
-            borderRadius: BorderRadius.circular(10),
-            border: Border(left: BorderSide(color: oc.primary, width: 3)),
+        widgets.add(
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            decoration: BoxDecoration(
+              color: oc.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border(left: BorderSide(color: oc.primary, width: 3)),
+            ),
+            child: _richLine(
+              trimmed.substring(2),
+              theme.bodyMedium?.copyWith(color: oc.secondaryText, height: 1.5),
+            ),
           ),
-          child: _richLine(
-            trimmed.substring(2),
-            theme.bodyMedium?.copyWith(color: oc.secondaryText, height: 1.5),
-          ),
-        ));
+        );
         continue;
       }
 
       // Bullet list item.
       if (trimmed.startsWith('- ')) {
-        widgets.add(_listItem(
-          context,
-          marker: '•',
-          text: trimmed.substring(2),
-        ));
+        widgets.add(
+          _listItem(context, marker: '•', text: trimmed.substring(2)),
+        );
         continue;
       }
 
       // Numbered list item (e.g. "1. ...").
       final numbered = RegExp(r'^(\d+)\.\s+(.*)').firstMatch(trimmed);
       if (numbered != null) {
-        widgets.add(_listItem(
-          context,
-          marker: '${numbered.group(1)}.',
-          text: numbered.group(2)!,
-        ));
+        widgets.add(
+          _listItem(
+            context,
+            marker: '${numbered.group(1)}.',
+            text: numbered.group(2)!,
+          ),
+        );
         continue;
       }
 
       // Plain paragraph.
-      widgets.add(_block(
-        text: trimmed,
-        style: theme.bodyMedium?.copyWith(color: oc.primaryText, height: 1.55),
-        top: 2,
-        rich: true,
-        context: context,
-      ));
+      widgets.add(
+        _block(
+          text: trimmed,
+          style: theme.bodyMedium?.copyWith(
+            color: oc.primaryText,
+            height: 1.55,
+          ),
+          top: 2,
+          rich: true,
+          context: context,
+        ),
+      );
     }
 
     return Column(
@@ -239,10 +258,9 @@ class _MarkdownView extends StatelessWidget {
     required String text,
   }) {
     final oc = context.oc;
-    final style = Theme.of(context)
-        .textTheme
-        .bodyMedium
-        ?.copyWith(color: oc.primaryText, height: 1.5);
+    final style = Theme.of(
+      context,
+    ).textTheme.bodyMedium?.copyWith(color: oc.primaryText, height: 1.5);
     return Padding(
       padding: const EdgeInsets.only(left: 4, top: 3, bottom: 3),
       child: Row(
@@ -267,10 +285,12 @@ class _MarkdownView extends StatelessWidget {
       if (match.start > index) {
         spans.add(TextSpan(text: text.substring(index, match.start)));
       }
-      spans.add(TextSpan(
-        text: match.group(1),
-        style: const TextStyle(fontWeight: FontWeight.w700),
-      ));
+      spans.add(
+        TextSpan(
+          text: match.group(1),
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      );
       index = match.end;
     }
     if (index < text.length) {

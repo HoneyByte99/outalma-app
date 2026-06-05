@@ -147,10 +147,12 @@ void main() {
         rating: 4,
       );
 
-      final clientReview =
-          repo.created.firstWhere((r) => r.reviewerRole == ReviewerRole.client);
-      final providerReview = repo.created
-          .firstWhere((r) => r.reviewerRole == ReviewerRole.provider);
+      final clientReview = repo.created.firstWhere(
+        (r) => r.reviewerRole == ReviewerRole.client,
+      );
+      final providerReview = repo.created.firstWhere(
+        (r) => r.reviewerRole == ReviewerRole.provider,
+      );
 
       expect(clientReview.revieweeId, 'provider_uid');
       expect(providerReview.revieweeId, 'client_uid');
@@ -160,8 +162,7 @@ void main() {
   group('hasReviewedProvider stream — derived from watchForBooking', () {
     test('returns false when no reviews exist for booking', () async {
       final reviews = await repo.watchForBooking('booking_1').first;
-      final hasReviewed =
-          reviews.any((r) => r.reviewerId == 'client_uid');
+      final hasReviewed = reviews.any((r) => r.reviewerId == 'client_uid');
       expect(hasReviewed, isFalse);
     });
 
@@ -175,8 +176,7 @@ void main() {
       );
 
       final reviews = await repo.watchForBooking('booking_1').first;
-      final hasReviewed =
-          reviews.any((r) => r.reviewerId == 'client_uid');
+      final hasReviewed = reviews.any((r) => r.reviewerId == 'client_uid');
       expect(hasReviewed, isTrue);
     });
 
@@ -190,8 +190,9 @@ void main() {
       );
 
       final reviews = await repo.watchForBooking('booking_1').first;
-      final providerHasReviewed =
-          reviews.any((r) => r.reviewerId == 'provider_uid');
+      final providerHasReviewed = reviews.any(
+        (r) => r.reviewerId == 'provider_uid',
+      );
       expect(providerHasReviewed, isFalse);
     });
   });

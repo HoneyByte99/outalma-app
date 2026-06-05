@@ -23,18 +23,18 @@ class _FakeAuthNotifier extends AuthNotifier {
 }
 
 Widget _wrap({List<Service> services = const []}) => ProviderScope(
-      overrides: [
-        authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        activeModeProvider.overrideWith((_) => ActiveMode.client),
-        serviceListProvider.overrideWith((_) => Stream.value(services)),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const HomePage(),
-      ),
-    );
+  overrides: [
+    authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
+    activeModeProvider.overrideWith((_) => ActiveMode.client),
+    serviceListProvider.overrideWith((_) => Stream.value(services)),
+  ],
+  child: MaterialApp(
+    theme: AppTheme.light(),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const HomePage(),
+  ),
+);
 
 void main() {
   group('HomePage — search', () {
@@ -50,8 +50,9 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('empty state renders when service list is empty',
-        (tester) async {
+    testWidgets('empty state renders when service list is empty', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrap(services: []));
       // Allow stream to emit
       await tester.pump();

@@ -72,10 +72,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (_typingCooldown != null) return;
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
-    ref.read(chatRepositoryProvider).setTyping(
-      chatId: widget.chatId,
-      uid: authState.user.id,
-    );
+    ref
+        .read(chatRepositoryProvider)
+        .setTyping(chatId: widget.chatId, uid: authState.user.id);
     _typingCooldown = Timer(
       const Duration(seconds: 2),
       () => _typingCooldown = null,
@@ -322,9 +321,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       final Uint8List bytes = kIsWeb
           ? (await http.get(Uri.parse(path))).bodyBytes
           : await File(path).readAsBytes();
-      debugPrint(
-        'Voice send: chatId=$chatId path=$path bytes=${bytes.length}',
-      );
+      debugPrint('Voice send: chatId=$chatId path=$path bytes=${bytes.length}');
       if (chatId.isEmpty) {
         throw StateError('Voice send aborted: empty chatId');
       }
@@ -405,17 +402,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.cloud_off_rounded,
-                      size: 40,
-                      color: oc.icons,
-                    ),
+                    Icon(Icons.cloud_off_rounded, size: 40, color: oc.icons),
                     const SizedBox(height: 12),
                     Text(
                       l10n.chatLoadError,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: oc.secondaryText,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                     ),
                   ],
                 ),
@@ -830,10 +823,7 @@ class _VoicePlayerState extends State<_VoicePlayer> {
           const SizedBox(width: 8),
           Text(
             'Format non supporté',
-            style: TextStyle(
-              color: fg.withValues(alpha: 0.5),
-              fontSize: 12,
-            ),
+            style: TextStyle(color: fg.withValues(alpha: 0.5), fontSize: 12),
           ),
         ],
       );
@@ -884,43 +874,43 @@ class _VoicePlayerState extends State<_VoicePlayer> {
                         if (_duration == Duration.zero || waveWidth <= 0) {
                           return;
                         }
-                        final frac =
-                            (details.localPosition.dx / waveWidth)
-                                .clamp(0.0, 1.0);
+                        final frac = (details.localPosition.dx / waveWidth)
+                            .clamp(0.0, 1.0);
                         _player.seek(
                           Duration(
-                            milliseconds:
-                                (frac * _duration.inMilliseconds).round(),
+                            milliseconds: (frac * _duration.inMilliseconds)
+                                .round(),
                           ),
                         );
                       },
-                  child: SizedBox(
-                    height: 28,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: List.generate(_barCount, (i) {
-                        final barProgress = i / _barCount;
-                        final isPlayed = barProgress < _progress;
-                        return Expanded(
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 1),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 80),
-                              height: 28 * _bars[i],
-                              decoration: BoxDecoration(
-                                color: isPlayed
-                                    ? fg
-                                    : fg.withValues(alpha: 0.22),
-                                borderRadius: BorderRadius.circular(2),
+                      child: SizedBox(
+                        height: 28,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: List.generate(_barCount, (i) {
+                            final barProgress = i / _barCount;
+                            final isPlayed = barProgress < _progress;
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 1,
+                                ),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 80),
+                                  height: 28 * _bars[i],
+                                  decoration: BoxDecoration(
+                                    color: isPlayed
+                                        ? fg
+                                        : fg.withValues(alpha: 0.22),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                );
+                            );
+                          }),
+                        ),
+                      ),
+                    );
                   },
                 ),
                 const SizedBox(height: 4),
@@ -1182,8 +1172,7 @@ class _InputBarState extends State<_InputBar> {
               icon: Icon(Icons.delete_outline_rounded, color: oc.error),
               tooltip: l10n.cancel,
               padding: EdgeInsets.zero,
-              constraints:
-                  const BoxConstraints(minWidth: 40, minHeight: 40),
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
             ),
             const SizedBox(width: 6),
             // Send recording
@@ -1196,11 +1185,7 @@ class _InputBarState extends State<_InputBar> {
                   color: oc.error,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.send_rounded,
-                  color: oc.surface,
-                  size: 22,
-                ),
+                child: Icon(Icons.send_rounded, color: oc.surface, size: 22),
               ),
             ),
           ],
@@ -1393,10 +1378,9 @@ class _TypingIndicatorBarState extends ConsumerState<_TypingIndicatorBar>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat();
-    _ticker = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) { if (mounted) setState(() {}); },
-    );
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -1434,7 +1418,8 @@ class _TypingIndicatorBarState extends ConsumerState<_TypingIndicatorBar>
                   children: List.generate(3, (i) {
                     final offset = (i / 3);
                     final phase = (_dotController.value - offset).abs() % 1.0;
-                    final scale = 1.0 + 0.4 * (phase < 0.5 ? phase * 2 : (1 - phase) * 2);
+                    final scale =
+                        1.0 + 0.4 * (phase < 0.5 ? phase * 2 : (1 - phase) * 2);
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: Transform.scale(
@@ -1484,9 +1469,10 @@ class _PulsingRecordDotState extends State<_PulsingRecordDot>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
-    _scale = Tween<double>(begin: 0.75, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 0.75,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -1507,4 +1493,3 @@ class _PulsingRecordDotState extends State<_PulsingRecordDot>
     );
   }
 }
-

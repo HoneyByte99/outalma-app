@@ -32,13 +32,13 @@ class _FakeAuthNotifier extends AuthNotifier {
 }
 
 AppUser _makeUser({ActiveMode mode = ActiveMode.client}) => AppUser(
-      id: 'test_uid',
-      displayName: 'Test User',
-      email: 'test@example.com',
-      country: 'FR',
-      activeMode: mode,
-      createdAt: DateTime(2024, 1, 1).toUtc(),
-    );
+  id: 'test_uid',
+  displayName: 'Test User',
+  email: 'test@example.com',
+  country: 'FR',
+  activeMode: mode,
+  createdAt: DateTime(2024, 1, 1).toUtc(),
+);
 
 Widget _wrap({required ActiveMode mode}) {
   final user = _makeUser(mode: mode);
@@ -79,16 +79,18 @@ void main() {
       expect(find.byType(ModeBadge), findsOneWidget);
     });
 
-    testWidgets('shows "Client" label when mode is ActiveMode.client',
-        (tester) async {
+    testWidgets('shows "Client" label when mode is ActiveMode.client', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrap(mode: ActiveMode.client));
       await tester.pump();
       // l10n key modeClient = "Client" (from app_en.arb)
       expect(find.text('Client'), findsOneWidget);
     });
 
-    testWidgets('shows "Provider" label when mode is ActiveMode.provider',
-        (tester) async {
+    testWidgets('shows "Provider" label when mode is ActiveMode.provider', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrap(mode: ActiveMode.provider));
       await tester.pump();
       // l10n key modeProvider = "Provider" (from app_en.arb)

@@ -196,7 +196,10 @@ void main() {
       final loc = _loc();
       final json = loc.toJson();
 
-      expect(json.keys, containsAll(['label', 'address', 'lat', 'lng', 'radiusKm']));
+      expect(
+        json.keys,
+        containsAll(['label', 'address', 'lat', 'lng', 'radiusKm']),
+      );
     });
   });
 }

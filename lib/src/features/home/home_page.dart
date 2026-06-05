@@ -89,9 +89,9 @@ class HomePage extends ConsumerWidget {
               displayName.isNotEmpty
                   ? l10n.homeGreeting(displayName)
                   : l10n.homeGreetingNoName,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -132,7 +132,9 @@ class _LocationPill extends ConsumerWidget {
         onTap: () => _showLocationSheet(context, ref),
         borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
         child: Container(
-          constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.minTouchTarget,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: oc.primary.withValues(alpha: 0.08),
@@ -271,7 +273,9 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
       context: context,
       builder: (ctx) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
             child: Column(
@@ -280,28 +284,34 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
               children: [
                 Text(
                   l10n.locationAddressName,
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: nameController,
                   autofocus: true,
-                  decoration: InputDecoration(hintText: l10n.locationAddressHint),
+                  decoration: InputDecoration(
+                    hintText: l10n.locationAddressHint,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
                     final name = nameController.text.trim();
                     if (name.isEmpty) return;
-                    ref.read(savedLocationsProvider.notifier).add(
-                      SavedLocation(
-                        label: name,
-                        address: filter.label,
-                        lat: filter.lat,
-                        lng: filter.lng,
-                        radiusKm: filter.radiusKm,
-                      ),
-                    );
+                    ref
+                        .read(savedLocationsProvider.notifier)
+                        .add(
+                          SavedLocation(
+                            label: name,
+                            address: filter.label,
+                            lat: filter.lat,
+                            lng: filter.lng,
+                            radiusKm: filter.radiusKm,
+                          ),
+                        );
                     Navigator.of(ctx).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(l10n.locationSaved(name))),
@@ -309,7 +319,9 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                   },
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(0, 48),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: Text(l10n.save),
                 ),
@@ -433,7 +445,12 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
       maxChildSize: 0.9,
       expand: false,
       builder: (_, scrollController) => Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.m, AppSpacing.xl, 0),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.m,
+          AppSpacing.xl,
+          0,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -650,7 +667,8 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                 child: ListView.separated(
                   controller: scrollController,
                   itemCount: savedLocations.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.xs),
                   itemBuilder: (_, i) {
                     final loc = savedLocations[i];
                     return _SavedLocationTile(
@@ -873,7 +891,9 @@ class _CategoryChip extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.minTouchTarget,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: isActive ? oc.primary : oc.surface,
@@ -1023,132 +1043,132 @@ class _ServiceCard extends ConsumerWidget {
       child: GestureDetector(
         onTap: () => context.push(AppRoutes.serviceDetail(service.id)),
         child: Container(
-        decoration: BoxDecoration(
-          color: oc.cardSurface,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-          border: Border.all(color: oc.border),
-          boxShadow: [
-            BoxShadow(
-              color: oc.shadow,
-              blurRadius: 16,
-              spreadRadius: 1,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image — takes all remaining space
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppSpacing.radiusLarge),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    service.photos.isNotEmpty
-                        ? AppNetworkImage(
-                            url: service.photos.first,
-                            fit: BoxFit.cover,
-                            errorWidget: _iconPlaceholder(oc),
-                          )
-                        : _iconPlaceholder(oc),
-                    Positioned(
-                      top: AppSpacing.s,
-                      left: AppSpacing.s,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.s,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(
-                            AppSpacing.radiusSmall,
+          decoration: BoxDecoration(
+            color: oc.cardSurface,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+            border: Border.all(color: oc.border),
+            boxShadow: [
+              BoxShadow(
+                color: oc.shadow,
+                blurRadius: 16,
+                spreadRadius: 1,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image — takes all remaining space
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(AppSpacing.radiusLarge),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      service.photos.isNotEmpty
+                          ? AppNetworkImage(
+                              url: service.photos.first,
+                              fit: BoxFit.cover,
+                              errorWidget: _iconPlaceholder(oc),
+                            )
+                          : _iconPlaceholder(oc),
+                      Positioned(
+                        top: AppSpacing.s,
+                        left: AppSpacing.s,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.55),
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.radiusSmall,
+                            ),
+                          ),
+                          child: Text(
+                            service.categoryId.label,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                         ),
-                        child: Text(
-                          service.categoryId.label,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              // Info — intrinsic height, never overflows
+              // Info block \u2014 hierarchy A.4: title dominant, price+rating
+              // secondary on one row, provider name as discreet tertiary.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.m,
+                  AppSpacing.s,
+                  AppSpacing.m,
+                  AppSpacing.m,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      service.title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            priceLabel,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: oc.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        _RatingRow(reviews: reviews),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        UserAvatar(
+                          displayName: providerUser?.displayName ?? '',
+                          photoPath: providerUser?.photoPath,
+                          radius: 10,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Expanded(
+                          child: Text(
+                            providerUser?.displayName.isNotEmpty == true
+                                ? providerUser!.displayName
+                                : '\u2014',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: oc.secondaryText),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-            ),
-            // Info — intrinsic height, never overflows
-            // Info block \u2014 hierarchy A.4: title dominant, price+rating
-            // secondary on one row, provider name as discreet tertiary.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.m,
-                AppSpacing.s,
-                AppSpacing.m,
-                AppSpacing.m,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    service.title,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          priceLabel,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: oc.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      _RatingRow(reviews: reviews),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Row(
-                    children: [
-                      UserAvatar(
-                        displayName: providerUser?.displayName ?? '',
-                        photoPath: providerUser?.photoPath,
-                        radius: 10,
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Expanded(
-                        child: Text(
-                          providerUser?.displayName.isNotEmpty == true
-                              ? providerUser!.displayName
-                              : '\u2014',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: oc.secondaryText),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
@@ -1318,7 +1338,8 @@ class _EmptyState extends ConsumerWidget {
         ? l10n.homeSearchEmpty(searchQuery)
         : l10n.servicesEmpty;
 
-    final hasActiveFilters = ref.watch(_selectedCategoryProvider) != null ||
+    final hasActiveFilters =
+        ref.watch(_selectedCategoryProvider) != null ||
         ref.watch(_searchQueryProvider).isNotEmpty ||
         ref.watch(locationFilterProvider) != null;
 

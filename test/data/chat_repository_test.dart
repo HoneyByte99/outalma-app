@@ -62,9 +62,10 @@ Future<void> _writeChat(FakeFirebaseFirestore db, Chat chat) {
 }
 
 Future<void> _writeMessage(FakeFirebaseFirestore db, ChatMessage msg) {
-  return FirestoreCollections.chatMessages(db: db, chatId: msg.chatId)
-      .doc(msg.id)
-      .set(msg);
+  return FirestoreCollections.chatMessages(
+    db: db,
+    chatId: msg.chatId,
+  ).doc(msg.id).set(msg);
 }
 
 // ---------------------------------------------------------------------------
@@ -136,7 +137,11 @@ void main() {
       final t2 = DateTime(2024, 3, 1).toUtc();
       await _writeChat(
         fakeDb,
-        _makeChat(id: 'older', participantIds: ['user_A', 'user_B'], lastMessageAt: t1),
+        _makeChat(
+          id: 'older',
+          participantIds: ['user_A', 'user_B'],
+          lastMessageAt: t1,
+        ),
       );
       await _writeChat(
         fakeDb,
@@ -165,14 +170,8 @@ void main() {
     });
 
     test('returns messages for the correct chat', () async {
-      await _writeMessage(
-        fakeDb,
-        _makeMessage(id: 'm1', chatId: 'chat_1'),
-      );
-      await _writeMessage(
-        fakeDb,
-        _makeMessage(id: 'm2', chatId: 'chat_2'),
-      );
+      await _writeMessage(fakeDb, _makeMessage(id: 'm1', chatId: 'chat_1'));
+      await _writeMessage(fakeDb, _makeMessage(id: 'm2', chatId: 'chat_2'));
 
       final list = await repo.watchMessages(chatId: 'chat_1').first;
       expect(list.length, 1);
@@ -199,7 +198,12 @@ void main() {
     test('returns correct message fields', () async {
       await _writeMessage(
         fakeDb,
-        _makeMessage(id: 'm1', chatId: 'chat_1', senderId: 'user_B', text: 'Bonjour'),
+        _makeMessage(
+          id: 'm1',
+          chatId: 'chat_1',
+          senderId: 'user_B',
+          text: 'Bonjour',
+        ),
       );
 
       final list = await repo.watchMessages(chatId: 'chat_1').first;
@@ -315,36 +319,40 @@ void main() {
       expect(result, isNull);
     });
 
-    test('returns DateTime when another user has a typing doc with Timestamp',
-        () async {
-      final ts = DateTime(2024, 6, 1, 12, 0).toUtc();
-      await fakeDb
-          .collection('chats')
-          .doc('chat_1')
-          .collection('typing')
-          .doc('user_B')
-          .set({'updatedAt': Timestamp.fromDate(ts)});
+    test(
+      'returns DateTime when another user has a typing doc with Timestamp',
+      () async {
+        final ts = DateTime(2024, 6, 1, 12, 0).toUtc();
+        await fakeDb
+            .collection('chats')
+            .doc('chat_1')
+            .collection('typing')
+            .doc('user_B')
+            .set({'updatedAt': Timestamp.fromDate(ts)});
 
-      final result = await repo
-          .watchOtherTyping(chatId: 'chat_1', myUid: 'user_A')
-          .first;
-      expect(result, isNotNull);
-      expect(result!.millisecondsSinceEpoch, ts.millisecondsSinceEpoch);
-    });
+        final result = await repo
+            .watchOtherTyping(chatId: 'chat_1', myUid: 'user_A')
+            .first;
+        expect(result, isNotNull);
+        expect(result!.millisecondsSinceEpoch, ts.millisecondsSinceEpoch);
+      },
+    );
 
-    test('returns null when other typing doc exists but updatedAt is absent',
-        () async {
-      await fakeDb
-          .collection('chats')
-          .doc('chat_1')
-          .collection('typing')
-          .doc('user_B')
-          .set({'updatedAt': null});
+    test(
+      'returns null when other typing doc exists but updatedAt is absent',
+      () async {
+        await fakeDb
+            .collection('chats')
+            .doc('chat_1')
+            .collection('typing')
+            .doc('user_B')
+            .set({'updatedAt': null});
 
-      final result = await repo
-          .watchOtherTyping(chatId: 'chat_1', myUid: 'user_A')
-          .first;
-      expect(result, isNull);
-    });
+        final result = await repo
+            .watchOtherTyping(chatId: 'chat_1', myUid: 'user_A')
+            .first;
+        expect(result, isNull);
+      },
+    );
   });
 }

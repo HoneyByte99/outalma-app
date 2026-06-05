@@ -113,10 +113,7 @@ void main() {
       await col.doc(profile.uid).set(profile);
       final result = (await col.doc(profile.uid).get()).data()!;
 
-      expect(
-        result.createdAt.millisecondsSinceEpoch,
-        t.millisecondsSinceEpoch,
-      );
+      expect(result.createdAt.millisecondsSinceEpoch, t.millisecondsSinceEpoch);
     });
 
     test('createdAt is stored as Firestore Timestamp', () async {
@@ -124,8 +121,8 @@ void main() {
       final col = FirestoreCollections.providers(fakeDb);
       await col.doc(profile.uid).set(profile);
 
-      final raw =
-          (await fakeDb.collection('providers').doc(profile.uid).get()).data()!;
+      final raw = (await fakeDb.collection('providers').doc(profile.uid).get())
+          .data()!;
       expect(raw['createdAt'], isA<Timestamp>());
     });
   });
@@ -145,10 +142,16 @@ void main() {
     });
 
     test('completely empty document does not crash', () async {
-      await fakeDb.collection('providers').doc('empty').set(<String, dynamic>{});
+      await fakeDb
+          .collection('providers')
+          .doc('empty')
+          .set(<String, dynamic>{});
       final col = FirestoreCollections.providers(fakeDb);
       // Should not throw — createdAt will fall back to epoch via dateTimeFromFirestore
-      expect(() async => (await col.doc('empty').get()).data()!, returnsNormally);
+      expect(
+        () async => (await col.doc('empty').get()).data()!,
+        returnsNormally,
+      );
     });
   });
 }

@@ -71,10 +71,7 @@ void main() {
 
       final list = await repo.watchForBooking('booking_1').first;
       expect(list.length, 2);
-      expect(
-        list.map((ps) => ps.uid),
-        containsAll(['user_A', 'user_B']),
-      );
+      expect(list.map((ps) => ps.uid), containsAll(['user_A', 'user_B']));
     });
 
     test('streams live updates when a share is added', () async {
@@ -151,30 +148,33 @@ void main() {
       expect(snap.data()?['phone'], '+22170000099');
     });
 
-    test('uses merge semantics — second call does not remove createdAt', () async {
-      await repo.share(
-        bookingId: 'booking_1',
-        uid: 'user_A',
-        phone: '+33600000001',
-      );
+    test(
+      'uses merge semantics — second call does not remove createdAt',
+      () async {
+        await repo.share(
+          bookingId: 'booking_1',
+          uid: 'user_A',
+          phone: '+33600000001',
+        );
 
-      // Second call with same uid (idempotent)
-      await repo.share(
-        bookingId: 'booking_1',
-        uid: 'user_A',
-        phone: '+33600000001',
-      );
+        // Second call with same uid (idempotent)
+        await repo.share(
+          bookingId: 'booking_1',
+          uid: 'user_A',
+          phone: '+33600000001',
+        );
 
-      final snap = await fakeDb
-          .collection('bookings')
-          .doc('booking_1')
-          .collection('phoneShares')
-          .doc('user_A')
-          .get();
+        final snap = await fakeDb
+            .collection('bookings')
+            .doc('booking_1')
+            .collection('phoneShares')
+            .doc('user_A')
+            .get();
 
-      expect(snap.exists, isTrue);
-      expect(snap.data()?.containsKey('createdAt'), isTrue);
-    });
+        expect(snap.exists, isTrue);
+        expect(snap.data()?.containsKey('createdAt'), isTrue);
+      },
+    );
 
     test('each uid gets its own document', () async {
       await repo.share(

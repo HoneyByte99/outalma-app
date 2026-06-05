@@ -519,9 +519,9 @@ class _ErrorState extends ConsumerWidget {
             const SizedBox(height: AppSpacing.m),
             Text(
               message,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: oc.secondaryText,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.m),

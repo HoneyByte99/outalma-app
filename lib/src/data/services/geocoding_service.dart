@@ -16,8 +16,8 @@ class PlaceSuggestion {
 /// for browser-side requests (unlike the legacy maps.googleapis.com endpoints).
 class GeocodingService {
   GeocodingService({required String apiKey, http.Client? httpClient})
-      : _apiKey = apiKey,
-        _client = httpClient ?? http.Client();
+    : _apiKey = apiKey,
+      _client = httpClient ?? http.Client();
 
   final String _apiKey;
   final http.Client _client;
@@ -77,14 +77,15 @@ class GeocodingService {
   /// as "nominatim:<lat>,<lng>" so no second lookup is needed.
   Future<List<PlaceSuggestion>> _nominatimSearch(String input) async {
     try {
-      final uri = Uri.parse('https://nominatim.openstreetmap.org/search').replace(
-        queryParameters: {
-          'q': input,
-          'format': 'json',
-          'limit': '5',
-          'accept-language': 'fr',
-        },
-      );
+      final uri = Uri.parse('https://nominatim.openstreetmap.org/search')
+          .replace(
+            queryParameters: {
+              'q': input,
+              'format': 'json',
+              'limit': '5',
+              'accept-language': 'fr',
+            },
+          );
 
       final response = await _client.get(
         uri,
@@ -94,22 +95,19 @@ class GeocodingService {
       if (response.statusCode != 200) return const [];
 
       final results = jsonDecode(response.body) as List;
-      return results
-          .cast<Map<String, dynamic>>()
-          .map((r) {
-            final lat = r['lat'] as String;
-            final lng = r['lon'] as String;
-            final name = (r['display_name'] as String)
-                .split(',')
-                .take(3)
-                .join(',')
-                .trim();
-            return PlaceSuggestion(
-              placeId: 'nominatim:$lat,$lng',
-              description: name,
-            );
-          })
-          .toList();
+      return results.cast<Map<String, dynamic>>().map((r) {
+        final lat = r['lat'] as String;
+        final lng = r['lon'] as String;
+        final name = (r['display_name'] as String)
+            .split(',')
+            .take(3)
+            .join(',')
+            .trim();
+        return PlaceSuggestion(
+          placeId: 'nominatim:$lat,$lng',
+          description: name,
+        );
+      }).toList();
     } catch (_) {
       return const [];
     }

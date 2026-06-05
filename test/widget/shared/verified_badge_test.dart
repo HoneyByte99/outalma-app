@@ -14,11 +14,11 @@ import 'package:outalma_app/src/features/shared/verified_badge.dart';
 import 'package:outalma_app/l10n/app_localizations.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
-      theme: AppTheme.light(),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: Center(child: child)),
-    );
+  theme: AppTheme.light(),
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  home: Scaffold(body: Center(child: child)),
+);
 
 void main() {
   group('VerifiedBadge — full (compact: false)', () {
@@ -76,8 +76,9 @@ void main() {
   });
 
   group('VerifiedBadge — layout difference between modes', () {
-    testWidgets('full mode renders text while compact mode does not',
-        (tester) async {
+    testWidgets('full mode renders text while compact mode does not', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
@@ -85,10 +86,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           home: const Scaffold(
             body: Row(
-              children: [
-                VerifiedBadge(),
-                VerifiedBadge(compact: true),
-              ],
+              children: [VerifiedBadge(), VerifiedBadge(compact: true)],
             ),
           ),
         ),

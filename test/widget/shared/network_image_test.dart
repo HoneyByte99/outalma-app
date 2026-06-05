@@ -20,34 +20,39 @@ import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/features/shared/network_image.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
-      theme: AppTheme.light(),
-      home: Scaffold(body: child),
-    );
+  theme: AppTheme.light(),
+  home: Scaffold(body: child),
+);
 
 void main() {
   group('AppNetworkImage', () {
     testWidgets('renders without throwing given a URL', (tester) async {
-      await tester.pumpWidget(_wrap(
-        const AppNetworkImage(
-          url: 'https://example.com/image.jpg',
-          width: 100,
-          height: 100,
+      await tester.pumpWidget(
+        _wrap(
+          const AppNetworkImage(
+            url: 'https://example.com/image.jpg',
+            width: 100,
+            height: 100,
+          ),
         ),
-      ));
+      );
       // First frame: CachedNetworkImage is present in the tree.
       expect(find.byType(AppNetworkImage), findsOneWidget);
       expect(find.byType(CachedNetworkImage), findsOneWidget);
     });
 
-    testWidgets('placeholder Container is visible before image loads',
-        (tester) async {
-      await tester.pumpWidget(_wrap(
-        const AppNetworkImage(
-          url: 'https://example.com/photo.png',
-          width: 80,
-          height: 80,
+    testWidgets('placeholder Container is visible before image loads', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AppNetworkImage(
+            url: 'https://example.com/photo.png',
+            width: 80,
+            height: 80,
+          ),
         ),
-      ));
+      );
       // pump() without settling ensures we're in the loading state.
       await tester.pump();
       // The default placeholder is a plain Container — verify at least one
@@ -63,49 +68,56 @@ void main() {
         width: 50,
         height: 50,
       );
-      await tester.pumpWidget(_wrap(
-        const AppNetworkImage(
-          url: 'https://example.com/img.jpg',
-          width: 50,
-          height: 50,
-          placeholder: customPlaceholder,
+      await tester.pumpWidget(
+        _wrap(
+          const AppNetworkImage(
+            url: 'https://example.com/img.jpg',
+            width: 50,
+            height: 50,
+            placeholder: customPlaceholder,
+          ),
         ),
-      ));
+      );
       await tester.pump();
       // Custom placeholder is rendered while loading.
       expect(find.byKey(const ValueKey('placeholder')), findsOneWidget);
     });
 
     testWidgets('borderRadius wraps image in ClipRRect', (tester) async {
-      await tester.pumpWidget(_wrap(
-        AppNetworkImage(
-          url: 'https://example.com/rounded.jpg',
-          width: 100,
-          height: 100,
-          borderRadius: BorderRadius.circular(12),
+      await tester.pumpWidget(
+        _wrap(
+          AppNetworkImage(
+            url: 'https://example.com/rounded.jpg',
+            width: 100,
+            height: 100,
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
-      ));
+      );
       await tester.pump();
       expect(find.byType(ClipRRect), findsOneWidget);
     });
 
-    testWidgets('no borderRadius means no ClipRRect in the tree',
-        (tester) async {
-      await tester.pumpWidget(_wrap(
-        const AppNetworkImage(
-          url: 'https://example.com/flat.jpg',
-          width: 100,
-          height: 100,
+    testWidgets('no borderRadius means no ClipRRect in the tree', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const AppNetworkImage(
+            url: 'https://example.com/flat.jpg',
+            width: 100,
+            height: 100,
+          ),
         ),
-      ));
+      );
       await tester.pump();
       expect(find.byType(ClipRRect), findsNothing);
     });
 
     testWidgets('renders with only required url parameter', (tester) async {
-      await tester.pumpWidget(_wrap(
-        const AppNetworkImage(url: 'https://example.com/min.jpg'),
-      ));
+      await tester.pumpWidget(
+        _wrap(const AppNetworkImage(url: 'https://example.com/min.jpg')),
+      );
       expect(tester.takeException(), isNull);
     });
   });

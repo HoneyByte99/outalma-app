@@ -52,15 +52,17 @@ void main() {
       expect(container.read(localeProvider), isNull);
     });
 
-    test('state remains null after async prefs load with no stored value',
-        () async {
-      final container = _makeContainer();
-      addTearDown(container.dispose);
+    test(
+      'state remains null after async prefs load with no stored value',
+      () async {
+        final container = _makeContainer();
+        addTearDown(container.dispose);
 
-      await _settle(container);
+        await _settle(container);
 
-      expect(container.read(localeProvider), isNull);
-    });
+        expect(container.read(localeProvider), isNull);
+      },
+    );
   });
 
   group('LocaleNotifier — setLocale', () {
@@ -68,7 +70,9 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await container.read(localeProvider.notifier).setLocale(const Locale('fr'));
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('fr'));
 
       expect(container.read(localeProvider), const Locale('fr'));
     });
@@ -77,7 +81,9 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await container.read(localeProvider.notifier).setLocale(const Locale('en'));
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('en'));
 
       expect(container.read(localeProvider), const Locale('en'));
     });
@@ -86,8 +92,12 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await container.read(localeProvider.notifier).setLocale(const Locale('fr'));
-      await container.read(localeProvider.notifier).setLocale(const Locale('en'));
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('fr'));
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('en'));
 
       expect(container.read(localeProvider), const Locale('en'));
     });
@@ -96,7 +106,9 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await container.read(localeProvider.notifier).setLocale(const Locale('fr'));
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('fr'));
       await container.read(localeProvider.notifier).setLocale(null);
 
       expect(container.read(localeProvider), isNull);
@@ -108,7 +120,9 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await container.read(localeProvider.notifier).setLocale(const Locale('fr'));
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('fr'));
 
       expect(Intl.defaultLocale, 'fr_FR');
     });
@@ -117,7 +131,9 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await container.read(localeProvider.notifier).setLocale(const Locale('fr'));
+      await container
+          .read(localeProvider.notifier)
+          .setLocale(const Locale('fr'));
       await container.read(localeProvider.notifier).setLocale(null);
 
       expect(Intl.defaultLocale, isNull);
@@ -137,18 +153,20 @@ void main() {
       expect(c2.read(localeProvider), const Locale('fr'));
     });
 
-    test('setLocale(null) removes persisted value — next container starts null',
-        () async {
-      final c1 = _makeContainer();
-      await c1.read(localeProvider.notifier).setLocale(const Locale('fr'));
-      await c1.read(localeProvider.notifier).setLocale(null);
-      c1.dispose();
+    test(
+      'setLocale(null) removes persisted value — next container starts null',
+      () async {
+        final c1 = _makeContainer();
+        await c1.read(localeProvider.notifier).setLocale(const Locale('fr'));
+        await c1.read(localeProvider.notifier).setLocale(null);
+        c1.dispose();
 
-      final c2 = _makeContainer();
-      addTearDown(c2.dispose);
-      await _settle(c2);
+        final c2 = _makeContainer();
+        addTearDown(c2.dispose);
+        await _settle(c2);
 
-      expect(c2.read(localeProvider), isNull);
-    });
+        expect(c2.read(localeProvider), isNull);
+      },
+    );
   });
 }

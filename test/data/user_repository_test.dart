@@ -91,9 +91,9 @@ void main() {
       addTearDown(subscription.cancel);
 
       // Trigger an update.
-      await FirestoreCollections.users(fakeDb).doc(user.id).set(
-            user.copyWith(displayName: 'Alice Updated'),
-          );
+      await FirestoreCollections.users(
+        fakeDb,
+      ).doc(user.id).set(user.copyWith(displayName: 'Alice Updated'));
 
       // Allow microtasks to propagate.
       await Future<void>.delayed(Duration.zero);
@@ -142,17 +142,20 @@ void main() {
       expect(result.displayName, 'Bob');
     });
 
-    test('preserves optional fields (phoneE164, photoPath, pushToken)', () async {
-      final user = _makeUser(
-        phoneE164: '+33600000000',
-        pushToken: 'fcm-token-abc',
-      );
-      await _writeUser(fakeDb, user);
+    test(
+      'preserves optional fields (phoneE164, photoPath, pushToken)',
+      () async {
+        final user = _makeUser(
+          phoneE164: '+33600000000',
+          pushToken: 'fcm-token-abc',
+        );
+        await _writeUser(fakeDb, user);
 
-      final result = await repo.getById(user.id);
-      expect(result!.phoneE164, '+33600000000');
-      expect(result.pushToken, 'fcm-token-abc');
-    });
+        final result = await repo.getById(user.id);
+        expect(result!.phoneE164, '+33600000000');
+        expect(result.pushToken, 'fcm-token-abc');
+      },
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -164,7 +167,9 @@ void main() {
       final user = _makeUser(id: 'uid-new');
       await repo.upsert(user);
 
-      final snap = await FirestoreCollections.users(fakeDb).doc('uid-new').get();
+      final snap = await FirestoreCollections.users(
+        fakeDb,
+      ).doc('uid-new').get();
       expect(snap.exists, isTrue);
       expect(snap.data()!.id, 'uid-new');
       expect(snap.data()!.displayName, user.displayName);
@@ -181,59 +186,61 @@ void main() {
       expect(snap.data()!.displayName, 'Charlie Updated');
     });
 
-    test('does NOT overwrite phoneE164 when upsert is called with null phone',
-        () async {
-      // First write — user has a phone number.
-      final userWithPhone = _makeUser(
-        id: 'uid-4',
-        phoneE164: '+33600000000',
-      );
-      await repo.upsert(userWithPhone);
+    test(
+      'does NOT overwrite phoneE164 when upsert is called with null phone',
+      () async {
+        // First write — user has a phone number.
+        final userWithPhone = _makeUser(id: 'uid-4', phoneE164: '+33600000000');
+        await repo.upsert(userWithPhone);
 
-      // Second write — serializer guard omits phoneE164 when it is null.
-      // We pass a user whose phoneE164 is null (e.g. email-only update path).
-      final userWithoutPhone = AppUser(
-        id: 'uid-4',
-        displayName: 'Alice',
-        email: 'alice@example.com',
-        country: 'FR',
-        activeMode: ActiveMode.client,
-        phoneE164: null, // intentionally omitted
-        createdAt: DateTime(2024, 1, 1).toUtc(),
-      );
-      await repo.upsert(userWithoutPhone);
+        // Second write — serializer guard omits phoneE164 when it is null.
+        // We pass a user whose phoneE164 is null (e.g. email-only update path).
+        final userWithoutPhone = AppUser(
+          id: 'uid-4',
+          displayName: 'Alice',
+          email: 'alice@example.com',
+          country: 'FR',
+          activeMode: ActiveMode.client,
+          phoneE164: null, // intentionally omitted
+          createdAt: DateTime(2024, 1, 1).toUtc(),
+        );
+        await repo.upsert(userWithoutPhone);
 
-      // The phoneE164 in Firestore must still be the original value because
-      // _userToFirestore only writes phoneE164 when it is non-null,
-      // and SetOptions(merge: true) preserves existing fields.
-      final raw = await fakeDb.collection('users').doc('uid-4').get();
-      expect(
-        raw.data()?['phoneE164'],
-        '+33600000000',
-        reason:
-            'phoneE164 must be preserved after a merge-upsert that omits the field',
-      );
-    });
+        // The phoneE164 in Firestore must still be the original value because
+        // _userToFirestore only writes phoneE164 when it is non-null,
+        // and SetOptions(merge: true) preserves existing fields.
+        final raw = await fakeDb.collection('users').doc('uid-4').get();
+        expect(
+          raw.data()?['phoneE164'],
+          '+33600000000',
+          reason:
+              'phoneE164 must be preserved after a merge-upsert that omits the field',
+        );
+      },
+    );
 
-    test('does NOT overwrite phoneE164 when called with a different phone', () async {
-      // Write user with original phone.
-      final original = _makeUser(id: 'uid-5', phoneE164: '+33600000001');
-      await repo.upsert(original);
+    test(
+      'does NOT overwrite phoneE164 when called with a different phone',
+      () async {
+        // Write user with original phone.
+        final original = _makeUser(id: 'uid-5', phoneE164: '+33600000001');
+        await repo.upsert(original);
 
-      // Attempt to upsert with a different phone value.
-      // The serializer includes phoneE164 only when non-null, so this WILL
-      // overwrite the field if a new non-null phone is passed.
-      // This test verifies the documented behaviour: upsert with a new
-      // non-null phone replaces the stored value (the security rule enforces
-      // immutability server-side; the client-side test simply checks the
-      // merge write semantics).
-      final withNewPhone = original.copyWith(phoneE164: '+22170000000');
-      await repo.upsert(withNewPhone);
+        // Attempt to upsert with a different phone value.
+        // The serializer includes phoneE164 only when non-null, so this WILL
+        // overwrite the field if a new non-null phone is passed.
+        // This test verifies the documented behaviour: upsert with a new
+        // non-null phone replaces the stored value (the security rule enforces
+        // immutability server-side; the client-side test simply checks the
+        // merge write semantics).
+        final withNewPhone = original.copyWith(phoneE164: '+22170000000');
+        await repo.upsert(withNewPhone);
 
-      final raw = await fakeDb.collection('users').doc('uid-5').get();
-      // With merge semantics and a non-null phone in the second write,
-      // the field is overwritten.
-      expect(raw.data()?['phoneE164'], '+22170000000');
-    });
+        final raw = await fakeDb.collection('users').doc('uid-5').get();
+        // With merge semantics and a non-null phone in the second write,
+        // the field is overwritten.
+        expect(raw.data()?['phoneE164'], '+22170000000');
+      },
+    );
   });
 }

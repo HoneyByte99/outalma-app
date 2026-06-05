@@ -39,22 +39,22 @@ final _fakeService = Service(
 );
 
 Widget _wrap() => ProviderScope(
-      overrides: [
-        authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        activeModeProvider.overrideWith((_) => ActiveMode.client),
-        serviceDetailProvider('svc_test')
-            .overrideWith((_) => Stream.value(_fakeService)),
-        userByIdProvider('prov_1').overrideWith((_) => const Stream.empty()),
-        reviewsForUserProvider('prov_1')
-            .overrideWith((_) => Stream.value([])),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const ServiceDetailPage(serviceId: 'svc_test'),
-      ),
-    );
+  overrides: [
+    authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
+    activeModeProvider.overrideWith((_) => ActiveMode.client),
+    serviceDetailProvider(
+      'svc_test',
+    ).overrideWith((_) => Stream.value(_fakeService)),
+    userByIdProvider('prov_1').overrideWith((_) => const Stream.empty()),
+    reviewsForUserProvider('prov_1').overrideWith((_) => Stream.value([])),
+  ],
+  child: MaterialApp(
+    theme: AppTheme.light(),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const ServiceDetailPage(serviceId: 'svc_test'),
+  ),
+);
 
 void main() {
   group('ServiceDetailPage', () {
@@ -72,8 +72,9 @@ void main() {
       expect(find.text('Ménage à domicile'), findsWidgets);
     });
 
-    testWidgets('book CTA (ElevatedButton) is present for non-owner',
-        (tester) async {
+    testWidgets('book CTA (ElevatedButton) is present for non-owner', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       await tester.pump();

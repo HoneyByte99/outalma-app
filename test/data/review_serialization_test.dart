@@ -96,8 +96,8 @@ void main() {
       final col = FirestoreCollections.reviews(fakeDb);
       await col.doc(review.id).set(review);
 
-      final raw =
-          (await fakeDb.collection('reviews').doc(review.id).get()).data()!;
+      final raw = (await fakeDb.collection('reviews').doc(review.id).get())
+          .data()!;
       expect(raw['reviewerRole'], 'client');
 
       final result = (await col.doc(review.id).get()).data()!;
@@ -112,10 +112,7 @@ void main() {
       final col = FirestoreCollections.reviews(fakeDb);
       await col.doc(review.id).set(review);
 
-      final raw = (await fakeDb
-              .collection('reviews')
-              .doc(review.id)
-              .get())
+      final raw = (await fakeDb.collection('reviews').doc(review.id).get())
           .data()!;
       expect(raw['reviewerRole'], 'provider');
 
@@ -143,10 +140,7 @@ void main() {
       await col.doc(review.id).set(review);
       final result = (await col.doc(review.id).get()).data()!;
 
-      expect(
-        result.createdAt.millisecondsSinceEpoch,
-        t.millisecondsSinceEpoch,
-      );
+      expect(result.createdAt.millisecondsSinceEpoch, t.millisecondsSinceEpoch);
     });
 
     test('createdAt is stored as Firestore Timestamp', () async {
@@ -154,8 +148,8 @@ void main() {
       final col = FirestoreCollections.reviews(fakeDb);
       await col.doc(review.id).set(review);
 
-      final raw =
-          (await fakeDb.collection('reviews').doc(review.id).get()).data()!;
+      final raw = (await fakeDb.collection('reviews').doc(review.id).get())
+          .data()!;
       expect(raw['createdAt'], isA<Timestamp>());
     });
   });

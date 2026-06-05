@@ -91,10 +91,7 @@ void main() {
     });
 
     test('does not return reviews for a different revieweeId', () async {
-      await _writeReview(
-        fakeDb,
-        _makeReview(id: 'r1', revieweeId: 'user_B'),
-      );
+      await _writeReview(fakeDb, _makeReview(id: 'r1', revieweeId: 'user_B'));
 
       final list = await repo.watchForUser('user_Z').first;
       expect(list, isEmpty);
@@ -111,10 +108,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       // Add a review targeting user_B
-      await _writeReview(
-        fakeDb,
-        _makeReview(id: 'r1', revieweeId: 'user_B'),
-      );
+      await _writeReview(fakeDb, _makeReview(id: 'r1', revieweeId: 'user_B'));
       await Future<void>.delayed(Duration.zero);
       await Future<void>.delayed(Duration.zero);
 
@@ -185,10 +179,7 @@ void main() {
 
       final list = await repo.watchForBooking('booking_1').first;
       expect(list.length, 2);
-      expect(
-        list.map((r) => r.id),
-        containsAll(['r_client', 'r_provider']),
-      );
+      expect(list.map((r) => r.id), containsAll(['r_client', 'r_provider']));
     });
 
     test('does not return reviews for a different booking', () async {
@@ -309,20 +300,20 @@ void main() {
       expect(list.first.revieweeId, 'user_B');
     });
 
-    test('before create: watchForBooking returns empty; after: returns review',
-        () async {
-      // Before
-      final before = await repo.watchForBooking('booking_1').first;
-      expect(before, isEmpty);
+    test(
+      'before create: watchForBooking returns empty; after: returns review',
+      () async {
+        // Before
+        final before = await repo.watchForBooking('booking_1').first;
+        expect(before, isEmpty);
 
-      // Create
-      await repo.create(
-        _makeReview(id: 'temp', bookingId: 'booking_1'),
-      );
+        // Create
+        await repo.create(_makeReview(id: 'temp', bookingId: 'booking_1'));
 
-      // After
-      final after = await repo.watchForBooking('booking_1').first;
-      expect(after.length, 1);
-    });
+        // After
+        final after = await repo.watchForBooking('booking_1').first;
+        expect(after.length, 1);
+      },
+    );
   });
 }

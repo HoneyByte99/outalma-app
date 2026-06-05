@@ -32,5 +32,4 @@ class FirestoreBookingRepository implements BookingRepository {
         .snapshots()
         .map((qs) => qs.docs.map((d) => d.data()).toList());
   }
-
 }

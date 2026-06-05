@@ -45,47 +45,47 @@ class _UnauthenticatedNotifier extends AuthNotifier {
 // ---------------------------------------------------------------------------
 
 AppUser _makeUser({String id = 'uid-1'}) => AppUser(
-      id: id,
-      displayName: 'Alice',
-      email: 'alice@test.com',
-      country: 'FR',
-      activeMode: ActiveMode.client,
-      createdAt: DateTime(2024, 1, 1).toUtc(),
-    );
+  id: id,
+  displayName: 'Alice',
+  email: 'alice@test.com',
+  country: 'FR',
+  activeMode: ActiveMode.client,
+  createdAt: DateTime(2024, 1, 1).toUtc(),
+);
 
 AppNotification _makeNotification({
   String id = 'notif-1',
   bool read = false,
   String type = 'booking_accepted',
 }) => AppNotification(
-      id: id,
-      type: type,
-      title: 'Test',
-      body: 'Test body',
-      read: read,
-      createdAt: DateTime(2024, 6, 1).toUtc(),
-    );
+  id: id,
+  type: type,
+  title: 'Test',
+  body: 'Test body',
+  read: read,
+  createdAt: DateTime(2024, 6, 1).toUtc(),
+);
 
 Future<void> _writeNotification(
   FakeFirebaseFirestore db,
   String uid,
   AppNotification notif,
 ) async {
-  await FirestoreCollections.notifications(db: db, uid: uid)
-      .doc(notif.id)
-      .set(notif);
+  await FirestoreCollections.notifications(
+    db: db,
+    uid: uid,
+  ).doc(notif.id).set(notif);
 }
 
 ProviderContainer _makeAuthenticatedContainer(
   AppUser user,
   FakeFirebaseFirestore db,
-) =>
-    ProviderContainer(
-      overrides: [
-        authNotifierProvider.overrideWith(() => _AuthenticatedNotifier(user)),
-        firestoreProvider.overrideWithValue(db),
-      ],
-    );
+) => ProviderContainer(
+  overrides: [
+    authNotifierProvider.overrideWith(() => _AuthenticatedNotifier(user)),
+    firestoreProvider.overrideWithValue(db),
+  ],
+);
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -120,8 +120,16 @@ void main() {
 
     test('returns list of notifications for authenticated user', () async {
       final user = _makeUser();
-      await _writeNotification(fakeDb, user.id, _makeNotification(id: 'n1', read: false));
-      await _writeNotification(fakeDb, user.id, _makeNotification(id: 'n2', read: true));
+      await _writeNotification(
+        fakeDb,
+        user.id,
+        _makeNotification(id: 'n1', read: false),
+      );
+      await _writeNotification(
+        fakeDb,
+        user.id,
+        _makeNotification(id: 'n2', read: true),
+      );
 
       final container = _makeAuthenticatedContainer(user, fakeDb);
       addTearDown(container.dispose);
@@ -134,8 +142,16 @@ void main() {
 
     test('list contains notifications with correct read flag', () async {
       final user = _makeUser();
-      await _writeNotification(fakeDb, user.id, _makeNotification(id: 'n1', read: false));
-      await _writeNotification(fakeDb, user.id, _makeNotification(id: 'n2', read: true));
+      await _writeNotification(
+        fakeDb,
+        user.id,
+        _makeNotification(id: 'n1', read: false),
+      );
+      await _writeNotification(
+        fakeDb,
+        user.id,
+        _makeNotification(id: 'n2', read: true),
+      );
 
       final container = _makeAuthenticatedContainer(user, fakeDb);
       addTearDown(container.dispose);
@@ -170,9 +186,21 @@ void main() {
 
     test('counts only unread notifications', () async {
       final user = _makeUser();
-      await _writeNotification(fakeDb, user.id, _makeNotification(id: 'n1', read: false));
-      await _writeNotification(fakeDb, user.id, _makeNotification(id: 'n2', read: false));
-      await _writeNotification(fakeDb, user.id, _makeNotification(id: 'n3', read: true));
+      await _writeNotification(
+        fakeDb,
+        user.id,
+        _makeNotification(id: 'n1', read: false),
+      );
+      await _writeNotification(
+        fakeDb,
+        user.id,
+        _makeNotification(id: 'n2', read: false),
+      );
+      await _writeNotification(
+        fakeDb,
+        user.id,
+        _makeNotification(id: 'n3', read: true),
+      );
 
       final container = _makeAuthenticatedContainer(user, fakeDb);
       addTearDown(container.dispose);
@@ -185,8 +213,16 @@ void main() {
 
     test('returns 0 when all notifications are read', () async {
       final user = _makeUser();
-      await _writeNotification(fakeDb, user.id, _makeNotification(id: 'n1', read: true));
-      await _writeNotification(fakeDb, user.id, _makeNotification(id: 'n2', read: true));
+      await _writeNotification(
+        fakeDb,
+        user.id,
+        _makeNotification(id: 'n1', read: true),
+      );
+      await _writeNotification(
+        fakeDb,
+        user.id,
+        _makeNotification(id: 'n2', read: true),
+      );
 
       final container = _makeAuthenticatedContainer(user, fakeDb);
       addTearDown(container.dispose);
@@ -254,11 +290,7 @@ void main() {
 
       // Should complete without throwing.
       await expectLater(
-        markAllNotificationsRead(
-          db: fakeDb,
-          uid: user.id,
-          notifications: [n1],
-        ),
+        markAllNotificationsRead(db: fakeDb, uid: user.id, notifications: [n1]),
         completes,
       );
     });

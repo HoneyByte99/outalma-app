@@ -5,17 +5,17 @@ import 'package:outalma_app/src/domain/models/service.dart';
 import 'package:outalma_app/src/domain/models/service_zone.dart';
 
 Service _base() => Service(
-      id: 's1',
-      providerId: 'p1',
-      categoryId: CategoryId.menage,
-      title: 'Ménage complet',
-      photos: const [],
-      priceType: PriceType.hourly,
-      price: 2500,
-      published: true,
-      createdAt: DateTime(2024, 1, 1),
-      updatedAt: DateTime(2024, 1, 2),
-    );
+  id: 's1',
+  providerId: 'p1',
+  categoryId: CategoryId.menage,
+  title: 'Ménage complet',
+  photos: const [],
+  priceType: PriceType.hourly,
+  price: 2500,
+  published: true,
+  createdAt: DateTime(2024, 1, 1),
+  updatedAt: DateTime(2024, 1, 2),
+);
 
 void main() {
   group('Service.copyWith', () {

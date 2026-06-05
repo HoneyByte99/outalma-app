@@ -111,8 +111,7 @@ void main() {
       final col = FirestoreCollections.chats(fakeDb);
       await col.doc(chat.id).set(chat);
 
-      final raw =
-          (await fakeDb.collection('chats').doc(chat.id).get()).data()!;
+      final raw = (await fakeDb.collection('chats').doc(chat.id).get()).data()!;
       expect(raw['lastMessageAt'], isA<Timestamp>());
     });
   });
@@ -125,10 +124,7 @@ void main() {
       await col.doc(chat.id).set(chat);
       final result = (await col.doc(chat.id).get()).data()!;
 
-      expect(
-        result.createdAt.millisecondsSinceEpoch,
-        t.millisecondsSinceEpoch,
-      );
+      expect(result.createdAt.millisecondsSinceEpoch, t.millisecondsSinceEpoch);
     });
 
     test('createdAt is stored as Firestore Timestamp', () async {
@@ -136,8 +132,7 @@ void main() {
       final col = FirestoreCollections.chats(fakeDb);
       await col.doc(chat.id).set(chat);
 
-      final raw =
-          (await fakeDb.collection('chats').doc(chat.id).get()).data()!;
+      final raw = (await fakeDb.collection('chats').doc(chat.id).get()).data()!;
       expect(raw['createdAt'], isA<Timestamp>());
     });
   });

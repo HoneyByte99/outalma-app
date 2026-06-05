@@ -18,31 +18,31 @@ import 'package:outalma_app/src/features/chat/chat_page.dart';
 class _FakeAuthNotifier extends AuthNotifier {
   @override
   Future<AuthState> build() async => AuthAuthenticated(
-        AppUser(
-          id: 'user_1',
-          displayName: 'Test User',
-          email: 'test@test.com',
-          country: 'FR',
-          activeMode: ActiveMode.client,
-          createdAt: DateTime(2024, 1, 1),
-        ),
-      );
+    AppUser(
+      id: 'user_1',
+      displayName: 'Test User',
+      email: 'test@test.com',
+      country: 'FR',
+      activeMode: ActiveMode.client,
+      createdAt: DateTime(2024, 1, 1),
+    ),
+  );
 }
 
 Widget _wrap() => ProviderScope(
-      overrides: [
-        authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        chatMessagesProvider('chat_1').overrideWith((_) => Stream.value([])),
-        chatDetailProvider('chat_1').overrideWith((_) => Stream.value(null)),
-        otherTypingProvider('chat_1').overrideWith((_) => Stream.value(null)),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const ChatPage(chatId: 'chat_1'),
-      ),
-    );
+  overrides: [
+    authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
+    chatMessagesProvider('chat_1').overrideWith((_) => Stream.value([])),
+    chatDetailProvider('chat_1').overrideWith((_) => Stream.value(null)),
+    otherTypingProvider('chat_1').overrideWith((_) => Stream.value(null)),
+  ],
+  child: MaterialApp(
+    theme: AppTheme.light(),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const ChatPage(chatId: 'chat_1'),
+  ),
+);
 
 void main() {
   group('ChatPage', () {
@@ -59,7 +59,9 @@ void main() {
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('mic/send action button is present in input bar', (tester) async {
+    testWidgets('mic/send action button is present in input bar', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       await tester.pump();

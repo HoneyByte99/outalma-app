@@ -36,27 +36,27 @@ void main() {
     mockCallable = MockHttpsCallable();
     service = LogSessionService(mockFunctions);
 
-    when(() => mockFunctions.httpsCallable('logSession'))
-        .thenReturn(mockCallable);
+    when(
+      () => mockFunctions.httpsCallable('logSession'),
+    ).thenReturn(mockCallable);
   });
 
   group('log()', () {
-    test('completes without throwing when Cloud Function call succeeds',
-        () async {
-      when(() => mockCallable.call<void>(any()))
-          .thenAnswer((_) async => MockHttpsCallableResult());
-
-      await expectLater(service.log(), completes);
-    });
-
     test(
-        'swallows FirebaseFunctionsException with UNAVAILABLE code — '
+      'completes without throwing when Cloud Function call succeeds',
+      () async {
+        when(
+          () => mockCallable.call<void>(any()),
+        ).thenAnswer((_) async => MockHttpsCallableResult());
+
+        await expectLater(service.log(), completes);
+      },
+    );
+
+    test('swallows FirebaseFunctionsException with UNAVAILABLE code — '
         'does not rethrow', () async {
       when(() => mockCallable.call<void>(any())).thenThrow(
-        FirebaseFunctionsException(
-          message: 'UNAVAILABLE',
-          code: 'unavailable',
-        ),
+        FirebaseFunctionsException(message: 'UNAVAILABLE', code: 'unavailable'),
       );
 
       // Must complete without throwing
@@ -65,25 +65,24 @@ void main() {
 
     test('swallows FirebaseFunctionsException with INTERNAL code', () async {
       when(() => mockCallable.call<void>(any())).thenThrow(
-        FirebaseFunctionsException(
-          message: 'INTERNAL',
-          code: 'internal',
-        ),
+        FirebaseFunctionsException(message: 'INTERNAL', code: 'internal'),
       );
 
       await expectLater(service.log(), completes);
     });
 
     test('swallows generic exceptions — does not rethrow', () async {
-      when(() => mockCallable.call<void>(any()))
-          .thenThrow(Exception('network error'));
+      when(
+        () => mockCallable.call<void>(any()),
+      ).thenThrow(Exception('network error'));
 
       await expectLater(service.log(), completes);
     });
 
     test('calls httpsCallable with logSession name', () async {
-      when(() => mockCallable.call<void>(any()))
-          .thenAnswer((_) async => MockHttpsCallableResult());
+      when(
+        () => mockCallable.call<void>(any()),
+      ).thenAnswer((_) async => MockHttpsCallableResult());
 
       await service.log();
 

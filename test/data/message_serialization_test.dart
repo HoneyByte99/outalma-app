@@ -74,13 +74,14 @@ void main() {
       );
       await col.doc(msg.id).set(msg);
 
-      final raw = (await fakeDb
-              .collection('chats')
-              .doc(_kChatId)
-              .collection('messages')
-              .doc(msg.id)
-              .get())
-          .data()!;
+      final raw =
+          (await fakeDb
+                  .collection('chats')
+                  .doc(_kChatId)
+                  .collection('messages')
+                  .doc(msg.id)
+                  .get())
+              .data()!;
       expect(raw['type'], 'text');
     });
   });
@@ -116,13 +117,14 @@ void main() {
       );
       await col.doc(msg.id).set(msg);
 
-      final raw = (await fakeDb
-              .collection('chats')
-              .doc(_kChatId)
-              .collection('messages')
-              .doc(msg.id)
-              .get())
-          .data()!;
+      final raw =
+          (await fakeDb
+                  .collection('chats')
+                  .doc(_kChatId)
+                  .collection('messages')
+                  .doc(msg.id)
+                  .get())
+              .data()!;
       expect(raw['type'], 'image');
     });
   });
@@ -157,13 +159,14 @@ void main() {
       );
       await col.doc(msg.id).set(msg);
 
-      final raw = (await fakeDb
-              .collection('chats')
-              .doc(_kChatId)
-              .collection('messages')
-              .doc(msg.id)
-              .get())
-          .data()!;
+      final raw =
+          (await fakeDb
+                  .collection('chats')
+                  .doc(_kChatId)
+                  .collection('messages')
+                  .doc(msg.id)
+                  .get())
+              .data()!;
       expect(raw['type'], 'voice');
     });
   });
@@ -176,11 +179,11 @@ void main() {
           .collection('messages')
           .doc('bad_type')
           .set({
-        'chatId': _kChatId,
-        'senderId': 'u1',
-        'type': 'sticker', // unknown
-        'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
-      });
+            'chatId': _kChatId,
+            'senderId': 'u1',
+            'type': 'sticker', // unknown
+            'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
+          });
       final col = FirestoreCollections.chatMessages(
         db: fakeDb,
         chatId: _kChatId,
@@ -201,10 +204,7 @@ void main() {
       await col.doc(msg.id).set(msg);
       final result = (await col.doc(msg.id).get()).data()!;
 
-      expect(
-        result.createdAt.millisecondsSinceEpoch,
-        t.millisecondsSinceEpoch,
-      );
+      expect(result.createdAt.millisecondsSinceEpoch, t.millisecondsSinceEpoch);
     });
 
     test('createdAt is stored as Firestore Timestamp', () async {
@@ -215,13 +215,14 @@ void main() {
       );
       await col.doc(msg.id).set(msg);
 
-      final raw = (await fakeDb
-              .collection('chats')
-              .doc(_kChatId)
-              .collection('messages')
-              .doc(msg.id)
-              .get())
-          .data()!;
+      final raw =
+          (await fakeDb
+                  .collection('chats')
+                  .doc(_kChatId)
+                  .collection('messages')
+                  .doc(msg.id)
+                  .get())
+              .data()!;
       expect(raw['createdAt'], isA<Timestamp>());
     });
   });
@@ -280,9 +281,7 @@ void main() {
           .doc(_kChatId)
           .collection('messages')
           .doc('minimal')
-          .set({
-        'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
-      });
+          .set({'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc())});
       final col = FirestoreCollections.chatMessages(
         db: fakeDb,
         chatId: _kChatId,

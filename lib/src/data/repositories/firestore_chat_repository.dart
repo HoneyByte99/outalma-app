@@ -78,10 +78,7 @@ class FirestoreChatRepository implements ChatRepository {
   }
 
   @override
-  Future<void> setTyping({
-    required String chatId,
-    required String uid,
-  }) {
+  Future<void> setTyping({required String chatId, required String uid}) {
     return _db
         .collection('chats')
         .doc(chatId)

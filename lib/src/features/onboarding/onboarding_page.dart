@@ -92,7 +92,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             ),
 
             // Dot indicators
-            _DotsIndicator(count: _totalPages, current: _page, color: oc.primary),
+            _DotsIndicator(
+              count: _totalPages,
+              current: _page,
+              color: oc.primary,
+            ),
             const SizedBox(height: 24),
 
             // Terms checkbox on last slide
@@ -142,9 +146,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                                 Expanded(
                                   child: Text(
                                     l10n.introTermsAccept,
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: oc.primaryText,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(color: oc.primaryText),
                                   ),
                                 ),
                               ],
@@ -155,14 +160,19 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.warning_amber_rounded,
-                                    color: oc.error, size: 18),
+                                Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: oc.error,
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
                                     l10n.introTermsRequired,
                                     style: TextStyle(
-                                        color: oc.error, fontSize: 14),
+                                      color: oc.error,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -190,7 +200,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   ),
                   child: Text(
                     isLast ? l10n.introGetStarted : l10n.introNext,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -262,11 +275,11 @@ class _LegalLink extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.underline,
-                    decorationColor: color,
-                  ),
+                color: color,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: color,
+              ),
             ),
           ],
         ),
@@ -315,19 +328,18 @@ class _Slide extends StatelessWidget {
           const SizedBox(height: 32),
           Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
             body,
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(color: oc.secondaryText, height: 1.5),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: oc.secondaryText,
+              height: 1.5,
+            ),
             textAlign: TextAlign.center,
           ),
         ],

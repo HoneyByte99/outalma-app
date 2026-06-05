@@ -108,10 +108,7 @@ void main() {
     });
 
     test('Senegalese E.164 number roundtrips correctly', () async {
-      final ps = _makePhoneShare(
-        uid: 'user_sn',
-        phone: '+221771234567',
-      );
+      final ps = _makePhoneShare(uid: 'user_sn', phone: '+221771234567');
       final col = FirestoreCollections.phoneShares(
         db: fakeDb,
         bookingId: testBookingId,
@@ -133,10 +130,7 @@ void main() {
       await col.doc(ps.uid).set(ps);
       final result = (await col.doc(ps.uid).get()).data()!;
 
-      expect(
-        result.createdAt.millisecondsSinceEpoch,
-        t.millisecondsSinceEpoch,
-      );
+      expect(result.createdAt.millisecondsSinceEpoch, t.millisecondsSinceEpoch);
     });
 
     test('createdAt is stored as Firestore Timestamp', () async {
@@ -147,13 +141,14 @@ void main() {
       );
       await col.doc(ps.uid).set(ps);
 
-      final raw = (await fakeDb
-              .collection('bookings')
-              .doc(testBookingId)
-              .collection('phoneShares')
-              .doc(ps.uid)
-              .get())
-          .data()!;
+      final raw =
+          (await fakeDb
+                  .collection('bookings')
+                  .doc(testBookingId)
+                  .collection('phoneShares')
+                  .doc(ps.uid)
+                  .get())
+              .data()!;
       expect(raw['createdAt'], isA<Timestamp>());
     });
   });
@@ -165,9 +160,7 @@ void main() {
           .doc(testBookingId)
           .collection('phoneShares')
           .doc('minimal_uid')
-          .set({
-        'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
-      });
+          .set({'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc())});
       final col = FirestoreCollections.phoneShares(
         db: fakeDb,
         bookingId: testBookingId,

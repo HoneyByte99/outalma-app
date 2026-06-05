@@ -8,8 +8,10 @@ class AcceptBookingUseCase {
   const AcceptBookingUseCase();
 
   Future<void> call(String bookingId) async {
-    await const CallableFunctionClient()
-        .call('acceptBooking', data: {'bookingId': bookingId});
+    await const CallableFunctionClient().call(
+      'acceptBooking',
+      data: {'bookingId': bookingId},
+    );
   }
 }
 
@@ -18,8 +20,10 @@ class RejectBookingUseCase {
   const RejectBookingUseCase();
 
   Future<void> call(String bookingId) async {
-    await const CallableFunctionClient()
-        .call('rejectBooking', data: {'bookingId': bookingId});
+    await const CallableFunctionClient().call(
+      'rejectBooking',
+      data: {'bookingId': bookingId},
+    );
   }
 }
 
@@ -29,8 +33,10 @@ class MarkInProgressUseCase {
   const MarkInProgressUseCase();
 
   Future<void> call(String bookingId) async {
-    await const CallableFunctionClient()
-        .call('markInProgress', data: {'bookingId': bookingId});
+    await const CallableFunctionClient().call(
+      'markInProgress',
+      data: {'bookingId': bookingId},
+    );
   }
 }
 
@@ -40,8 +46,10 @@ class ConfirmDoneUseCase {
   const ConfirmDoneUseCase();
 
   Future<void> call(String bookingId) async {
-    await const CallableFunctionClient()
-        .call('confirmDone', data: {'bookingId': bookingId});
+    await const CallableFunctionClient().call(
+      'confirmDone',
+      data: {'bookingId': bookingId},
+    );
   }
 }
 
@@ -51,8 +59,10 @@ class CancelBookingUseCase {
   const CancelBookingUseCase();
 
   Future<void> call(String bookingId) async {
-    await const CallableFunctionClient()
-        .call('cancelBooking', data: {'bookingId': bookingId});
+    await const CallableFunctionClient().call(
+      'cancelBooking',
+      data: {'bookingId': bookingId},
+    );
   }
 }
 

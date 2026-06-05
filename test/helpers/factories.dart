@@ -29,18 +29,17 @@ AppUser makeTestUser({
   String? photoPath,
   String? phoneE164,
   String? pushToken,
-}) =>
-    AppUser(
-      id: id,
-      displayName: displayName,
-      email: email,
-      country: country,
-      activeMode: activeMode,
-      createdAt: createdAt ?? _epoch,
-      photoPath: photoPath,
-      phoneE164: phoneE164,
-      pushToken: pushToken,
-    );
+}) => AppUser(
+  id: id,
+  displayName: displayName,
+  email: email,
+  country: country,
+  activeMode: activeMode,
+  createdAt: createdAt ?? _epoch,
+  photoPath: photoPath,
+  phoneE164: phoneE164,
+  pushToken: pushToken,
+);
 
 Service makeTestService({
   String id = 'service-001',
@@ -54,20 +53,19 @@ Service makeTestService({
   bool published = true,
   DateTime? createdAt,
   DateTime? updatedAt,
-}) =>
-    Service(
-      id: id,
-      providerId: providerId,
-      categoryId: categoryId,
-      title: title,
-      description: description,
-      photos: photos ?? const [],
-      priceType: priceType,
-      price: price,
-      published: published,
-      createdAt: createdAt ?? _epoch,
-      updatedAt: updatedAt ?? _epoch,
-    );
+}) => Service(
+  id: id,
+  providerId: providerId,
+  categoryId: categoryId,
+  title: title,
+  description: description,
+  photos: photos ?? const [],
+  priceType: priceType,
+  price: price,
+  published: published,
+  createdAt: createdAt ?? _epoch,
+  updatedAt: updatedAt ?? _epoch,
+);
 
 Booking makeTestBooking({
   String id = 'booking-001',
@@ -85,24 +83,23 @@ Booking makeTestBooking({
   DateTime? startedAt,
   DateTime? doneAt,
   String? audioMessageUrl,
-}) =>
-    Booking(
-      id: id,
-      customerId: customerId,
-      providerId: providerId,
-      serviceId: serviceId,
-      status: status,
-      requestMessage: requestMessage,
-      createdAt: createdAt ?? _epoch,
-      scheduledAt: scheduledAt,
-      chatId: chatId,
-      acceptedAt: acceptedAt,
-      rejectedAt: rejectedAt,
-      cancelledAt: cancelledAt,
-      startedAt: startedAt,
-      doneAt: doneAt,
-      audioMessageUrl: audioMessageUrl,
-    );
+}) => Booking(
+  id: id,
+  customerId: customerId,
+  providerId: providerId,
+  serviceId: serviceId,
+  status: status,
+  requestMessage: requestMessage,
+  createdAt: createdAt ?? _epoch,
+  scheduledAt: scheduledAt,
+  chatId: chatId,
+  acceptedAt: acceptedAt,
+  rejectedAt: rejectedAt,
+  cancelledAt: cancelledAt,
+  startedAt: startedAt,
+  doneAt: doneAt,
+  audioMessageUrl: audioMessageUrl,
+);
 
 Chat makeTestChat({
   String id = 'chat-001',
@@ -112,17 +109,15 @@ Chat makeTestChat({
   DateTime? lastMessageAt,
   String customerId = 'customer-001',
   String providerId = 'provider-001',
-}) =>
-    Chat(
-      id: id,
-      bookingId: bookingId,
-      participantIds:
-          participantIds ?? const ['customer-001', 'provider-001'],
-      createdAt: createdAt ?? _epoch,
-      lastMessageAt: lastMessageAt,
-      customerId: customerId,
-      providerId: providerId,
-    );
+}) => Chat(
+  id: id,
+  bookingId: bookingId,
+  participantIds: participantIds ?? const ['customer-001', 'provider-001'],
+  createdAt: createdAt ?? _epoch,
+  lastMessageAt: lastMessageAt,
+  customerId: customerId,
+  providerId: providerId,
+);
 
 Review makeTestReview({
   String id = 'review-001',
@@ -133,14 +128,13 @@ Review makeTestReview({
   int rating = 5,
   String? comment,
   DateTime? createdAt,
-}) =>
-    Review(
-      id: id,
-      bookingId: bookingId,
-      reviewerId: reviewerId,
-      revieweeId: revieweeId,
-      reviewerRole: reviewerRole,
-      rating: rating,
-      comment: comment,
-      createdAt: createdAt ?? _epoch,
-    );
+}) => Review(
+  id: id,
+  bookingId: bookingId,
+  reviewerId: reviewerId,
+  revieweeId: revieweeId,
+  reviewerRole: reviewerRole,
+  rating: rating,
+  comment: comment,
+  createdAt: createdAt ?? _epoch,
+);

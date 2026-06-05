@@ -327,7 +327,11 @@ class _ProviderRow extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
-                  Icon(Icons.chevron_right_rounded, size: 16, color: oc.primary),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: oc.primary,
+                  ),
                 ],
               ),
             ],
@@ -539,7 +543,9 @@ class _ServiceDetailLoadingState extends State<_ServiceDetailLoading>
                       width: 80,
                       decoration: BoxDecoration(
                         color: shimmer,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusSmall,
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.m),
@@ -548,7 +554,9 @@ class _ServiceDetailLoadingState extends State<_ServiceDetailLoading>
                       width: 200,
                       decoration: BoxDecoration(
                         color: shimmer,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusSmall,
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.s),
@@ -557,7 +565,9 @@ class _ServiceDetailLoadingState extends State<_ServiceDetailLoading>
                       width: 100,
                       decoration: BoxDecoration(
                         color: shimmer,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusSmall,
+                        ),
                       ),
                     ),
                   ],

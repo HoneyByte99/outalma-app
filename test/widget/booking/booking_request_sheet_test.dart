@@ -23,9 +23,7 @@ Widget _wrap() {
   final fakeUseCase = _MockCreateBookingUseCase();
 
   return ProviderScope(
-    overrides: [
-      createBookingUseCaseProvider.overrideWithValue(fakeUseCase),
-    ],
+    overrides: [createBookingUseCaseProvider.overrideWithValue(fakeUseCase)],
     child: MaterialApp(
       theme: AppTheme.light(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -57,47 +55,53 @@ Widget _wrap() {
 void main() {
   group('BookingRequestSheet', () {
     testWidgets('smoke — sheet renders without throwing', (tester) async {
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          createBookingUseCaseProvider
-              .overrideWithValue(_MockCreateBookingUseCase()),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(
-            body: BookingRequestSheet(
-              serviceId: 'svc_1',
-              providerId: 'prov_1',
-              serviceTitle: 'Test Service',
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            createBookingUseCaseProvider.overrideWithValue(
+              _MockCreateBookingUseCase(),
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(
+              body: BookingRequestSheet(
+                serviceId: 'svc_1',
+                providerId: 'prov_1',
+                serviceTitle: 'Test Service',
+              ),
             ),
           ),
         ),
-      ));
+      );
       await tester.pump();
       expect(find.byType(BookingRequestSheet), findsOneWidget);
     });
 
     testWidgets('step indicator is present (3 dots)', (tester) async {
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          createBookingUseCaseProvider
-              .overrideWithValue(_MockCreateBookingUseCase()),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(
-            body: BookingRequestSheet(
-              serviceId: 'svc_1',
-              providerId: 'prov_1',
-              serviceTitle: 'Test Service',
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            createBookingUseCaseProvider.overrideWithValue(
+              _MockCreateBookingUseCase(),
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(
+              body: BookingRequestSheet(
+                serviceId: 'svc_1',
+                providerId: 'prov_1',
+                serviceTitle: 'Test Service',
+              ),
             ),
           ),
         ),
-      ));
+      );
       await tester.pump();
       // The _StepIndicator renders 3 containers (dots)
       // Just verify the sheet rendered a continue button
@@ -105,24 +109,27 @@ void main() {
     });
 
     testWidgets('service title is visible in sheet header', (tester) async {
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          createBookingUseCaseProvider
-              .overrideWithValue(_MockCreateBookingUseCase()),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(
-            body: BookingRequestSheet(
-              serviceId: 'svc_1',
-              providerId: 'prov_1',
-              serviceTitle: 'Test Service',
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            createBookingUseCaseProvider.overrideWithValue(
+              _MockCreateBookingUseCase(),
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(
+              body: BookingRequestSheet(
+                serviceId: 'svc_1',
+                providerId: 'prov_1',
+                serviceTitle: 'Test Service',
+              ),
             ),
           ),
         ),
-      ));
+      );
       await tester.pump();
       expect(find.text('Test Service'), findsOneWidget);
     });

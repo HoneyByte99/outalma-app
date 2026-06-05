@@ -105,26 +105,31 @@ void main() {
       expect(results.first.placeId, 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ');
     });
 
-    test('falls back to Nominatim when Google returns empty suggestions',
-        () async {
-      var nominatimCalled = false;
-      final client = MockClient((request) async {
-        if (request.url.host == 'places.googleapis.com') {
-          return http.Response(jsonEncode({'suggestions': []}), 200);
-        }
-        if (request.url.host == 'nominatim.openstreetmap.org') {
-          nominatimCalled = true;
-          return _nominatimResponse();
-        }
-        fail('Unexpected request to ${request.url}');
-      });
+    test(
+      'falls back to Nominatim when Google returns empty suggestions',
+      () async {
+        var nominatimCalled = false;
+        final client = MockClient((request) async {
+          if (request.url.host == 'places.googleapis.com') {
+            return http.Response(jsonEncode({'suggestions': []}), 200);
+          }
+          if (request.url.host == 'nominatim.openstreetmap.org') {
+            nominatimCalled = true;
+            return _nominatimResponse();
+          }
+          fail('Unexpected request to ${request.url}');
+        });
 
-      final service = GeocodingService(apiKey: 'valid-key', httpClient: client);
-      final results = await service.autocomplete('Paris');
+        final service = GeocodingService(
+          apiKey: 'valid-key',
+          httpClient: client,
+        );
+        final results = await service.autocomplete('Paris');
 
-      expect(nominatimCalled, isTrue);
-      expect(results, isNotEmpty);
-    });
+        expect(nominatimCalled, isTrue);
+        expect(results, isNotEmpty);
+      },
+    );
   });
 
   group('GeocodingService.getPlaceLatLng', () {

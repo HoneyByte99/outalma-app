@@ -160,7 +160,9 @@ void main() {
       final container = _makeContainer(mockRepo);
       addTearDown(container.dispose);
 
-      final result = await container.read(serviceDetailProvider('svc_abc').future);
+      final result = await container.read(
+        serviceDetailProvider('svc_abc').future,
+      );
       expect(result?.id, 'svc_abc');
       expect(result?.categoryId, CategoryId.menage);
     });
@@ -172,15 +174,15 @@ void main() {
       final container = _makeContainer(mockRepo);
       addTearDown(container.dispose);
 
-      final result = await container.read(serviceDetailProvider('missing').future);
+      final result = await container.read(
+        serviceDetailProvider('missing').future,
+      );
       expect(result, isNull);
     });
 
     test('reflects live updates from stream', () async {
       final controller = StreamController<Service?>();
-      when(
-        () => mockRepo.watchById('s1'),
-      ).thenAnswer((_) => controller.stream);
+      when(() => mockRepo.watchById('s1')).thenAnswer((_) => controller.stream);
       final container = _makeContainer(mockRepo);
       addTearDown(() {
         container.dispose();

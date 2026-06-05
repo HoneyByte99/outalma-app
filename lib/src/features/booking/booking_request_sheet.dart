@@ -127,7 +127,9 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         setState(() => _voiceMode = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.bookingVoicePermissionDenied),
+            content: Text(
+              AppLocalizations.of(context)!.bookingVoicePermissionDenied,
+            ),
             backgroundColor: context.oc.error,
           ),
         );
@@ -162,9 +164,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     setState(() => _playing = true);
     try {
       await player.setAudioSource(
-        AudioSource.uri(
-          Uri.dataFromBytes(bytes, mimeType: 'audio/mp4'),
-        ),
+        AudioSource.uri(Uri.dataFromBytes(bytes, mimeType: 'audio/mp4')),
       );
       await player.play();
     } catch (_) {
@@ -345,8 +345,9 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
 
     String? conflict;
     try {
-      final bookings =
-          await ref.read(providerBookingsForDateProvider(dateKey).future);
+      final bookings = await ref.read(
+        providerBookingsForDateProvider(dateKey).future,
+      );
       for (final b in bookings) {
         if (b.scheduledAt != null) {
           final diff = (b.scheduledAt!.difference(dt).inMinutes).abs();
@@ -408,93 +409,93 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              // Handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: oc.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Title + step indicator
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.bookingRequestTitle,
-                      style: Theme.of(context).textTheme.titleLarge,
+                // Handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: oc.border,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  _StepIndicator(current: _step, total: 3),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.serviceTitle,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 20),
-
-              // Step content
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: KeyedSubtree(
-                  key: ValueKey(_step),
-                  child: _buildStepContent(),
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-              // Navigation buttons
-              Row(
-                children: [
-                  if (_step > 0) ...[
+                // Title + step indicator
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: _loading
-                            ? null
-                            : () => setState(() => _step--),
-                        child: Text(l10n.bookingBack),
+                      child: Text(
+                        l10n.bookingRequestTitle,
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    _StepIndicator(current: _step, total: 3),
                   ],
-                  Expanded(
-                    child: _step < 2
-                        ? ElevatedButton(
-                            onPressed: _canAdvance
-                                ? () => setState(() => _step++)
-                                : null,
-                            child: Text(l10n.bookingContinue),
-                          )
-                        : ElevatedButton(
-                            onPressed: _loading ? null : _submit,
-                            child: _loading
-                                ? SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: oc.cardSurface,
-                                    ),
-                                  )
-                                : Text(l10n.bookingSend),
-                          ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.serviceTitle,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 20),
+
+                // Step content
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: KeyedSubtree(
+                    key: ValueKey(_step),
+                    child: _buildStepContent(),
                   ),
-                ],
-              ),
-              SizedBox(height: bottomPadding > 0 ? 0 : 12),
-            ],
+                ),
+                const SizedBox(height: 20),
+
+                // Navigation buttons
+                Row(
+                  children: [
+                    if (_step > 0) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _loading
+                              ? null
+                              : () => setState(() => _step--),
+                          child: Text(l10n.bookingBack),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: _step < 2
+                          ? ElevatedButton(
+                              onPressed: _canAdvance
+                                  ? () => setState(() => _step++)
+                                  : null,
+                              child: Text(l10n.bookingContinue),
+                            )
+                          : ElevatedButton(
+                              onPressed: _loading ? null : _submit,
+                              child: _loading
+                                  ? SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: oc.cardSurface,
+                                      ),
+                                    )
+                                  : Text(l10n.bookingSend),
+                            ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: bottomPadding > 0 ? 0 : 12),
+              ],
             ),
           ),
         ),
@@ -713,7 +714,9 @@ class _ModeChip extends StatelessWidget {
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
-            constraints: const BoxConstraints(minHeight: AppSpacing.minTouchTarget),
+            constraints: const BoxConstraints(
+              minHeight: AppSpacing.minTouchTarget,
+            ),
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
             decoration: BoxDecoration(
               color: selected ? oc.cardSurface : Colors.transparent,
@@ -823,9 +826,9 @@ class _VoiceRecorder extends StatelessWidget {
                   ),
                   Text(
                     formatDuration(recordingSeconds),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: oc.secondaryText,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                   ),
                 ],
               ),
@@ -1133,31 +1136,31 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
                   label: s.description,
                   button: true,
                   child: InkWell(
-                  onTap: () => _selectSuggestion(s),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.m,
-                      vertical: AppSpacing.l,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 14,
-                          color: oc.secondaryText,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            s.description,
-                            style: Theme.of(context).textTheme.bodySmall,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    onTap: () => _selectSuggestion(s),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.m,
+                        vertical: AppSpacing.l,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: oc.secondaryText,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              s.description,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                   ),
                 );
               },

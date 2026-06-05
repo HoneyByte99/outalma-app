@@ -23,15 +23,15 @@ import 'package:outalma_app/src/features/review/review_form_page.dart';
 class _FakeAuthNotifier extends AuthNotifier {
   @override
   Future<AuthState> build() async => AuthAuthenticated(
-        AppUser(
-          id: 'client_1',
-          displayName: 'Client User',
-          email: 'client@test.com',
-          country: 'FR',
-          activeMode: ActiveMode.client,
-          createdAt: DateTime(2024, 1, 1),
-        ),
-      );
+    AppUser(
+      id: 'client_1',
+      displayName: 'Client User',
+      email: 'client@test.com',
+      country: 'FR',
+      activeMode: ActiveMode.client,
+      createdAt: DateTime(2024, 1, 1),
+    ),
+  );
 }
 
 final _fakeBooking = Booking(
@@ -45,18 +45,19 @@ final _fakeBooking = Booking(
 );
 
 Widget _wrap() => ProviderScope(
-      overrides: [
-        authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        bookingDetailProvider('bk_test')
-            .overrideWith((_) => Stream.value(_fakeBooking)),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const ReviewFormPage(bookingId: 'bk_test'),
-      ),
-    );
+  overrides: [
+    authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
+    bookingDetailProvider(
+      'bk_test',
+    ).overrideWith((_) => Stream.value(_fakeBooking)),
+  ],
+  child: MaterialApp(
+    theme: AppTheme.light(),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const ReviewFormPage(bookingId: 'bk_test'),
+  ),
+);
 
 void main() {
   group('ReviewFormPage', () {
@@ -72,8 +73,9 @@ void main() {
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
-    testWidgets('review form or loading/empty state renders without error',
-        (tester) async {
+    testWidgets('review form or loading/empty state renders without error', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrap());
       await tester.pumpAndSettle();
       // Either the form (with stars) or a state-message text is shown.

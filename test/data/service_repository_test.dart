@@ -78,7 +78,10 @@ void main() {
 
     test('respects limit parameter', () async {
       for (var i = 1; i <= 5; i++) {
-        await _writeService(fakeDb, _makeService(id: 'svc_$i', published: true));
+        await _writeService(
+          fakeDb,
+          _makeService(id: 'svc_$i', published: true),
+        );
       }
 
       final list = await repo.watchAllPublished(limit: 3).first;
@@ -135,9 +138,9 @@ void main() {
       expect(first?.published, false);
 
       // Update the doc — republish
-      await FirestoreCollections.services(fakeDb).doc('svc_live').set(
-        _makeService(id: 'svc_live', published: true),
-      );
+      await FirestoreCollections.services(
+        fakeDb,
+      ).doc('svc_live').set(_makeService(id: 'svc_live', published: true));
 
       // Give Firestore a tick to emit the update
       await Future<void>.delayed(Duration.zero);
@@ -180,20 +183,22 @@ void main() {
       expect(list.map((s) => s.id), containsAll(['s1', 's3']));
     });
 
-    test('includes both published and unpublished services for provider',
-        () async {
-      await _writeService(
-        fakeDb,
-        _makeService(id: 'pub', providerId: 'prov_1', published: true),
-      );
-      await _writeService(
-        fakeDb,
-        _makeService(id: 'draft', providerId: 'prov_1', published: false),
-      );
+    test(
+      'includes both published and unpublished services for provider',
+      () async {
+        await _writeService(
+          fakeDb,
+          _makeService(id: 'pub', providerId: 'prov_1', published: true),
+        );
+        await _writeService(
+          fakeDb,
+          _makeService(id: 'draft', providerId: 'prov_1', published: false),
+        );
 
-      final list = await repo.watchForProvider('prov_1').first;
-      expect(list.length, 2);
-    });
+        final list = await repo.watchForProvider('prov_1').first;
+        expect(list.length, 2);
+      },
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -209,7 +214,9 @@ void main() {
       expect(result.title, service.title);
 
       // Verify document exists in Firestore
-      final snap = await FirestoreCollections.services(fakeDb).doc('my_id').get();
+      final snap = await FirestoreCollections.services(
+        fakeDb,
+      ).doc('my_id').get();
       expect(snap.exists, true);
       expect(snap.data()?.id, 'my_id');
     });

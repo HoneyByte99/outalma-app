@@ -8,5 +8,4 @@ final _priceFormatter = NumberFormat.currency(
 
 /// Formats a price stored in cents as a currency string,
 /// e.g. `1500` -> `1 500 F CFA`.
-String formatPriceFromCents(int cents) =>
-    _priceFormatter.format(cents / 100);
+String formatPriceFromCents(int cents) => _priceFormatter.format(cents / 100);

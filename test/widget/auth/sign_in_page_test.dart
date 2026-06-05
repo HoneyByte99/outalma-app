@@ -24,17 +24,17 @@ class _FakeThemeNotifier extends ThemeModeNotifier {
 }
 
 Widget _wrap() => ProviderScope(
-      overrides: [
-        authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        themeModeProvider.overrideWith(_FakeThemeNotifier.new),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const SignInPage(),
-      ),
-    );
+  overrides: [
+    authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
+    themeModeProvider.overrideWith(_FakeThemeNotifier.new),
+  ],
+  child: MaterialApp(
+    theme: AppTheme.light(),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const SignInPage(),
+  ),
+);
 
 void main() {
   group('SignInPage', () {

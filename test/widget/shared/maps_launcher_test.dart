@@ -133,8 +133,7 @@ void main() {
       // _pickMapsApp layout so we test the UI without touching url_launcher.
       final options = [
         _FakeMapOption(label: 'Plans (Apple)', icon: Icons.map_outlined),
-        _FakeMapOption(
-            label: 'Google Maps', icon: Icons.navigation_outlined),
+        _FakeMapOption(label: 'Google Maps', icon: Icons.navigation_outlined),
         _FakeMapOption(label: 'Waze', icon: Icons.alt_route_outlined),
       ];
 

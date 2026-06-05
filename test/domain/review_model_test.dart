@@ -3,14 +3,14 @@ import 'package:outalma_app/src/domain/enums/reviewer_role.dart';
 import 'package:outalma_app/src/domain/models/review.dart';
 
 Review _base() => Review(
-      id: 'r1',
-      bookingId: 'b1',
-      reviewerId: 'u1',
-      revieweeId: 'u2',
-      reviewerRole: ReviewerRole.client,
-      rating: 5,
-      createdAt: DateTime(2024, 6, 1),
-    );
+  id: 'r1',
+  bookingId: 'b1',
+  reviewerId: 'u1',
+  revieweeId: 'u2',
+  reviewerRole: ReviewerRole.client,
+  rating: 5,
+  createdAt: DateTime(2024, 6, 1),
+);
 
 void main() {
   group('Review.copyWith', () {

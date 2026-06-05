@@ -20,15 +20,15 @@ import 'package:outalma_app/src/features/profile/profile_page.dart';
 class _FakeAuthNotifier extends AuthNotifier {
   @override
   Future<AuthState> build() async => AuthAuthenticated(
-        AppUser(
-          id: 'user_1',
-          displayName: 'Alice Martin',
-          email: 'alice@test.com',
-          country: 'FR',
-          activeMode: ActiveMode.client,
-          createdAt: DateTime(2024, 1, 1),
-        ),
-      );
+    AppUser(
+      id: 'user_1',
+      displayName: 'Alice Martin',
+      email: 'alice@test.com',
+      country: 'FR',
+      activeMode: ActiveMode.client,
+      createdAt: DateTime(2024, 1, 1),
+    ),
+  );
 }
 
 class _FakeThemeNotifier extends ThemeModeNotifier {
@@ -37,20 +37,19 @@ class _FakeThemeNotifier extends ThemeModeNotifier {
 }
 
 Widget _wrap() => ProviderScope(
-      overrides: [
-        authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        activeModeProvider.overrideWith((_) => ActiveMode.client),
-        themeModeProvider.overrideWith(_FakeThemeNotifier.new),
-        reviewsForUserProvider('user_1')
-            .overrideWith((_) => Stream.value([])),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const ProfilePage(),
-      ),
-    );
+  overrides: [
+    authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
+    activeModeProvider.overrideWith((_) => ActiveMode.client),
+    themeModeProvider.overrideWith(_FakeThemeNotifier.new),
+    reviewsForUserProvider('user_1').overrideWith((_) => Stream.value([])),
+  ],
+  child: MaterialApp(
+    theme: AppTheme.light(),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: const ProfilePage(),
+  ),
+);
 
 void main() {
   group('ProfilePage', () {

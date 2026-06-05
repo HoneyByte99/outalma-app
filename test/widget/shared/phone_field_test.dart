@@ -6,9 +6,9 @@ import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/features/shared/phone_field.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
-      theme: AppTheme.light(),
-      home: Scaffold(body: child),
-    );
+  theme: AppTheme.light(),
+  home: Scaffold(body: child),
+);
 
 void main() {
   group('PhoneField.validate()', () {
@@ -43,44 +43,36 @@ void main() {
 
   group('PhoneField widget', () {
     testWidgets('renders without throwing', (tester) async {
-      await tester.pumpWidget(_wrap(
-        PhoneField(onChanged: (_) {}),
-      ));
+      await tester.pumpWidget(_wrap(PhoneField(onChanged: (_) {})));
       await tester.pump();
       // Basic check: the field renders something
       expect(find.byType(PhoneField), findsOneWidget);
     });
 
     testWidgets('renders with initialValue without throwing', (tester) async {
-      await tester.pumpWidget(_wrap(
-        PhoneField(
-          initialValue: '+33612345678',
-          onChanged: (_) {},
-        ),
-      ));
+      await tester.pumpWidget(
+        _wrap(PhoneField(initialValue: '+33612345678', onChanged: (_) {})),
+      );
       await tester.pump();
       expect(find.byType(PhoneField), findsOneWidget);
     });
 
-    testWidgets('default country chip shows French flag and dial code',
-        (tester) async {
-      await tester.pumpWidget(_wrap(
-        PhoneField(onChanged: (_) {}),
-      ));
+    testWidgets('default country chip shows French flag and dial code', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap(PhoneField(onChanged: (_) {})));
       await tester.pump();
       // French flag emoji should be visible
       expect(find.text('🇫🇷'), findsOneWidget);
       expect(find.text('+33'), findsOneWidget);
     });
 
-    testWidgets('initialValue +221 shows Senegalese flag and dial code',
-        (tester) async {
-      await tester.pumpWidget(_wrap(
-        PhoneField(
-          initialValue: '+221701234567',
-          onChanged: (_) {},
-        ),
-      ));
+    testWidgets('initialValue +221 shows Senegalese flag and dial code', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(PhoneField(initialValue: '+221701234567', onChanged: (_) {})),
+      );
       await tester.pump();
       expect(find.text('🇸🇳'), findsOneWidget);
       expect(find.text('+221'), findsOneWidget);

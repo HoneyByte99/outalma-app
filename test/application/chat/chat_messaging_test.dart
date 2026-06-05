@@ -104,8 +104,9 @@ void main() {
     });
 
     test('propagates exception from repository', () async {
-      when(() => repo.sendMessage(any()))
-          .thenAnswer((_) async => throw Exception('permission-denied'));
+      when(
+        () => repo.sendMessage(any()),
+      ).thenAnswer((_) async => throw Exception('permission-denied'));
 
       await expectLater(
         repo.sendMessage(_makeMessage()),
@@ -117,7 +118,10 @@ void main() {
   group('setTyping', () {
     test('completes without error for authenticated participant', () async {
       when(
-        () => repo.setTyping(chatId: any(named: 'chatId'), uid: any(named: 'uid')),
+        () => repo.setTyping(
+          chatId: any(named: 'chatId'),
+          uid: any(named: 'uid'),
+        ),
       ).thenAnswer((_) async {});
 
       await expectLater(
@@ -128,14 +132,15 @@ void main() {
 
     test('calls repository with correct chatId and uid', () async {
       when(
-        () => repo.setTyping(chatId: any(named: 'chatId'), uid: any(named: 'uid')),
+        () => repo.setTyping(
+          chatId: any(named: 'chatId'),
+          uid: any(named: 'uid'),
+        ),
       ).thenAnswer((_) async {});
 
       await repo.setTyping(chatId: 'chat_99', uid: 'user_X');
 
-      verify(
-        () => repo.setTyping(chatId: 'chat_99', uid: 'user_X'),
-      ).called(1);
+      verify(() => repo.setTyping(chatId: 'chat_99', uid: 'user_X')).called(1);
     });
   });
 

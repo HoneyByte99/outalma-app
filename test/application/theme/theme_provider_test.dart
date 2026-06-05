@@ -50,15 +50,17 @@ void main() {
       expect(container.read(themeModeProvider), ThemeMode.system);
     });
 
-    test('state remains ThemeMode.system after async prefs load with no value',
-        () async {
-      final container = _makeContainer();
-      addTearDown(container.dispose);
+    test(
+      'state remains ThemeMode.system after async prefs load with no value',
+      () async {
+        final container = _makeContainer();
+        addTearDown(container.dispose);
 
-      await _settle(container);
+        await _settle(container);
 
-      expect(container.read(themeModeProvider), ThemeMode.system);
-    });
+        expect(container.read(themeModeProvider), ThemeMode.system);
+      },
+    );
   });
 
   group('ThemeModeNotifier — setThemeMode', () {
@@ -66,7 +68,9 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await container.read(themeModeProvider.notifier).setThemeMode(ThemeMode.light);
+      await container
+          .read(themeModeProvider.notifier)
+          .setThemeMode(ThemeMode.light);
 
       expect(container.read(themeModeProvider), ThemeMode.light);
     });
@@ -75,7 +79,9 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await container.read(themeModeProvider.notifier).setThemeMode(ThemeMode.dark);
+      await container
+          .read(themeModeProvider.notifier)
+          .setThemeMode(ThemeMode.dark);
 
       expect(container.read(themeModeProvider), ThemeMode.dark);
     });
@@ -84,8 +90,12 @@ void main() {
       final container = _makeContainer();
       addTearDown(container.dispose);
 
-      await container.read(themeModeProvider.notifier).setThemeMode(ThemeMode.light);
-      await container.read(themeModeProvider.notifier).setThemeMode(ThemeMode.system);
+      await container
+          .read(themeModeProvider.notifier)
+          .setThemeMode(ThemeMode.light);
+      await container
+          .read(themeModeProvider.notifier)
+          .setThemeMode(ThemeMode.system);
 
       expect(container.read(themeModeProvider), ThemeMode.system);
     });

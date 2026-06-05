@@ -162,10 +162,7 @@ void main() {
       await col.doc(report.id).set(report);
       final result = (await col.doc(report.id).get()).data()!;
 
-      expect(
-        result.createdAt.millisecondsSinceEpoch,
-        t.millisecondsSinceEpoch,
-      );
+      expect(result.createdAt.millisecondsSinceEpoch, t.millisecondsSinceEpoch);
     });
 
     test('createdAt is stored as Firestore Timestamp', () async {
@@ -173,8 +170,8 @@ void main() {
       final col = FirestoreCollections.reports(fakeDb);
       await col.doc(report.id).set(report);
 
-      final raw =
-          (await fakeDb.collection('reports').doc(report.id).get()).data()!;
+      final raw = (await fakeDb.collection('reports').doc(report.id).get())
+          .data()!;
       expect(raw['createdAt'], isA<Timestamp>());
     });
   });

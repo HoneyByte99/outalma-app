@@ -31,11 +31,13 @@ String? _redirectAuthenticated(ActiveMode mode, String loc) {
   final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
   if (isAuthRoute) return AppRoutes.home;
 
-  final isClientTab = loc == AppRoutes.home ||
+  final isClientTab =
+      loc == AppRoutes.home ||
       loc == AppRoutes.bookings ||
       loc.startsWith('${AppRoutes.bookings}/');
 
-  final isProviderTab = loc == AppRoutes.providerHome ||
+  final isProviderTab =
+      loc == AppRoutes.providerHome ||
       loc == AppRoutes.providerInbox ||
       loc.startsWith('${AppRoutes.providerInbox}/');
 
@@ -48,7 +50,8 @@ String? _redirectAuthenticated(ActiveMode mode, String loc) {
     return AppRoutes.home;
   }
 
-  final isProviderOnlyRoute = loc.startsWith('/provider/onboarding') ||
+  final isProviderOnlyRoute =
+      loc.startsWith('/provider/onboarding') ||
       loc.startsWith('/provider/calendar') ||
       loc.startsWith('/provider/services');
 
@@ -98,16 +101,18 @@ void main() {
       );
     });
 
-    test('/bookings/:id sub-route redirects to /provider when in provider mode',
-        () {
-      expect(
-        _redirectAuthenticated(
-          ActiveMode.provider,
-          '${AppRoutes.bookings}/booking-abc',
-        ),
-        equals(AppRoutes.providerHome),
-      );
-    });
+    test(
+      '/bookings/:id sub-route redirects to /provider when in provider mode',
+      () {
+        expect(
+          _redirectAuthenticated(
+            ActiveMode.provider,
+            '${AppRoutes.bookings}/booking-abc',
+          ),
+          equals(AppRoutes.providerHome),
+        );
+      },
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -129,8 +134,7 @@ void main() {
       );
     });
 
-    test(
-        '/provider/inbox/bookings/:id sub-route redirects to /home '
+    test('/provider/inbox/bookings/:id sub-route redirects to /home '
         'when in client mode', () {
       expect(
         _redirectAuthenticated(
@@ -149,10 +153,7 @@ void main() {
   group('client mode + provider-only routes → /home', () {
     test('/provider/onboarding redirects to /home when in client mode', () {
       expect(
-        _redirectAuthenticated(
-          ActiveMode.client,
-          AppRoutes.providerOnboarding,
-        ),
+        _redirectAuthenticated(ActiveMode.client, AppRoutes.providerOnboarding),
         equals(AppRoutes.home),
       );
     });
@@ -172,16 +173,17 @@ void main() {
     });
 
     test(
-        '/provider/services/:id/edit redirects to /home when in client mode',
-        () {
-      expect(
-        _redirectAuthenticated(
-          ActiveMode.client,
-          AppRoutes.serviceEdit('svc-1'),
-        ),
-        equals(AppRoutes.home),
-      );
-    });
+      '/provider/services/:id/edit redirects to /home when in client mode',
+      () {
+        expect(
+          _redirectAuthenticated(
+            ActiveMode.client,
+            AppRoutes.serviceEdit('svc-1'),
+          ),
+          equals(AppRoutes.home),
+        );
+      },
+    );
   });
 
   // -------------------------------------------------------------------------

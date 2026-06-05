@@ -44,8 +44,10 @@ class CreateBookingUseCase {
         'audioMessageUrl': audioMessageUrl,
     };
 
-    final data = await const CallableFunctionClient()
-        .call('createBooking', data: payload);
+    final data = await const CallableFunctionClient().call(
+      'createBooking',
+      data: payload,
+    );
 
     final bookingId = data['bookingId'] as String?;
     if (bookingId == null || bookingId.isEmpty) {

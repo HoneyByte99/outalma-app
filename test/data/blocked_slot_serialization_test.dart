@@ -69,13 +69,14 @@ void main() {
       final col = FirestoreCollections.blockedSlots(fakeDb, testUid);
       await col.doc(slot.id).set(slot);
 
-      final raw = (await fakeDb
-              .collection('providers')
-              .doc(testUid)
-              .collection('blocked_slots')
-              .doc(slot.id)
-              .get())
-          .data()!;
+      final raw =
+          (await fakeDb
+                  .collection('providers')
+                  .doc(testUid)
+                  .collection('blocked_slots')
+                  .doc(slot.id)
+                  .get())
+              .data()!;
       expect(raw['date'], isA<Timestamp>());
     });
 
@@ -122,13 +123,14 @@ void main() {
       final col = FirestoreCollections.blockedSlots(fakeDb, testUid);
       await col.doc(slot.id).set(slot);
 
-      final raw = (await fakeDb
-              .collection('providers')
-              .doc(testUid)
-              .collection('blocked_slots')
-              .doc(slot.id)
-              .get())
-          .data()!;
+      final raw =
+          (await fakeDb
+                  .collection('providers')
+                  .doc(testUid)
+                  .collection('blocked_slots')
+                  .doc(slot.id)
+                  .get())
+              .data()!;
       expect(raw['endDate'], isA<Timestamp>());
     });
   });
@@ -179,9 +181,7 @@ void main() {
           .doc(testUid)
           .collection('blocked_slots')
           .doc('minimal')
-          .set({
-        'date': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
-      });
+          .set({'date': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc())});
       final col = FirestoreCollections.blockedSlots(fakeDb, testUid);
       final result = (await col.doc('minimal').get()).data()!;
 
@@ -200,10 +200,7 @@ void main() {
       final col = FirestoreCollections.blockedSlots(fakeDb, testUid);
       final result = (await col.doc('no_date').get()).data()!;
 
-      expect(
-        result.date,
-        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-      );
+      expect(result.date, DateTime.fromMillisecondsSinceEpoch(0, isUtc: true));
     });
   });
 }

@@ -139,20 +139,21 @@ void main() {
       await col.doc(user.id).set(user);
       final result = (await col.doc(user.id).get()).data()!;
 
-      expect(
-        result.createdAt.millisecondsSinceEpoch,
-        t.millisecondsSinceEpoch,
-      );
+      expect(result.createdAt.millisecondsSinceEpoch, t.millisecondsSinceEpoch);
     });
 
-    test('createdAt is stored as Firestore Timestamp (not String/int)', () async {
-      final user = _makeUser();
-      final col = FirestoreCollections.users(fakeDb);
-      await col.doc(user.id).set(user);
+    test(
+      'createdAt is stored as Firestore Timestamp (not String/int)',
+      () async {
+        final user = _makeUser();
+        final col = FirestoreCollections.users(fakeDb);
+        await col.doc(user.id).set(user);
 
-      final raw = (await fakeDb.collection('users').doc(user.id).get()).data()!;
-      expect(raw['createdAt'], isA<Timestamp>());
-    });
+        final raw = (await fakeDb.collection('users').doc(user.id).get())
+            .data()!;
+        expect(raw['createdAt'], isA<Timestamp>());
+      },
+    );
 
     test('missing createdAt field returns epoch (does not crash)', () async {
       await fakeDb.collection('users').doc('no_ts').set({
