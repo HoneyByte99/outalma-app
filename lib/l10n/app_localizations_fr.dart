@@ -1277,4 +1277,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatUnsupportedFormat => 'Format non supporté';
+
+  @override
+  String get chatHoldToRecord => 'Maintenez pour enregistrer';
+
+  @override
+  String get chatSlideToCancel => 'Glisser pour annuler';
+
+  @override
+  String get chatReleaseToCancel => 'Relâchez pour annuler';
+
+  @override
+  String get chatTakePhoto => 'Photo';
 }

@@ -2461,6 +2461,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unsupported format'**
   String get chatUnsupportedFormat;
+
+  /// No description provided for @chatHoldToRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to record'**
+  String get chatHoldToRecord;
+
+  /// No description provided for @chatSlideToCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Slide to cancel'**
+  String get chatSlideToCancel;
+
+  /// No description provided for @chatReleaseToCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Release to cancel'**
+  String get chatReleaseToCancel;
+
+  /// No description provided for @chatTakePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get chatTakePhoto;
 }
 
 class _AppLocalizationsDelegate

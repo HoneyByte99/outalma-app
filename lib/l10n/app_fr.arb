@@ -504,5 +504,9 @@
   "authTabEmail": "Mail",
   "authTabPhone": "Téléphone",
   "locationMyPosition": "Ma position",
-  "chatUnsupportedFormat": "Format non supporté"
+  "chatUnsupportedFormat": "Format non supporté",
+  "chatHoldToRecord": "Maintenez pour enregistrer",
+  "chatSlideToCancel": "Glisser pour annuler",
+  "chatReleaseToCancel": "Relâchez pour annuler",
+  "chatTakePhoto": "Photo"
 }

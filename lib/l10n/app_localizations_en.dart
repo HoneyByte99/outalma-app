@@ -1263,4 +1263,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatUnsupportedFormat => 'Unsupported format';
+
+  @override
+  String get chatHoldToRecord => 'Hold to record';
+
+  @override
+  String get chatSlideToCancel => 'Slide to cancel';
+
+  @override
+  String get chatReleaseToCancel => 'Release to cancel';
+
+  @override
+  String get chatTakePhoto => 'Photo';
 }

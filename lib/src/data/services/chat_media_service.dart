@@ -65,16 +65,30 @@ class ChatMediaService {
     return ref.getDownloadURL();
   }
 
+  /// Current uid — chat media is stored under it so Storage rules authorize
+  /// writes via isSelf(uid) (no fragile cross-service Firestore lookup).
+  String _requireUid() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Chat media upload requires an authenticated user');
+    }
+    return uid;
+  }
+
   Future<String> _uploadVoiceBytes(String chatId, Uint8List bytes) async {
+    final uid = _requireUid();
     final ts = DateTime.now().millisecondsSinceEpoch;
     const ext = kIsWeb ? 'webm' : 'm4a';
     const contentType = kIsWeb ? 'audio/webm' : 'audio/mp4';
-    final ref = _storage.ref('private/chats/$chatId/media/${ts}_voice.$ext');
+    final ref = _storage.ref(
+      'private/chats/$chatId/media/$uid/${ts}_voice.$ext',
+    );
     await ref.putData(bytes, SettableMetadata(contentType: contentType));
     return ref.getDownloadURL();
   }
 
   Future<String> _uploadFile(String chatId, XFile file, String prefix) async {
+    final uid = _requireUid();
     final bytes = await file.readAsBytes();
     // On web, file.path is a blob URL (blob:http://...) — extract extension
     // from mimeType instead, or default to jpg for images.
@@ -82,7 +96,9 @@ class ChatMediaService {
     final ext = rawExt.length > 5 || rawExt.contains('/') ? 'jpg' : rawExt;
     final ts = DateTime.now().millisecondsSinceEpoch;
     final contentType = file.mimeType ?? _mimeType(ext);
-    final ref = _storage.ref('private/chats/$chatId/media/${ts}_$prefix.$ext');
+    final ref = _storage.ref(
+      'private/chats/$chatId/media/$uid/${ts}_$prefix.$ext',
+    );
     await ref.putData(bytes, SettableMetadata(contentType: contentType));
     return ref.getDownloadURL();
   }

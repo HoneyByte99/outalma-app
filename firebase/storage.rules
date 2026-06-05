@@ -55,25 +55,27 @@ service firebase.storage {
     }
 
     // Chat media (images + voice messages)
-    // Path: /private/chats/{chatId}/media/{filename}
-    // Restricted to chat participants via cross-service Firestore lookup.
-    // Note: firestore.get() works on native iOS/Android SDKs (our primary
-    // target). The web SDK has CORS limitations for cross-service lookups
-    // but the web build is not the production target for this app.
-    match /private/chats/{chatId}/media/{filename} {
-      function isChatParticipant() {
-        return signedIn()
-          && request.auth.uid in
-             firestore.get(/databases/(default)/documents/chats/$(chatId)).data.participantIds;
-      }
-
-      allow read: if isAdmin() || isChatParticipant();
+    // Path: /private/chats/{chatId}/media/{uid}/{filename}
+    // Scoped by uploader uid so writes authorize via isSelf(uid) — NO
+    // cross-service firestore.get (that lookup silently fails from Storage and
+    // denied legitimate participants). The recipient plays media via the
+    // tokenised download URL stored on the chat message, so read stays simple:
+    // any signed-in user with the (unguessable, tokenised) URL.
+    match /private/chats/{chatId}/media/{uid}/{filename} {
+      allow read: if signedIn();
       allow write: if isAdmin() || (
-        isChatParticipant()
+        isSelf(uid)
         && (request.resource.contentType.matches('image/.*')
             || request.resource.contentType.matches('audio/.*'))
         && smallEnough(20 * 1024 * 1024)
       );
+    }
+
+    // Legacy chat media path (pre-uid-scoping). Read-only for backward compat
+    // with already-uploaded objects; new uploads use the uid-scoped path above.
+    match /private/chats/{chatId}/media/{filename} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
     }
 
     // Booking request voice messages, uploaded BEFORE the booking exists

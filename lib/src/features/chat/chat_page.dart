@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -1124,6 +1125,24 @@ class _InputBar extends StatefulWidget {
 class _InputBarState extends State<_InputBar> {
   bool _hasText = false;
 
+  // WhatsApp-style press-and-hold voice recording state.
+  bool _held = false; // finger down, recording (not yet locked)
+  bool _locked = false; // slid up to lock — hands-free recording
+  bool _willCancel = false; // slid left far enough to cancel on release
+  double _dragDx = 0;
+  double _dragDy = 0;
+  Offset _downPos = Offset.zero;
+  // Delays the actual start so a quick tap / accidental brush never records.
+  Timer? _holdStartTimer;
+
+  static const double _lockThreshold = -80; // px up to lock hands-free
+  static const Duration _holdDelay = Duration(milliseconds: 150);
+
+  // Cancel threshold scales with screen width (≈22%) so it feels consistent
+  // across small and large phones.
+  double get _cancelThreshold =>
+      -(MediaQuery.of(context).size.width * 0.22).clamp(70.0, 160.0);
+
   @override
   void initState() {
     super.initState();
@@ -1132,6 +1151,7 @@ class _InputBarState extends State<_InputBar> {
 
   @override
   void dispose() {
+    _holdStartTimer?.cancel();
     widget.controller.removeListener(_onTextChanged);
     super.dispose();
   }
@@ -1144,14 +1164,86 @@ class _InputBarState extends State<_InputBar> {
 
   String _fmt(int v) => v.toString().padLeft(2, '0');
 
+  void _resetDrag() {
+    _dragDx = 0;
+    _dragDy = 0;
+    _willCancel = false;
+  }
+
+  void _onPointerDown(PointerDownEvent e) {
+    if (widget.sending || _locked) return;
+    _downPos = e.position;
+    // Start only after a short hold so a quick tap / accidental brush never
+    // begins a recording.
+    _holdStartTimer = Timer(_holdDelay, () {
+      if (!mounted) return;
+      setState(() {
+        _held = true;
+        _resetDrag();
+      });
+      HapticFeedback.mediumImpact();
+      widget.onStartRecording();
+    });
+  }
+
+  void _onPointerMove(PointerMoveEvent e) {
+    if (!_held) return;
+    final wasCancel = _willCancel;
+    setState(() {
+      _dragDx = e.position.dx - _downPos.dx;
+      _dragDy = e.position.dy - _downPos.dy;
+      _willCancel = _dragDx < _cancelThreshold;
+    });
+    if (_willCancel && !wasCancel) HapticFeedback.lightImpact();
+    // Slide up far enough → lock hands-free recording.
+    if (_dragDy < _lockThreshold && !_willCancel) {
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _locked = true;
+        _held = false;
+        _resetDrag();
+      });
+    }
+  }
+
+  void _onPointerUp(PointerUpEvent e) {
+    // Released before the hold delay elapsed → it was a tap, not a recording.
+    final pending = _holdStartTimer?.isActive ?? false;
+    _holdStartTimer?.cancel();
+    _holdStartTimer = null;
+    if (pending) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.chatHoldToRecord),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+    if (!_held) return; // already locked or not recording
+    final cancel = _willCancel;
+    setState(() {
+      _held = false;
+      _resetDrag();
+    });
+    HapticFeedback.lightImpact();
+    if (cancel) {
+      widget.onCancelRecording();
+    } else {
+      widget.onStopRecording();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    // Recording mode
-    if (widget.recording) {
+    // Locked (hands-free) recording — explicit cancel / send controls.
+    if (_locked) {
       return Container(
         padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
         decoration: BoxDecoration(
@@ -1162,47 +1254,31 @@ class _InputBarState extends State<_InputBar> {
         ),
         child: Row(
           children: [
-            // Pulsing mic dot
             _PulsingRecordDot(color: oc.error),
             const SizedBox(width: 10),
-            Expanded(
-              child: Row(
-                children: [
-                  Text(
-                    l10n.chatRecording,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: oc.error,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${_fmt(widget.recordingSeconds ~/ 60)}:${_fmt(widget.recordingSeconds % 60)}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: oc.error,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Cancel (trash)
+            Expanded(child: _timerLabel(context, oc)),
             IconButton(
-              onPressed: widget.onCancelRecording,
+              onPressed: () {
+                setState(() => _locked = false);
+                widget.onCancelRecording();
+              },
               icon: Icon(Icons.delete_outline_rounded, color: oc.error),
               tooltip: l10n.cancel,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             ),
             const SizedBox(width: 6),
-            // Send recording
             GestureDetector(
-              onTap: widget.onStopRecording,
+              onTap: () {
+                setState(() => _locked = false);
+                HapticFeedback.lightImpact();
+                widget.onStopRecording();
+              },
               child: Container(
-                width: 46,
-                height: 46,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: oc.error,
+                  color: oc.primary,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.send_rounded, color: oc.surface, size: 22),
@@ -1213,74 +1289,78 @@ class _InputBarState extends State<_InputBar> {
       );
     }
 
-    // Normal mode — WhatsApp layout:
-    // [gallery] [______message______] [camera] [mic/send]
     return Container(
       padding: EdgeInsets.fromLTRB(6, 8, 6, 8 + bottomPadding),
       decoration: BoxDecoration(
-        color: oc.cardSurface,
-        border: Border(top: BorderSide(color: oc.border)),
+        color: _held ? oc.error.withValues(alpha: 0.05) : oc.cardSurface,
+        border: Border(
+          top: BorderSide(
+            color: _held ? oc.error.withValues(alpha: 0.25) : oc.border,
+          ),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Gallery button (left)
-          IconButton(
-            onPressed: widget.sending ? null : widget.onPickGallery,
-            icon: Icon(Icons.photo_outlined, color: oc.icons, size: 24),
-            tooltip: l10n.chatGallery,
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            padding: EdgeInsets.zero,
-          ),
-
-          // Text input with camera inside
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              minLines: 1,
-              maxLines: 4,
-              textInputAction: TextInputAction.newline,
-              decoration: InputDecoration(
-                hintText: l10n.chatTyping,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                filled: true,
-                fillColor: oc.inputFill,
-                suffixIcon: IconButton(
-                  onPressed: widget.sending ? null : widget.onTakePhoto,
-                  icon: Icon(
-                    Icons.camera_alt_outlined,
-                    color: oc.icons,
-                    size: 22,
+          // Left side: gallery (idle) or recording status strip (while held).
+          if (_held)
+            Expanded(child: _recordingStrip(context, oc, l10n))
+          else ...[
+            IconButton(
+              onPressed: widget.sending ? null : widget.onPickGallery,
+              icon: Icon(Icons.photo_outlined, color: oc.icons, size: 24),
+              tooltip: l10n.chatGallery,
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              padding: EdgeInsets.zero,
+            ),
+            Expanded(
+              child: TextField(
+                controller: widget.controller,
+                minLines: 1,
+                maxLines: 4,
+                textInputAction: TextInputAction.newline,
+                decoration: InputDecoration(
+                  hintText: l10n.chatTyping,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
                   ),
-                  tooltip: 'Photo',
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: oc.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: oc.primary, width: 1.5),
+                  filled: true,
+                  fillColor: oc.inputFill,
+                  suffixIcon: IconButton(
+                    onPressed: widget.sending ? null : widget.onTakePhoto,
+                    icon: Icon(
+                      Icons.camera_alt_outlined,
+                      color: oc.icons,
+                      size: 22,
+                    ),
+                    tooltip: l10n.chatTakePhoto,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(color: oc.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(color: oc.primary, width: 1.5),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
           const SizedBox(width: 4),
 
-          // Mic or Send button (right)
+          // Right button: spinner / send (text) / hold-to-record mic.
           if (widget.sending)
             Container(
-              width: 44,
-              height: 44,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: oc.border,
                 shape: BoxShape.circle,
               ),
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(13),
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: oc.cardSurface,
@@ -1291,8 +1371,8 @@ class _InputBarState extends State<_InputBar> {
             GestureDetector(
               onTap: widget.onSend,
               child: Container(
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: oc.primary,
                   shape: BoxShape.circle,
@@ -1301,18 +1381,154 @@ class _InputBarState extends State<_InputBar> {
               ),
             )
           else
-            GestureDetector(
-              onTap: widget.onStartRecording,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: oc.primary,
-                  shape: BoxShape.circle,
+            // Hold-to-record mic. Listener gives immediate press response and
+            // full control over slide-to-cancel / slide-up-to-lock.
+            Listener(
+              onPointerDown: _onPointerDown,
+              onPointerMove: _onPointerMove,
+              onPointerUp: _onPointerUp,
+              onPointerCancel: (_) {
+                _holdStartTimer?.cancel();
+                _holdStartTimer = null;
+                if (_held) {
+                  setState(() {
+                    _held = false;
+                    _resetDrag();
+                  });
+                  widget.onCancelRecording();
+                }
+              },
+              // Fixed 56px slot so the button growing while held never shifts
+              // the rest of the bar.
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: Center(
+                  child: Transform.translate(
+                    offset: Offset(
+                      _held ? _dragDx.clamp(-140.0, 0.0) : 0,
+                      _held
+                          ? (_dragDy < 0
+                                ? (_dragDy * 0.3).clamp(-56.0, 0.0)
+                                : 0)
+                          : 0,
+                    ),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        // Lock affordance shown above the mic while recording.
+                        if (_held && !_willCancel)
+                          Positioned(
+                            top: -34,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.lock_outline_rounded,
+                                  size: 16,
+                                  color: oc.secondaryText,
+                                ),
+                                Icon(
+                                  Icons.keyboard_arrow_up_rounded,
+                                  size: 16,
+                                  color: oc.secondaryText,
+                                ),
+                              ],
+                            ),
+                          ),
+                        Semantics(
+                          button: true,
+                          label: l10n.chatHoldToRecord,
+                          child: Container(
+                            width: _held ? 54 : 48,
+                            height: _held ? 54 : 48,
+                            decoration: BoxDecoration(
+                              color: _willCancel ? oc.error : oc.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _willCancel
+                                  ? Icons.delete_outline_rounded
+                                  : Icons.mic_rounded,
+                              color: oc.surface,
+                              size: _held ? 26 : 22,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                child: Icon(Icons.mic_rounded, color: oc.surface, size: 22),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _timerLabel(BuildContext context, OutalmaColors oc) {
+    return Row(
+      children: [
+        Text(
+          '${_fmt(widget.recordingSeconds ~/ 60)}:${_fmt(widget.recordingSeconds % 60)}',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: oc.error,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _recordingStrip(
+    BuildContext context,
+    OutalmaColors oc,
+    AppLocalizations l10n,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: Row(
+        children: [
+          _PulsingRecordDot(color: oc.error),
+          const SizedBox(width: 8),
+          Text(
+            '${_fmt(widget.recordingSeconds ~/ 60)}:${_fmt(widget.recordingSeconds % 60)}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: oc.error,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const Spacer(),
+          // Slide-to-cancel hint, intensifies as the finger nears the threshold.
+          Flexible(
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 120),
+              opacity: _willCancel ? 1 : 0.6,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.chevron_left_rounded,
+                    size: 18,
+                    color: _willCancel ? oc.error : oc.secondaryText,
+                  ),
+                  Flexible(
+                    child: Text(
+                      _willCancel
+                          ? l10n.chatReleaseToCancel
+                          : l10n.chatSlideToCancel,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _willCancel ? oc.error : oc.secondaryText,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
     );
