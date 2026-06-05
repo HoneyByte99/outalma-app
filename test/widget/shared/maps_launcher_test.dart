@@ -20,7 +20,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('Google Maps universal URL structure', () {
-    Uri _buildUniversal({required double lat, required double lng}) {
+    Uri buildUniversal({required double lat, required double lng}) {
       return Uri.parse(
         'https://www.google.com/maps/dir/?api=1'
         '&destination=$lat,$lng'
@@ -29,33 +29,33 @@ void main() {
     }
 
     test('contains the correct host', () {
-      final uri = _buildUniversal(lat: 48.8566, lng: 2.3522);
+      final uri = buildUniversal(lat: 48.8566, lng: 2.3522);
       expect(uri.host, equals('www.google.com'));
     });
 
     test('path is /maps/dir/', () {
-      final uri = _buildUniversal(lat: 48.8566, lng: 2.3522);
+      final uri = buildUniversal(lat: 48.8566, lng: 2.3522);
       expect(uri.path, equals('/maps/dir/'));
     });
 
     test('destination parameter contains lat,lng', () {
-      final uri = _buildUniversal(lat: 14.6928, lng: -17.4467);
+      final uri = buildUniversal(lat: 14.6928, lng: -17.4467);
       expect(uri.queryParameters['destination'], equals('14.6928,-17.4467'));
     });
 
     test('travelmode is driving', () {
-      final uri = _buildUniversal(lat: 48.8566, lng: 2.3522);
+      final uri = buildUniversal(lat: 48.8566, lng: 2.3522);
       expect(uri.queryParameters['travelmode'], equals('driving'));
     });
 
     test('api=1 query parameter is present', () {
-      final uri = _buildUniversal(lat: 0.0, lng: 0.0);
+      final uri = buildUniversal(lat: 0.0, lng: 0.0);
       expect(uri.queryParameters['api'], equals('1'));
     });
 
     test('destination uses dot as decimal separator (not comma)', () {
       // French locale should not affect Dart double.toString()
-      final uri = _buildUniversal(lat: 48.8566, lng: 2.3522);
+      final uri = buildUniversal(lat: 48.8566, lng: 2.3522);
       final dest = uri.queryParameters['destination']!;
       expect(dest.contains(','), isTrue); // lat,lng separator
       // The lat part "48.8566" must use a dot
@@ -64,61 +64,61 @@ void main() {
   });
 
   group('Apple Maps URL structure', () {
-    Uri _buildApple({required double lat, required double lng}) {
+    Uri buildApple({required double lat, required double lng}) {
       return Uri.parse('https://maps.apple.com/?daddr=$lat,$lng');
     }
 
     test('host is maps.apple.com', () {
-      final uri = _buildApple(lat: 48.8566, lng: 2.3522);
+      final uri = buildApple(lat: 48.8566, lng: 2.3522);
       expect(uri.host, equals('maps.apple.com'));
     });
 
     test('daddr contains lat,lng', () {
-      final uri = _buildApple(lat: 14.6928, lng: -17.4467);
+      final uri = buildApple(lat: 14.6928, lng: -17.4467);
       expect(uri.queryParameters['daddr'], equals('14.6928,-17.4467'));
     });
   });
 
   group('Google Maps native scheme URL structure', () {
-    Uri _buildGoogleScheme({required double lat, required double lng}) {
+    Uri buildGoogleScheme({required double lat, required double lng}) {
       return Uri.parse(
         'comgooglemaps://?daddr=$lat,$lng&directionsmode=driving',
       );
     }
 
     test('scheme is comgooglemaps', () {
-      final uri = _buildGoogleScheme(lat: 48.8566, lng: 2.3522);
+      final uri = buildGoogleScheme(lat: 48.8566, lng: 2.3522);
       expect(uri.scheme, equals('comgooglemaps'));
     });
 
     test('daddr contains lat,lng', () {
-      final uri = _buildGoogleScheme(lat: 14.6928, lng: -17.4467);
+      final uri = buildGoogleScheme(lat: 14.6928, lng: -17.4467);
       expect(uri.queryParameters['daddr'], equals('14.6928,-17.4467'));
     });
 
     test('directionsmode is driving', () {
-      final uri = _buildGoogleScheme(lat: 48.8566, lng: 2.3522);
+      final uri = buildGoogleScheme(lat: 48.8566, lng: 2.3522);
       expect(uri.queryParameters['directionsmode'], equals('driving'));
     });
   });
 
   group('Waze URL structure', () {
-    Uri _buildWaze({required double lat, required double lng}) {
+    Uri buildWaze({required double lat, required double lng}) {
       return Uri.parse('waze://?ll=$lat,$lng&navigate=yes');
     }
 
     test('scheme is waze', () {
-      final uri = _buildWaze(lat: 48.8566, lng: 2.3522);
+      final uri = buildWaze(lat: 48.8566, lng: 2.3522);
       expect(uri.scheme, equals('waze'));
     });
 
     test('ll parameter contains lat,lng', () {
-      final uri = _buildWaze(lat: 14.6928, lng: -17.4467);
+      final uri = buildWaze(lat: 14.6928, lng: -17.4467);
       expect(uri.queryParameters['ll'], equals('14.6928,-17.4467'));
     });
 
     test('navigate=yes is set', () {
-      final uri = _buildWaze(lat: 48.8566, lng: 2.3522);
+      final uri = buildWaze(lat: 48.8566, lng: 2.3522);
       expect(uri.queryParameters['navigate'], equals('yes'));
     });
   });
@@ -132,9 +132,12 @@ void main() {
       // Directly build a bottom-sheet that mirrors the internal
       // _pickMapsApp layout so we test the UI without touching url_launcher.
       final options = [
-        _FakeMapOption(label: 'Plans (Apple)', icon: Icons.map_outlined),
-        _FakeMapOption(label: 'Google Maps', icon: Icons.navigation_outlined),
-        _FakeMapOption(label: 'Waze', icon: Icons.alt_route_outlined),
+        const _FakeMapOption(label: 'Plans (Apple)', icon: Icons.map_outlined),
+        const _FakeMapOption(
+          label: 'Google Maps',
+          icon: Icons.navigation_outlined,
+        ),
+        const _FakeMapOption(label: 'Waze', icon: Icons.alt_route_outlined),
       ];
 
       await tester.pumpWidget(

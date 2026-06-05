@@ -19,39 +19,6 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockCreateBookingUseCase extends Mock implements CreateBookingUseCase {}
 
-Widget _wrap() {
-  final fakeUseCase = _MockCreateBookingUseCase();
-
-  return ProviderScope(
-    overrides: [createBookingUseCaseProvider.overrideWithValue(fakeUseCase)],
-    child: MaterialApp(
-      theme: AppTheme.light(),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: Builder(
-          builder: (ctx) => ElevatedButton(
-            onPressed: () => showModalBottomSheet(
-              context: ctx,
-              builder: (_) => ProviderScope(
-                overrides: [
-                  createBookingUseCaseProvider.overrideWithValue(fakeUseCase),
-                ],
-                child: const BookingRequestSheet(
-                  serviceId: 'svc_1',
-                  providerId: 'prov_1',
-                  serviceTitle: 'Test Service',
-                ),
-              ),
-            ),
-            child: const Text('Open'),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
 void main() {
   group('BookingRequestSheet', () {
     testWidgets('smoke — sheet renders without throwing', (tester) async {

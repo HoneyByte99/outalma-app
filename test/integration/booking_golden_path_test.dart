@@ -15,7 +15,6 @@
 // would do (create the booking doc, set chatId on accept, etc.) since we
 // cannot run Cloud Functions in a unit test environment.
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/src/application/review/review_providers.dart';
@@ -27,47 +26,8 @@ import 'package:outalma_app/src/domain/enums/category_id.dart';
 import 'package:outalma_app/src/domain/enums/message_type.dart';
 import 'package:outalma_app/src/domain/enums/price_type.dart';
 import 'package:outalma_app/src/domain/enums/reviewer_role.dart';
-import 'package:outalma_app/src/domain/models/booking.dart';
-import 'package:outalma_app/src/domain/models/chat.dart';
 import 'package:outalma_app/src/domain/models/chat_message.dart';
 import 'package:outalma_app/src/domain/models/service.dart';
-
-// ---------------------------------------------------------------------------
-// Fake Cloud Functions infrastructure (same pattern as lifecycle_use_cases_test)
-// ---------------------------------------------------------------------------
-
-class _FakeCallableResult<T> implements HttpsCallableResult<T> {
-  _FakeCallableResult(this._data);
-  final T _data;
-  @override
-  T get data => _data;
-}
-
-class _FakeCallable extends Fake implements HttpsCallable {
-  _FakeCallable({this.response});
-
-  /// Optional response data returned by the callable.
-  final Map<String, dynamic>? response;
-
-  @override
-  Future<HttpsCallableResult<T>> call<T>([dynamic parameters]) async {
-    if (response != null) {
-      return _FakeCallableResult<T>(response as T);
-    }
-    return _FakeCallableResult<T>(null as T);
-  }
-}
-
-class _FakeFunctions extends Fake implements FirebaseFunctions {
-  _FakeFunctions(this._callableByName);
-
-  final Map<String, _FakeCallable> _callableByName;
-
-  @override
-  HttpsCallable httpsCallable(String name, {HttpsCallableOptions? options}) {
-    return _callableByName[name] ?? _FakeCallable();
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Test helpers
