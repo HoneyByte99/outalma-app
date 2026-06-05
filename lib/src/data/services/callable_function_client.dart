@@ -43,7 +43,20 @@ class CallableFunctionClient {
       body: jsonEncode({'data': data}),
     );
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    // A 5xx/gateway error returns an HTML body, not JSON. Decoding it would
+    // throw an untyped FormatException; surface a proper FirebaseFunctions
+    // exception instead so existing catch-blocks handle it consistently.
+    Map<String, dynamic> body;
+    try {
+      body = jsonDecode(response.body) as Map<String, dynamic>;
+    } on FormatException {
+      throw FirebaseFunctionsException(
+        code: response.statusCode >= 500 ? 'unavailable' : 'internal',
+        message:
+            'Cloud Function returned a non-JSON response '
+            '(HTTP ${response.statusCode}).',
+      );
+    }
 
     if (body.containsKey('error')) {
       final err = body['error'] as Map<String, dynamic>;

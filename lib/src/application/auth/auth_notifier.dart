@@ -80,7 +80,26 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     final userRepo = ref.read(userRepositoryProvider);
 
     try {
-      var appUser = await userRepo.getById(firebaseUser.uid);
+      // Retry transient read failures (network blips) before giving up, so a
+      // momentary Firestore error does not force an authenticated user back to
+      // the sign-in screen.
+      AppUser? appUser;
+      Object? lastError;
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          appUser = await userRepo.getById(firebaseUser.uid);
+          lastError = null;
+          break;
+        } catch (e) {
+          lastError = e;
+          if (attempt < 2) {
+            await Future<void>.delayed(
+              Duration(milliseconds: 300 * (attempt + 1)),
+            );
+          }
+        }
+      }
+      if (lastError != null) throw lastError;
       if (appUser == null) {
         // Defensive: phone signups and email magic-link signups both create
         // the Firestore user doc through dedicated paths (Cloud Function or

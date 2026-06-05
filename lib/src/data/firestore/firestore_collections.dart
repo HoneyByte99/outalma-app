@@ -177,7 +177,12 @@ class FirestoreCollections {
       if (user.phoneE164 != null) 'phoneE164': user.phoneE164,
       'country': user.country,
       'activeMode': user.activeMode.name,
-      'pushToken': user.pushToken,
+      // Never write pushToken as null. NotificationService writes the token via
+      // a direct .update() after auth resolves, so the in-memory AppUser carried
+      // by AuthAuthenticated is often stale (null). A merge write that always
+      // included pushToken would clobber the real token on switchMode /
+      // updateProfile and silently kill push delivery.
+      if (user.pushToken != null) 'pushToken': user.pushToken,
       'createdAt': dateTimeToFirestore(user.createdAt),
     };
   }

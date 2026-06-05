@@ -168,15 +168,15 @@ void main() {
       }
     });
 
-    test('unknown string falls back to requested (not a crash)', () {
+    test('unknown string maps to the unknown sentinel (not a crash)', () {
       expect(
         BookingStatus.fromString('totally_unknown'),
-        BookingStatus.requested,
+        BookingStatus.unknown,
       );
     });
 
-    test('empty string falls back to requested', () {
-      expect(BookingStatus.fromString(''), BookingStatus.requested);
+    test('empty string maps to the unknown sentinel', () {
+      expect(BookingStatus.fromString(''), BookingStatus.unknown);
     });
   });
 }

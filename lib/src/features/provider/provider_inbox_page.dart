@@ -291,6 +291,7 @@ class _StatusChip extends StatelessWidget {
       BookingStatus.done => (l10n.statusDone, oc.success),
       BookingStatus.rejected => (l10n.statusRejected, oc.secondaryText),
       BookingStatus.cancelled => (l10n.statusCancelled, oc.secondaryText),
+      BookingStatus.unknown => ('—', oc.secondaryText),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

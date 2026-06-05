@@ -219,7 +219,7 @@ void main() {
       });
 
       test(
-        'unknown status string falls back to requested (not a crash)',
+        'unknown status string maps to the unknown sentinel (not a crash)',
         () async {
           await fakeDb.collection('bookings').doc('bad_status').set({
             'status': 'flying', // unknown value
@@ -227,7 +227,7 @@ void main() {
           });
           final col = FirestoreCollections.bookings(fakeDb);
           final result = (await col.doc('bad_status').get()).data()!;
-          expect(result.status, BookingStatus.requested);
+          expect(result.status, BookingStatus.unknown);
         },
       );
     },

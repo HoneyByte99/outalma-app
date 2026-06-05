@@ -146,6 +146,22 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       final Uint8List bytes = kIsWeb
           ? (await http.get(Uri.parse(path))).bodyBytes
           : await File(path).readAsBytes();
+      // Reject empty recordings (mic failure / immediate stop) so we never
+      // upload a 0-byte clip that the provider cannot play. Mirrors the chat
+      // guard in chat_page.dart.
+      if (bytes.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context)!.bookingVoiceUploadFailed,
+              ),
+              backgroundColor: context.oc.error,
+            ),
+          );
+        }
+        return;
+      }
       if (mounted) setState(() => _recordedBytes = bytes);
     } catch (_) {}
   }

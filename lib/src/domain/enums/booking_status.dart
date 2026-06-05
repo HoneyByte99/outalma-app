@@ -1,10 +1,18 @@
+import 'package:flutter/foundation.dart';
+
 enum BookingStatus {
   requested,
   accepted,
   inProgress,
   done,
   rejected,
-  cancelled;
+  cancelled,
+
+  /// Sentinel for an unrecognised status string (TS↔Dart drift, corrupt data).
+  /// Treated as a terminal, read-only state so the UI never offers actions on
+  /// a booking it cannot reason about — instead of the previous silent fallback
+  /// to `requested`, which could re-offer accept/cancel on a closed booking.
+  unknown;
 
   /// Canonical Firestore string values (snake_case).
   String get value {
@@ -31,7 +39,10 @@ enum BookingStatus {
       case 'cancelled':
         return BookingStatus.cancelled;
       default:
-        return BookingStatus.requested;
+        if (kDebugMode) {
+          debugPrint('BookingStatus.fromString: unknown value "$value"');
+        }
+        return BookingStatus.unknown;
     }
   }
 
@@ -59,6 +70,7 @@ enum BookingStatus {
       case BookingStatus.done:
       case BookingStatus.rejected:
       case BookingStatus.cancelled:
+      case BookingStatus.unknown:
         return false;
     }
   }

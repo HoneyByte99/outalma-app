@@ -478,6 +478,8 @@ class _StatusChip extends StatelessWidget {
         return (l10n.statusRejected, oc.secondaryText);
       case BookingStatus.cancelled:
         return (l10n.statusCancelled, oc.secondaryText);
+      case BookingStatus.unknown:
+        return ('—', oc.secondaryText);
     }
   }
 }

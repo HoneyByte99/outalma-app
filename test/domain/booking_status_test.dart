@@ -27,12 +27,15 @@ void main() {
       expect(BookingStatus.fromString('cancelled'), BookingStatus.cancelled);
     });
 
-    test('unknown value returns requested fallback without throwing', () {
+    test('unrecognised value maps to the unknown sentinel, not requested', () {
       expect(() => BookingStatus.fromString('unknown_value'), returnsNormally);
-      expect(
-        BookingStatus.fromString('unknown_value'),
-        BookingStatus.requested,
-      );
+      expect(BookingStatus.fromString('unknown_value'), BookingStatus.unknown);
+    });
+
+    test('unknown sentinel cannot transition to any status', () {
+      for (final to in BookingStatus.values) {
+        expect(BookingStatus.unknown.canTransitionTo(to), isFalse);
+      }
     });
   });
 
