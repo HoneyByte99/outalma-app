@@ -256,9 +256,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text(
-                  'Accès au microphone refusé. Activez-le dans Réglages.',
-                ),
+                content: Text(AppLocalizations.of(context)!.chatMicError),
                 backgroundColor: context.oc.error,
               ),
             );
@@ -822,7 +820,7 @@ class _VoicePlayerState extends State<_VoicePlayer> {
           ),
           const SizedBox(width: 8),
           Text(
-            'Format non supporté',
+            AppLocalizations.of(context)!.chatUnsupportedFormat,
             style: TextStyle(color: fg.withValues(alpha: 0.5), fontSize: 12),
           ),
         ],

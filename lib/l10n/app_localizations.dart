@@ -2431,6 +2431,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Privacy policy'**
   String get legalPrivacyTitle;
+
+  /// No description provided for @introSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get introSkip;
+
+  /// No description provided for @authTabEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get authTabEmail;
+
+  /// No description provided for @authTabPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get authTabPhone;
+
+  /// No description provided for @locationMyPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'My location'**
+  String get locationMyPosition;
+
+  /// No description provided for @chatUnsupportedFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported format'**
+  String get chatUnsupportedFormat;
 }
 
 class _AppLocalizationsDelegate

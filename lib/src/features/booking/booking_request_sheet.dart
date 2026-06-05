@@ -280,7 +280,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
           }
           return;
         }
-        requestMessage = '[Message vocal]';
+        requestMessage = l10n.bookingVoiceMessageLabel;
       } else {
         requestMessage = _messageController.text.trim();
       }
@@ -329,7 +329,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       initialDate: _selectedDate ?? now.add(const Duration(days: 1)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 90)),
-      locale: const Locale('fr'),
+      locale: Localizations.localeOf(context),
     );
     if (picked != null && mounted) {
       setState(() => _selectedDate = picked);

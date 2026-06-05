@@ -396,11 +396,12 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
 
       if (!mounted) return;
 
-      _controller.text = label ?? 'Ma position';
+      final fallbackLabel = AppLocalizations.of(context)!.locationMyPosition;
+      _controller.text = label ?? fallbackLabel;
       setState(() => _suggestions = []);
 
       ref.read(locationFilterProvider.notifier).state = LocationFilter(
-        label: label ?? 'Ma position',
+        label: label ?? fallbackLabel,
         lat: position.latitude,
         lng: position.longitude,
         radiusKm: _radiusKm,

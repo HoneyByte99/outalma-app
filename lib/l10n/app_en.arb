@@ -499,5 +499,10 @@
   "legalReadTerms": "Read the terms of use",
   "legalReadPrivacy": "Read the privacy policy",
   "legalTermsTitle": "Terms of use",
-  "legalPrivacyTitle": "Privacy policy"
+  "legalPrivacyTitle": "Privacy policy",
+  "introSkip": "Skip",
+  "authTabEmail": "Email",
+  "authTabPhone": "Phone",
+  "locationMyPosition": "My location",
+  "chatUnsupportedFormat": "Unsupported format"
 }

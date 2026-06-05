@@ -72,7 +72,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 child: TextButton(
                   onPressed: isLast ? null : _finish,
                   child: Text(
-                    'Passer',
+                    l10n.introSkip,
                     style: TextStyle(color: oc.secondaryText),
                   ),
                 ),

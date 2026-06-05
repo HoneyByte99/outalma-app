@@ -1262,4 +1262,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get legalPrivacyTitle => 'Politique de confidentialité';
+
+  @override
+  String get introSkip => 'Passer';
+
+  @override
+  String get authTabEmail => 'Mail';
+
+  @override
+  String get authTabPhone => 'Téléphone';
+
+  @override
+  String get locationMyPosition => 'Ma position';
+
+  @override
+  String get chatUnsupportedFormat => 'Format non supporté';
 }

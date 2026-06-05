@@ -468,6 +468,7 @@ class _AuthModeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       decoration: BoxDecoration(
@@ -481,14 +482,14 @@ class _AuthModeToggle extends StatelessWidget {
           _buildTab(
             context,
             icon: Icons.email_outlined,
-            label: 'Mail',
+            label: l10n.authTabEmail,
             isActive: mode == _AuthMode.mail,
             onTap: () => onChanged(_AuthMode.mail),
           ),
           _buildTab(
             context,
             icon: Icons.phone_outlined,
-            label: 'Phone',
+            label: l10n.authTabPhone,
             isActive: mode == _AuthMode.phone,
             onTap: () => onChanged(_AuthMode.phone),
           ),

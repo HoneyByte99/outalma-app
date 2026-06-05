@@ -60,8 +60,9 @@ void main() {
     testWidgets('mail/phone toggle renders two tabs', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
-      expect(find.text('Mail'), findsOneWidget);
-      expect(find.text('Phone'), findsOneWidget);
+      // Labels are localized; assert on the stable tab icons instead.
+      expect(find.byIcon(Icons.email_outlined), findsWidgets);
+      expect(find.byIcon(Icons.phone_outlined), findsWidgets);
     });
   });
 }

@@ -1248,4 +1248,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get legalPrivacyTitle => 'Privacy policy';
+
+  @override
+  String get introSkip => 'Skip';
+
+  @override
+  String get authTabEmail => 'Email';
+
+  @override
+  String get authTabPhone => 'Phone';
+
+  @override
+  String get locationMyPosition => 'My location';
+
+  @override
+  String get chatUnsupportedFormat => 'Unsupported format';
 }
