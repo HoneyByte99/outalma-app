@@ -1250,4 +1250,16 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get introTermsRequired =>
       'Veuillez accepter les conditions pour continuer.';
+
+  @override
+  String get legalReadTerms => 'Lire les conditions d\'utilisation';
+
+  @override
+  String get legalReadPrivacy => 'Lire la politique de confidentialité';
+
+  @override
+  String get legalTermsTitle => 'Conditions d\'utilisation';
+
+  @override
+  String get legalPrivacyTitle => 'Politique de confidentialité';
 }

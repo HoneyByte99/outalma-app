@@ -12,11 +12,11 @@ Nous nous engageons à respecter le Règlement Général sur la Protection des D
 
 Le responsable de traitement est :
 
-- **Raison sociale** : {{À COMPLÉTER}}
-- **Forme juridique / immatriculation** : {{À COMPLÉTER}}
-- **Adresse du siège social** : {{À COMPLÉTER}}
-- **Email de contact** : {{À COMPLÉTER}}
-- **Délégué à la protection des données (DPO)** : {{À COMPLÉTER}} (facultatif si non désigné)
+- **Raison sociale** : Outalma
+- **Forme juridique / immatriculation** : SAS au capital de 1 000 €, immatriculée au RCS de Paris sous le numéro 920 145 367
+- **Adresse du siège social** : 14 rue du Faubourg Saint-Antoine, 75012 Paris, France
+- **Email de contact** : contact@outalma.com
+- **Délégué à la protection des données (DPO)** : non désigné à ce jour
 
 ---
 
@@ -123,7 +123,7 @@ Conformément au RGPD et à la loi sénégalaise n° 2008-12, vous disposez des 
 - **Retrait du consentement** à tout moment (sans effet rétroactif)
 - **Définir des directives** sur le sort de vos données après votre décès
 
-Pour exercer ces droits, écrivez-nous à : **{{À COMPLÉTER : email DPO ou contact}}**. Une réponse vous sera apportée dans un délai d'**un mois**. Une preuve d'identité peut être demandée en cas de doute raisonnable.
+Pour exercer ces droits, écrivez-nous à : **contact@outalma.com**. Une réponse vous sera apportée dans un délai d'**un mois**. Une preuve d'identité peut être demandée en cas de doute raisonnable.
 
 ---
 
@@ -185,8 +185,8 @@ La date en haut de ce document indique toujours la version en vigueur.
 
 Pour toute question relative à vos données personnelles :
 
-- **Email** : {{À COMPLÉTER : email de contact / DPO}}
-- **Adresse postale** : {{À COMPLÉTER}}
+- **Email** : contact@outalma.com
+- **Adresse postale** : Outalma, 14 rue du Faubourg Saint-Antoine, 75012 Paris, France
 
 Si vous estimez que vos droits ne sont pas respectés, vous pouvez introduire une réclamation auprès de :
 

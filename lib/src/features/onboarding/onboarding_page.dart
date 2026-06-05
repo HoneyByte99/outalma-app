@@ -103,6 +103,25 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
                         children: [
+                          // Read first, then decide: in-app links above the
+                          // acceptance checkbox (no remote URL).
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 16,
+                            children: [
+                              _LegalLink(
+                                label: l10n.legalReadTerms,
+                                onTap: () => context.push('/legal/terms'),
+                                color: oc.primary,
+                              ),
+                              _LegalLink(
+                                label: l10n.legalReadPrivacy,
+                                onTap: () => context.push('/legal/privacy'),
+                                color: oc.primary,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
                           InkWell(
                             onTap: () => setState(() {
                               _termsAccepted = !_termsAccepted;
@@ -133,9 +152,20 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                           ),
                           if (_showTermsError) ...[
                             const SizedBox(height: 4),
-                            Text(
-                              l10n.introTermsRequired,
-                              style: TextStyle(color: oc.error, fontSize: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.warning_amber_rounded,
+                                    color: oc.error, size: 18),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    l10n.introTermsRequired,
+                                    style: TextStyle(
+                                        color: oc.error, fontSize: 14),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                           const SizedBox(height: 8),
@@ -199,6 +229,49 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       ),
     ];
     return slides;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Legal link (opens an in-app document, not a remote URL)
+// ---------------------------------------------------------------------------
+
+class _LegalLink extends StatelessWidget {
+  const _LegalLink({
+    required this.label,
+    required this.onTap,
+    required this.color,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.description_outlined, size: 16, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                    decorationColor: color,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

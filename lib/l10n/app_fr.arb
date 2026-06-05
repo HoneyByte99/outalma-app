@@ -495,5 +495,9 @@
   "introTermsAccept": "J'accepte les conditions d'utilisation",
   "introNext": "Suivant",
   "introGetStarted": "Commencer",
-  "introTermsRequired": "Veuillez accepter les conditions pour continuer."
+  "introTermsRequired": "Veuillez accepter les conditions pour continuer.",
+  "legalReadTerms": "Lire les conditions d'utilisation",
+  "legalReadPrivacy": "Lire la politique de confidentialité",
+  "legalTermsTitle": "Conditions d'utilisation",
+  "legalPrivacyTitle": "Politique de confidentialité"
 }

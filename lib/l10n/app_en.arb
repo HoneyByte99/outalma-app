@@ -495,5 +495,9 @@
   "introTermsAccept": "I accept the terms of use",
   "introNext": "Next",
   "introGetStarted": "Get started",
-  "introTermsRequired": "Please accept the terms to continue."
+  "introTermsRequired": "Please accept the terms to continue.",
+  "legalReadTerms": "Read the terms of use",
+  "legalReadPrivacy": "Read the privacy policy",
+  "legalTermsTitle": "Terms of use",
+  "legalPrivacyTitle": "Privacy policy"
 }

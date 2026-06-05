@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../application/auth/auth_providers.dart';
 import '../application/auth/auth_state.dart';
 import '../application/onboarding/onboarding_provider.dart';
@@ -18,6 +19,7 @@ import '../features/booking/booking_list_page.dart';
 import '../features/chat/chat_page.dart';
 import '../features/chat/chats_list_page.dart';
 import '../features/home/home_page.dart';
+import '../features/legal/legal_page.dart';
 import '../features/onboarding/onboarding_page.dart';
 import '../features/profile/profile_page.dart';
 import '../features/provider/provider_dashboard_page.dart';
@@ -65,6 +67,10 @@ abstract final class AppRoutes {
 
   static const profile = '/profile';
 
+  // Legal documents — served in-app from bundled assets (no remote link).
+  static const legalTerms = '/legal/terms';
+  static const legalPrivacy = '/legal/privacy';
+
   static String chat(String chatId) => '/chat/$chatId';
   static String review(String bookingId) => '/review/$bookingId';
   static String report({required String type, required String id}) =>
@@ -96,6 +102,8 @@ class RouterNotifier extends ChangeNotifier {
       error: (_, __) => AppRoutes.signIn,
       data: (authState) {
         final loc = state.matchedLocation;
+        // Legal documents are always accessible (before auth, during onboarding).
+        if (loc.startsWith('/legal')) return null;
         // OTP lab is debug-only — block in release builds.
         if (kDebugMode && loc == AppRoutes.otpLab) return null;
         if (!kDebugMode && loc == AppRoutes.otpLab) return AppRoutes.signIn;
@@ -193,6 +201,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.onboarding,
         name: 'onboarding',
         builder: (_, __) => const OnboardingPage(),
+      ),
+
+      // ---- Legal documents (in-app, full screen, no remote link) ----
+      GoRoute(
+        path: '/legal/:doc',
+        name: 'legal',
+        builder: (context, state) {
+          final doc = LegalDoc.fromKey(state.pathParameters['doc']);
+          final l10n = AppLocalizations.of(context)!;
+          final title = doc == LegalDoc.privacy
+              ? l10n.legalPrivacyTitle
+              : l10n.legalTermsTitle;
+          return LegalPage(doc: doc, title: title);
+        },
       ),
 
       // ---- Auth ----

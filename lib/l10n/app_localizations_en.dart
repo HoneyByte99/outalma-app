@@ -1236,4 +1236,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get introTermsRequired => 'Please accept the terms to continue.';
+
+  @override
+  String get legalReadTerms => 'Read the terms of use';
+
+  @override
+  String get legalReadPrivacy => 'Read the privacy policy';
+
+  @override
+  String get legalTermsTitle => 'Terms of use';
+
+  @override
+  String get legalPrivacyTitle => 'Privacy policy';
 }

@@ -2407,6 +2407,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please accept the terms to continue.'**
   String get introTermsRequired;
+
+  /// No description provided for @legalReadTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the terms of use'**
+  String get legalReadTerms;
+
+  /// No description provided for @legalReadPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the privacy policy'**
+  String get legalReadPrivacy;
+
+  /// No description provided for @legalTermsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of use'**
+  String get legalTermsTitle;
+
+  /// No description provided for @legalPrivacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get legalPrivacyTitle;
 }
 
 class _AppLocalizationsDelegate

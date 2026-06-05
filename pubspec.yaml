@@ -2,7 +2,7 @@ name: outalma_app
 description: "Outalma — service marketplace MVP"
 publish_to: 'none'
 
-version: 1.0.0+4
+version: 1.0.0+12
 
 environment:
   sdk: ^3.11.3
@@ -95,3 +95,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - docs/legal/
