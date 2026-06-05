@@ -3,7 +3,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as logger from 'firebase-functions/logger';
-import { assertAdminClaim, assertAdminOrModeratorClaim, assertAuthenticated, requireBoolean, requireString } from './common';
+import { assertAdminClaim, assertAdminOrModeratorClaim, assertMinSupportClaim, assertAuthenticated, requireBoolean, requireString } from './common';
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -600,6 +600,8 @@ export const setAdminClaim = onCall(async (request) => {
     displayName: user.displayName ?? null,
     admin: isAdmin,
     moderator: (current.moderator as boolean | undefined) ?? false,
+    support: (current.support as boolean | undefined) ?? false,
+    readonly: (current.readonly as boolean | undefined) ?? false,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
 
@@ -734,6 +736,8 @@ export const setModeratorClaim = onCall(async (request) => {
     displayName: user.displayName ?? null,
     admin: (currentClaims.admin as boolean | undefined) ?? false,
     moderator: isModerator,
+    support: (currentClaims.support as boolean | undefined) ?? false,
+    readonly: (currentClaims.readonly as boolean | undefined) ?? false,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
 
@@ -745,6 +749,80 @@ export const setModeratorClaim = onCall(async (request) => {
   });
 
   return { uid: targetUid, moderator: isModerator };
+});
+
+// ---------------------------------------------------------------------------
+// setSupportClaim — admin only
+// ---------------------------------------------------------------------------
+
+export const setSupportClaim = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const targetUid = requireString(request.data?.uid, 'uid');
+  const isSupport = requireBoolean(request.data?.support, 'support');
+
+  const user = await admin.auth().getUser(targetUid);
+  const currentClaims = (user.customClaims ?? {}) as Record<string, unknown>;
+  await admin.auth().setCustomUserClaims(targetUid, { ...currentClaims, support: isSupport });
+
+  await db.collection('user_roles').doc(targetUid).set({
+    uid: targetUid,
+    email: user.email ?? null,
+    displayName: user.displayName ?? null,
+    admin: (currentClaims.admin as boolean | undefined) ?? false,
+    moderator: (currentClaims.moderator as boolean | undefined) ?? false,
+    support: isSupport,
+    readonly: (currentClaims.readonly as boolean | undefined) ?? false,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: isSupport ? 'set_support_claim' : 'revoke_support_claim',
+    targetType: 'user',
+    targetId: targetUid,
+  });
+
+  return { uid: targetUid, support: isSupport };
+});
+
+// ---------------------------------------------------------------------------
+// setReadonlyClaim — admin only
+// ---------------------------------------------------------------------------
+
+export const setReadonlyClaim = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const targetUid = requireString(request.data?.uid, 'uid');
+  const isReadonly = requireBoolean(request.data?.readonly, 'readonly');
+
+  const user = await admin.auth().getUser(targetUid);
+  const currentClaims = (user.customClaims ?? {}) as Record<string, unknown>;
+  await admin.auth().setCustomUserClaims(targetUid, { ...currentClaims, readonly: isReadonly });
+
+  await db.collection('user_roles').doc(targetUid).set({
+    uid: targetUid,
+    email: user.email ?? null,
+    displayName: user.displayName ?? null,
+    admin: (currentClaims.admin as boolean | undefined) ?? false,
+    moderator: (currentClaims.moderator as boolean | undefined) ?? false,
+    support: (currentClaims.support as boolean | undefined) ?? false,
+    readonly: isReadonly,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: isReadonly ? 'set_readonly_claim' : 'revoke_readonly_claim',
+    targetType: 'user',
+    targetId: targetUid,
+  });
+
+  return { uid: targetUid, readonly: isReadonly };
 });
 
 // ---------------------------------------------------------------------------
@@ -949,6 +1027,12 @@ export const logSession = onCall(async (request) => {
   // Geolocate IP via ipapi.co (1 000 req/day on free tier)
   let country: string | null = null;
   let countryCode: string | null = null;
+  let city: string | null = null;
+  let region: string | null = null;
+  let isp: string | null = null;
+  let asn: string | null = null;
+  let latitude: number | null = null;
+  let longitude: number | null = null;
   if (ip) {
     try {
       const geoResp = await fetch(`https://ipapi.co/${ip}/json/`);
@@ -956,11 +1040,23 @@ export const logSession = onCall(async (request) => {
         const geo = (await geoResp.json()) as {
           country_code?: string;
           country_name?: string;
+          city?: string;
+          region?: string;
+          org?: string;
+          asn?: string;
+          latitude?: number;
+          longitude?: number;
           error?: boolean;
         };
         if (!geo.error) {
           countryCode = geo.country_code ?? null;
           country = geo.country_name ?? null;
+          city = geo.city ?? null;
+          region = geo.region ?? null;
+          isp = geo.org ?? null;
+          asn = geo.asn ?? null;
+          latitude = geo.latitude ?? null;
+          longitude = geo.longitude ?? null;
         }
       }
     } catch (e) {
@@ -968,21 +1064,58 @@ export const logSession = onCall(async (request) => {
     }
   }
 
+  // Check IP against blocklist
+  if (ip) {
+    const blockSnap = await db.collection('ip_blocklist')
+      .where('ip', '==', ip)
+      .where('active', '==', true)
+      .limit(1)
+      .get();
+    if (!blockSnap.empty) {
+      logger.warn('Blocked IP login attempt', { uid, ip });
+      await db.collection('security_alerts').add({
+        uid,
+        type: 'blocked_ip_login',
+        severity: 'high',
+        ip,
+        country,
+        countryCode,
+        city,
+        latitude,
+        longitude,
+        description: `Login attempt from blocked IP ${ip}`,
+        status: 'open',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        resolvedAt: null,
+        resolvedBy: null,
+      });
+      throw new HttpsError('permission-denied', 'Access denied.');
+    }
+  }
+
   const sessionRef = db.collection('user_sessions').doc(uid);
   const eventRef = sessionRef.collection('events').doc();
 
-  const batch = db.batch();
-  batch.set(eventRef, {
+  const eventData = {
     uid,
     ip,
     country,
     countryCode,
+    city,
+    region,
+    isp,
+    asn,
+    latitude,
+    longitude,
     platform,
     deviceModel,
     appVersion,
     sessionId,
     loggedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  };
+
+  const batch = db.batch();
+  batch.set(eventRef, eventData);
   batch.set(
     sessionRef,
     {
@@ -991,13 +1124,368 @@ export const logSession = onCall(async (request) => {
       lastIp: ip,
       lastCountry: country,
       lastCountryCode: countryCode,
+      lastCity: city,
       lastPlatform: platform,
+      lastLatitude: latitude,
+      lastLongitude: longitude,
     },
     { merge: true }
   );
   await batch.commit();
 
+  // Anomaly detection (async, non-blocking — failures logged but don't block login)
+  detectAnomalies(uid, eventData).catch((e) =>
+    logger.warn('Anomaly detection failed', { uid, error: String(e) })
+  );
+
   return { logged: true };
+});
+
+// ---------------------------------------------------------------------------
+// resolveReport — admin or moderator
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Moderation queue — service pre-publication workflow
+// ---------------------------------------------------------------------------
+
+export const submitServiceForReview = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  assertAuthenticated(uid);
+
+  const serviceId = requireString(request.data?.serviceId, 'serviceId');
+
+  const serviceRef = db.collection('services').doc(serviceId);
+  const serviceSnap = await serviceRef.get();
+  if (!serviceSnap.exists) {
+    throw new HttpsError('not-found', 'Service not found.');
+  }
+
+  const service = serviceSnap.data() as { providerId?: string };
+  if (service.providerId !== uid) {
+    throw new HttpsError('permission-denied', 'Only the service owner can submit for review.');
+  }
+
+  await serviceRef.update({ published: false, status: 'pending_review' });
+
+  await db.collection('moderation_queue').add({
+    serviceId,
+    providerId: uid,
+    submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+    status: 'pending',
+    reviewedBy: null,
+    reviewedAt: null,
+    rejectionReason: null,
+  });
+
+  return { serviceId, status: 'pending_review' };
+});
+
+export const approveService = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertMinSupportClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const queueItemId = requireString(request.data?.queueItemId, 'queueItemId');
+
+  const queueRef = db.collection('moderation_queue').doc(queueItemId);
+  const queueSnap = await queueRef.get();
+  if (!queueSnap.exists) {
+    throw new HttpsError('not-found', 'Queue item not found.');
+  }
+
+  const item = queueSnap.data() as { serviceId: string; status: string };
+  if (item.status !== 'pending') {
+    throw new HttpsError('failed-precondition', `Item is already ${item.status}.`);
+  }
+
+  const batch = db.batch();
+  batch.update(queueRef, {
+    status: 'approved',
+    reviewedBy: callerUid,
+    reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  batch.update(db.collection('services').doc(item.serviceId), {
+    published: true,
+    status: 'approved',
+  });
+  await batch.commit();
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'approve_service',
+    targetType: 'service',
+    targetId: item.serviceId,
+  });
+
+  return { queueItemId, serviceId: item.serviceId, status: 'approved' };
+});
+
+export const rejectService = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertMinSupportClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const queueItemId = requireString(request.data?.queueItemId, 'queueItemId');
+  const reason = typeof request.data?.reason === 'string' ? request.data.reason.trim() : '';
+  if (!reason) {
+    throw new HttpsError('invalid-argument', 'A rejection reason is required.');
+  }
+
+  const queueRef = db.collection('moderation_queue').doc(queueItemId);
+  const queueSnap = await queueRef.get();
+  if (!queueSnap.exists) {
+    throw new HttpsError('not-found', 'Queue item not found.');
+  }
+
+  const item = queueSnap.data() as { serviceId: string; status: string };
+  if (item.status !== 'pending') {
+    throw new HttpsError('failed-precondition', `Item is already ${item.status}.`);
+  }
+
+  const batch = db.batch();
+  batch.update(queueRef, {
+    status: 'rejected',
+    reviewedBy: callerUid,
+    reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+    rejectionReason: reason,
+  });
+  batch.update(db.collection('services').doc(item.serviceId), {
+    published: false,
+    status: 'rejected',
+  });
+  await batch.commit();
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'reject_service',
+    targetType: 'service',
+    targetId: item.serviceId,
+    notes: reason,
+  });
+
+  return { queueItemId, serviceId: item.serviceId, status: 'rejected' };
+});
+
+// ---------------------------------------------------------------------------
+// User bans — suspend / ban / shadow-ban
+// ---------------------------------------------------------------------------
+
+export const banUser = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const targetUid = requireString(request.data?.uid, 'uid');
+  const reason = requireString(request.data?.reason, 'reason');
+
+  await admin.auth().updateUser(targetUid, { disabled: true });
+
+  await db.collection('user_bans').doc(targetUid).set({
+    userId: targetUid,
+    type: 'banned',
+    reason,
+    bannedBy: callerUid,
+    bannedAt: admin.firestore.FieldValue.serverTimestamp(),
+    expiresAt: null,
+    liftedAt: null,
+    liftedBy: null,
+  });
+
+  await db.collection('users').doc(targetUid).update({ isBanned: true });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'ban_user',
+    targetType: 'user',
+    targetId: targetUid,
+    notes: reason,
+  });
+
+  return { uid: targetUid, type: 'banned' };
+});
+
+export const unbanUser = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const targetUid = requireString(request.data?.uid, 'uid');
+
+  await admin.auth().updateUser(targetUid, { disabled: false });
+
+  await db.collection('user_bans').doc(targetUid).update({
+    liftedAt: admin.firestore.FieldValue.serverTimestamp(),
+    liftedBy: callerUid,
+  });
+
+  await db.collection('users').doc(targetUid).update({
+    isBanned: false,
+    isShadowBanned: false,
+    isSuspended: false,
+  });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'unban_user',
+    targetType: 'user',
+    targetId: targetUid,
+  });
+
+  return { uid: targetUid, unbanned: true };
+});
+
+export const shadowBanUser = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const targetUid = requireString(request.data?.uid, 'uid');
+  const reason = requireString(request.data?.reason, 'reason');
+
+  await db.collection('user_bans').doc(targetUid).set({
+    userId: targetUid,
+    type: 'shadow_banned',
+    reason,
+    bannedBy: callerUid,
+    bannedAt: admin.firestore.FieldValue.serverTimestamp(),
+    expiresAt: null,
+    liftedAt: null,
+    liftedBy: null,
+  });
+
+  await db.collection('users').doc(targetUid).update({ isShadowBanned: true });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'shadow_ban_user',
+    targetType: 'user',
+    targetId: targetUid,
+    notes: reason,
+  });
+
+  return { uid: targetUid, type: 'shadow_banned' };
+});
+
+export const suspendUser = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertMinSupportClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const targetUid = requireString(request.data?.uid, 'uid');
+  const reason = requireString(request.data?.reason, 'reason');
+  const expiresAtRaw = request.data?.expiresAt;
+
+  let expiresAt: admin.firestore.Timestamp | null = null;
+  if (expiresAtRaw) {
+    const parsed = new Date(expiresAtRaw);
+    if (isNaN(parsed.getTime())) {
+      throw new HttpsError('invalid-argument', 'expiresAt is not a valid date.');
+    }
+    if (parsed.getTime() < Date.now()) {
+      throw new HttpsError('invalid-argument', 'expiresAt must be in the future.');
+    }
+    expiresAt = admin.firestore.Timestamp.fromDate(parsed);
+  }
+
+  await db.collection('user_bans').doc(targetUid).set({
+    userId: targetUid,
+    type: 'suspended',
+    reason,
+    bannedBy: callerUid,
+    bannedAt: admin.firestore.FieldValue.serverTimestamp(),
+    expiresAt,
+    liftedAt: null,
+    liftedBy: null,
+  });
+
+  await db.collection('users').doc(targetUid).update({ isSuspended: true });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'suspend_user',
+    targetType: 'user',
+    targetId: targetUid,
+    notes: reason,
+  });
+
+  return { uid: targetUid, type: 'suspended' };
+});
+
+// ---------------------------------------------------------------------------
+// Review moderation — hide / unhide / delete
+// ---------------------------------------------------------------------------
+
+export const hideReview = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const reviewId = requireString(request.data?.reviewId, 'reviewId');
+  const reviewRef = db.collection('reviews').doc(reviewId);
+  const reviewSnap = await reviewRef.get();
+  if (!reviewSnap.exists) {
+    throw new HttpsError('not-found', 'Review not found.');
+  }
+
+  await reviewRef.update({ hidden: true });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'hide_review',
+    targetType: 'review',
+    targetId: reviewId,
+  });
+
+  return { reviewId, hidden: true };
+});
+
+export const unhideReview = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const reviewId = requireString(request.data?.reviewId, 'reviewId');
+  const reviewRef = db.collection('reviews').doc(reviewId);
+  const reviewSnap = await reviewRef.get();
+  if (!reviewSnap.exists) {
+    throw new HttpsError('not-found', 'Review not found.');
+  }
+
+  await reviewRef.update({ hidden: false });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'unhide_review',
+    targetType: 'review',
+    targetId: reviewId,
+  });
+
+  return { reviewId, hidden: false };
+});
+
+export const deleteReview = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const reviewId = requireString(request.data?.reviewId, 'reviewId');
+  const reviewRef = db.collection('reviews').doc(reviewId);
+  const reviewSnap = await reviewRef.get();
+  if (!reviewSnap.exists) {
+    throw new HttpsError('not-found', 'Review not found.');
+  }
+
+  await reviewRef.delete();
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'delete_review',
+    targetType: 'review',
+    targetId: reviewId,
+  });
+
+  return { reviewId, deleted: true };
 });
 
 // ---------------------------------------------------------------------------
@@ -1007,7 +1495,7 @@ export const logSession = onCall(async (request) => {
 export const resolveReport = onCall(async (request) => {
   const callerUid = request.auth?.uid;
   assertAuthenticated(callerUid);
-  assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
+  assertMinSupportClaim(request.auth?.token as Record<string, unknown> | undefined);
 
   const reportId = requireString(request.data?.reportId, 'reportId');
   const action = requireString(request.data?.action, 'action');
@@ -1044,3 +1532,273 @@ export const resolveReport = onCall(async (request) => {
 
   return { reportId, status: action };
 });
+
+// ---------------------------------------------------------------------------
+// Security — anomaly detection (called internally from logSession)
+// ---------------------------------------------------------------------------
+
+async function detectAnomalies(
+  uid: string,
+  currentEvent: {
+    ip: string | null;
+    countryCode: string | null;
+    city: string | null;
+    latitude: number | null;
+    longitude: number | null;
+  }
+): Promise<void> {
+  if (!currentEvent.ip || !currentEvent.countryCode) return;
+
+  const alerts: Array<{
+    type: string;
+    severity: string;
+    description: string;
+  }> = [];
+
+  // Fetch last 10 session events for this user (excluding the one just written)
+  const recentSnap = await db
+    .collection('user_sessions')
+    .doc(uid)
+    .collection('events')
+    .orderBy('loggedAt', 'desc')
+    .limit(11)
+    .get();
+
+  const recentEvents = recentSnap.docs
+    .map((d) => d.data())
+    .filter((e: Record<string, unknown>) =>
+      e.ip !== currentEvent.ip || e.countryCode !== currentEvent.countryCode
+    );
+
+  if (recentEvents.length === 0) return;
+
+  const lastEvent = recentEvents[0];
+
+  // 1. Impossible travel: different geo with implausible time gap
+  if (
+    lastEvent &&
+    currentEvent.latitude != null &&
+    currentEvent.longitude != null &&
+    lastEvent.latitude != null &&
+    lastEvent.longitude != null &&
+    lastEvent.loggedAt
+  ) {
+    const distKm = haversineKm(
+      currentEvent.latitude,
+      currentEvent.longitude,
+      lastEvent.latitude as number,
+      lastEvent.longitude as number
+    );
+    const lastTime = (lastEvent.loggedAt as admin.firestore.Timestamp).toDate();
+    const timeDiffHours = (Date.now() - lastTime.getTime()) / (1000 * 60 * 60);
+    // Max plausible speed: ~900 km/h (commercial flight)
+    if (timeDiffHours > 0 && distKm / timeDiffHours > 900) {
+      alerts.push({
+        type: 'impossible_travel',
+        severity: 'high',
+        description: `${Math.round(distKm)} km in ${timeDiffHours.toFixed(1)}h (${lastEvent.city ?? lastEvent.countryCode} → ${currentEvent.city ?? currentEvent.countryCode})`,
+      });
+    }
+  }
+
+  // 2. Unusual country: not seen in last 10 sessions
+  const knownCountries = new Set(
+    recentEvents
+      .map((e: Record<string, unknown>) => e.countryCode as string | null)
+      .filter((c): c is string => c != null)
+  );
+  if (!knownCountries.has(currentEvent.countryCode)) {
+    alerts.push({
+      type: 'unusual_country',
+      severity: 'medium',
+      description: `First login from ${currentEvent.countryCode} (known: ${[...knownCountries].join(', ')})`,
+    });
+  }
+
+  // Write alerts
+  for (const alert of alerts) {
+    await db.collection('security_alerts').add({
+      uid,
+      type: alert.type,
+      severity: alert.severity,
+      ip: currentEvent.ip,
+      country: null,
+      countryCode: currentEvent.countryCode,
+      city: currentEvent.city,
+      latitude: currentEvent.latitude,
+      longitude: currentEvent.longitude,
+      description: alert.description,
+      status: 'open',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      resolvedAt: null,
+      resolvedBy: null,
+    });
+  }
+
+  if (alerts.length > 0) {
+    logger.warn('Security anomalies detected', { uid, count: alerts.length });
+  }
+}
+
+function haversineKm(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ---------------------------------------------------------------------------
+// Security — resolve alert (admin only)
+// ---------------------------------------------------------------------------
+
+export const resolveSecurityAlert = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const alertId = requireString(request.data?.alertId, 'alertId');
+  const notes = typeof request.data?.notes === 'string' ? request.data.notes.trim() : null;
+
+  const alertRef = db.collection('security_alerts').doc(alertId);
+  const alertSnap = await alertRef.get();
+  if (!alertSnap.exists) {
+    throw new HttpsError('not-found', 'Alert not found.');
+  }
+
+  const alert = alertSnap.data() as { status?: string };
+  if (alert.status !== 'open') {
+    throw new HttpsError('failed-precondition', `Alert is already ${alert.status ?? 'closed'}.`);
+  }
+
+  await alertRef.update({
+    status: 'resolved',
+    resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
+    resolvedBy: callerUid,
+    resolutionNotes: notes,
+  });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'resolve_security_alert',
+    targetType: 'security_alert',
+    targetId: alertId,
+    notes: notes ?? undefined,
+  });
+
+  return { alertId, status: 'resolved' };
+});
+
+// ---------------------------------------------------------------------------
+// Security — IP blocklist management (admin only)
+// ---------------------------------------------------------------------------
+
+export const addToIpBlocklist = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const ip = requireString(request.data?.ip, 'ip');
+  const reason = typeof request.data?.reason === 'string' ? request.data.reason.trim() : null;
+
+  const existing = await db.collection('ip_blocklist')
+    .where('ip', '==', ip)
+    .where('active', '==', true)
+    .limit(1)
+    .get();
+
+  if (!existing.empty) {
+    throw new HttpsError('already-exists', `IP ${ip} is already blocked.`);
+  }
+
+  const ref = await db.collection('ip_blocklist').add({
+    ip,
+    reason,
+    active: true,
+    addedBy: callerUid,
+    addedAt: admin.firestore.FieldValue.serverTimestamp(),
+    removedAt: null,
+    removedBy: null,
+  });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'add_ip_blocklist',
+    targetType: 'ip',
+    targetId: ip,
+    notes: reason ?? undefined,
+  });
+
+  return { id: ref.id, ip, blocked: true };
+});
+
+export const removeFromIpBlocklist = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const entryId = requireString(request.data?.entryId, 'entryId');
+
+  const entryRef = db.collection('ip_blocklist').doc(entryId);
+  const entrySnap = await entryRef.get();
+  if (!entrySnap.exists) {
+    throw new HttpsError('not-found', 'Blocklist entry not found.');
+  }
+
+  await entryRef.update({
+    active: false,
+    removedAt: admin.firestore.FieldValue.serverTimestamp(),
+    removedBy: callerUid,
+  });
+
+  const ip = (entrySnap.data() as { ip?: string }).ip ?? entryId;
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'remove_ip_blocklist',
+    targetType: 'ip',
+    targetId: ip,
+  });
+
+  return { entryId, blocked: false };
+});
+
+// ---------------------------------------------------------------------------
+// Security — scheduled: purge expired session data (runs daily at 3am Paris)
+// ---------------------------------------------------------------------------
+
+export const purgeExpiredSessionData = onSchedule(
+  { schedule: 'every day 03:00', timeZone: 'Europe/Paris' },
+  async () => {
+    const retentionDays = 90;
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    const cutoffTs = admin.firestore.Timestamp.fromDate(cutoff);
+
+    const expiredSnap = await db
+      .collectionGroup('events')
+      .where('loggedAt', '<', cutoffTs)
+      .limit(500)
+      .get();
+
+    if (expiredSnap.empty) {
+      logger.info('Session purge: no expired events.');
+      return;
+    }
+
+    const batch = db.batch();
+    for (const doc of expiredSnap.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+
+    logger.info(`Session purge: deleted ${expiredSnap.size} events older than ${retentionDays} days.`);
+  }
+);
