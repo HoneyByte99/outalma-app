@@ -76,6 +76,19 @@ service firebase.storage {
       );
     }
 
+    // Booking request voice messages, uploaded BEFORE the booking exists
+    // (no bookingId yet), so they are scoped by uploader uid instead.
+    // Path: /private/bookings/voice/{uid}/{filename}
+    // The provider plays the message via the tokenised download URL stored on
+    // the booking document, so read can stay owner-only.
+    match /private/bookings/voice/{uid}/{filename} {
+      allow read: if isAdmin() || isSelf(uid);
+      allow write: if isAdmin()
+        || (isSelf(uid)
+            && request.resource.contentType.matches('audio/.*')
+            && smallEnough(20 * 1024 * 1024));
+    }
+
     // Booking attachments (private to participants)
     // Path: /private/bookings/{bookingId}/attachments/{filename}
     match /private/bookings/{bookingId}/attachments/{filename} {

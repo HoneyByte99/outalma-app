@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,10 +49,18 @@ class ChatMediaService {
   /// Upload a booking voice message before the booking is created
   /// (no bookingId available yet).
   ///
-  /// Storage path: private/bookings/voice/{timestamp}_voice.m4a
+  /// Scoped under the uploader's uid so Storage rules can restrict writes to
+  /// the owner. The provider later plays it via the tokenised download URL
+  /// stored on the booking document.
+  ///
+  /// Storage path: private/bookings/voice/{uid}/{timestamp}_voice.m4a
   Future<String> uploadBookingVoice(Uint8List bytes) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Booking voice upload requires an authenticated user');
+    }
     final ts = DateTime.now().millisecondsSinceEpoch;
-    final ref = _storage.ref('private/bookings/voice/${ts}_voice.m4a');
+    final ref = _storage.ref('private/bookings/voice/$uid/${ts}_voice.m4a');
     await ref.putData(bytes, SettableMetadata(contentType: 'audio/mp4'));
     return ref.getDownloadURL();
   }
