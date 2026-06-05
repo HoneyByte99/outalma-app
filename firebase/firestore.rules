@@ -227,7 +227,12 @@ service cloud.firestore {
     match /reviews/{reviewId} {
       allow read: if signedIn();
 
+      // Create-only (no non-admin update) + deterministic doc id
+      // "{bookingId}_{reviewerId}" guarantees one review per (booking, reviewer):
+      // a second attempt targets an existing doc → update → denied.
+      // revieweeId must be the OTHER booking participant (no self-review).
       allow create: if signedIn()
+        && reviewId == request.resource.data.bookingId + '_' + request.auth.uid
         && request.resource.data.reviewerId == request.auth.uid
         && request.resource.data.bookingId is string
         && request.resource.data.rating is int
@@ -235,8 +240,12 @@ service cloud.firestore {
         && request.resource.data.rating <= 5
         && bookingExists(request.resource.data.bookingId)
         && bookingData(request.resource.data.bookingId).status == "done"
-        && (bookingData(request.resource.data.bookingId).customerId == request.auth.uid
-            || bookingData(request.resource.data.bookingId).providerId == request.auth.uid);
+        && (
+          (bookingData(request.resource.data.bookingId).customerId == request.auth.uid
+            && request.resource.data.revieweeId == bookingData(request.resource.data.bookingId).providerId)
+          || (bookingData(request.resource.data.bookingId).providerId == request.auth.uid
+            && request.resource.data.revieweeId == bookingData(request.resource.data.bookingId).customerId)
+        );
 
       allow update, delete: if isAdmin();
     }

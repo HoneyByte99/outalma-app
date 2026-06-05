@@ -111,6 +111,9 @@ export const createBooking = onCall(async (request) => {
   const providerId = requireString(request.data?.providerId, 'providerId');
   const serviceId = requireString(request.data?.serviceId, 'serviceId');
   const requestMessage = requireString(request.data?.requestMessage, 'requestMessage');
+  if (requestMessage.length > 2000) {
+    throw new HttpsError('invalid-argument', 'requestMessage is too long (max 2000 chars).');
+  }
 
   // schedule/addressSnapshot are intentionally permissive for MVP; validate in app + tighten later.
   const schedule = request.data?.schedule ?? null;
@@ -118,6 +121,16 @@ export const createBooking = onCall(async (request) => {
   const audioMessageUrl = typeof request.data?.audioMessageUrl === 'string'
     ? request.data.audioMessageUrl.trim()
     : null;
+  // Only accept a Firebase Storage URL that lives in the caller's own
+  // booking-voice folder — prevents storing arbitrary/phishing URLs that the
+  // provider would later open.
+  if (audioMessageUrl !== null) {
+    const okHost = audioMessageUrl.startsWith('https://firebasestorage.googleapis.com/');
+    const okOwner = audioMessageUrl.includes(uid);
+    if (!okHost || !okOwner) {
+      throw new HttpsError('invalid-argument', 'audioMessageUrl is not a valid booking voice URL.');
+    }
+  }
   const scheduledAtRaw = request.data?.scheduledAt ?? null;
   let scheduledAt: admin.firestore.Timestamp | null = null;
   if (scheduledAtRaw) {
@@ -132,19 +145,42 @@ export const createBooking = onCall(async (request) => {
   }
 
   const bookingRef = db.collection('bookings').doc();
-  await bookingRef.set({
-    customerId: uid,
-    providerId,
-    serviceId,
-    status: 'requested' as BookingStatus,
-    requestMessage,
-    scheduledAt,
-    schedule,
-    addressSnapshot,
-    ...(audioMessageUrl ? { audioMessageUrl } : {}),
-    reminded24h: false,
-    reminded1h: false,
-    createdAt: admin.firestore.FieldValue.serverTimestamp()
+
+  await db.runTransaction(async (tx) => {
+    // Validate the target service exists, is published, and belongs to the
+    // claimed provider — and that the provider is not suspended. Prevents
+    // bookings against fantom/unpublished services or suspended providers.
+    const serviceSnap = await tx.get(db.collection('services').doc(serviceId));
+    if (!serviceSnap.exists) {
+      throw new HttpsError('not-found', 'Service not found.');
+    }
+    const service = serviceSnap.data() as { providerId?: string; published?: boolean };
+    if (service.providerId !== providerId) {
+      throw new HttpsError('failed-precondition', 'Service does not belong to this provider.');
+    }
+    if (service.published !== true) {
+      throw new HttpsError('failed-precondition', 'Service is not published.');
+    }
+
+    const providerSnap = await tx.get(db.collection('providers').doc(providerId));
+    if (providerSnap.exists && (providerSnap.data() as { suspended?: boolean }).suspended === true) {
+      throw new HttpsError('failed-precondition', 'Provider is currently unavailable.');
+    }
+
+    tx.set(bookingRef, {
+      customerId: uid,
+      providerId,
+      serviceId,
+      status: 'requested' as BookingStatus,
+      requestMessage,
+      scheduledAt,
+      schedule,
+      addressSnapshot,
+      ...(audioMessageUrl ? { audioMessageUrl } : {}),
+      reminded24h: false,
+      reminded1h: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
   });
 
   return { bookingId: bookingRef.id };

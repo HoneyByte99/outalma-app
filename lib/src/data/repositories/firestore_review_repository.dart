@@ -28,7 +28,10 @@ class FirestoreReviewRepository implements ReviewRepository {
   @override
   Future<Review> create(Review review) async {
     final col = FirestoreCollections.reviews(_db);
-    final ref = col.doc();
+    // Deterministic id enforces one review per (booking, reviewer): a second
+    // submission becomes an update, which the Firestore create-only rule
+    // rejects. Prevents duplicate/spam reviews skewing the average.
+    final ref = col.doc('${review.bookingId}_${review.reviewerId}');
     await ref.set(review);
     final snap = await ref.get();
     return snap.data()!;
