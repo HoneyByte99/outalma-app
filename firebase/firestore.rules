@@ -329,6 +329,12 @@ service cloud.firestore {
       allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
     }
 
+    // ---------- STATS (analytics counters, admin read-only, CF write-only) ----------
+    match /stats/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // ---------- Default deny ----------
     match /{document=**} {
       allow read, write: if false;

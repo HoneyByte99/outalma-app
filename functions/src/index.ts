@@ -1,7 +1,7 @@
 import * as admin from 'firebase-admin';
 import { createHash } from 'crypto';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as logger from 'firebase-functions/logger';
 import { assertAdminClaim, assertAdminOrModeratorClaim, assertMinSupportClaim, assertAuthenticated, requireBoolean, requireString } from './common';
@@ -2055,3 +2055,56 @@ export const onReportCreated = onDocumentCreated(
     logger.info('Report notification sent', { reportId, staffCount: uids.length });
   }
 );
+
+// ---------------------------------------------------------------------------
+// Analytics — incremental counters for posts & events (stats/global)
+// ---------------------------------------------------------------------------
+
+const ANALYTICS_STATS_REF = db.collection('stats').doc('global');
+
+export const onPostCreated = onDocumentCreated('posts/{postId}', async () => {
+  await ANALYTICS_STATS_REF.set(
+    { postsCount: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+});
+
+export const onPostDeleted = onDocumentDeleted('posts/{postId}', async () => {
+  await ANALYTICS_STATS_REF.set(
+    { postsCount: admin.firestore.FieldValue.increment(-1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+});
+
+export const onEventCreated = onDocumentCreated('events/{eventId}', async () => {
+  await ANALYTICS_STATS_REF.set(
+    { eventsCount: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+});
+
+export const onEventDeleted = onDocumentDeleted('events/{eventId}', async () => {
+  await ANALYTICS_STATS_REF.set(
+    { eventsCount: admin.firestore.FieldValue.increment(-1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+});
+
+export const initializeStats = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const snap = await ANALYTICS_STATS_REF.get();
+  if (snap.exists) {
+    return { initialized: false, reason: 'already_exists' };
+  }
+
+  await ANALYTICS_STATS_REF.set({
+    postsCount: 0,
+    eventsCount: 0,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { initialized: true };
+});
