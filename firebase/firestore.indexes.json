@@ -153,6 +153,41 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "submittedAt", "order": "DESCENDING" }
       ]
+    },
+
+    {
+      "collectionGroup": "services",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "title", "order": "ASCENDING" }
+      ]
+    },
+
+    {
+      "collectionGroup": "my_bookings",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "service", "order": "ASCENDING" },
+        { "fieldPath": "completed", "order": "ASCENDING" },
+        { "fieldPath": "booking_date", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "my_bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "completed", "order": "ASCENDING" },
+        { "fieldPath": "booking_date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "my_bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "reviewed", "order": "ASCENDING" },
+        { "fieldPath": "booking_date", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
@@ -162,6 +197,13 @@
       "indexes": [
         { "order": "ASCENDING",  "queryScope": "COLLECTION_GROUP" },
         { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
+      "collectionGroup": "my_bookings",
+      "fieldPath": "service",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
       ]
     }
   ]
