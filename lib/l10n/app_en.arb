@@ -256,6 +256,7 @@
   "bookingCancelYes": "Yes, cancel",
   "bookingCancelNo": "No",
   "bookingCancelButton": "Cancel request",
+  "bookingCancelReasonHint": "Reason (optional)",
   "bookingCancelError": "Could not cancel. Please try again.",
   "bookingCancelSuccess": "Request cancelled.",
   "bookingConfirmDoneTitle": "Confirm completion?",

@@ -27,6 +27,62 @@ String _formatSchedule(DateTime dt, String locale) {
   return '${dateFmt.format(dt)} \u00e0 ${timeFmt.format(dt)}';
 }
 
+/// Cancel an accepted/in-progress booking with an optional reason.
+Future<void> _confirmCancelBooking(
+  BuildContext context,
+  WidgetRef ref,
+  Booking booking,
+) async {
+  final l10n = AppLocalizations.of(context)!;
+  final oc = context.oc;
+  final messenger = ScaffoldMessenger.of(context);
+  final reasonController = TextEditingController();
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l10n.bookingCancelTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.bookingCancelContent),
+          const SizedBox(height: 12),
+          TextField(
+            controller: reasonController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: l10n.bookingCancelReasonHint,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(l10n.bookingBack),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(l10n.bookingCancelYes, style: TextStyle(color: oc.error)),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true) {
+    try {
+      await ref
+          .read(cancelBookingUseCaseProvider)
+          .call(booking.id, reason: reasonController.text);
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.errorGeneral), backgroundColor: oc.error),
+      );
+    }
+  }
+  reasonController.dispose();
+}
+
 class BookingDetailPage extends ConsumerWidget {
   const BookingDetailPage({super.key, required this.bookingId});
 
@@ -88,11 +144,27 @@ class _DetailContent extends ConsumerWidget {
         ? booking.providerId
         : booking.customerId;
 
+    // Either participant may cancel an accepted / in-progress booking (with a
+    // reason). 'requested' keeps its existing flow (provider accept/reject,
+    // customer cancel bar).
+    final isParticipant =
+        uid == booking.customerId || uid == booking.providerId;
+    final canCancelAfterAccept =
+        isParticipant &&
+        (booking.status == BookingStatus.accepted ||
+            booking.status == BookingStatus.inProgress);
+
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
         title: Text(l10n.bookingDetailTitle),
         actions: [
+          if (canCancelAfterAccept)
+            IconButton(
+              icon: const Icon(Icons.cancel_outlined, size: 20),
+              tooltip: l10n.bookingCancelTitle,
+              onPressed: () => _confirmCancelBooking(context, ref, booking),
+            ),
           if (otherUid.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.flag_outlined, size: 20),

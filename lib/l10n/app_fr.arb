@@ -256,6 +256,7 @@
   "bookingCancelYes": "Oui, annuler",
   "bookingCancelNo": "Non",
   "bookingCancelButton": "Annuler la demande",
+  "bookingCancelReasonHint": "Motif (facultatif)",
   "bookingCancelError": "Impossible d'annuler. Réessayez.",
   "bookingCancelSuccess": "Demande annulée.",
   "bookingConfirmDoneTitle": "Confirmer la fin ?",

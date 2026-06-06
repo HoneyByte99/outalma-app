@@ -1268,6 +1268,12 @@ abstract class AppLocalizations {
   /// **'Cancel request'**
   String get bookingCancelButton;
 
+  /// No description provided for @bookingCancelReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get bookingCancelReasonHint;
+
   /// No description provided for @bookingCancelError.
   ///
   /// In en, this message translates to:

@@ -537,7 +537,19 @@ export const cancelBooking = onCall(async (request) => {
   assertAuthenticated(uid);
 
   const bookingId = requireString(request.data?.bookingId, 'bookingId');
+  // Optional cancellation reason (bounded). Empty string allowed.
+  const reasonRaw = typeof request.data?.reason === 'string'
+    ? (request.data.reason as string).trim()
+    : '';
+  if (reasonRaw.length > 500) {
+    throw new HttpsError('invalid-argument', 'reason is too long (max 500 chars).');
+  }
   const bookingRef = db.collection('bookings').doc(bookingId);
+
+  // A booking may be cancelled by either participant while it is still active
+  // (requested → before accept, or accepted/in_progress → after, with a reason).
+  // done/rejected/cancelled are terminal.
+  const cancellable: BookingStatus[] = ['requested', 'accepted', 'in_progress'];
 
   const result = await db.runTransaction(async (tx) => {
     const snap = await tx.get(bookingRef);
@@ -553,7 +565,7 @@ export const cancelBooking = onCall(async (request) => {
       throw new HttpsError('failed-precondition', 'Booking is missing required fields.');
     }
 
-    if (booking.status !== 'requested') {
+    if (!cancellable.includes(booking.status as BookingStatus)) {
       throw new HttpsError(
         'failed-precondition',
         `Booking cannot be cancelled from status=${booking.status ?? 'unknown'}.`
@@ -567,7 +579,9 @@ export const cancelBooking = onCall(async (request) => {
 
     tx.update(bookingRef, {
       status: 'cancelled' as BookingStatus,
-      cancelledAt: admin.firestore.FieldValue.serverTimestamp()
+      cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+      cancelledBy: uid,
+      ...(reasonRaw ? { cancelReason: reasonRaw } : {}),
     });
 
     return { bookingId };

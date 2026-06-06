@@ -19,6 +19,8 @@ class Booking {
     this.startedAt,
     this.doneAt,
     this.audioMessageUrl,
+    this.cancelReason,
+    this.cancelledBy,
   });
 
   final String id;
@@ -39,6 +41,10 @@ class Booking {
   final DateTime? doneAt;
   final String? audioMessageUrl;
 
+  /// Set when the booking was cancelled — who cancelled and why.
+  final String? cancelReason;
+  final String? cancelledBy;
+
   Booking copyWith({
     String? customerId,
     String? providerId,
@@ -56,6 +62,8 @@ class Booking {
     DateTime? startedAt,
     DateTime? doneAt,
     String? audioMessageUrl,
+    String? cancelReason,
+    String? cancelledBy,
   }) {
     return Booking(
       id: id,
@@ -75,6 +83,8 @@ class Booking {
       startedAt: startedAt ?? this.startedAt,
       doneAt: doneAt ?? this.doneAt,
       audioMessageUrl: audioMessageUrl ?? this.audioMessageUrl,
+      cancelReason: cancelReason ?? this.cancelReason,
+      cancelledBy: cancelledBy ?? this.cancelledBy,
     );
   }
 }

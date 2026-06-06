@@ -54,14 +54,18 @@ class ConfirmDoneUseCase {
 }
 
 /// Calls the server-authoritative `cancelBooking` Cloud Function.
-/// Only valid when booking status = `requested`.
+/// Valid while the booking is requested, accepted or in_progress (either
+/// participant may cancel; an optional [reason] is recorded).
 class CancelBookingUseCase {
   const CancelBookingUseCase();
 
-  Future<void> call(String bookingId) async {
+  Future<void> call(String bookingId, {String? reason}) async {
     await const CallableFunctionClient().call(
       'cancelBooking',
-      data: {'bookingId': bookingId},
+      data: {
+        'bookingId': bookingId,
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
     );
   }
 }

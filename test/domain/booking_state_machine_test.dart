@@ -45,6 +45,20 @@ void main() {
         isTrue,
       );
     });
+
+    test('accepted → cancelled (cancellation allowed after acceptance)', () {
+      expect(
+        BookingStatus.accepted.canTransitionTo(BookingStatus.cancelled),
+        isTrue,
+      );
+    });
+
+    test('inProgress → cancelled (cancellation allowed mid-service)', () {
+      expect(
+        BookingStatus.inProgress.canTransitionTo(BookingStatus.cancelled),
+        isTrue,
+      );
+    });
   });
 
   group('BookingStatus.canTransitionTo — invalid transitions', () {
@@ -69,13 +83,6 @@ void main() {
       );
     });
 
-    test('accepted → cancelled (MVP rule: no cancel after accept)', () {
-      expect(
-        BookingStatus.accepted.canTransitionTo(BookingStatus.cancelled),
-        isFalse,
-      );
-    });
-
     test('accepted → done (must go through inProgress)', () {
       expect(
         BookingStatus.accepted.canTransitionTo(BookingStatus.done),
@@ -93,13 +100,6 @@ void main() {
     test('accepted → rejected (already accepted)', () {
       expect(
         BookingStatus.accepted.canTransitionTo(BookingStatus.rejected),
-        isFalse,
-      );
-    });
-
-    test('inProgress → cancelled (no cancel mid-service)', () {
-      expect(
-        BookingStatus.inProgress.canTransitionTo(BookingStatus.cancelled),
         isFalse,
       );
     });

@@ -50,9 +50,12 @@ enum BookingStatus {
   /// Outalma MVP state machine:
   ///
   ///   requested   → accepted, rejected, cancelled
-  ///   accepted    → in_progress
-  ///   in_progress → done
+  ///   accepted    → in_progress, cancelled
+  ///   in_progress → done, cancelled
   ///   done / rejected / cancelled → (none)
+  ///
+  /// A booking may be cancelled (by either participant, with a reason) while it
+  /// is still active — requested, accepted or in_progress.
   ///
   /// Note: server-side Cloud Functions are the authoritative enforcers.
   /// This method is a client-side guard to prevent offering invalid actions
@@ -64,9 +67,9 @@ enum BookingStatus {
             to == BookingStatus.rejected ||
             to == BookingStatus.cancelled;
       case BookingStatus.accepted:
-        return to == BookingStatus.inProgress;
+        return to == BookingStatus.inProgress || to == BookingStatus.cancelled;
       case BookingStatus.inProgress:
-        return to == BookingStatus.done;
+        return to == BookingStatus.done || to == BookingStatus.cancelled;
       case BookingStatus.done:
       case BookingStatus.rejected:
       case BookingStatus.cancelled:

@@ -299,6 +299,8 @@ class FirestoreCollections {
           ? dateTimeFromFirestore(data['doneAt'])
           : null,
       audioMessageUrl: data['audioMessageUrl'] as String?,
+      cancelReason: data['cancelReason'] as String?,
+      cancelledBy: data['cancelledBy'] as String?,
     );
   }
 

@@ -631,6 +631,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingCancelButton => 'Cancel request';
 
   @override
+  String get bookingCancelReasonHint => 'Reason (optional)';
+
+  @override
   String get bookingCancelError => 'Could not cancel. Please try again.';
 
   @override
