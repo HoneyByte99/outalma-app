@@ -69,3 +69,8 @@ lib/firebase_options.dart
 
 # Seed data — contains test-account credentials and tester PII; never commit.
 seed/
+
+# Android release signing — never commit
+android/key.properties
+*.jks
+*.keystore
