@@ -1934,6 +1934,77 @@ export const purgeIpGeoCache = onSchedule(
 );
 
 // ---------------------------------------------------------------------------
+// Platform stats — incremental counters maintained by triggers
+// ---------------------------------------------------------------------------
+
+const STATS_REF = db.collection('platform_stats').doc('global');
+
+export const onUserCreated = onDocumentCreated('users/{userId}', async () => {
+  await STATS_REF.set(
+    { totalUsers: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+});
+
+export const onProviderCreated = onDocumentCreated('providers/{providerId}', async () => {
+  await STATS_REF.set(
+    { totalProviders: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+});
+
+export const onServiceCreated = onDocumentCreated('services/{serviceId}', async () => {
+  await STATS_REF.set(
+    { totalServices: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+});
+
+export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async () => {
+  await STATS_REF.set(
+    { totalBookings: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+});
+
+export const onBookingUpdatedStats = onDocumentUpdated('bookings/{bookingId}', async (event) => {
+  const before = event.data?.before.data() as { status?: string } | undefined;
+  const after = event.data?.after.data() as { status?: string } | undefined;
+  if (!before || !after || before.status === after.status) return;
+
+  if (after.status === 'done' && before.status !== 'done') {
+    await STATS_REF.set(
+      { totalBookingsDone: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+      { merge: true },
+    );
+  }
+});
+
+export const onReportCreatedStats = onDocumentCreated('reports/{reportId}', async () => {
+  await STATS_REF.set(
+    {
+      totalReports: admin.firestore.FieldValue.increment(1),
+      totalReportsPending: admin.firestore.FieldValue.increment(1),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+});
+
+export const onReportUpdatedStats = onDocumentUpdated('reports/{reportId}', async (event) => {
+  const before = event.data?.before.data() as { status?: string } | undefined;
+  const after = event.data?.after.data() as { status?: string } | undefined;
+  if (!before || !after || before.status === after.status) return;
+
+  if (before.status === 'open' && after.status !== 'open') {
+    await STATS_REF.set(
+      { totalReportsPending: admin.firestore.FieldValue.increment(-1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+      { merge: true },
+    );
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Trigger: notify admins/moderators on new report
 // ---------------------------------------------------------------------------
 

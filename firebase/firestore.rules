@@ -317,6 +317,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ---------- PLATFORM STATS (staff read-only, CF write-only) ----------
+    match /platform_stats/{docId} {
+      allow read: if isReadonly();
+      allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
+    }
+
     // ---------- IP GEO CACHE (admin read-only, CF write-only) ----------
     match /ip_geo_cache/{hash} {
       allow read: if isAdmin();
