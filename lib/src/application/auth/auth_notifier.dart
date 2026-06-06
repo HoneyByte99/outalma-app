@@ -136,6 +136,11 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     await ref.read(firebaseAuthProvider).signOut();
   }
 
+  /// Returns the caller's personal data (RGPD portability) as a JSON-able map.
+  Future<Map<String, dynamic>> exportMyData() async {
+    return const CallableFunctionClient().call('exportMyData');
+  }
+
   // ---------------------------------------------------------------------------
   // Phone authentication via OTP — production flow (Twilio Verify backend)
   // All flows are server-authoritative through Cloud Functions.

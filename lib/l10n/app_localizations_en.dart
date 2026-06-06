@@ -1280,6 +1280,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get legalSection => 'Legal';
 
   @override
+  String get accountExportData => 'Export my data';
+
+  @override
   String get accountDeleteTitle => 'Delete my account';
 
   @override

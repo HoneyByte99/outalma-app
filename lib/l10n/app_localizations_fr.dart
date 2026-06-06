@@ -1294,6 +1294,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get legalSection => 'Légal';
 
   @override
+  String get accountExportData => 'Exporter mes données';
+
+  @override
   String get accountDeleteTitle => 'Supprimer mon compte';
 
   @override

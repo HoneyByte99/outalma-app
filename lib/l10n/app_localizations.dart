@@ -2492,6 +2492,12 @@ abstract class AppLocalizations {
   /// **'Legal'**
   String get legalSection;
 
+  /// No description provided for @accountExportData.
+  ///
+  /// In en, this message translates to:
+  /// **'Export my data'**
+  String get accountExportData;
+
   /// No description provided for @accountDeleteTitle.
   ///
   /// In en, this message translates to:

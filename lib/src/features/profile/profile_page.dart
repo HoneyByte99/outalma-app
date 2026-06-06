@@ -1,6 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_spacing.dart';
@@ -79,6 +84,8 @@ class ProfilePage extends ConsumerWidget {
             _SectionLabel(label: l10n.legalSection),
             const SizedBox(height: 12),
             const _LegalLinksSection(),
+            const SizedBox(height: 12),
+            const _ExportDataTile(),
             const SizedBox(height: 28),
             const _DeleteAccountSection(),
           ],
@@ -998,6 +1005,85 @@ class _LegalLinksSection extends StatelessWidget {
             '/legal/terms',
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Export my data (RGPD portability)
+// ---------------------------------------------------------------------------
+
+class _ExportDataTile extends ConsumerStatefulWidget {
+  const _ExportDataTile();
+
+  @override
+  ConsumerState<_ExportDataTile> createState() => _ExportDataTileState();
+}
+
+class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
+  bool _loading = false;
+
+  Future<void> _export() async {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _loading = true);
+    try {
+      final data = await ref.read(authNotifierProvider.notifier).exportMyData();
+      final json = const JsonEncoder.withIndent('  ').convert(data);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/outalma_data_export.json');
+      await file.writeAsString(json);
+      await Share.shareXFiles([
+        XFile(file.path, mimeType: 'application/json'),
+      ], subject: l10n.accountExportData);
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.errorGeneral), backgroundColor: oc.error),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      decoration: BoxDecoration(
+        color: oc.cardSurface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        border: Border.all(color: oc.border),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        onTap: _loading ? null : _export,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Icon(Icons.download_outlined, size: 20, color: oc.icons),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  l10n.accountExportData,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              if (_loading)
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: oc.primary,
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

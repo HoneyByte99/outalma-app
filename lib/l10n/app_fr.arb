@@ -510,6 +510,7 @@
   "chatReleaseToCancel": "Relâchez pour annuler",
   "chatTakePhoto": "Photo",
   "legalSection": "Légal",
+  "accountExportData": "Exporter mes données",
   "accountDeleteTitle": "Supprimer mon compte",
   "accountDeleteWarning": "Cette action est définitive et irréversible. Votre profil, vos services et vos informations personnelles seront supprimés.",
   "accountDeleteConfirm": "Supprimer définitivement",

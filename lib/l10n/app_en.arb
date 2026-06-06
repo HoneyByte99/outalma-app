@@ -510,6 +510,7 @@
   "chatReleaseToCancel": "Release to cancel",
   "chatTakePhoto": "Photo",
   "legalSection": "Legal",
+  "accountExportData": "Export my data",
   "accountDeleteTitle": "Delete my account",
   "accountDeleteWarning": "This action is permanent and irreversible. Your profile, services and personal information will be deleted.",
   "accountDeleteConfirm": "Delete permanently",

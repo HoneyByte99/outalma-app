@@ -699,6 +699,41 @@ export const deleteMyAccount = onCall(async (request) => {
   return { deleted: true };
 });
 
+// ---------------------------------------------------------------------------
+// Personal data export (RGPD right to portability)
+// ---------------------------------------------------------------------------
+export const exportMyData = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  assertAuthenticated(uid);
+
+  const [user, provider, services, bkCustomer, bkProvider, revWritten, revReceived] =
+    await Promise.all([
+      db.collection('users').doc(uid).get(),
+      db.collection('providers').doc(uid).get(),
+      db.collection('services').where('providerId', '==', uid).get(),
+      db.collection('bookings').where('customerId', '==', uid).get(),
+      db.collection('bookings').where('providerId', '==', uid).get(),
+      db.collection('reviews').where('reviewerId', '==', uid).get(),
+      db.collection('reviews').where('revieweeId', '==', uid).get(),
+    ]);
+
+  const one = (s: admin.firestore.DocumentSnapshot) =>
+    s.exists ? { id: s.id, ...s.data() } : null;
+  const many = (q: admin.firestore.QuerySnapshot) =>
+    q.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  return {
+    exportedAt: new Date().toISOString(),
+    user: one(user),
+    providerProfile: one(provider),
+    services: many(services),
+    bookingsAsCustomer: many(bkCustomer),
+    bookingsAsProvider: many(bkProvider),
+    reviewsWritten: many(revWritten),
+    reviewsReceived: many(revReceived),
+  };
+});
+
 export const setAdminClaim = onCall(async (request) => {
   const callerUid = request.auth?.uid;
   assertAuthenticated(callerUid);
