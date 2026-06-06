@@ -1289,4 +1289,40 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatTakePhoto => 'Photo';
+
+  @override
+  String get legalSection => 'Légal';
+
+  @override
+  String get accountDeleteTitle => 'Supprimer mon compte';
+
+  @override
+  String get accountDeleteWarning =>
+      'Cette action est définitive et irréversible. Votre profil, vos services et vos informations personnelles seront supprimés.';
+
+  @override
+  String get accountDeleteConfirm => 'Supprimer définitivement';
+
+  @override
+  String get accountDeleted => 'Votre compte a été supprimé.';
+
+  @override
+  String get blockUser => 'Bloquer cet utilisateur';
+
+  @override
+  String get unblockUser => 'Débloquer cet utilisateur';
+
+  @override
+  String get blockUserConfirm =>
+      'Bloquer cet utilisateur ? Vous ne verrez plus ses messages et il ne pourra plus vous contacter.';
+
+  @override
+  String get userBlocked => 'Utilisateur bloqué';
+
+  @override
+  String get userUnblocked => 'Utilisateur débloqué';
+
+  @override
+  String get chatBlockedBanner =>
+      'Vous avez bloqué cet utilisateur. Débloquez-le pour échanger à nouveau.';
 }

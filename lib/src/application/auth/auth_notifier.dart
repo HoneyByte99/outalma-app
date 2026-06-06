@@ -128,6 +128,14 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     await ref.read(firebaseAuthProvider).signOut();
   }
 
+  /// Permanently deletes the current user's account and personal data via a
+  /// server-authoritative Cloud Function, then signs out locally.
+  /// Required by App Store 5.1.1(v) and Google Play.
+  Future<void> deleteAccount() async {
+    await const CallableFunctionClient().call('deleteMyAccount');
+    await ref.read(firebaseAuthProvider).signOut();
+  }
+
   // ---------------------------------------------------------------------------
   // Phone authentication via OTP — production flow (Twilio Verify backend)
   // All flows are server-authoritative through Cloud Functions.

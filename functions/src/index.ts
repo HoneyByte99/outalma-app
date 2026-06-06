@@ -662,6 +662,43 @@ export const confirmDone = onCall(async (request) => {
   return result;
 });
 
+// ---------------------------------------------------------------------------
+// Account self-deletion (App Store 5.1.1(v) / Google Play requirement)
+// Server-authoritative: purges the user's auth account + personal data.
+// ---------------------------------------------------------------------------
+export const deleteMyAccount = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  assertAuthenticated(uid);
+
+  // Delete owned services (a provider's listings) + provider profile + user doc
+  // in a batch. Booking/review/chat history is retained but de-referenced; the
+  // personal profile and credentials are removed.
+  const services = await db
+    .collection('services')
+    .where('providerId', '==', uid)
+    .get();
+
+  const batch = db.batch();
+  services.forEach((d) => batch.delete(d.ref));
+  batch.delete(db.collection('providers').doc(uid));
+  batch.delete(db.collection('users').doc(uid));
+  await batch.commit();
+
+  // Best-effort cleanup of the user's avatar folder.
+  try {
+    await admin.storage().bucket().deleteFiles({
+      prefix: `private/users/${uid}/`,
+    });
+  } catch (e) {
+    console.warn(`deleteMyAccount: avatar cleanup failed for ${uid}: ${e}`);
+  }
+
+  // Remove the Firebase Auth account last so the client is fully signed out.
+  await admin.auth().deleteUser(uid);
+
+  return { deleted: true };
+});
+
 export const setAdminClaim = onCall(async (request) => {
   const callerUid = request.auth?.uid;
   assertAuthenticated(callerUid);

@@ -508,5 +508,16 @@
   "chatHoldToRecord": "Hold to record",
   "chatSlideToCancel": "Slide to cancel",
   "chatReleaseToCancel": "Release to cancel",
-  "chatTakePhoto": "Photo"
+  "chatTakePhoto": "Photo",
+  "legalSection": "Legal",
+  "accountDeleteTitle": "Delete my account",
+  "accountDeleteWarning": "This action is permanent and irreversible. Your profile, services and personal information will be deleted.",
+  "accountDeleteConfirm": "Delete permanently",
+  "accountDeleted": "Your account has been deleted.",
+  "blockUser": "Block this user",
+  "unblockUser": "Unblock this user",
+  "blockUserConfirm": "Block this user? You will no longer see their messages and they can no longer contact you.",
+  "userBlocked": "User blocked",
+  "userUnblocked": "User unblocked",
+  "chatBlockedBanner": "You have blocked this user. Unblock to chat again."
 }

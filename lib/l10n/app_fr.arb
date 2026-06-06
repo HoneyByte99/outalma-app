@@ -508,5 +508,16 @@
   "chatHoldToRecord": "Maintenez pour enregistrer",
   "chatSlideToCancel": "Glisser pour annuler",
   "chatReleaseToCancel": "Relâchez pour annuler",
-  "chatTakePhoto": "Photo"
+  "chatTakePhoto": "Photo",
+  "legalSection": "Légal",
+  "accountDeleteTitle": "Supprimer mon compte",
+  "accountDeleteWarning": "Cette action est définitive et irréversible. Votre profil, vos services et vos informations personnelles seront supprimés.",
+  "accountDeleteConfirm": "Supprimer définitivement",
+  "accountDeleted": "Votre compte a été supprimé.",
+  "blockUser": "Bloquer cet utilisateur",
+  "unblockUser": "Débloquer cet utilisateur",
+  "blockUserConfirm": "Bloquer cet utilisateur ? Vous ne verrez plus ses messages et il ne pourra plus vous contacter.",
+  "userBlocked": "Utilisateur bloqué",
+  "userUnblocked": "Utilisateur débloqué",
+  "chatBlockedBanner": "Vous avez bloqué cet utilisateur. Débloquez-le pour échanger à nouveau."
 }

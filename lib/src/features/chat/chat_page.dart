@@ -141,6 +141,46 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  Future<void> _toggleBlock(
+    String otherUid,
+    bool isBlocked,
+    AppLocalizations l10n,
+    OutalmaColors oc,
+  ) async {
+    final svc = ref.read(userBlockServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    if (isBlocked) {
+      await svc.unblock(otherUid);
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.userUnblocked)));
+      }
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.blockUser),
+        content: Text(l10n.blockUserConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.blockUser, style: TextStyle(color: oc.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await svc.block(otherUid);
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.userBlocked)));
+      }
+    }
+  }
+
   // Pending image preview — WhatsApp-style: preview + caption before send
   String? _pendingImageUrl;
 
@@ -368,6 +408,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ? otherUser.displayName
         : l10n.chatConversation;
 
+    final blocked = ref.watch(blockedUserIdsProvider).valueOrNull ?? const {};
+    final isBlocked =
+        otherUid != null && otherUid.isNotEmpty && blocked.contains(otherUid);
+
     // Mark messages read only when the message count actually grows — not on
     // every rebuild. Prevents a runaway Firestore write loop in the chat view.
     ref.listen<AsyncValue<List<ChatMessage>>>(
@@ -389,6 +433,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
         actions: [
+          if (otherUid != null && otherUid.isNotEmpty)
+            IconButton(
+              icon: Icon(
+                isBlocked ? Icons.block : Icons.block_outlined,
+                size: 20,
+                color: isBlocked ? oc.error : null,
+              ),
+              tooltip: isBlocked ? l10n.unblockUser : l10n.blockUser,
+              onPressed: () => _toggleBlock(otherUid, isBlocked, l10n, oc),
+            ),
           IconButton(
             icon: const Icon(Icons.flag_outlined, size: 20),
             tooltip: l10n.bookingReport,
@@ -456,8 +510,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
 
           // ---- Input bar ----
+          // Blocked: hide the composer, show a banner instead.
+          if (isBlocked)
+            _BlockedBanner(message: l10n.chatBlockedBanner)
           // Image preview overlay (WhatsApp-style)
-          if (_pendingImageUrl != null)
+          else if (_pendingImageUrl != null)
             _ImagePreviewBar(
               imageUrl: _pendingImageUrl!,
               captionController: _controller,
@@ -481,6 +538,46 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               onCancelRecording: _cancelRecording,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blocked banner (shown instead of the composer when the other user is blocked)
+// ---------------------------------------------------------------------------
+
+class _BlockedBanner extends StatelessWidget {
+  const _BlockedBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + bottomPadding),
+      decoration: BoxDecoration(
+        color: oc.surfaceVariant,
+        border: Border(top: BorderSide(color: oc.border)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.block, size: 18, color: oc.secondaryText),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+            ),
+          ),
         ],
       ),
     );

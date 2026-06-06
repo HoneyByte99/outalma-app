@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/auth/auth_providers.dart';
@@ -50,8 +51,13 @@ final chatsForModeProvider = Provider<AsyncValue<List<Chat>>>((ref) {
 
   if (uid == null) return const AsyncValue.data([]);
 
+  final blocked = ref.watch(blockedUserIdsProvider).valueOrNull ?? const {};
+
   return chatsAsync.whenData((chats) {
     return chats.where((c) {
+      // Hide chats with a blocked participant.
+      final otherUid = c.customerId == uid ? c.providerId : c.customerId;
+      if (otherUid.isNotEmpty && blocked.contains(otherUid)) return false;
       // Legacy document: neither field is set → show in both modes
       if (c.customerId.isEmpty && c.providerId.isEmpty) return true;
       return mode == ActiveMode.client
@@ -72,6 +78,44 @@ final otherTypingProvider = StreamProvider.family<DateTime?, String>((
   return ref
       .watch(chatRepositoryProvider)
       .watchOtherTyping(chatId: chatId, myUid: auth.user.id);
+});
+
+/// Set of user ids the current user has blocked (live).
+final blockedUserIdsProvider = StreamProvider.autoDispose<Set<String>>((ref) {
+  final uid = ref.watch(_stableChatUidProvider);
+  if (uid == null) return Stream.value(<String>{});
+  return ref
+      .watch(firestoreProvider)
+      .collection('users')
+      .doc(uid)
+      .collection('blockedUsers')
+      .snapshots()
+      .map((qs) => qs.docs.map((d) => d.id).toSet());
+});
+
+/// Blocks/unblocks another user (writes under the caller's own subcollection).
+class UserBlockService {
+  UserBlockService(this._db, this._uid);
+  final FirebaseFirestore _db;
+  final String? _uid;
+
+  CollectionReference<Map<String, dynamic>>? _col() {
+    final uid = _uid;
+    if (uid == null) return null;
+    return _db.collection('users').doc(uid).collection('blockedUsers');
+  }
+
+  Future<void> block(String otherUid) async =>
+      _col()?.doc(otherUid).set({'createdAt': FieldValue.serverTimestamp()});
+
+  Future<void> unblock(String otherUid) async => _col()?.doc(otherUid).delete();
+}
+
+final userBlockServiceProvider = Provider<UserBlockService>((ref) {
+  return UserBlockService(
+    ref.watch(firestoreProvider),
+    ref.watch(_stableChatUidProvider),
+  );
 });
 
 /// Unread messages count across all chats (messages not sent by me and not in readBy).

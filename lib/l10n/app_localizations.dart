@@ -2485,6 +2485,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Photo'**
   String get chatTakePhoto;
+
+  /// No description provided for @legalSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal'**
+  String get legalSection;
+
+  /// No description provided for @accountDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete my account'**
+  String get accountDeleteTitle;
+
+  /// No description provided for @accountDeleteWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This action is permanent and irreversible. Your profile, services and personal information will be deleted.'**
+  String get accountDeleteWarning;
+
+  /// No description provided for @accountDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete permanently'**
+  String get accountDeleteConfirm;
+
+  /// No description provided for @accountDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been deleted.'**
+  String get accountDeleted;
+
+  /// No description provided for @blockUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Block this user'**
+  String get blockUser;
+
+  /// No description provided for @unblockUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock this user'**
+  String get unblockUser;
+
+  /// No description provided for @blockUserConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Block this user? You will no longer see their messages and they can no longer contact you.'**
+  String get blockUserConfirm;
+
+  /// No description provided for @userBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'User blocked'**
+  String get userBlocked;
+
+  /// No description provided for @userUnblocked.
+  ///
+  /// In en, this message translates to:
+  /// **'User unblocked'**
+  String get userUnblocked;
+
+  /// No description provided for @chatBlockedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'You have blocked this user. Unblock to chat again.'**
+  String get chatBlockedBanner;
 }
 
 class _AppLocalizationsDelegate

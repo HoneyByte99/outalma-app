@@ -75,6 +75,12 @@ class ProfilePage extends ConsumerWidget {
             _SectionLabel(label: l10n.profileAccount),
             const SizedBox(height: 12),
             _AccountSection(user: user),
+            const SizedBox(height: 28),
+            _SectionLabel(label: l10n.legalSection),
+            const SizedBox(height: 12),
+            const _LegalLinksSection(),
+            const SizedBox(height: 28),
+            const _DeleteAccountSection(),
           ],
         ),
       ),
@@ -938,6 +944,198 @@ class _AccountSection extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Legal links (privacy + terms) — must stay reachable after sign-up
+// ---------------------------------------------------------------------------
+
+class _LegalLinksSection extends StatelessWidget {
+  const _LegalLinksSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+
+    Widget tile(IconData icon, String label, String route) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        onTap: () => context.push(route),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: oc.icons),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 20, color: oc.icons),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: oc.cardSurface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        border: Border.all(color: oc.border),
+      ),
+      child: Column(
+        children: [
+          tile(Icons.shield_outlined, l10n.legalPrivacyTitle, '/legal/privacy'),
+          Divider(height: 1, color: oc.border),
+          tile(
+            Icons.description_outlined,
+            l10n.legalTermsTitle,
+            '/legal/terms',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Delete account (App Store 5.1.1(v) / Google Play requirement)
+// ---------------------------------------------------------------------------
+
+class _DeleteAccountSection extends ConsumerWidget {
+  const _DeleteAccountSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: oc.cardSurface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        border: Border.all(color: oc.error.withValues(alpha: 0.4)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        onTap: () => _confirmDelete(context, ref, oc, l10n),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Icon(Icons.delete_forever_outlined, size: 20, color: oc.error),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  l10n.accountDeleteTitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: oc.error,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    OutalmaColors oc,
+    AppLocalizations l10n,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: oc.error.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.delete_forever_outlined,
+                  color: oc.error,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.accountDeleteTitle,
+                style: Theme.of(
+                  ctx,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.accountDeleteWarning,
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  ctx,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: oc.error,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(l10n.accountDeleteConfirm),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: oc.primary,
+                    side: BorderSide(color: oc.primary),
+                    minimumSize: const Size(0, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(l10n.cancel),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(authNotifierProvider.notifier).deleteAccount();
+      messenger.showSnackBar(SnackBar(content: Text(l10n.accountDeleted)));
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.errorGeneral), backgroundColor: oc.error),
+      );
+    }
   }
 }
 

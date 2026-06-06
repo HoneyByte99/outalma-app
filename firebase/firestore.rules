@@ -65,6 +65,11 @@ service cloud.firestore {
       allow create: if isAdmin() || (isSelf(uid) && isUserCreateSafe());
       allow update: if isAdmin() || (isSelf(uid) && isUserUpdateSafe());
       allow delete: if isAdmin();
+
+      // Users a person has blocked — private to that person.
+      match /blockedUsers/{blockedUid} {
+        allow read, write: if isSelf(uid);
+      }
     }
 
     // ---------- PROVIDERS (public read, owner write) ----------
