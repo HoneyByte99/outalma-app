@@ -14,6 +14,12 @@ abstract interface class ChatRepository {
 
   Future<ChatMessage> sendMessage(ChatMessage message);
 
+  /// Soft-deletes a message (sets `deleted: true`); only the sender may do so.
+  Future<void> softDeleteMessage({
+    required String chatId,
+    required String messageId,
+  });
+
   /// Marks all messages in [chatId] not sent by [uid] as read by [uid].
   Future<void> markMessagesRead({required String chatId, required String uid});
 

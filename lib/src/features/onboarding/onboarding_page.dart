@@ -39,6 +39,17 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     }
   }
 
+  // "Skip" jumps to the last slide (where the terms checkbox + Get Started
+  // live) instead of trying to finish — finishing requires terms acceptance,
+  // which is only shown on the last slide.
+  void _skipToEnd() {
+    _controller.animateToPage(
+      _totalPages - 1,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
   Future<void> _finish() async {
     if (!_termsAccepted) {
       setState(() => _showTermsError = true);
@@ -70,7 +81,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 opacity: isLast ? 0 : 1,
                 duration: const Duration(milliseconds: 200),
                 child: TextButton(
-                  onPressed: isLast ? null : _finish,
+                  onPressed: isLast ? null : _skipToEnd,
                   child: Text(
                     l10n.introSkip,
                     style: TextStyle(color: oc.secondaryText),

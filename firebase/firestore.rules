@@ -180,7 +180,12 @@ service cloud.firestore {
         allow update: if isAdmin()
           || (isParticipantViaChat()
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
-              && request.auth.uid in request.resource.data.readBy);
+              && request.auth.uid in request.resource.data.readBy)
+          // Sender soft-deletes their own message: only the `deleted` flag may
+          // change, and it can only flip to true.
+          || (resource.data.senderId == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted'])
+              && request.resource.data.deleted == true);
 
         allow delete: if isAdmin();
       }

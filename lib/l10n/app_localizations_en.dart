@@ -1328,4 +1328,25 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$count star$_temp0';
   }
+
+  @override
+  String get chatReply => 'Reply';
+
+  @override
+  String get chatCopy => 'Copy';
+
+  @override
+  String get chatCopied => 'Copied';
+
+  @override
+  String get chatDelete => 'Delete';
+
+  @override
+  String get chatReportMessage => 'Report this message';
+
+  @override
+  String get chatDeletedMessage => 'Message deleted';
+
+  @override
+  String get chatReplyingTo => 'Replying to';
 }

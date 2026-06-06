@@ -2569,6 +2569,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} star{count, plural, one{} other{s}}'**
   String reviewStarLabel(int count);
+
+  /// No description provided for @chatReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get chatReply;
+
+  /// No description provided for @chatCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get chatCopy;
+
+  /// No description provided for @chatCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get chatCopied;
+
+  /// No description provided for @chatDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get chatDelete;
+
+  /// No description provided for @chatReportMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Report this message'**
+  String get chatReportMessage;
+
+  /// No description provided for @chatDeletedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message deleted'**
+  String get chatDeletedMessage;
+
+  /// No description provided for @chatReplyingTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Replying to'**
+  String get chatReplyingTo;
 }
 
 class _AppLocalizationsDelegate

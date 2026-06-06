@@ -10,6 +10,10 @@ class ChatMessage {
     this.text,
     this.mediaUrl,
     this.readBy = const [],
+    this.deleted = false,
+    this.replyToId,
+    this.replyToText,
+    this.replyToSenderId,
   });
 
   final String id;
@@ -23,6 +27,16 @@ class ChatMessage {
   /// UIDs of participants who have read this message.
   final List<String> readBy;
 
+  /// Soft-deleted by its sender — rendered as "message deleted".
+  final bool deleted;
+
+  /// Reply/quote: id + snapshot of the message this one replies to.
+  final String? replyToId;
+  final String? replyToText;
+  final String? replyToSenderId;
+
+  bool get isReply => replyToId != null && replyToId!.isNotEmpty;
+
   ChatMessage copyWith({
     String? chatId,
     String? senderId,
@@ -31,6 +45,10 @@ class ChatMessage {
     String? text,
     String? mediaUrl,
     List<String>? readBy,
+    bool? deleted,
+    String? replyToId,
+    String? replyToText,
+    String? replyToSenderId,
   }) {
     return ChatMessage(
       id: id,
@@ -41,6 +59,10 @@ class ChatMessage {
       text: text ?? this.text,
       mediaUrl: mediaUrl ?? this.mediaUrl,
       readBy: readBy ?? this.readBy,
+      deleted: deleted ?? this.deleted,
+      replyToId: replyToId ?? this.replyToId,
+      replyToText: replyToText ?? this.replyToText,
+      replyToSenderId: replyToSenderId ?? this.replyToSenderId,
     );
   }
 }

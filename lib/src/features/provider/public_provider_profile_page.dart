@@ -247,6 +247,38 @@ class _ProfileHeader extends ConsumerWidget {
                       ),
                     ],
                   ),
+                if (providerProfile?.serviceArea?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.map_outlined,
+                        size: 14,
+                        color: oc.secondaryText,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          providerProfile!.serviceArea!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: oc.secondaryText),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (providerProfile?.bio?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    providerProfile!.bio!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: oc.secondaryText,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

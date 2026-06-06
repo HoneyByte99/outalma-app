@@ -111,6 +111,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     setState(() => _sending = true);
 
+    final replyTo = _replyingTo;
     try {
       await ref
           .read(chatRepositoryProvider)
@@ -122,10 +123,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               type: MessageType.text,
               createdAt: DateTime.now().toUtc(),
               text: text,
+              replyToId: replyTo?.id,
+              replyToText: replyTo?.text,
+              replyToSenderId: replyTo?.senderId,
             ),
           );
       if (mounted) {
         _controller.clear();
+        setState(() => _replyingTo = null);
         SchedulerBinding.instance.addPostFrameCallback(
           (_) => _scrollToBottom(),
         );
@@ -183,6 +188,86 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   // Pending image preview — WhatsApp-style: preview + caption before send
   String? _pendingImageUrl;
+
+  // Message the composer is currently replying to (quote shown above input).
+  ChatMessage? _replyingTo;
+
+  /// Long-press action sheet on a message: reply / copy / delete / report.
+  Future<void> _showMessageActions(ChatMessage msg, bool isMe) async {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final hasText = (msg.text ?? '').isNotEmpty;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: oc.surface,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.reply_rounded),
+              title: Text(l10n.chatReply),
+              onTap: () {
+                Navigator.pop(ctx);
+                setState(() => _replyingTo = msg);
+              },
+            ),
+            if (hasText)
+              ListTile(
+                leading: const Icon(Icons.copy_rounded),
+                title: Text(l10n.chatCopy),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Clipboard.setData(ClipboardData(text: msg.text!));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.chatCopied),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+            if (isMe)
+              ListTile(
+                leading: Icon(Icons.delete_outline_rounded, color: oc.error),
+                title: Text(l10n.chatDelete, style: TextStyle(color: oc.error)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _deleteMessage(msg);
+                },
+              )
+            else
+              ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: Text(l10n.chatReportMessage),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.push(AppRoutes.report(type: 'message', id: msg.id));
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteMessage(ChatMessage msg) async {
+    try {
+      await ref
+          .read(chatRepositoryProvider)
+          .softDeleteMessage(chatId: widget.chatId, messageId: msg.id);
+      if (_replyingTo?.id == msg.id) setState(() => _replyingTo = null);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorGeneral),
+            backgroundColor: context.oc.error,
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _sendMedia(
     MessageType type,
@@ -509,6 +594,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       message: msg,
                       isMe: isMe,
                       myUid: myUid,
+                      onLongPress: () => _showMessageActions(msg, isMe),
                     );
                   },
                 );
@@ -530,6 +616,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               onCancel: _cancelPendingImage,
             )
           else ...[
+            if (_replyingTo != null)
+              _ReplyComposerBanner(
+                message: _replyingTo!,
+                onCancel: () => setState(() => _replyingTo = null),
+              ),
             _TypingIndicatorBar(chatId: widget.chatId),
             _InputBar(
               controller: _controller,
@@ -592,6 +683,65 @@ class _BlockedBanner extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Reply composer banner (shown above the input when replying to a message)
+// ---------------------------------------------------------------------------
+
+class _ReplyComposerBanner extends StatelessWidget {
+  const _ReplyComposerBanner({required this.message, required this.onCancel});
+
+  final ChatMessage message;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+    final preview = (message.text?.isNotEmpty ?? false)
+        ? message.text!
+        : l10n.bookingVoiceMessageLabel;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: oc.surfaceVariant,
+        border: Border(left: BorderSide(color: oc.primary, width: 3)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.chatReplyingTo,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: oc.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  preview,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close_rounded, size: 20, color: oc.secondaryText),
+            onPressed: onCancel,
+            tooltip: l10n.cancel,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Message bubble
 // ---------------------------------------------------------------------------
 
@@ -600,11 +750,13 @@ class _MessageBubble extends ConsumerWidget {
     required this.message,
     required this.isMe,
     required this.myUid,
+    this.onLongPress,
   });
 
   final ChatMessage message;
   final bool isMe;
   final String? myUid;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -672,17 +824,28 @@ class _MessageBubble extends ConsumerWidget {
           Column(
             crossAxisAlignment: align,
             children: [
-              Container(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width * 0.65,
+              GestureDetector(
+                onLongPress: message.deleted ? null : onLongPress,
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.65,
+                  ),
+                  clipBehavior: Clip.hardEdge,
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: radius,
+                    border: isMe ? null : Border.all(color: oc.border),
+                  ),
+                  child: message.deleted
+                      ? _deletedContent(context, fg)
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (message.isReply) _replyQuote(context, fg),
+                            _buildBubbleContent(context, oc, fg),
+                          ],
+                        ),
                 ),
-                clipBehavior: Clip.hardEdge,
-                decoration: BoxDecoration(
-                  color: bg,
-                  borderRadius: radius,
-                  border: isMe ? null : Border.all(color: oc.border),
-                ),
-                child: _buildBubbleContent(context, oc, fg),
               ),
               const SizedBox(height: 3),
               Row(
@@ -712,6 +875,52 @@ class _MessageBubble extends ConsumerWidget {
           // Spacer on the right for sent messages to keep timestamp aligned
           if (isMe) const SizedBox(width: 36),
         ],
+      ),
+    );
+  }
+
+  Widget _deletedContent(BuildContext context, Color fg) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.block, size: 14, color: fg.withValues(alpha: 0.5)),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              l10n.chatDeletedMessage,
+              style: TextStyle(
+                color: fg.withValues(alpha: 0.6),
+                fontStyle: FontStyle.italic,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _replyQuote(BuildContext context, Color fg) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: fg.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: fg.withValues(alpha: 0.5), width: 3),
+        ),
+      ),
+      child: Text(
+        message.replyToText?.isNotEmpty == true
+            ? message.replyToText!
+            : AppLocalizations.of(context)!.bookingVoiceMessageLabel,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: fg.withValues(alpha: 0.75), fontSize: 12.5),
       ),
     );
   }

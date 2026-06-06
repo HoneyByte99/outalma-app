@@ -1342,4 +1342,25 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$count étoile$_temp0';
   }
+
+  @override
+  String get chatReply => 'Répondre';
+
+  @override
+  String get chatCopy => 'Copier';
+
+  @override
+  String get chatCopied => 'Copié';
+
+  @override
+  String get chatDelete => 'Supprimer';
+
+  @override
+  String get chatReportMessage => 'Signaler ce message';
+
+  @override
+  String get chatDeletedMessage => 'Message supprimé';
+
+  @override
+  String get chatReplyingTo => 'Réponse à';
 }

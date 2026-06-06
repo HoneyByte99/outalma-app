@@ -523,5 +523,12 @@
   "bookingModeText": "Text",
   "bookingModeVoice": "Voice",
   "reviewStarLabel": "{count} star{count, plural, one{} other{s}}",
-  "@reviewStarLabel": { "placeholders": { "count": { "type": "int" } } }
+  "@reviewStarLabel": { "placeholders": { "count": { "type": "int" } } },
+  "chatReply": "Reply",
+  "chatCopy": "Copy",
+  "chatCopied": "Copied",
+  "chatDelete": "Delete",
+  "chatReportMessage": "Report this message",
+  "chatDeletedMessage": "Message deleted",
+  "chatReplyingTo": "Replying to"
 }

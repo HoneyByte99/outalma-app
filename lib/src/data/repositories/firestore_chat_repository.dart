@@ -57,6 +57,17 @@ class FirestoreChatRepository implements ChatRepository {
   }
 
   @override
+  Future<void> softDeleteMessage({
+    required String chatId,
+    required String messageId,
+  }) async {
+    await FirestoreCollections.chatMessages(
+      db: _db,
+      chatId: chatId,
+    ).doc(messageId).update({'deleted': true});
+  }
+
+  @override
   Future<void> markMessagesRead({
     required String chatId,
     required String uid,
