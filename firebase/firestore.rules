@@ -6,7 +6,10 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function isAdmin() { return signedIn() && request.auth.token.admin == true; }
     function isModerator() { return signedIn() && request.auth.token.moderator == true; }
+    function isSupport() { return signedIn() && request.auth.token.support == true; }
+    function isReadonly() { return isAdmin() || isModerator() || isSupport() || (signedIn() && request.auth.token.readonly == true); }
     function isAdminOrModerator() { return isAdmin() || isModerator(); }
+    function isMinSupport() { return isAdminOrModerator() || isSupport(); }
     function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
 
     function bookingRef(bookingId) {
@@ -250,23 +253,35 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // ---------- REPORTS (any signed-in user can create) ----------
+    // ---------- REPORTS (any signed-in user can create, support+ read) ----------
     match /reports/{reportId} {
-      allow read: if isAdminOrModerator();
+      allow read: if isMinSupport();
       allow create: if signedIn();
-      allow update: if isAdminOrModerator();
+      allow update: if isMinSupport();
       allow delete: if isAdmin();
     }
 
     // ---------- USER ROLES (admin visibility on privileged accounts) ----------
     match /user_roles/{uid} {
-      allow read: if isAdmin();
+      allow read: if isReadonly();
       allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
     }
 
-    // ---------- ADMIN LOGS (audit trail, admin-only) ----------
+    // ---------- MODERATION QUEUE (pre-publication review) ----------
+    match /moderation_queue/{docId} {
+      allow read: if isMinSupport();
+      allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
+    }
+
+    // ---------- USER BANS (ban/suspend/shadow-ban records) ----------
+    match /user_bans/{userId} {
+      allow read: if isMinSupport();
+      allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
+    }
+
+    // ---------- ADMIN LOGS (audit trail, moderator+ read) ----------
     match /admin_logs/{logId} {
-      allow read: if isAdmin();
+      allow read: if isReadonly();
       allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
     }
 
@@ -284,13 +299,13 @@ service cloud.firestore {
       allow delete: if isAdmin() || isSelf(uid);
     }
 
-    // ---------- USER SESSIONS (admin read-only, written by Cloud Functions) ----------
+    // ---------- USER SESSIONS (staff read-only, written by Cloud Functions) ----------
     match /user_sessions/{uid} {
-      allow read: if isAdmin();
+      allow read: if isReadonly();
       allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
 
       match /events/{eventId} {
-        allow read: if isAdmin();
+        allow read: if isReadonly();
         allow write: if false;
       }
     }
@@ -298,8 +313,14 @@ service cloud.firestore {
     // Collection group rule required for collectionGroup('events') queries.
     // Without this, Firestore rejects the query even if the nested rule exists.
     match /{path=**}/events/{eventId} {
-      allow read: if isAdmin();
+      allow read: if isReadonly();
       allow write: if false;
+    }
+
+    // ---------- IP GEO CACHE (admin read-only, CF write-only) ----------
+    match /ip_geo_cache/{hash} {
+      allow read: if isAdmin();
+      allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
     }
 
     // ---------- Default deny ----------

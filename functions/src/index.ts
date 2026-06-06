@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { createHash } from 'crypto';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -7,6 +8,88 @@ import { assertAdminClaim, assertAdminOrModeratorClaim, assertMinSupportClaim, a
 
 admin.initializeApp();
 const db = admin.firestore();
+
+// ---------------------------------------------------------------------------
+// IP geolocation cache (ipapi.co has 1 000 req/day on free tier)
+// ---------------------------------------------------------------------------
+
+const IP_GEO_CACHE_TTL_DAYS = 7;
+
+interface GeoData {
+  countryCode: string | null;
+  country: string | null;
+  city: string | null;
+  region: string | null;
+  isp: string | null;
+  asn: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+function ipHash(ip: string): string {
+  return createHash('sha256').update(ip).digest('hex').substring(0, 32);
+}
+
+async function getGeoForIp(ip: string): Promise<GeoData> {
+  const empty: GeoData = {
+    countryCode: null, country: null, city: null, region: null,
+    isp: null, asn: null, latitude: null, longitude: null,
+  };
+
+  const hash = ipHash(ip);
+  const cacheRef = db.collection('ip_geo_cache').doc(hash);
+  const cached = await cacheRef.get();
+
+  if (cached.exists) {
+    const data = cached.data()!;
+    const cachedAt = data.cachedAt as admin.firestore.Timestamp;
+    const ageMs = Date.now() - cachedAt.toMillis();
+    if (ageMs < IP_GEO_CACHE_TTL_DAYS * 24 * 60 * 60 * 1000) {
+      return {
+        countryCode: data.countryCode ?? null,
+        country: data.country ?? null,
+        city: data.city ?? null,
+        region: data.region ?? null,
+        isp: data.isp ?? null,
+        asn: data.asn ?? null,
+        latitude: data.latitude ?? null,
+        longitude: data.longitude ?? null,
+      };
+    }
+  }
+
+  try {
+    const geoResp = await fetch(`https://ipapi.co/${ip}/json/`);
+    if (geoResp.ok) {
+      const geo = (await geoResp.json()) as {
+        country_code?: string; country_name?: string;
+        city?: string; region?: string; org?: string; asn?: string;
+        latitude?: number; longitude?: number; error?: boolean;
+      };
+      if (!geo.error) {
+        const result: GeoData = {
+          countryCode: geo.country_code ?? null,
+          country: geo.country_name ?? null,
+          city: geo.city ?? null,
+          region: geo.region ?? null,
+          isp: geo.org ?? null,
+          asn: geo.asn ?? null,
+          latitude: geo.latitude ?? null,
+          longitude: geo.longitude ?? null,
+        };
+        await cacheRef.set({
+          ...result,
+          cachedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return result;
+      }
+    }
+  } catch (e) {
+    logger.warn('IP geolocation failed', { ip, error: String(e) });
+  }
+
+  return empty;
+}
 
 // ---------------------------------------------------------------------------
 // Phone authentication — production OTP flow (Twilio Verify backend)
@@ -1024,7 +1107,7 @@ export const logSession = onCall(async (request) => {
       ?.trim() ?? request.rawRequest.socket?.remoteAddress ?? null;
   const ip = rawIp === '::1' || rawIp === '127.0.0.1' ? null : rawIp;
 
-  // Geolocate IP via ipapi.co (1 000 req/day on free tier)
+  // Geolocate IP via ipapi.co (cached in Firestore to stay within free tier)
   let country: string | null = null;
   let countryCode: string | null = null;
   let city: string | null = null;
@@ -1034,34 +1117,15 @@ export const logSession = onCall(async (request) => {
   let latitude: number | null = null;
   let longitude: number | null = null;
   if (ip) {
-    try {
-      const geoResp = await fetch(`https://ipapi.co/${ip}/json/`);
-      if (geoResp.ok) {
-        const geo = (await geoResp.json()) as {
-          country_code?: string;
-          country_name?: string;
-          city?: string;
-          region?: string;
-          org?: string;
-          asn?: string;
-          latitude?: number;
-          longitude?: number;
-          error?: boolean;
-        };
-        if (!geo.error) {
-          countryCode = geo.country_code ?? null;
-          country = geo.country_name ?? null;
-          city = geo.city ?? null;
-          region = geo.region ?? null;
-          isp = geo.org ?? null;
-          asn = geo.asn ?? null;
-          latitude = geo.latitude ?? null;
-          longitude = geo.longitude ?? null;
-        }
-      }
-    } catch (e) {
-      logger.warn('IP geolocation failed', { ip, error: String(e) });
-    }
+    const geo = await getGeoForIp(ip);
+    country = geo.country;
+    countryCode = geo.countryCode;
+    city = geo.city;
+    region = geo.region;
+    isp = geo.isp;
+    asn = geo.asn;
+    latitude = geo.latitude;
+    longitude = geo.longitude;
   }
 
   // Check IP against blocklist
@@ -1219,6 +1283,40 @@ export const approveService = onCall(async (request) => {
   });
 
   return { queueItemId, serviceId: item.serviceId, status: 'approved' };
+});
+
+export const republishService = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
+
+  const serviceId = requireString(request.data?.serviceId, 'serviceId');
+
+  const serviceRef = db.collection('services').doc(serviceId);
+  const serviceSnap = await serviceRef.get();
+  if (!serviceSnap.exists) {
+    throw new HttpsError('not-found', 'Service not found.');
+  }
+
+  const service = serviceSnap.data() as { status?: string; published?: boolean };
+
+  if (service.status === 'rejected' || service.status === 'pending_review') {
+    throw new HttpsError(
+      'permission-denied',
+      `Service has moderation status "${service.status}" — it must go through the moderation queue before republication.`
+    );
+  }
+
+  await serviceRef.update({ published: true });
+
+  await writeAdminLog({
+    actorUid: callerUid,
+    action: 'republish_service',
+    targetType: 'service',
+    targetId: serviceId,
+  });
+
+  return { serviceId, published: true };
 });
 
 export const rejectService = onCall(async (request) => {
@@ -1800,5 +1898,89 @@ export const purgeExpiredSessionData = onSchedule(
     await batch.commit();
 
     logger.info(`Session purge: deleted ${expiredSnap.size} events older than ${retentionDays} days.`);
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Scheduled: purge old IP geo cache entries (daily at 4am Paris)
+// ---------------------------------------------------------------------------
+
+export const purgeIpGeoCache = onSchedule(
+  { schedule: 'every day 04:00', timeZone: 'Europe/Paris' },
+  async () => {
+    const maxAgeDays = 30;
+    const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000);
+    const cutoffTs = admin.firestore.Timestamp.fromDate(cutoff);
+
+    const oldEntries = await db
+      .collection('ip_geo_cache')
+      .where('cachedAt', '<', cutoffTs)
+      .limit(500)
+      .get();
+
+    if (oldEntries.empty) {
+      logger.info('IP geo cache purge: nothing to delete.');
+      return;
+    }
+
+    const batch = db.batch();
+    for (const doc of oldEntries.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+
+    logger.info(`IP geo cache purge: deleted ${oldEntries.size} entries older than ${maxAgeDays} days.`);
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Trigger: notify admins/moderators on new report
+// ---------------------------------------------------------------------------
+
+export const onReportCreated = onDocumentCreated(
+  'reports/{reportId}',
+  async (event) => {
+    const reportId = event.params.reportId;
+    const report = event.data?.data() as { reason?: string } | undefined;
+    if (!report) return;
+
+    const reason = (report.reason as string | undefined) ?? 'Contenu signalé';
+
+    const rolesSnap = await db
+      .collection('user_roles')
+      .where('admin', '==', true)
+      .limit(20)
+      .get();
+
+    const modSnap = await db
+      .collection('user_roles')
+      .where('moderator', '==', true)
+      .limit(20)
+      .get();
+
+    const staffUids = new Set<string>();
+    for (const doc of [...rolesSnap.docs, ...modSnap.docs]) {
+      staffUids.add(doc.id);
+    }
+
+    const uids = [...staffUids];
+
+    if (uids.length > 0) {
+      await sendPushToUsers(uids, {
+        title: 'Nouveau signalement',
+        body: `Un utilisateur a signalé : ${reason}`,
+      });
+    }
+
+    await db.collection('admin_logs').add({
+      actorUid: 'system',
+      action: 'report_notification_sent',
+      targetType: 'report',
+      targetId: reportId,
+      notes: `Notified ${uids.length} staff members`,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    logger.info('Report notification sent', { reportId, staffCount: uids.length });
   }
 );
