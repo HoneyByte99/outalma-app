@@ -11,6 +11,7 @@ class AppUser {
     this.photoPath,
     this.phoneE164,
     this.pushToken,
+    this.termsAcceptedAt,
   });
 
   final String id;
@@ -23,6 +24,9 @@ class AppUser {
   final String? pushToken;
   final DateTime createdAt;
 
+  /// When the user accepted the terms + privacy policy (consent proof, RGPD).
+  final DateTime? termsAcceptedAt;
+
   AppUser copyWith({
     String? displayName,
     String? email,
@@ -32,6 +36,7 @@ class AppUser {
     ActiveMode? activeMode,
     String? pushToken,
     DateTime? createdAt,
+    DateTime? termsAcceptedAt,
   }) {
     return AppUser(
       id: id,
@@ -43,6 +48,7 @@ class AppUser {
       activeMode: activeMode ?? this.activeMode,
       pushToken: pushToken ?? this.pushToken,
       createdAt: createdAt ?? this.createdAt,
+      termsAcceptedAt: termsAcceptedAt ?? this.termsAcceptedAt,
     );
   }
 }

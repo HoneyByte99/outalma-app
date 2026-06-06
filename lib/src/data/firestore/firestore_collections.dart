@@ -163,6 +163,9 @@ class FirestoreCollections {
       ),
       pushToken: data['pushToken'] as String?,
       createdAt: dateTimeFromFirestore(data['createdAt']),
+      termsAcceptedAt: data['termsAcceptedAt'] != null
+          ? dateTimeFromFirestore(data['termsAcceptedAt'])
+          : null,
     );
   }
 
@@ -183,6 +186,8 @@ class FirestoreCollections {
       // included pushToken would clobber the real token on switchMode /
       // updateProfile and silently kill push delivery.
       if (user.pushToken != null) 'pushToken': user.pushToken,
+      if (user.termsAcceptedAt != null)
+        'termsAcceptedAt': dateTimeToFirestore(user.termsAcceptedAt!),
       'createdAt': dateTimeToFirestore(user.createdAt),
     };
   }

@@ -304,6 +304,8 @@ export const verifyPhoneOtpAndSignUp = onCall(
       country,
       activeMode: 'client',
       createdAt: admin.firestore.Timestamp.now(),
+      // Consent proof (RGPD) — the sign-up screen gates submission on acceptance.
+      termsAcceptedAt: admin.firestore.Timestamp.now(),
     });
 
     const customToken = await auth.createCustomToken(uid, {

@@ -323,6 +323,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         country: existing?.country ?? 'FR',
         activeMode: existing?.activeMode ?? ActiveMode.client,
         createdAt: existing?.createdAt ?? DateTime.now(),
+        // Consent proof — the sign-up screen gates submission on acceptance.
+        termsAcceptedAt: existing?.termsAcceptedAt ?? DateTime.now(),
       ),
     );
 

@@ -52,6 +52,15 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   final _otpController = TextEditingController();
 
   bool _loading = false;
+  bool _termsAccepted = false;
+
+  /// Consent must precede account creation (legal/RGPD). Returns false (and
+  /// shows an error) when the user hasn't accepted the terms.
+  bool _ensureTermsAccepted() {
+    if (_termsAccepted) return true;
+    _showError(AppLocalizations.of(context)!.introTermsRequired);
+    return false;
+  }
 
   @override
   void dispose() {
@@ -80,6 +89,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       _showError(l10n.signUpErrorPasswordTooShort);
       return;
     }
+    if (!_ensureTermsAccepted()) return;
 
     setState(() => _loading = true);
     try {
@@ -120,6 +130,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       _showError(phoneError);
       return;
     }
+    if (!_ensureTermsAccepted()) return;
 
     setState(() => _loading = true);
     try {
@@ -422,6 +433,61 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                       onPressed: _loading ? null : _requestOtp,
                       child: Text(l10n.phoneOtpResend),
                     ),
+                  ),
+                ],
+
+                // ---- Consent (must precede account creation) ----
+                if (_mode == _AuthMode.mail ||
+                    _phoneStep == _PhoneStep.enterDetails) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Checkbox(
+                        value: _termsAccepted,
+                        onChanged: (v) =>
+                            setState(() => _termsAccepted = v ?? false),
+                        activeColor: oc.primary,
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.introTermsAccept,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: oc.primaryText),
+                            ),
+                            Wrap(
+                              spacing: 12,
+                              children: [
+                                TextButton(
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: const Size(0, 36),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  onPressed: () => context.push('/legal/terms'),
+                                  child: Text(l10n.legalReadTerms),
+                                ),
+                                TextButton(
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: const Size(0, 36),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  onPressed: () =>
+                                      context.push('/legal/privacy'),
+                                  child: Text(l10n.legalReadPrivacy),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
                 const SizedBox(height: 28),
