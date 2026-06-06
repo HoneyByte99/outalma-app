@@ -334,6 +334,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ---------- SECURITY ALERTS (admin read, CF write-only) ----------
+    match /security_alerts/{alertId} {
+      allow read: if isAdmin();
+      allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
+    }
+
+    // ---------- IP BLOCKLIST (admin read, CF write-only) ----------
+    match /ip_blocklist/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
+    }
+
     // ---------- PROCESSED EVENTS (trigger dedup — CF only via Admin SDK) ----------
     // Used by stat-increment triggers to prevent double-counting on Firebase retries.
     // Should be purged after 7 days via a Firestore TTL policy on the `processedAt` field.
