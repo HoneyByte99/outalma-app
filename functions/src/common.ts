@@ -31,3 +31,9 @@ export function assertAdminOrModeratorClaim(token: Record<string, unknown> | und
     throw new HttpsError('permission-denied', 'Admin or moderator privileges required.');
   }
 }
+
+export function assertMinSupportClaim(token: Record<string, unknown> | undefined): void {
+  if (token?.admin !== true && token?.moderator !== true && token?.support !== true) {
+    throw new HttpsError('permission-denied', 'Support, moderator or admin privileges required.');
+  }
+}
