@@ -267,8 +267,9 @@ void main() {
         controller.close();
       });
 
-      // Initialize provider (subscribe to stream)
-      container.read(bookingDetailProvider('b1'));
+      // Keep the autoDispose provider alive for the duration of the test.
+      final sub = container.listen(bookingDetailProvider('b1'), (_, __) {});
+      addTearDown(sub.close);
 
       // Emit requested
       controller.add(_makeBooking('b1', BookingStatus.requested));

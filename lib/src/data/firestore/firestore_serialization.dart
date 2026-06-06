@@ -10,7 +10,11 @@ DateTime dateTimeFromFirestore(Object? raw) {
   if (raw == null) return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   if (raw is Timestamp) return raw.toDate().toUtc();
   if (raw is DateTime) return raw.toUtc();
-  if (raw is String) return DateTime.parse(raw).toUtc();
+  if (raw is String) {
+    // tryParse avoids killing the whole stream on one malformed string.
+    return DateTime.tryParse(raw)?.toUtc() ??
+        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  }
   if (raw is int) return DateTime.fromMillisecondsSinceEpoch(raw, isUtc: true);
   return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 }

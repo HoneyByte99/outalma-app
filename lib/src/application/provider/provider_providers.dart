@@ -33,8 +33,8 @@ final currentProviderProfileProvider = StreamProvider<ProviderProfile?>((ref) {
 
 /// Any provider's profile by uid — used by public provider profile pages,
 /// service cards, and trust signals.
-final providerProfileByIdProvider =
-    StreamProvider.family<ProviderProfile?, String>((ref, uid) {
+final providerProfileByIdProvider = StreamProvider.autoDispose
+    .family<ProviderProfile?, String>((ref, uid) {
       if (uid.isEmpty) return const Stream.empty();
       return ref.watch(providerRepositoryProvider).watchByUid(uid);
     });
@@ -78,8 +78,8 @@ final providerActiveBookingsProvider = StreamProvider<List<Booking>>((ref) {
 });
 
 /// Published services for any given provider uid — used on public profile pages.
-final publicProviderServicesProvider =
-    StreamProvider.family<List<Service>, String>((ref, uid) {
+final publicProviderServicesProvider = StreamProvider.autoDispose
+    .family<List<Service>, String>((ref, uid) {
       return ref
           .watch(serviceRepositoryProvider)
           .watchForProvider(uid)
@@ -156,17 +156,14 @@ final providerBlockedSlotsProvider = StreamProvider<List<BlockedSlot>>((ref) {
 });
 
 /// Blocked slots for any provider — used by clients to check availability.
-final blockedSlotsForProviderProvider =
-    StreamProvider.family<List<BlockedSlot>, String>((ref, uid) {
+final blockedSlotsForProviderProvider = StreamProvider.autoDispose
+    .family<List<BlockedSlot>, String>((ref, uid) {
       return ref.watch(providerRepositoryProvider).watchBlockedSlots(uid);
     });
 
 /// Bookings for a specific provider on a specific date (accepted/in_progress).
-final providerBookingsForDateProvider =
-    StreamProvider.family<List<Booking>, ({String providerId, DateTime date})>((
-      ref,
-      params,
-    ) {
+final providerBookingsForDateProvider = StreamProvider.autoDispose
+    .family<List<Booking>, ({String providerId, DateTime date})>((ref, params) {
       return ref
           .watch(bookingRepositoryProvider)
           .watchForProvider(params.providerId)

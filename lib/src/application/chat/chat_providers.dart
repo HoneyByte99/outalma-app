@@ -15,19 +15,20 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) {
 });
 
 /// Watches a single chat document by id.
-final chatDetailProvider = StreamProvider.family<Chat?, String>((ref, chatId) {
+final chatDetailProvider = StreamProvider.autoDispose.family<Chat?, String>((
+  ref,
+  chatId,
+) {
   return ref.watch(chatRepositoryProvider).watchChat(chatId);
 });
 
 /// Watches the latest 50 messages for a chat.
-final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>((
-  ref,
-  chatId,
-) {
-  return ref
-      .watch(chatRepositoryProvider)
-      .watchMessages(chatId: chatId, limit: 50);
-});
+final chatMessagesProvider = StreamProvider.autoDispose
+    .family<List<ChatMessage>, String>((ref, chatId) {
+      return ref
+          .watch(chatRepositoryProvider)
+          .watchMessages(chatId: chatId, limit: 50);
+    });
 
 /// Stable UID — avoids transient null during auth re-evaluation.
 final _stableChatUidProvider = Provider<String?>((ref) {
@@ -69,16 +70,14 @@ final chatsForModeProvider = Provider<AsyncValue<List<Chat>>>((ref) {
 
 /// Streams the other participant's typing timestamp for [chatId].
 /// Returns null when the other user is not typing (or TTL has expired).
-final otherTypingProvider = StreamProvider.family<DateTime?, String>((
-  ref,
-  chatId,
-) {
-  final auth = ref.watch(authNotifierProvider).valueOrNull;
-  if (auth is! AuthAuthenticated) return const Stream.empty();
-  return ref
-      .watch(chatRepositoryProvider)
-      .watchOtherTyping(chatId: chatId, myUid: auth.user.id);
-});
+final otherTypingProvider = StreamProvider.autoDispose
+    .family<DateTime?, String>((ref, chatId) {
+      final auth = ref.watch(authNotifierProvider).valueOrNull;
+      if (auth is! AuthAuthenticated) return const Stream.empty();
+      return ref
+          .watch(chatRepositoryProvider)
+          .watchOtherTyping(chatId: chatId, myUid: auth.user.id);
+    });
 
 /// Set of user ids the current user has blocked (live).
 final blockedUserIdsProvider = StreamProvider.autoDispose<Set<String>>((ref) {

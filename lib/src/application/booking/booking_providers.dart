@@ -23,12 +23,10 @@ final customerBookingsProvider = StreamProvider<List<Booking>>((ref) {
 });
 
 /// Single booking by id — used for detail page.
-final bookingDetailProvider = StreamProvider.family<Booking?, String>((
-  ref,
-  bookingId,
-) {
-  return ref.watch(bookingRepositoryProvider).watchById(bookingId);
-});
+final bookingDetailProvider = StreamProvider.autoDispose
+    .family<Booking?, String>((ref, bookingId) {
+      return ref.watch(bookingRepositoryProvider).watchById(bookingId);
+    });
 
 /// Count of client bookings that require attention (accepted or in_progress).
 final clientActiveBookingsCountProvider = Provider<int>((ref) {

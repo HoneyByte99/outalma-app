@@ -189,7 +189,9 @@ void main() {
         controller.close();
       });
 
-      container.read(serviceDetailProvider('s1'));
+      // Keep the autoDispose provider alive for the duration of the test.
+      final sub = container.listen(serviceDetailProvider('s1'), (_, __) {});
+      addTearDown(sub.close);
 
       // Initially not published
       controller.add(_makeService(id: 's1', published: false));

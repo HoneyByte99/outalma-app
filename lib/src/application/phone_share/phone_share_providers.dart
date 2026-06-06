@@ -11,15 +11,13 @@ final phoneShareRepositoryProvider = Provider<PhoneShareRepository>((ref) {
 });
 
 /// All phone shares for a booking.
-final phoneSharesProvider = StreamProvider.family<List<PhoneShare>, String>((
-  ref,
-  bookingId,
-) {
-  return ref.watch(phoneShareRepositoryProvider).watchForBooking(bookingId);
-});
+final phoneSharesProvider = StreamProvider.autoDispose
+    .family<List<PhoneShare>, String>((ref, bookingId) {
+      return ref.watch(phoneShareRepositoryProvider).watchForBooking(bookingId);
+    });
 
 /// Whether the current user has already shared their phone for this booking.
-final hasSharedPhoneProvider = StreamProvider.family<bool, String>((
+final hasSharedPhoneProvider = StreamProvider.autoDispose.family<bool, String>((
   ref,
   bookingId,
 ) {

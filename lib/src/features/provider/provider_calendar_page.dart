@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
@@ -32,10 +33,13 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
     final oc = context.oc;
-    final bookings =
-        ref.watch(providerBookingHistoryProvider).valueOrNull ?? [];
-    final blockedSlots =
-        ref.watch(providerBlockedSlotsProvider).valueOrNull ?? [];
+    final bookingsAsync = ref.watch(providerBookingHistoryProvider);
+    final blockedAsync = ref.watch(providerBlockedSlotsProvider);
+    final bookings = bookingsAsync.valueOrNull ?? [];
+    final blockedSlots = blockedAsync.valueOrNull ?? [];
+    // Surface load failures: a silently-empty calendar could make the provider
+    // think a taken slot is free.
+    final hasError = bookingsAsync.hasError || blockedAsync.hasError;
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -55,6 +59,39 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
       ),
       body: CustomScrollView(
         slivers: [
+          if (hasError)
+            SliverToBoxAdapter(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: oc.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                  border: Border.all(color: oc.error.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.wifi_off_rounded, size: 18, color: oc.error),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.errorGeneral,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: oc.error),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        ref.invalidate(providerBookingHistoryProvider);
+                        ref.invalidate(providerBlockedSlotsProvider);
+                      },
+                      child: Text(l10n.retry),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           SliverToBoxAdapter(
             child: TableCalendar<Object>(
               locale: locale,

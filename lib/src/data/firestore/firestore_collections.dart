@@ -205,7 +205,7 @@ class FirestoreCollections {
       priceType: PriceType.fromString(
         (data['priceType'] as String?) ?? PriceType.fixed.name,
       ),
-      price: (data['price'] as int?) ?? 0,
+      price: (data['price'] as num?)?.toInt() ?? 0,
       published: (data['published'] as bool?) ?? false,
       serviceZones: _serviceZonesFromFirestore(data),
       createdAt: dateTimeFromFirestore(data['createdAt']),
@@ -236,7 +236,11 @@ class FirestoreCollections {
   ) {
     final raw = data['serviceZones'];
     if (raw is List && raw.isNotEmpty) {
-      return raw.cast<Map<String, dynamic>>().map(serviceZoneFromMap).toList();
+      // whereType avoids a hard crash if a malformed element isn't a Map.
+      return raw
+          .whereType<Map<String, dynamic>>()
+          .map(serviceZoneFromMap)
+          .toList();
     }
     // Legacy fallback
     final legacy = data['serviceArea'] as String?;
@@ -456,7 +460,7 @@ class FirestoreCollections {
       reviewerRole: ReviewerRole.fromString(
         (data['reviewerRole'] as String?) ?? ReviewerRole.client.name,
       ),
-      rating: (data['rating'] as int?) ?? 1,
+      rating: (data['rating'] as num?)?.toInt() ?? 1,
       comment: data['comment'] as String?,
       createdAt: dateTimeFromFirestore(data['createdAt']),
     );

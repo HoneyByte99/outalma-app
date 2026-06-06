@@ -12,20 +12,16 @@ final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
 });
 
 /// Watches all reviews received by [userId] (as reviewee).
-final reviewsForUserProvider = StreamProvider.family<List<Review>, String>((
-  ref,
-  userId,
-) {
-  return ref.watch(reviewRepositoryProvider).watchForUser(userId);
-});
+final reviewsForUserProvider = StreamProvider.autoDispose
+    .family<List<Review>, String>((ref, userId) {
+      return ref.watch(reviewRepositoryProvider).watchForUser(userId);
+    });
 
 /// Watches all reviews for a given booking (at most 2 — one per role).
-final reviewsForBookingProvider = StreamProvider.family<List<Review>, String>((
-  ref,
-  bookingId,
-) {
-  return ref.watch(reviewRepositoryProvider).watchForBooking(bookingId);
-});
+final reviewsForBookingProvider = StreamProvider.autoDispose
+    .family<List<Review>, String>((ref, bookingId) {
+      return ref.watch(reviewRepositoryProvider).watchForBooking(bookingId);
+    });
 
 // ---------------------------------------------------------------------------
 // Create review use case
@@ -66,7 +62,7 @@ final createReviewUseCaseProvider = Provider<CreateReviewUseCase>((ref) {
 
 /// Whether the current user has already left a review for [bookingId].
 /// Returns null while loading.
-final hasReviewedProvider = StreamProvider.family<bool, String>((
+final hasReviewedProvider = StreamProvider.autoDispose.family<bool, String>((
   ref,
   bookingId,
 ) {

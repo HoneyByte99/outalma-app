@@ -139,10 +139,11 @@ class GeocodingService {
     final location = json['location'] as Map<String, dynamic>?;
     if (location == null) return null;
 
-    return (
-      lat: (location['latitude'] as num).toDouble(),
-      lng: (location['longitude'] as num).toDouble(),
-    );
+    final lat = (location['latitude'] as num?)?.toDouble();
+    final lng = (location['longitude'] as num?)?.toDouble();
+    if (lat == null || lng == null) return null;
+
+    return (lat: lat, lng: lng);
   }
 
   /// Reverse-geocodes [lat]/[lng] into a human-readable address label.
