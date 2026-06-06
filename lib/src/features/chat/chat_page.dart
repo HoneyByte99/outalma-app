@@ -136,9 +136,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         );
       }
     } catch (_) {
+      // Text + reply context are preserved (only cleared on success), so the
+      // user can retry directly from the SnackBar action.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: context.oc.error,
+            action: SnackBarAction(
+              label: AppLocalizations.of(context)!.retry,
+              textColor: Colors.white,
+              onPressed: _send,
+            ),
+          ),
         );
       }
     } finally {

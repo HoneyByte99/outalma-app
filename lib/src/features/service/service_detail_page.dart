@@ -94,6 +94,31 @@ class _ServiceDetailContent extends ConsumerWidget {
                 ),
               ),
             ),
+            actions: [
+              if (!isOwner)
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.s),
+                  child: CircleAvatar(
+                    radius: 24,
+                    backgroundColor: oc.surface.withValues(alpha: 0.9),
+                    child: IconButton(
+                      tooltip: l10n.bookingReport,
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
+                      icon: Icon(
+                        Icons.flag_outlined,
+                        size: 18,
+                        color: oc.primaryText,
+                      ),
+                      onPressed: () => context.push(
+                        AppRoutes.report(type: 'service', id: service.id),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.none,
               background: service.photos.isNotEmpty
