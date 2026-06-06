@@ -661,13 +661,13 @@ class _StepMessage extends StatelessWidget {
           child: Row(
             children: [
               _ModeChip(
-                label: 'Texte',
+                label: AppLocalizations.of(context)!.bookingModeText,
                 icon: Icons.text_fields_rounded,
                 selected: !voiceMode,
                 onTap: () => onToggleMode(false),
               ),
               _ModeChip(
-                label: 'Vocal',
+                label: AppLocalizations.of(context)!.bookingModeVoice,
                 icon: Icons.mic_none_rounded,
                 selected: voiceMode,
                 onTap: () => onToggleMode(true),
@@ -815,17 +815,21 @@ class _VoiceRecorder extends StatelessWidget {
             // Play / stop button
             GestureDetector(
               onTap: playing ? onStopPlay : onPlay,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: oc.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  playing ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                  color: oc.background,
-                  size: 22,
+              child: Semantics(
+                button: true,
+                label: playing ? 'Stop' : 'Lecture',
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: oc.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    playing ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                    color: oc.background,
+                    size: 22,
+                  ),
                 ),
               ),
             ),

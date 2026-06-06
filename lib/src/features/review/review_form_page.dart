@@ -223,17 +223,23 @@ class _StarRating extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: List.generate(5, (i) {
         final filled = i < value;
-        return GestureDetector(
-          onTap: () => onChanged(i + 1),
-          child: Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Icon(
-              filled ? Icons.star_rounded : Icons.star_outline_rounded,
-              size: 40,
-              color: filled ? oc.warning : oc.border,
+        return Semantics(
+          button: true,
+          selected: filled,
+          label: l10n.reviewStarLabel(i + 1),
+          child: GestureDetector(
+            onTap: () => onChanged(i + 1),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Icon(
+                filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                size: 40,
+                color: filled ? oc.warning : oc.border,
+              ),
             ),
           ),
         );

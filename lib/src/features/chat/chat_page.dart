@@ -475,6 +475,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         context,
                       ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
                     ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          ref.invalidate(chatMessagesProvider(widget.chatId)),
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: Text(l10n.retry),
+                    ),
                   ],
                 ),
               ),
@@ -950,17 +957,21 @@ class _VoicePlayerState extends State<_VoicePlayer> {
           // Play / pause button
           GestureDetector(
             onTap: () => _playing ? _player.pause() : _player.play(),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: fg.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                size: 24,
-                color: fg,
+            child: Semantics(
+              button: true,
+              label: _playing ? 'Pause' : 'Lecture',
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: fg.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  size: 24,
+                  color: fg,
+                ),
               ),
             ),
           ),

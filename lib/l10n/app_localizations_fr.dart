@@ -1325,4 +1325,21 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get chatBlockedBanner =>
       'Vous avez bloqué cet utilisateur. Débloquez-le pour échanger à nouveau.';
+
+  @override
+  String get bookingModeText => 'Texte';
+
+  @override
+  String get bookingModeVoice => 'Vocal';
+
+  @override
+  String reviewStarLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 's',
+      one: '',
+    );
+    return '$count étoile$_temp0';
+  }
 }

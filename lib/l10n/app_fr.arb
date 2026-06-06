@@ -519,5 +519,9 @@
   "blockUserConfirm": "Bloquer cet utilisateur ? Vous ne verrez plus ses messages et il ne pourra plus vous contacter.",
   "userBlocked": "Utilisateur bloqué",
   "userUnblocked": "Utilisateur débloqué",
-  "chatBlockedBanner": "Vous avez bloqué cet utilisateur. Débloquez-le pour échanger à nouveau."
+  "chatBlockedBanner": "Vous avez bloqué cet utilisateur. Débloquez-le pour échanger à nouveau.",
+  "bookingModeText": "Texte",
+  "bookingModeVoice": "Vocal",
+  "reviewStarLabel": "{count} étoile{count, plural, one{} other{s}}",
+  "@reviewStarLabel": { "placeholders": { "count": { "type": "int" } } }
 }

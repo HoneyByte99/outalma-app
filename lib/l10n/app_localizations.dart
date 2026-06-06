@@ -2551,6 +2551,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You have blocked this user. Unblock to chat again.'**
   String get chatBlockedBanner;
+
+  /// No description provided for @bookingModeText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get bookingModeText;
+
+  /// No description provided for @bookingModeVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice'**
+  String get bookingModeVoice;
+
+  /// No description provided for @reviewStarLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} star{count, plural, one{} other{s}}'**
+  String reviewStarLabel(int count);
 }
 
 class _AppLocalizationsDelegate

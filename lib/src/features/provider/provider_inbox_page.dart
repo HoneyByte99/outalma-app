@@ -92,7 +92,8 @@ class _RequestsTab extends ConsumerWidget {
 
     return inboxAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const _ErrorState(),
+      error: (_, __) =>
+          _ErrorState(onRetry: () => ref.invalidate(providerInboxProvider)),
       data: (bookings) {
         if (bookings.isEmpty) return const _EmptyState(isActive: false);
         final sorted = [...bookings]
@@ -121,7 +122,9 @@ class _ActiveTab extends ConsumerWidget {
 
     return activeAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const _ErrorState(),
+      error: (_, __) => _ErrorState(
+        onRetry: () => ref.invalidate(providerActiveBookingsProvider),
+      ),
       data: (bookings) {
         if (bookings.isEmpty) return const _EmptyState(isActive: true);
         final sorted = [...bookings]
@@ -355,17 +358,36 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState();
+  const _ErrorState({this.onRetry});
+
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
     return Center(
-      child: Text(
-        l10n.inboxLoadError,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: context.oc.secondaryText),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.wifi_off_rounded, size: 40, color: oc.icons),
+          const SizedBox(height: 12),
+          Text(
+            l10n.inboxLoadError,
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+          ),
+          if (onRetry != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(l10n.retry),
+            ),
+          ],
+        ],
       ),
     );
   }

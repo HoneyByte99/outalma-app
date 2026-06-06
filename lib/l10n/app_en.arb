@@ -519,5 +519,9 @@
   "blockUserConfirm": "Block this user? You will no longer see their messages and they can no longer contact you.",
   "userBlocked": "User blocked",
   "userUnblocked": "User unblocked",
-  "chatBlockedBanner": "You have blocked this user. Unblock to chat again."
+  "chatBlockedBanner": "You have blocked this user. Unblock to chat again.",
+  "bookingModeText": "Text",
+  "bookingModeVoice": "Voice",
+  "reviewStarLabel": "{count} star{count, plural, one{} other{s}}",
+  "@reviewStarLabel": { "placeholders": { "count": { "type": "int" } } }
 }
