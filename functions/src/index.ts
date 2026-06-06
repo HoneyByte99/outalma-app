@@ -735,38 +735,56 @@ export const sendBookingReminders = onSchedule(
           hour: '2-digit',
           minute: '2-digit',
         });
-        await sendPushToUsers(participants, {
-          title: 'Rappel — RDV demain',
-          body: `Votre prestation est prévue demain à ${timeStr}.`,
+        // Wrap flag-check + flag-set in a transaction to prevent double-send on scheduler retry
+        let shouldSend24h = false;
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(doc.ref);
+          if (snap.data()?.reminded24h) return; // already processed (retry guard)
+          tx.update(doc.ref, { reminded24h: true });
+          shouldSend24h = true;
         });
-        for (const uid of participants) {
-          await createNotification(uid, {
-            type: 'booking_reminder',
+        if (shouldSend24h) {
+          await sendPushToUsers(participants, {
             title: 'Rappel — RDV demain',
             body: `Votre prestation est prévue demain à ${timeStr}.`,
-            bookingId: doc.id,
           });
+          for (const uid of participants) {
+            await createNotification(uid, {
+              type: 'booking_reminder',
+              title: 'Rappel — RDV demain',
+              body: `Votre prestation est prévue demain à ${timeStr}.`,
+              bookingId: doc.id,
+            });
+          }
+          sent++;
         }
-        await doc.ref.update({ reminded24h: true });
-        sent++;
       }
 
       // 1h reminder (between 0.5h and 1.5h before)
       if (!data.reminded1h && diffHours >= 0.5 && diffHours <= 1.5) {
-        await sendPushToUsers(participants, {
-          title: 'Rappel — RDV dans 1h',
-          body: 'Votre prestation commence bientôt !',
+        // Wrap flag-check + flag-set in a transaction to prevent double-send on scheduler retry
+        let shouldSend1h = false;
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(doc.ref);
+          if (snap.data()?.reminded1h) return; // already processed (retry guard)
+          tx.update(doc.ref, { reminded1h: true });
+          shouldSend1h = true;
         });
-        for (const uid of participants) {
-          await createNotification(uid, {
-            type: 'booking_reminder',
+        if (shouldSend1h) {
+          await sendPushToUsers(participants, {
             title: 'Rappel — RDV dans 1h',
             body: 'Votre prestation commence bientôt !',
-            bookingId: doc.id,
           });
+          for (const uid of participants) {
+            await createNotification(uid, {
+              type: 'booking_reminder',
+              title: 'Rappel — RDV dans 1h',
+              body: 'Votre prestation commence bientôt !',
+              bookingId: doc.id,
+            });
+          }
+          sent++;
         }
-        await doc.ref.update({ reminded1h: true });
-        sent++;
       }
     }
 
@@ -921,27 +939,38 @@ export const suspendProvider = onCall(async (request) => {
   const reason = typeof request.data?.reason === 'string' ? request.data.reason.trim() : null;
 
   const providerRef = db.collection('providers').doc(targetUid);
-  const providerSnap = await providerRef.get();
-  if (!providerSnap.exists) {
-    throw new HttpsError('not-found', 'Provider not found.');
-  }
 
+  // Read the published services BEFORE the transaction to get their refs.
+  // The transaction then re-reads the provider doc atomically before writing,
+  // ensuring the suspend + service unpublish are a single atomic operation.
   const servicesSnap = await db
     .collection('services')
     .where('providerId', '==', targetUid)
     .where('published', '==', true)
     .get();
 
-  const batch = db.batch();
-  batch.update(providerRef, {
-    suspended: true,
-    suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
-    suspendedReason: reason,
+  const serviceRefs = servicesSnap.docs.map(d => d.ref);
+
+  await db.runTransaction(async (tx) => {
+    const providerSnap = await tx.get(providerRef);
+    if (!providerSnap.exists) {
+      throw new HttpsError('not-found', 'Provider not found.');
+    }
+
+    // Re-read each service doc inside the transaction for atomicity
+    const serviceSnaps = await Promise.all(serviceRefs.map(ref => tx.get(ref)));
+
+    tx.update(providerRef, {
+      suspended: true,
+      suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
+      suspendedReason: reason,
+    });
+    for (const snap of serviceSnaps) {
+      if (snap.exists) {
+        tx.update(snap.ref, { published: false });
+      }
+    }
   });
-  for (const doc of servicesSnap.docs) {
-    batch.update(doc.ref, { published: false });
-  }
-  await batch.commit();
 
   await writeAdminLog({
     actorUid: callerUid,
@@ -1417,15 +1446,15 @@ export const unbanUser = onCall(async (request) => {
     liftedBy: callerUid,
   });
 
+  // Only clear isBanned — shadow-ban state is independent and must be lifted
+  // explicitly via a separate action (shadowBanUser sets it, no auto-clear here).
   await db.collection('users').doc(targetUid).update({
     isBanned: false,
-    isShadowBanned: false,
-    isSuspended: false,
   });
 
   await writeAdminLog({
     actorUid: callerUid,
-    action: 'unban_user',
+    action: 'unban',
     targetType: 'user',
     targetId: targetUid,
   });
@@ -1935,36 +1964,59 @@ export const purgeIpGeoCache = onSchedule(
 
 // ---------------------------------------------------------------------------
 // Platform stats — incremental counters maintained by triggers
+//
+// Idempotency: Firebase Gen2 triggers can be retried on failure. Without
+// deduplication, FieldValue.increment would double-count on retries.
+// Each trigger uses a `processed_events/{eventId}` document as a dedup key.
+// The dedup doc + counter increment are written in a single transaction.
+//
+// Cleanup: processed_events documents should be purged after 7 days.
+// Use a Firestore TTL policy on the `processedAt` field, or add a scheduled
+// Cloud Function. Without cleanup the collection grows unboundedly.
 // ---------------------------------------------------------------------------
 
 const STATS_REF = db.collection('platform_stats').doc('global');
 
-export const onUserCreated = onDocumentCreated('users/{userId}', async () => {
-  await STATS_REF.set(
-    { totalUsers: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
-    { merge: true },
-  );
+/** Atomically increment a stats field, guarded by a dedup event document. */
+async function incrementStatIdempotent(
+  eventId: string,
+  eventType: string,
+  statsUpdate: Record<string, admin.firestore.FieldValue>,
+): Promise<void> {
+  const dedupRef = db.doc(`processed_events/${eventId}`);
+  await db.runTransaction(async (tx) => {
+    const dedup = await tx.get(dedupRef);
+    if (dedup.exists) return; // already processed — Firebase retry guard
+    tx.set(dedupRef, {
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      type: eventType,
+    });
+    tx.set(STATS_REF, { ...statsUpdate, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  });
+}
+
+export const onUserCreated = onDocumentCreated('users/{userId}', async (event) => {
+  await incrementStatIdempotent(event.id, 'user_created', {
+    totalUsers: admin.firestore.FieldValue.increment(1),
+  });
 });
 
-export const onProviderCreated = onDocumentCreated('providers/{providerId}', async () => {
-  await STATS_REF.set(
-    { totalProviders: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
-    { merge: true },
-  );
+export const onProviderCreated = onDocumentCreated('providers/{providerId}', async (event) => {
+  await incrementStatIdempotent(event.id, 'provider_created', {
+    totalProviders: admin.firestore.FieldValue.increment(1),
+  });
 });
 
-export const onServiceCreated = onDocumentCreated('services/{serviceId}', async () => {
-  await STATS_REF.set(
-    { totalServices: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
-    { merge: true },
-  );
+export const onServiceCreated = onDocumentCreated('services/{serviceId}', async (event) => {
+  await incrementStatIdempotent(event.id, 'service_created', {
+    totalServices: admin.firestore.FieldValue.increment(1),
+  });
 });
 
-export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async () => {
-  await STATS_REF.set(
-    { totalBookings: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
-    { merge: true },
-  );
+export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async (event) => {
+  await incrementStatIdempotent(event.id, 'booking_created', {
+    totalBookings: admin.firestore.FieldValue.increment(1),
+  });
 });
 
 export const onBookingUpdatedStats = onDocumentUpdated('bookings/{bookingId}', async (event) => {
@@ -1973,22 +2025,17 @@ export const onBookingUpdatedStats = onDocumentUpdated('bookings/{bookingId}', a
   if (!before || !after || before.status === after.status) return;
 
   if (after.status === 'done' && before.status !== 'done') {
-    await STATS_REF.set(
-      { totalBookingsDone: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
-      { merge: true },
-    );
+    await incrementStatIdempotent(event.id, 'booking_done', {
+      totalBookingsDone: admin.firestore.FieldValue.increment(1),
+    });
   }
 });
 
-export const onReportCreatedStats = onDocumentCreated('reports/{reportId}', async () => {
-  await STATS_REF.set(
-    {
-      totalReports: admin.firestore.FieldValue.increment(1),
-      totalReportsPending: admin.firestore.FieldValue.increment(1),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    },
-    { merge: true },
-  );
+export const onReportCreatedStats = onDocumentCreated('reports/{reportId}', async (event) => {
+  await incrementStatIdempotent(event.id, 'report_created', {
+    totalReports: admin.firestore.FieldValue.increment(1),
+    totalReportsPending: admin.firestore.FieldValue.increment(1),
+  });
 });
 
 export const onReportUpdatedStats = onDocumentUpdated('reports/{reportId}', async (event) => {
@@ -1997,10 +2044,9 @@ export const onReportUpdatedStats = onDocumentUpdated('reports/{reportId}', asyn
   if (!before || !after || before.status === after.status) return;
 
   if (before.status === 'open' && after.status !== 'open') {
-    await STATS_REF.set(
-      { totalReportsPending: admin.firestore.FieldValue.increment(-1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
-      { merge: true },
-    );
+    await incrementStatIdempotent(event.id, 'report_closed', {
+      totalReportsPending: admin.firestore.FieldValue.increment(-1),
+    });
   }
 });
 
