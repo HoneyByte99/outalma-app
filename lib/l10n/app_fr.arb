@@ -532,5 +532,8 @@
   "chatDelete": "Supprimer",
   "chatReportMessage": "Signaler ce message",
   "chatDeletedMessage": "Message supprimé",
-  "chatReplyingTo": "Réponse à"
+  "chatReplyingTo": "Réponse à",
+  "chatEdit": "Modifier",
+  "chatEditing": "Modifier le message",
+  "chatEdited": "modifié"
 }

@@ -11,6 +11,7 @@ class ChatMessage {
     this.mediaUrl,
     this.readBy = const [],
     this.deleted = false,
+    this.edited = false,
     this.replyToId,
     this.replyToText,
     this.replyToSenderId,
@@ -30,6 +31,9 @@ class ChatMessage {
   /// Soft-deleted by its sender — rendered as "message deleted".
   final bool deleted;
 
+  /// Edited by its sender — rendered with an "(edited)" marker.
+  final bool edited;
+
   /// Reply/quote: id + snapshot of the message this one replies to.
   final String? replyToId;
   final String? replyToText;
@@ -46,6 +50,7 @@ class ChatMessage {
     String? mediaUrl,
     List<String>? readBy,
     bool? deleted,
+    bool? edited,
     String? replyToId,
     String? replyToText,
     String? replyToSenderId,
@@ -60,6 +65,7 @@ class ChatMessage {
       mediaUrl: mediaUrl ?? this.mediaUrl,
       readBy: readBy ?? this.readBy,
       deleted: deleted ?? this.deleted,
+      edited: edited ?? this.edited,
       replyToId: replyToId ?? this.replyToId,
       replyToText: replyToText ?? this.replyToText,
       replyToSenderId: replyToSenderId ?? this.replyToSenderId,

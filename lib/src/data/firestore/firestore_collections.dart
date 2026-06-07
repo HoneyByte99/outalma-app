@@ -386,6 +386,7 @@ class FirestoreCollections {
       mediaUrl: data['mediaUrl'] as String?,
       readBy: (data['readBy'] as List?)?.cast<String>() ?? [],
       deleted: (data['deleted'] as bool?) ?? false,
+      edited: (data['edited'] as bool?) ?? false,
       replyToId: data['replyToId'] as String?,
       replyToText: data['replyToText'] as String?,
       replyToSenderId: data['replyToSenderId'] as String?,
@@ -402,6 +403,7 @@ class FirestoreCollections {
       'mediaUrl': message.mediaUrl,
       'readBy': message.readBy,
       'deleted': message.deleted,
+      'edited': message.edited,
       if (message.replyToId != null) 'replyToId': message.replyToId,
       if (message.replyToText != null) 'replyToText': message.replyToText,
       if (message.replyToSenderId != null)

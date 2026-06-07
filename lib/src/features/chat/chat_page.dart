@@ -103,6 +103,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
 
+    // Editing an existing message instead of sending a new one.
+    if (_editing != null) {
+      await _submitEdit(text);
+      return;
+    }
+
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
@@ -202,6 +208,58 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   // Message the composer is currently replying to (quote shown above input).
   ChatMessage? _replyingTo;
 
+  // Message currently being edited (composer prefilled, banner shown).
+  ChatMessage? _editing;
+
+  /// WhatsApp-style edit window: a sent message can be edited for 15 minutes.
+  static const _editWindow = Duration(minutes: 15);
+  bool _canEdit(ChatMessage m) =>
+      !m.deleted &&
+      m.type == MessageType.text &&
+      DateTime.now().toUtc().difference(m.createdAt) < _editWindow;
+
+  void _startEditing(ChatMessage msg) {
+    setState(() {
+      _editing = msg;
+      _replyingTo = null;
+      _controller.text = msg.text ?? '';
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
+    });
+  }
+
+  void _cancelEditing() {
+    setState(() => _editing = null);
+    _controller.clear();
+  }
+
+  Future<void> _submitEdit(String text) async {
+    final msg = _editing!;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _sending = true);
+    try {
+      await ref
+          .read(chatRepositoryProvider)
+          .editMessage(chatId: widget.chatId, messageId: msg.id, newText: text);
+      if (mounted) {
+        _controller.clear();
+        setState(() => _editing = null);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.chatErrorSend),
+            backgroundColor: context.oc.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   /// Long-press action sheet on a message: reply / copy / delete / report.
   Future<void> _showMessageActions(ChatMessage msg, bool isMe) async {
     final l10n = AppLocalizations.of(context)!;
@@ -235,6 +293,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       duration: const Duration(seconds: 1),
                     ),
                   );
+                },
+              ),
+            if (isMe && _canEdit(msg))
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: Text(l10n.chatEdit),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _startEditing(msg);
                 },
               ),
             if (isMe)
@@ -626,7 +693,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               onCancel: _cancelPendingImage,
             )
           else ...[
-            if (_replyingTo != null)
+            if (_editing != null)
+              _EditComposerBanner(onCancel: _cancelEditing)
+            else if (_replyingTo != null)
               _ReplyComposerBanner(
                 message: _replyingTo!,
                 onCancel: () => setState(() => _replyingTo = null),
@@ -752,6 +821,49 @@ class _ReplyComposerBanner extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Edit composer banner (shown above the input while editing a message)
+// ---------------------------------------------------------------------------
+
+class _EditComposerBanner extends StatelessWidget {
+  const _EditComposerBanner({required this.onCancel});
+
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: oc.surfaceVariant,
+        border: Border(left: BorderSide(color: oc.primary, width: 3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.edit_outlined, size: 16, color: oc.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.chatEditing,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: oc.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close_rounded, size: 20, color: oc.secondaryText),
+            onPressed: onCancel,
+            tooltip: l10n.cancel,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Message bubble
 // ---------------------------------------------------------------------------
 
@@ -861,6 +973,17 @@ class _MessageBubble extends ConsumerWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (message.edited && !message.deleted) ...[
+                    Text(
+                      AppLocalizations.of(context)!.chatEdited,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 10,
+                        fontStyle: FontStyle.italic,
+                        color: oc.icons,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   Text(
                     date_utils.formatTime(message.createdAt),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(

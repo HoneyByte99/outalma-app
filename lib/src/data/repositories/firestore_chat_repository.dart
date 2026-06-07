@@ -68,6 +68,18 @@ class FirestoreChatRepository implements ChatRepository {
   }
 
   @override
+  Future<void> editMessage({
+    required String chatId,
+    required String messageId,
+    required String newText,
+  }) async {
+    await FirestoreCollections.chatMessages(
+      db: _db,
+      chatId: chatId,
+    ).doc(messageId).update({'text': newText, 'edited': true});
+  }
+
+  @override
   Future<void> markMessagesRead({
     required String chatId,
     required String uid,

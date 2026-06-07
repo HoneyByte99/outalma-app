@@ -185,7 +185,14 @@ service cloud.firestore {
           // change, and it can only flip to true.
           || (resource.data.senderId == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted'])
-              && request.resource.data.deleted == true);
+              && request.resource.data.deleted == true)
+          // Sender edits their own message text within 15 minutes of sending:
+          // only text + edited may change, edited flips to true.
+          || (resource.data.senderId == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited'])
+              && request.resource.data.edited == true
+              && request.resource.data.text is string
+              && request.time < resource.data.createdAt + duration.value(15, 'm'));
 
         allow delete: if isAdmin();
       }

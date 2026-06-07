@@ -1369,4 +1369,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatReplyingTo => 'Réponse à';
+
+  @override
+  String get chatEdit => 'Modifier';
+
+  @override
+  String get chatEditing => 'Modifier le message';
+
+  @override
+  String get chatEdited => 'modifié';
 }

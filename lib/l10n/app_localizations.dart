@@ -2623,6 +2623,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Replying to'**
   String get chatReplyingTo;
+
+  /// No description provided for @chatEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get chatEdit;
+
+  /// No description provided for @chatEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit message'**
+  String get chatEditing;
+
+  /// No description provided for @chatEdited.
+  ///
+  /// In en, this message translates to:
+  /// **'edited'**
+  String get chatEdited;
 }
 
 class _AppLocalizationsDelegate

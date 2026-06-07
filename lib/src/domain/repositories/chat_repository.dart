@@ -20,6 +20,14 @@ abstract interface class ChatRepository {
     required String messageId,
   });
 
+  /// Edits a message's text (sets `edited: true`); sender-only, time-limited
+  /// server-side.
+  Future<void> editMessage({
+    required String chatId,
+    required String messageId,
+    required String newText,
+  });
+
   /// Marks all messages in [chatId] not sent by [uid] as read by [uid].
   Future<void> markMessagesRead({required String chatId, required String uid});
 
