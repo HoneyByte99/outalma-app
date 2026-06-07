@@ -1,8 +1,8 @@
-# Politique de Confidentialité — Outalma
+# Politique de confidentialité d'Outalma Service
 
 _Dernière mise à jour : 16 mai 2026_
 
-La présente politique décrit comment Outalma (« nous », « notre », « le service ») collecte, utilise et protège vos données personnelles lorsque vous utilisez notre application mobile et notre site web (ensemble, « l'Application »). Outalma est une place de marché de services pour des utilisateurs basés en France et au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
+La présente politique décrit comment **KAYZEN TECHNOLOGY** (« nous », « notre »), éditeur de l'application Outalma Service, collecte, utilise et protège vos données personnelles lorsque vous utilisez notre application mobile et notre site web (ensemble, « l'Application »). Outalma Service est une place de marché de services pour des utilisateurs basés en France et au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
 
 Nous nous engageons à respecter le Règlement Général sur la Protection des Données (UE 2016/679, « RGPD »), la loi française « Informatique et Libertés », ainsi que la **loi sénégalaise n° 2008-12 du 25 janvier 2008** sur la protection des données à caractère personnel.
 
@@ -12,9 +12,9 @@ Nous nous engageons à respecter le Règlement Général sur la Protection des D
 
 Le responsable de traitement est :
 
-- **Raison sociale** : Outalma
-- **Forme juridique / immatriculation** : SAS au capital de 1 000 €, immatriculée au RCS de Paris sous le numéro 920 145 367
-- **Adresse du siège social** : 14 rue du Faubourg Saint-Antoine, 75012 Paris, France
+- **Raison sociale** : KAYZEN TECHNOLOGY
+- **Forme juridique / immatriculation** : [à compléter avant publication]
+- **Adresse du siège social** : [à compléter avant publication]
 - **Email de contact** : contact@outalma.com
 - **Délégué à la protection des données (DPO)** : non désigné à ce jour
 
@@ -72,7 +72,7 @@ Vos données sont utilisées pour :
 |---|---|
 | Création de compte et exécution des réservations | Exécution d'un contrat (Art. 6.1.b) |
 | Sécurité, prévention de la fraude | Intérêt légitime (Art. 6.1.f) |
-| Notifications push | Consentement (Art. 6.1.a) — révocable depuis les réglages |
+| Notifications push | Consentement (Art. 6.1.a), révocable depuis les réglages |
 | Géolocalisation précise | Consentement (Art. 6.1.a) |
 | Crashlytics (diagnostic technique) | Intérêt légitime (Art. 6.1.f) |
 | Conservation comptable et fiscale éventuelle | Obligation légale (Art. 6.1.c) |
@@ -145,7 +145,7 @@ Nous mettons en œuvre des mesures techniques et organisationnelles raisonnables
 
 - Chiffrement TLS pour toutes les communications client / serveur
 - Chiffrement au repos des données stockées chez Firebase
-- Authentification forte (lien magique ou OTP — pas de mot de passe à mémoriser)
+- Authentification forte (lien magique ou code OTP, sans mot de passe à mémoriser)
 - Règles de sécurité Firestore et Storage limitant l'accès aux seules personnes autorisées
 - Journaux d'accès et alertes en cas d'activité suspecte
 - Accès restreint aux données aux seuls membres de l'équipe qui en ont besoin
@@ -186,12 +186,12 @@ La date en haut de ce document indique toujours la version en vigueur.
 Pour toute question relative à vos données personnelles :
 
 - **Email** : contact@outalma.com
-- **Adresse postale** : Outalma, 14 rue du Faubourg Saint-Antoine, 75012 Paris, France
+- **Adresse postale** : KAYZEN TECHNOLOGY [adresse à compléter avant publication]
 
 Si vous estimez que vos droits ne sont pas respectés, vous pouvez introduire une réclamation auprès de :
 
-- **France** : Commission Nationale de l'Informatique et des Libertés (CNIL) — 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07 — [www.cnil.fr](https://www.cnil.fr)
-- **Sénégal** : Commission des Données Personnelles (CDP) — Immeuble Y2K, 1er étage, Rond-Point OMVS, Dakar — [www.cdp.sn](https://www.cdp.sn)
+- **France** : Commission Nationale de l'Informatique et des Libertés (CNIL), 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07. Site : [www.cnil.fr](https://www.cnil.fr)
+- **Sénégal** : Commission des Données Personnelles (CDP), Immeuble Y2K, 1er étage, Rond-Point OMVS, Dakar. Site : [www.cdp.sn](https://www.cdp.sn)
 
 ---
 

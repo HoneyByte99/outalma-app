@@ -1,8 +1,8 @@
-# Conditions Générales d'Utilisation — Outalma
+# Conditions générales d'utilisation d'Outalma Service
 
 _Dernière mise à jour : 5 juin 2026_
 
-Les présentes Conditions Générales d'Utilisation (« CGU ») encadrent l'accès et l'utilisation de l'application mobile et du site web Outalma (ensemble, « l'Application »). Outalma est une place de marché de services destinée à des utilisateurs basés en France et au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
+Les présentes Conditions Générales d'Utilisation (« CGU ») encadrent l'accès et l'utilisation de l'application mobile et du site web Outalma Service (ensemble, « l'Application »), édités par la société **KAYZEN TECHNOLOGY**. Outalma Service est une place de marché de services destinée à des utilisateurs basés en France et au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
 
 En créant un compte ou en utilisant l'Application, vous acceptez sans réserve les présentes CGU. Si vous n'acceptez pas ces conditions, vous ne devez pas utiliser l'Application.
 
@@ -14,9 +14,9 @@ En créant un compte ou en utilisant l'Application, vous acceptez sans réserve 
 
 L'Application est éditée par :
 
-- **Raison sociale** : Outalma
-- **Forme juridique / immatriculation** : SAS au capital de 1 000 €, immatriculée au RCS de Paris sous le numéro 920 145 367
-- **Adresse du siège social** : 14 rue du Faubourg Saint-Antoine, 75012 Paris, France
+- **Raison sociale** : KAYZEN TECHNOLOGY
+- **Forme juridique / immatriculation** : [à compléter avant publication]
+- **Adresse du siège social** : [à compléter avant publication]
 - **Email de contact** : contact@outalma.com
 
 ---
@@ -143,4 +143,4 @@ Les présentes CGU sont régies par le droit français pour les utilisateurs sit
 Pour toute question relative aux présentes CGU :
 
 - **Email** : contact@outalma.com
-- **Adresse postale** : Outalma, 14 rue du Faubourg Saint-Antoine, 75012 Paris, France
+- **Adresse postale** : KAYZEN TECHNOLOGY [adresse à compléter avant publication]
