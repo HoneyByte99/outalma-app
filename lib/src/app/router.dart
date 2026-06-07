@@ -66,6 +66,7 @@ abstract final class AppRoutes {
   static const chatsList = '/chats';
 
   static const profile = '/profile';
+  static const myReviews = '/my-reviews';
 
   // Legal documents — served in-app from bundled assets (no remote link).
   static const legalTerms = '/legal/terms';
@@ -409,6 +410,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           targetType: state.pathParameters['targetType']!,
           targetId: state.pathParameters['targetId']!,
         ),
+      ),
+
+      // ---- My reviews (dedicated page, opened from profile) ----
+      GoRoute(
+        path: AppRoutes.myReviews,
+        name: 'my-reviews',
+        builder: (_, __) => const MyReviewsPage(),
       ),
 
       // ---- Public provider profile ----

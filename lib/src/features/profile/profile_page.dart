@@ -52,9 +52,7 @@ class ProfilePage extends ConsumerWidget {
             const _EditableUserHeader(),
             const SizedBox(height: 28),
             if (user != null) ...[
-              _SectionLabel(label: l10n.profileMyReviews),
-              const SizedBox(height: 12),
-              _MyReviewsSection(uid: user.id),
+              _MyReviewsTile(uid: user.id),
               const SizedBox(height: 28),
             ],
             _SectionLabel(label: l10n.profileActiveMode),
@@ -1030,15 +1028,10 @@ class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
     try {
       final data = await ref.read(authNotifierProvider.notifier).exportMyData();
       final json = const JsonEncoder.withIndent('  ').convert(data);
-      // Share JSON bytes directly (no path_provider — unreliable on the iOS
-      // simulator; works on device too).
-      await Share.shareXFiles([
-        XFile.fromData(
-          utf8.encode(json),
-          name: 'outalma_data_export.json',
-          mimeType: 'application/json',
-        ),
-      ], subject: l10n.accountExportData);
+      // Share the JSON as text. File-based sharing routes through path_provider
+      // (broken on the iOS simulator); plain text sharing does not, so this
+      // works everywhere.
+      await Share.share(json, subject: l10n.accountExportData);
     } catch (_) {
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.errorGeneral), backgroundColor: oc.error),
@@ -1229,6 +1222,87 @@ class _DeleteAccountSection extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 // My reviews section
 // ---------------------------------------------------------------------------
+
+/// Compact entry in the profile that opens the full reviews page (keeps the
+/// settings screen uncluttered).
+class _MyReviewsTile extends ConsumerWidget {
+  const _MyReviewsTile({required this.uid});
+
+  final String uid;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+    final reviews = ref.watch(reviewsForUserProvider(uid)).valueOrNull ?? [];
+    final avg = reviews.isEmpty
+        ? null
+        : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: oc.cardSurface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        border: Border.all(color: oc.border),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        onTap: () => context.push(AppRoutes.myReviews),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Icon(Icons.star_rounded, size: 20, color: oc.star),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  l10n.profileMyReviews,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              if (avg != null)
+                Text(
+                  '${avg.toStringAsFixed(1)} (${reviews.length})',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                ),
+              Icon(Icons.chevron_right_rounded, size: 20, color: oc.icons),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-screen list of the current user's reviews.
+class MyReviewsPage extends ConsumerWidget {
+  const MyReviewsPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+    final auth = ref.watch(authNotifierProvider).valueOrNull;
+    final uid = auth is AuthAuthenticated ? auth.user.id : null;
+
+    return Scaffold(
+      backgroundColor: oc.background,
+      appBar: AppBar(
+        title: Text(l10n.profileMyReviews),
+        backgroundColor: oc.background,
+        surfaceTintColor: Colors.transparent,
+      ),
+      body: uid == null
+          ? const SizedBox.shrink()
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+              child: _MyReviewsSection(uid: uid),
+            ),
+    );
+  }
+}
 
 class _MyReviewsSection extends ConsumerWidget {
   const _MyReviewsSection({required this.uid});
