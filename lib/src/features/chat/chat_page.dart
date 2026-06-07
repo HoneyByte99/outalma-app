@@ -538,13 +538,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               tooltip: isBlocked ? l10n.unblockUser : l10n.blockUser,
               onPressed: () => _toggleBlock(otherUid, isBlocked, l10n, oc),
             ),
-          IconButton(
-            icon: const Icon(Icons.flag_outlined, size: 20),
-            tooltip: l10n.bookingReport,
-            onPressed: () => context.push(
-              AppRoutes.report(type: 'message', id: widget.chatId),
+          if (otherUid != null && otherUid.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.flag_outlined, size: 20),
+              tooltip: l10n.bookingReport,
+              onPressed: () =>
+                  context.push(AppRoutes.report(type: 'user', id: otherUid)),
             ),
-          ),
         ],
       ),
       body: Column(
