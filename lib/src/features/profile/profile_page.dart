@@ -1,10 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -1032,11 +1030,14 @@ class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
     try {
       final data = await ref.read(authNotifierProvider.notifier).exportMyData();
       final json = const JsonEncoder.withIndent('  ').convert(data);
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/outalma_data_export.json');
-      await file.writeAsString(json);
+      // Share JSON bytes directly (no path_provider — unreliable on the iOS
+      // simulator; works on device too).
       await Share.shareXFiles([
-        XFile(file.path, mimeType: 'application/json'),
+        XFile.fromData(
+          utf8.encode(json),
+          name: 'outalma_data_export.json',
+          mimeType: 'application/json',
+        ),
       ], subject: l10n.accountExportData);
     } catch (_) {
       messenger.showSnackBar(
