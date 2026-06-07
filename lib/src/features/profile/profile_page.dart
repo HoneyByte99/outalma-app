@@ -51,20 +51,27 @@ class ProfilePage extends ConsumerWidget {
           children: [
             const _EditableUserHeader(),
             const SizedBox(height: 28),
-            if (user != null) ...[
-              _MyReviewsTile(uid: user.id),
-              const SizedBox(height: 28),
-            ],
-            _SectionLabel(label: l10n.profileActiveMode),
-            const SizedBox(height: 12),
-            const _ModeToggle(),
-            const SizedBox(height: 28),
+
+            // Identity: edit profile right under the header.
             if (user != null) ...[
               _SectionLabel(label: l10n.profileInformation),
               const SizedBox(height: 12),
               _ProfileForm(user: user),
               const SizedBox(height: 28),
             ],
+
+            // Primary action: active mode (client / provider).
+            _SectionLabel(label: l10n.profileActiveMode),
+            const SizedBox(height: 12),
+            const _ModeToggle(),
+            const SizedBox(height: 28),
+
+            if (user != null) ...[
+              _MyReviewsTile(uid: user.id),
+              const SizedBox(height: 28),
+            ],
+
+            // Preferences.
             _SectionLabel(label: l10n.profileAppearance),
             const SizedBox(height: 12),
             const _ThemeSelector(),
@@ -73,16 +80,21 @@ class ProfilePage extends ConsumerWidget {
             const SizedBox(height: 12),
             const _LanguageSelector(),
             const SizedBox(height: 28),
-            _SectionLabel(label: l10n.profileAccount),
-            const SizedBox(height: 12),
-            _AccountSection(user: user),
-            const SizedBox(height: 28),
+
+            // Legal & privacy (export grouped here).
             _SectionLabel(label: l10n.legalSection),
             const SizedBox(height: 12),
             const _LegalLinksSection(),
             const SizedBox(height: 12),
             const _ExportDataTile(),
             const SizedBox(height: 28),
+
+            // Account actions at the bottom — sign out, then the destructive
+            // delete account last.
+            _SectionLabel(label: l10n.profileAccount),
+            const SizedBox(height: 12),
+            _AccountSection(user: user),
+            const SizedBox(height: 12),
             const _DeleteAccountSection(),
           ],
         ),
