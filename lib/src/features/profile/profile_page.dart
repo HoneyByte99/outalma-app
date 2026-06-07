@@ -52,11 +52,8 @@ class ProfilePage extends ConsumerWidget {
             const _EditableUserHeader(),
             const SizedBox(height: 28),
 
-            // Identity: edit profile right under the header.
             if (user != null) ...[
-              _SectionLabel(label: l10n.profileInformation),
-              const SizedBox(height: 12),
-              _ProfileForm(user: user),
+              _MyReviewsTile(uid: user.id),
               const SizedBox(height: 28),
             ],
 
@@ -66,8 +63,11 @@ class ProfilePage extends ConsumerWidget {
             const _ModeToggle(),
             const SizedBox(height: 28),
 
+            // Identity: edit profile.
             if (user != null) ...[
-              _MyReviewsTile(uid: user.id),
+              _SectionLabel(label: l10n.profileInformation),
+              const SizedBox(height: 12),
+              _ProfileForm(user: user),
               const SizedBox(height: 28),
             ],
 
