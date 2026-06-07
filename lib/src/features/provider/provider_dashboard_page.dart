@@ -359,15 +359,19 @@ class _ServiceTile extends ConsumerWidget {
         ),
         subtitle: Row(
           children: [
-            Text(
-              priceLabel,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: oc.primary,
-                fontWeight: FontWeight.w500,
+            Flexible(
+              child: Text(
+                priceLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: oc.primary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
             const SizedBox(width: 8),
-            _CategoryChip(categoryId: service.categoryId),
+            Flexible(child: _CategoryChip(categoryId: service.categoryId)),
           ],
         ),
         trailing: Row(
@@ -417,6 +421,8 @@ class _CategoryChip extends StatelessWidget {
       ),
       child: Text(
         _labels[categoryId] ?? '',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: Theme.of(
           context,
         ).textTheme.labelSmall?.copyWith(color: oc.secondaryText),
