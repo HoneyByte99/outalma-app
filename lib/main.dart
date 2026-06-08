@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -11,6 +12,16 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'src/app/app.dart';
 import 'src/application/onboarding/onboarding_provider.dart';
+
+/// Background / terminated FCM handler. The notification itself is displayed by
+/// the OS (our pushes carry a `notification` block), so this is a no-op beyond
+/// ensuring Firebase is initialised in the background isolate. Registering it
+/// is required for FCM to wake the app without warnings and enables future
+/// data-only handling.
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+}
 
 Future<void> main() async {
   // Catch all uncaught async errors. runZonedGuarded is intentionally
@@ -26,6 +37,9 @@ Future<void> main() async {
         initializeDateFormatting('fr_FR'),
         readOnboardingDone(),
       ]);
+
+      // Register the background message handler once Firebase is ready.
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
       final onboardingDone = results[2] as bool;
 

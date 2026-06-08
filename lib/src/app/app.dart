@@ -32,6 +32,37 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
     super.initState();
     _messageSub = NotificationService.listenForeground(_messengerKey);
     _initAppLinks();
+    _initNotificationTaps();
+  }
+
+  /// Routes the user to the relevant screen when they tap a push notification,
+  /// both from background (onMessageOpenedApp) and cold start (getInitialMessage).
+  Future<void> _initNotificationTaps() async {
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
+    try {
+      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      if (initial != null) {
+        // Defer until the router is mounted on first frame.
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _handleNotificationTap(initial),
+        );
+      }
+    } catch (e) {
+      debugPrint('[Notif] getInitialMessage error: $e');
+    }
+  }
+
+  void _handleNotificationTap(RemoteMessage message) {
+    final data = message.data;
+    final chatId = data['chatId'] as String?;
+    final bookingId = data['bookingId'] as String?;
+    if (!mounted) return;
+    final router = ref.read(routerProvider);
+    if (chatId != null && chatId.isNotEmpty) {
+      router.push(AppRoutes.chat(chatId));
+    } else if (bookingId != null && bookingId.isNotEmpty) {
+      router.push(AppRoutes.bookingDetail(bookingId));
+    }
   }
 
   /// Listens for incoming Universal / App Links — primarily Firebase email

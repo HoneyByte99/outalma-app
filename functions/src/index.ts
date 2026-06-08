@@ -112,7 +112,10 @@ export {
 
 async function sendPushToUsers(
   uids: string[],
-  notification: { title: string; body: string }
+  notification: { title: string; body: string },
+  // Optional deep-link payload so the app can route on tap. All values must be
+  // strings (FCM data payload constraint).
+  data?: { [key: string]: string }
 ): Promise<void> {
   if (uids.length === 0) return;
 
@@ -136,7 +139,12 @@ async function sendPushToUsers(
       title: notification.title,
       body: notification.body,
     },
-    android: { priority: 'high' },
+    ...(data ? { data } : {}),
+    android: {
+      priority: 'high',
+      // Ensures the tap intent carries the data payload on Android.
+      notification: { clickAction: 'FLUTTER_NOTIFICATION_CLICK' },
+    },
     apns: { payload: { aps: { sound: 'default' } } },
   });
 
@@ -418,10 +426,15 @@ export const onMessageCreate = onDocumentCreated(
       notifBody = (message.text as string | undefined) ?? 'Message re\u00e7u';
     }
 
-    await sendPushToUsers(recipients, {
-      title: notifTitle,
-      body: notifBody,
-    });
+    await sendPushToUsers(
+      recipients,
+      { title: notifTitle, body: notifBody },
+      {
+        type: 'new_message',
+        chatId,
+        ...(bookingId ? { bookingId } : {}),
+      }
+    );
 
     for (const uid of recipients) {
       await createNotification(uid, {
@@ -519,7 +532,11 @@ export const onBookingStatusChange = onDocumentUpdated(
     }
 
     for (const n of notifications) {
-      await sendPushToUsers(n.uids, { title: n.title, body: n.body });
+      await sendPushToUsers(
+        n.uids,
+        { title: n.title, body: n.body },
+        { type: n.type, bookingId }
+      );
       for (const uid of n.uids) {
         await createNotification(uid, {
           type: n.type,
