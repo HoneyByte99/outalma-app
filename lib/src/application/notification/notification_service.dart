@@ -27,15 +27,52 @@ class NotificationService {
     // FCM on Flutter Web requires a VAPID key — skip until configured.
     if (kIsWeb) return;
 
-    // 1. Request permission (required on iOS; no-op on Android 12 and below)
-    await _messaging.requestPermission(alert: true, badge: true, sound: true);
-
-    // 2. Get and save token
-    final token = await _messaging.getToken();
-    if (token != null) await _saveToken(token);
-
-    // 3. Listen for token refreshes — store subscription so it can be cancelled.
+    // 1. Listen for token refreshes FIRST. On iOS the FCM token often becomes
+    //    available only after the APNs token arrives (a few seconds post-launch);
+    //    subscribing first guarantees we never miss that late token even if the
+    //    eager getToken() below returns null or throws.
     _tokenRefreshSub = _messaging.onTokenRefresh.listen(_saveToken);
+
+    // 2. Request permission (required on iOS; Android 13+ prompts; older Android no-op)
+    final settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    if (settings.authorizationStatus == AuthorizationStatus.denied) {
+      if (kDebugMode) debugPrint('[Notif] permission denied — no token will register');
+      return;
+    }
+
+    // 3. On Apple platforms the FCM token requires the APNs token, which is not
+    //    ready at the instant the app launches. Poll briefly so getToken() does
+    //    not throw `apns-token-not-set`.
+    if (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      String? apnsToken;
+      for (var attempt = 0; attempt < 12; attempt++) {
+        apnsToken = await _messaging.getAPNSToken();
+        if (apnsToken != null) break;
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+      if (apnsToken == null && kDebugMode) {
+        debugPrint('[Notif] APNs token still null after ~6s — '
+            'check APNs key in Firebase + push entitlement');
+      }
+    }
+
+    // 4. Get and save the FCM token. Guarded: getToken() can still throw if the
+    //    APNs token is not set yet — onTokenRefresh (step 1) will deliver it.
+    try {
+      final token = await _messaging.getToken();
+      if (token != null) {
+        await _saveToken(token);
+      } else if (kDebugMode) {
+        debugPrint('[Notif] getToken() returned null (APNs not ready?)');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Notif] getToken() failed: $e');
+    }
   }
 
   void dispose() {
@@ -43,7 +80,17 @@ class NotificationService {
   }
 
   Future<void> _saveToken(String token) async {
-    await _db.collection('users').doc(_uid).update({'pushToken': token});
+    try {
+      // set+merge (not update) so a missing doc never throws; rules allow the
+      // owner to write pushToken on their own document.
+      await _db.collection('users').doc(_uid).set(
+        {'pushToken': token},
+        SetOptions(merge: true),
+      );
+      if (kDebugMode) debugPrint('[Notif] pushToken saved for $_uid');
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Notif] failed to save pushToken: $e');
+    }
   }
 
   /// Call this to display an in-app SnackBar for foreground messages.
