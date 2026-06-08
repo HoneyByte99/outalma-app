@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show File;
 import 'dart:math' as math;
 
+import 'package:audio_session/audio_session.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -22,10 +23,12 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/booking/booking_providers.dart';
 import '../../application/chat/chat_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../core/utils/date_utils.dart' as date_utils;
 import '../../data/services/chat_media_service.dart';
+import '../../domain/enums/booking_status.dart';
 import '../../domain/enums/message_type.dart';
 import '../../domain/models/chat_message.dart';
 import '../shared/user_avatar.dart';
@@ -260,11 +263,41 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
-  /// Long-press action sheet on a message: reply / copy / delete / report.
+  static const _quickReactions = ['❤️', '😂', '👍', '😮', '😢', '🙏'];
+
+  Future<void> _react(ChatMessage msg, String emoji) async {
+    final authState = ref.read(authNotifierProvider).valueOrNull;
+    if (authState is! AuthAuthenticated) return;
+    final uid = authState.user.id;
+    // Tapping the same emoji again removes it (toggle).
+    final next = msg.reactions[uid] == emoji ? null : emoji;
+    try {
+      await ref
+          .read(chatRepositoryProvider)
+          .setReaction(
+            chatId: widget.chatId,
+            messageId: msg.id,
+            uid: uid,
+            emoji: next,
+          );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorGeneral),
+            backgroundColor: context.oc.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Long-press action sheet on a message: react / reply / copy / delete / report.
   Future<void> _showMessageActions(ChatMessage msg, bool isMe) async {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final hasText = (msg.text ?? '').isNotEmpty;
+    if (msg.deleted) return;
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: oc.surface,
@@ -272,6 +305,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Quick emoji reaction row.
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  for (final emoji in _quickReactions)
+                    IconButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _react(msg, emoji);
+                      },
+                      icon: Text(emoji, style: const TextStyle(fontSize: 24)),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.reply_rounded),
               title: Text(l10n.chatReply),
@@ -381,7 +432,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: context.oc.error,
+            action: SnackBarAction(
+              label: AppLocalizations.of(context)!.retry,
+              textColor: Colors.white,
+              onPressed: () => _sendMedia(type, url, caption: caption),
+            ),
+          ),
         );
       }
     } finally {
@@ -442,8 +501,28 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     setState(() => _pendingImageUrl = null);
   }
 
+  /// Configures the iOS/Android audio session for recording. just_audio (used
+  /// for voice playback) leaves the AVAudioSession in a playback-only category,
+  /// which makes record's start() throw even when the mic permission is granted.
+  /// Switching to playAndRecord before recording fixes the "impossible
+  /// d'activer le micro" failure after a voice message has been played.
+  Future<void> _configureRecordingSession() async {
+    if (kIsWeb) return;
+    final session = await AudioSession.instance;
+    await session.configure(
+      const AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+        avAudioSessionCategoryOptions:
+            AVAudioSessionCategoryOptions.defaultToSpeaker,
+        avAudioSessionMode: AVAudioSessionMode.spokenAudio,
+      ),
+    );
+    await session.setActive(true);
+  }
+
   Future<void> _startRecording() async {
     final l10n = AppLocalizations.of(context)!;
+    final permissionMsg = l10n.chatMicPermission;
     final errorMsg = l10n.chatMicError;
 
     try {
@@ -455,17 +534,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           path: '',
         );
       } else {
+        // hasPermission() also requests the permission on first use.
         if (!await _recorder.hasPermission()) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(AppLocalizations.of(context)!.chatMicError),
+                content: Text(permissionMsg),
                 backgroundColor: context.oc.error,
               ),
             );
           }
           return;
         }
+        // Critical: claim the audio session for recording (see helper doc).
+        await _configureRecordingSession();
         final dir = await getTemporaryDirectory();
         final path =
             '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
@@ -484,7 +566,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           if (mounted) setState(() => _recordingSeconds++);
         });
       }
-    } catch (e) {
+    } catch (e, st) {
+      // Was silently swallowed before — log the real cause for diagnosis.
+      debugPrint('[Voice] recorder.start failed: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
@@ -574,6 +658,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final isBlocked =
         otherUid != null && otherUid.isNotEmpty && blocked.contains(otherUid);
 
+    // Lock the composer once the related booking is completed: the conversation
+    // stays readable as history, but no new messages can be sent.
+    final bookingId = chat?.bookingId;
+    final booking = (bookingId != null && bookingId.isNotEmpty)
+        ? ref.watch(bookingDetailProvider(bookingId)).valueOrNull
+        : null;
+    final isMissionDone = booking?.status == BookingStatus.done;
+
+    // The other participant is the provider when their uid matches the chat's
+    // providerId — only then is their public profile reachable on tap.
+    final otherIsProvider =
+        otherUid != null && otherUid.isNotEmpty && chat?.providerId == otherUid;
+
     // Mark messages read only when the message count actually grows — not on
     // every rebuild. Prevents a runaway Firestore write loop in the chat view.
     ref.listen<AsyncValue<List<ChatMessage>>>(
@@ -591,7 +688,25 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: Text(chatTitle),
+        title: otherIsProvider
+            ? InkWell(
+                onTap: () => context.push(AppRoutes.providerProfile(otherUid)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    UserAvatar(
+                      photoPath: otherUser?.photoPath,
+                      displayName: chatTitle,
+                      radius: 16,
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(chatTitle, overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              )
+            : Text(chatTitle),
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
         actions: [
@@ -647,7 +762,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   ],
                 ),
               ),
-              data: (messages) {
+              data: (allMessages) {
+                // Hide messages from users the current user has blocked.
+                final messages = blocked.isEmpty
+                    ? allMessages
+                    : allMessages
+                          .where((m) => !blocked.contains(m.senderId))
+                          .toList();
                 if (messages.isEmpty) {
                   return _EmptyChat();
                 }
@@ -683,6 +804,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           // Blocked: hide the composer, show a banner instead.
           if (isBlocked)
             _BlockedBanner(message: l10n.chatBlockedBanner)
+          // Mission completed: conversation is read-only history.
+          else if (isMissionDone)
+            _BlockedBanner(
+              message: l10n.chatMissionEndedBanner,
+              icon: Icons.lock_outline_rounded,
+            )
           // Image preview overlay (WhatsApp-style)
           else if (_pendingImageUrl != null)
             _ImagePreviewBar(
@@ -726,9 +853,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 // ---------------------------------------------------------------------------
 
 class _BlockedBanner extends StatelessWidget {
-  const _BlockedBanner({required this.message});
+  const _BlockedBanner({required this.message, this.icon = Icons.block});
 
   final String message;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -744,7 +872,7 @@ class _BlockedBanner extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.block, size: 18, color: oc.secondaryText),
+          Icon(icon, size: 18, color: oc.secondaryText),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
@@ -755,6 +883,47 @@ class _BlockedBanner extends StatelessWidget {
               ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reaction chips (emoji + count) shown under a message bubble
+// ---------------------------------------------------------------------------
+
+class _ReactionChips extends StatelessWidget {
+  const _ReactionChips({required this.reactions});
+
+  final Map<String, String> reactions;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    // Aggregate emoji → count.
+    final counts = <String, int>{};
+    for (final emoji in reactions.values) {
+      counts[emoji] = (counts[emoji] ?? 0) + 1;
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Wrap(
+        spacing: 4,
+        children: [
+          for (final entry in counts.entries)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: oc.surfaceVariant,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: oc.border),
+              ),
+              child: Text(
+                entry.value > 1 ? '${entry.key} ${entry.value}' : entry.key,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
         ],
       ),
     );
@@ -969,6 +1138,8 @@ class _MessageBubble extends ConsumerWidget {
                         ),
                 ),
               ),
+              if (message.reactions.isNotEmpty && !message.deleted)
+                _ReactionChips(reactions: message.reactions),
               const SizedBox(height: 3),
               Row(
                 mainAxisSize: MainAxisSize.min,

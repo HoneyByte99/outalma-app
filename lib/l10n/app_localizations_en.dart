@@ -1180,6 +1180,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMicError => 'Could not activate microphone.';
 
   @override
+  String get chatMicPermission =>
+      'Allow microphone access to send a voice message.';
+
+  @override
+  String get chatMissionEndedBanner =>
+      'Mission completed — conversation is read-only.';
+
+  @override
   String get chatVoiceError => 'Could not send voice message.';
 
   @override

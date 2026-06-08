@@ -80,6 +80,21 @@ class FirestoreChatRepository implements ChatRepository {
   }
 
   @override
+  Future<void> setReaction({
+    required String chatId,
+    required String messageId,
+    required String uid,
+    String? emoji,
+  }) async {
+    final ref = FirestoreCollections.chatMessages(
+      db: _db,
+      chatId: chatId,
+    ).doc(messageId);
+    // Toggle off when emoji is null; otherwise set this user's reaction.
+    await ref.update({'reactions.$uid': emoji ?? FieldValue.delete()});
+  }
+
+  @override
   Future<void> markMessagesRead({
     required String chatId,
     required String uid,

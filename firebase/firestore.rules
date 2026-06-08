@@ -159,28 +159,56 @@ service cloud.firestore {
       match /messages/{messageId} {
         // isChatParticipant() uses resource which refers to the message doc (not the chat).
         // For messages we must get() the parent chat document explicitly.
+        function chatData() {
+          return get(/databases/$(database)/documents/chats/$(chatId)).data;
+        }
         function isParticipantViaChat() {
           return signedIn()
-            && (request.auth.uid in
-                get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds);
+            && (request.auth.uid in chatData().participantIds);
+        }
+        // The participant who is not the sender (2-party chats).
+        function otherParticipantUid() {
+          return chatData().participantIds[0] == request.auth.uid
+            ? chatData().participantIds[1]
+            : chatData().participantIds[0];
+        }
+        // Block enforcement: neither party may message if either has blocked
+        // the other. Repeated get()/exists() on the same doc are cached, so this
+        // touches at most 3 unique documents.
+        function notBlockedPair() {
+          return !exists(/databases/$(database)/documents/users/$(otherParticipantUid())/blockedUsers/$(request.auth.uid))
+            && !exists(/databases/$(database)/documents/users/$(request.auth.uid)/blockedUsers/$(otherParticipantUid()));
+        }
+        // Conversation locks (read-only) once the related booking is done.
+        function bookingActiveForChat() {
+          return chatData().bookingId == null
+            || chatData().bookingId == ''
+            || !exists(/databases/$(database)/documents/bookings/$(chatData().bookingId))
+            || get(/databases/$(database)/documents/bookings/$(chatData().bookingId)).data.status != 'done';
         }
 
         allow read: if isAdminOrModerator() || isParticipantViaChat();
 
-        // Create: only participants; senderId must match auth uid
-        // text OR mediaUrl must be present (supports image/voice messages)
+        // Create: only participants; senderId must match auth uid;
+        // text OR mediaUrl must be present (supports image/voice messages);
+        // blocked pairs cannot message; locked once the booking is done.
         allow create: if isAdmin()
           || (isParticipantViaChat()
               && request.resource.data.senderId == request.auth.uid
               && request.resource.data.createdAt is timestamp
               && (request.resource.data.text is string
-                  || request.resource.data.mediaUrl is string));
+                  || request.resource.data.mediaUrl is string)
+              && notBlockedPair()
+              && bookingActiveForChat());
 
         // Read receipt update: participants may only append their own uid to readBy.
         allow update: if isAdmin()
           || (isParticipantViaChat()
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
               && request.auth.uid in request.resource.data.readBy)
+          // Any participant may add/update emoji reactions (reactions map only).
+          || (isParticipantViaChat()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']))
           // Sender soft-deletes their own message: only the `deleted` flag may
           // change, and it can only flip to true.
           || (resource.data.senderId == request.auth.uid

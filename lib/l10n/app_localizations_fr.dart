@@ -1193,6 +1193,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get chatMicError => 'Impossible d\'activer le micro.';
 
   @override
+  String get chatMicPermission =>
+      'Autorisez l\'accès au micro pour envoyer un vocal.';
+
+  @override
+  String get chatMissionEndedBanner =>
+      'Mission terminée — conversation en lecture seule.';
+
+  @override
   String get chatVoiceError => 'Impossible d\'envoyer le vocal.';
 
   @override

@@ -99,10 +99,6 @@ async function main() {
   const serviceBatch = db.batch();
   for (const doc of servicesSnap.docs) {
     const data = doc.data();
-    if (data.photos && data.photos.length > 0) {
-      console.log(`  ✓ ${doc.id} (${data.categoryId}) — already has photo, skipping`);
-      continue;
-    }
     const category = data.categoryId ?? 'menage';
     const photo = pick(SERVICE_PHOTOS, category);
     serviceBatch.update(doc.ref, { photos: [photo] });

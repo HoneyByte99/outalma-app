@@ -15,6 +15,7 @@ class ChatMessage {
     this.replyToId,
     this.replyToText,
     this.replyToSenderId,
+    this.reactions = const {},
   });
 
   final String id;
@@ -39,6 +40,9 @@ class ChatMessage {
   final String? replyToText;
   final String? replyToSenderId;
 
+  /// Emoji reactions keyed by reactor uid → emoji (one reaction per user).
+  final Map<String, String> reactions;
+
   bool get isReply => replyToId != null && replyToId!.isNotEmpty;
 
   ChatMessage copyWith({
@@ -54,6 +58,7 @@ class ChatMessage {
     String? replyToId,
     String? replyToText,
     String? replyToSenderId,
+    Map<String, String>? reactions,
   }) {
     return ChatMessage(
       id: id,
@@ -69,6 +74,7 @@ class ChatMessage {
       replyToId: replyToId ?? this.replyToId,
       replyToText: replyToText ?? this.replyToText,
       replyToSenderId: replyToSenderId ?? this.replyToSenderId,
+      reactions: reactions ?? this.reactions,
     );
   }
 }

@@ -476,6 +476,8 @@
   "chatRecording": "Recording in progress\u2026",
   "chatSubtitle": "Coordinate the service details here.",
   "chatMicError": "Could not activate microphone.",
+  "chatMicPermission": "Allow microphone access to send a voice message.",
+  "chatMissionEndedBanner": "Mission completed — conversation is read-only.",
   "chatVoiceError": "Could not send voice message.",
   "chatFileError": "Could not send file.",
   "chatAddCaption": "Add a message\u2026",

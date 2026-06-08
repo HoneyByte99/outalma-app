@@ -28,6 +28,15 @@ abstract interface class ChatRepository {
     required String newText,
   });
 
+  /// Sets (or, when [emoji] is null, removes) the caller's emoji reaction on a
+  /// message. One reaction per user, keyed by uid.
+  Future<void> setReaction({
+    required String chatId,
+    required String messageId,
+    required String uid,
+    String? emoji,
+  });
+
   /// Marks all messages in [chatId] not sent by [uid] as read by [uid].
   Future<void> markMessagesRead({required String chatId, required String uid});
 

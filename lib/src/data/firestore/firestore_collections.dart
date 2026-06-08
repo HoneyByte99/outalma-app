@@ -390,6 +390,11 @@ class FirestoreCollections {
       replyToId: data['replyToId'] as String?,
       replyToText: data['replyToText'] as String?,
       replyToSenderId: data['replyToSenderId'] as String?,
+      reactions:
+          (data['reactions'] as Map?)?.map(
+            (k, v) => MapEntry(k.toString(), v.toString()),
+          ) ??
+          const {},
     );
   }
 

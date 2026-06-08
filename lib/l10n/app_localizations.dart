@@ -2300,6 +2300,18 @@ abstract class AppLocalizations {
   /// **'Could not activate microphone.'**
   String get chatMicError;
 
+  /// No description provided for @chatMicPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow microphone access to send a voice message.'**
+  String get chatMicPermission;
+
+  /// No description provided for @chatMissionEndedBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Mission completed — conversation is read-only.'**
+  String get chatMissionEndedBanner;
+
   /// No description provided for @chatVoiceError.
   ///
   /// In en, this message translates to:
