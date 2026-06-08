@@ -111,20 +111,22 @@ class RouterNotifier extends ChangeNotifier {
         final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
         final isOnboardingRoute = loc == AppRoutes.onboarding;
 
+        // First launch: the onboarding screen (which carries the CGU consent
+        // gate) must be shown BEFORE anything else — including sign-in — so
+        // consent is collected at app opening, not after authentication.
+        final onboardingDone = _ref.read(onboardingDoneProvider);
+        if (!onboardingDone) {
+          return isOnboardingRoute ? null : AppRoutes.onboarding;
+        }
+
         // ---- Unauthenticated ----
         if (authState is AuthUnauthenticated) {
-          if (isOnboardingRoute) return null; // allow onboarding before auth
+          if (isOnboardingRoute) return AppRoutes.signIn; // already consented
           return isAuthRoute ? null : AppRoutes.signIn;
         }
 
         // ---- Authenticated ----
         if (authState is AuthAuthenticated) {
-          // Show onboarding on first launch (before anything else).
-          final onboardingDone = _ref.read(onboardingDoneProvider);
-          if (!onboardingDone) {
-            return isOnboardingRoute ? null : AppRoutes.onboarding;
-          }
-
           if (isOnboardingRoute) return AppRoutes.home;
           if (isAuthRoute) return AppRoutes.home;
 
