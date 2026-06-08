@@ -134,6 +134,31 @@ class AppLocalizationsFr extends AppLocalizations {
   String get signUpPasswordHint => 'Mot de passe (min. 6 caractères)';
 
   @override
+  String get signUpPasswordConfirmHint => 'Confirmer le mot de passe';
+
+  @override
+  String get signUpShowPassword => 'Afficher le mot de passe';
+
+  @override
+  String get signUpHidePassword => 'Masquer le mot de passe';
+
+  @override
+  String get signUpErrorPasswordMismatch =>
+      'Les mots de passe ne correspondent pas.';
+
+  @override
+  String get emailVerifyBanner => 'Vérifiez votre adresse email.';
+
+  @override
+  String get emailVerifyResend => 'Renvoyer';
+
+  @override
+  String get emailVerifySent => 'Email de vérification envoyé.';
+
+  @override
+  String get emailVerifyError => 'Envoi impossible. Réessayez plus tard.';
+
+  @override
   String get signUpButton => 'Créer un compte';
 
   @override

@@ -20,6 +20,7 @@ import '../../data/services/saved_locations_service.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/enums/price_type.dart';
 import '../../domain/models/review.dart';
+import '../auth/email_verification_banner.dart';
 import '../../domain/models/service.dart';
 import '../../domain/utils/distance.dart';
 import '../../app/app_spacing.dart';
@@ -96,6 +97,8 @@ class HomePage extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          // Non-blocking email verification nudge (email accounts only).
+          const EmailVerificationBanner(),
           // Search bar — replaces static subtitle
           const _SearchBar(),
           // Category chips

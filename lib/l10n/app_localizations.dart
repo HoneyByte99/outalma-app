@@ -338,6 +338,54 @@ abstract class AppLocalizations {
   /// **'Password (min. 6 characters)'**
   String get signUpPasswordHint;
 
+  /// No description provided for @signUpPasswordConfirmHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get signUpPasswordConfirmHint;
+
+  /// No description provided for @signUpShowPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get signUpShowPassword;
+
+  /// No description provided for @signUpHidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get signUpHidePassword;
+
+  /// No description provided for @signUpErrorPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match.'**
+  String get signUpErrorPasswordMismatch;
+
+  /// No description provided for @emailVerifyBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your email address.'**
+  String get emailVerifyBanner;
+
+  /// No description provided for @emailVerifyResend.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend'**
+  String get emailVerifyResend;
+
+  /// No description provided for @emailVerifySent.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent.'**
+  String get emailVerifySent;
+
+  /// No description provided for @emailVerifyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send. Try again later.'**
+  String get emailVerifyError;
+
   /// No description provided for @signUpButton.
   ///
   /// In en, this message translates to:

@@ -45,7 +45,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   // Email fields
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordConfirmController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscurePasswordConfirm = true;
 
   // Phone fields
   String? _phoneE164;
@@ -67,6 +69,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _passwordConfirmController.dispose();
     _otpController.dispose();
     super.dispose();
   }
@@ -87,6 +90,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     }
     if (password.length < 6) {
       _showError(l10n.signUpErrorPasswordTooShort);
+      return;
+    }
+    if (password != _passwordConfirmController.text) {
+      _showError(l10n.signUpErrorPasswordMismatch);
       return;
     }
     if (!_ensureTermsAccepted()) return;
@@ -319,8 +326,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   TextField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _signUpEmail(),
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       hintText: l10n.signUpPasswordHint,
                       prefixIcon: const Icon(
@@ -335,8 +341,41 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                           color: oc.icons,
                           size: 20,
                         ),
+                        tooltip: _obscurePassword
+                            ? l10n.signUpShowPassword
+                            : l10n.signUpHidePassword,
                         onPressed: () => setState(
                           () => _obscurePassword = !_obscurePassword,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _passwordConfirmController,
+                    obscureText: _obscurePasswordConfirm,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _signUpEmail(),
+                    decoration: InputDecoration(
+                      hintText: l10n.signUpPasswordConfirmHint,
+                      prefixIcon: const Icon(
+                        Icons.lock_outline_rounded,
+                        size: 20,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePasswordConfirm
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: oc.icons,
+                          size: 20,
+                        ),
+                        tooltip: _obscurePasswordConfirm
+                            ? l10n.signUpShowPassword
+                            : l10n.signUpHidePassword,
+                        onPressed: () => setState(
+                          () => _obscurePasswordConfirm =
+                              !_obscurePasswordConfirm,
                         ),
                       ),
                     ),

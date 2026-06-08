@@ -131,6 +131,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signUpPasswordHint => 'Password (min. 6 characters)';
 
   @override
+  String get signUpPasswordConfirmHint => 'Confirm password';
+
+  @override
+  String get signUpShowPassword => 'Show password';
+
+  @override
+  String get signUpHidePassword => 'Hide password';
+
+  @override
+  String get signUpErrorPasswordMismatch => 'Passwords do not match.';
+
+  @override
+  String get emailVerifyBanner => 'Verify your email address.';
+
+  @override
+  String get emailVerifyResend => 'Resend';
+
+  @override
+  String get emailVerifySent => 'Verification email sent.';
+
+  @override
+  String get emailVerifyError => 'Could not send. Try again later.';
+
+  @override
   String get signUpButton => 'Create account';
 
   @override
