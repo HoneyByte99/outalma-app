@@ -2177,7 +2177,7 @@ abstract class AppLocalizations {
   /// No description provided for @zoneValidate.
   ///
   /// In en, this message translates to:
-  /// **'Validate'**
+  /// **'Confirm'**
   String get zoneValidate;
 
   /// No description provided for @zoneModify.
@@ -2731,6 +2731,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'edited'**
   String get chatEdited;
+
+  /// No description provided for @zoneSheetEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit area'**
+  String get zoneSheetEditTitle;
+
+  /// No description provided for @zoneSheetAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an area'**
+  String get zoneSheetAddTitle;
+
+  /// No description provided for @zoneCityOrAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'City or address'**
+  String get zoneCityOrAddress;
+
+  /// No description provided for @zoneEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get zoneEdit;
+
+  /// No description provided for @serviceFormPhotoRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove photo'**
+  String get serviceFormPhotoRemove;
+
+  /// No description provided for @serviceFormPhotoRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo removed'**
+  String get serviceFormPhotoRemoved;
+
+  /// No description provided for @serviceFormPhotoUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get serviceFormPhotoUndo;
+
+  /// No description provided for @zoneGeocodeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Address not found, please refine it.'**
+  String get zoneGeocodeFailed;
 }
 
 class _AppLocalizationsDelegate

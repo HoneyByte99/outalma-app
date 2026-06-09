@@ -556,5 +556,15 @@
   "chatReplyingTo": "Replying to",
   "chatEdit": "Edit",
   "chatEditing": "Edit message",
-  "chatEdited": "edited"
+  "chatEdited": "edited",
+  "zoneSheetEditTitle": "Edit area",
+  "zoneSheetAddTitle": "Add an area",
+  "zoneCityOrAddress": "City or address",
+  "zoneRadius": "Service radius",
+  "zoneEdit": "Edit",
+  "zoneValidate": "Confirm",
+  "serviceFormPhotoRemove": "Remove photo",
+  "serviceFormPhotoRemoved": "Photo removed",
+  "serviceFormPhotoUndo": "Undo",
+  "zoneGeocodeFailed": "Address not found, please refine it."
 }

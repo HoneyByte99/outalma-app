@@ -30,6 +30,8 @@ class _ProviderOnboardingPageState
   double? _selectedLat;
   double? _selectedLng;
   bool _zoneError = false;
+  bool _geocodingZone = false;
+  bool _geocodeFailed = false;
 
   bool _saving = false;
 
@@ -45,7 +47,10 @@ class _ProviderOnboardingPageState
     _selected = null;
     _selectedLat = null;
     _selectedLng = null;
-    setState(() => _zoneError = false);
+    setState(() {
+      _zoneError = false;
+      _geocodeFailed = false;
+    });
 
     if (input.trim().length < 2) {
       setState(() => _suggestions = []);
@@ -66,15 +71,50 @@ class _ProviderOnboardingPageState
       _suggestions = [];
       _selected = suggestion;
       _zoneError = false;
+      _geocodeFailed = false;
+      _geocodingZone = true;
     });
 
+    final l10n = AppLocalizations.of(context)!;
     final geocoding = ref.read(geocodingServiceProvider);
-    final coords = await geocoding.getPlaceLatLng(suggestion.placeId);
-    if (!mounted) return;
-    setState(() {
-      _selectedLat = coords?.lat;
-      _selectedLng = coords?.lng;
-    });
+    try {
+      final coords = await geocoding.getPlaceLatLng(suggestion.placeId);
+      if (!mounted) return;
+      if (coords == null) {
+        setState(() {
+          _geocodingZone = false;
+          _geocodeFailed = true;
+        });
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(l10n.zoneGeocodeFailed),
+              backgroundColor: context.oc.error,
+            ),
+          );
+        return;
+      }
+      setState(() {
+        _selectedLat = coords.lat;
+        _selectedLng = coords.lng;
+        _geocodingZone = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _geocodingZone = false;
+        _geocodeFailed = true;
+      });
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(l10n.zoneGeocodeFailed),
+            backgroundColor: context.oc.error,
+          ),
+        );
+    }
   }
 
   Future<void> _activate() async {
@@ -205,15 +245,29 @@ class _ProviderOnboardingPageState
                   decoration: InputDecoration(
                     hintText: l10n.onboardingZoneHint,
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                    // Green check once geocoded — a visual cue requiring no text.
-                    suffixIcon: isGeocoded
+                    // Spinner while resolving, then green check once geocoded —
+                    // visual cues requiring no text.
+                    suffixIcon: _geocodingZone
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : isGeocoded
                         ? Icon(
                             Icons.check_circle_rounded,
                             color: oc.success,
                             size: 20,
                           )
                         : null,
-                    errorText: _zoneError ? l10n.onboardingZoneRequired : null,
+                    errorText: _zoneError
+                        ? l10n.onboardingZoneRequired
+                        : _geocodeFailed
+                        ? l10n.zoneGeocodeFailed
+                        : null,
                   ),
                   onChanged: _onZoneChanged,
                 ),
@@ -238,32 +292,36 @@ class _ProviderOnboardingPageState
                       ),
                       itemBuilder: (_, i) {
                         final s = _suggestions[i];
-                        return InkWell(
-                          onTap: () => _selectSuggestion(s),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.location_on_outlined,
-                                  size: 16,
-                                  color: oc.secondaryText,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    s.description,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                        return Semantics(
+                          button: true,
+                          label: s.description,
+                          child: InkWell(
+                            onTap: () => _selectSuggestion(s),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on_outlined,
+                                    size: 16,
+                                    color: oc.secondaryText,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      s.description,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );

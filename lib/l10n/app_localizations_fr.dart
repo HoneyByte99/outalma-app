@@ -1431,4 +1431,28 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatEdited => 'modifié';
+
+  @override
+  String get zoneSheetEditTitle => 'Modifier la zone';
+
+  @override
+  String get zoneSheetAddTitle => 'Ajouter une zone';
+
+  @override
+  String get zoneCityOrAddress => 'Ville ou adresse';
+
+  @override
+  String get zoneEdit => 'Modifier';
+
+  @override
+  String get serviceFormPhotoRemove => 'Supprimer la photo';
+
+  @override
+  String get serviceFormPhotoRemoved => 'Photo supprimée';
+
+  @override
+  String get serviceFormPhotoUndo => 'Annuler';
+
+  @override
+  String get zoneGeocodeFailed => 'Adresse introuvable, précisez-la.';
 }

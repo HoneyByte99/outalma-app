@@ -103,13 +103,41 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   }
 
   void _removePhoto(int index) {
+    final l10n = AppLocalizations.of(context)!;
     final removed = _photos[index];
     setState(() => _photos = [..._photos]..removeAt(index));
-    // Best-effort delete from storage; ignore failures (the listing is already
-    // updated and a stray object is harmless).
-    ref
-        .read(servicePhotoUploadServiceProvider)
-        .deletePhotoByUrl(removed)
+
+    final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
+    var undone = false;
+    final controller = messenger.showSnackBar(
+      SnackBar(
+        content: Text(l10n.serviceFormPhotoRemoved),
+        action: SnackBarAction(
+          label: l10n.serviceFormPhotoUndo,
+          onPressed: () {
+            undone = true;
+            if (mounted) {
+              setState(
+                () =>
+                    _photos = [..._photos]
+                      ..insert(index.clamp(0, _photos.length), removed),
+              );
+            }
+          },
+        ),
+      ),
+    );
+
+    // Delete from storage only once the undo window has closed, so an undone
+    // removal keeps the photo intact. Best-effort: ignore failures.
+    controller.closed
+        .then((_) {
+          if (undone) return;
+          ref
+              .read(servicePhotoUploadServiceProvider)
+              .deletePhotoByUrl(removed)
+              .catchError((_) {});
+        })
         .catchError((_) {});
   }
 
@@ -505,9 +533,14 @@ class _ZoneChip extends StatelessWidget {
                 ],
               ),
             ),
-            GestureDetector(
-              onTap: onRemove,
-              child: Icon(Icons.close, size: 18, color: oc.secondaryText),
+            IconButton(
+              onPressed: onRemove,
+              icon: const Icon(Icons.close, size: 18),
+              color: oc.secondaryText,
+              tooltip: l10n.serviceFormPhotoRemove,
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
             ),
           ],
         ),
@@ -643,6 +676,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Padding(
       padding: EdgeInsets.only(
@@ -669,7 +703,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
           const SizedBox(height: 16),
 
           Text(
-            _isEdit ? 'Modifier la zone' : 'Ajouter une zone',
+            _isEdit ? l10n.zoneSheetEditTitle : l10n.zoneSheetAddTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
@@ -680,7 +714,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
             autofocus: true,
             textCapitalization: TextCapitalization.words,
             decoration: InputDecoration(
-              hintText: 'Ville ou adresse',
+              hintText: l10n.zoneCityOrAddress,
               prefixIcon: const Icon(Icons.search_rounded, size: 20),
               errorText: _error,
             ),
@@ -744,10 +778,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
           const SizedBox(height: 20),
 
           // Radius slider
-          Text(
-            'Rayon d\'intervention',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
+          Text(l10n.zoneRadius, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 4),
           Row(
             children: [
@@ -792,7 +823,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
                         color: Colors.white,
                       ),
                     )
-                  : Text(_isEdit ? 'Modifier' : 'Valider'),
+                  : Text(_isEdit ? l10n.zoneEdit : l10n.zoneValidate),
             ),
           ),
         ],
@@ -901,6 +932,7 @@ class _PhotoThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return SizedBox(
       width: size,
@@ -943,16 +975,27 @@ class _PhotoThumb extends StatelessWidget {
           Positioned(
             top: 4,
             right: 4,
-            child: GestureDetector(
-              onTap: onRemove,
-              child: Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  shape: BoxShape.circle,
+            child: Semantics(
+              button: true,
+              label: l10n.serviceFormPhotoRemove,
+              child: Tooltip(
+                message: l10n.serviceFormPhotoRemove,
+                child: GestureDetector(
+                  onTap: onRemove,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 16),
               ),
             ),
           ),

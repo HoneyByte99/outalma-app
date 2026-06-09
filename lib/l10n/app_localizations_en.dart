@@ -1115,7 +1115,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get zoneValidate => 'Validate';
+  String get zoneValidate => 'Confirm';
 
   @override
   String get zoneModify => 'Modify';
@@ -1416,4 +1416,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatEdited => 'edited';
+
+  @override
+  String get zoneSheetEditTitle => 'Edit area';
+
+  @override
+  String get zoneSheetAddTitle => 'Add an area';
+
+  @override
+  String get zoneCityOrAddress => 'City or address';
+
+  @override
+  String get zoneEdit => 'Edit';
+
+  @override
+  String get serviceFormPhotoRemove => 'Remove photo';
+
+  @override
+  String get serviceFormPhotoRemoved => 'Photo removed';
+
+  @override
+  String get serviceFormPhotoUndo => 'Undo';
+
+  @override
+  String get zoneGeocodeFailed => 'Address not found, please refine it.';
 }

@@ -81,12 +81,12 @@ class _EmailVerificationBannerState
       ),
       child: Row(
         children: [
-          Icon(Icons.mark_email_unread_outlined, size: 20, color: oc.primary),
+          Icon(Icons.mail_lock_outlined, size: 24, color: oc.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               l10n.emailVerifyBanner,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
           const SizedBox(width: 8),

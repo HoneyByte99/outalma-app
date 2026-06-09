@@ -359,7 +359,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     decoration: InputDecoration(
                       hintText: l10n.signUpPasswordConfirmHint,
                       prefixIcon: const Icon(
-                        Icons.lock_outline_rounded,
+                        Icons.lock_reset_outlined,
                         size: 20,
                       ),
                       suffixIcon: IconButton(

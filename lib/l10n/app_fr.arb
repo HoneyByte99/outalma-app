@@ -556,5 +556,15 @@
   "chatReplyingTo": "Réponse à",
   "chatEdit": "Modifier",
   "chatEditing": "Modifier le message",
-  "chatEdited": "modifié"
+  "chatEdited": "modifié",
+  "zoneSheetEditTitle": "Modifier la zone",
+  "zoneSheetAddTitle": "Ajouter une zone",
+  "zoneCityOrAddress": "Ville ou adresse",
+  "zoneRadius": "Rayon d'intervention",
+  "zoneEdit": "Modifier",
+  "zoneValidate": "Valider",
+  "serviceFormPhotoRemove": "Supprimer la photo",
+  "serviceFormPhotoRemoved": "Photo supprimée",
+  "serviceFormPhotoUndo": "Annuler",
+  "zoneGeocodeFailed": "Adresse introuvable, précisez-la."
 }

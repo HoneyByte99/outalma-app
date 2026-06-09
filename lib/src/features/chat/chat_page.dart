@@ -313,6 +313,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 children: [
                   for (final emoji in _quickReactions)
                     IconButton(
+                      tooltip: emoji,
                       onPressed: () {
                         Navigator.pop(ctx);
                         _react(msg, emoji);
@@ -703,6 +704,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     Flexible(
                       child: Text(chatTitle, overflow: TextOverflow.ellipsis),
                     ),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: oc.secondaryText,
+                    ),
                   ],
                 ),
               )
@@ -793,6 +799,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       isMe: isMe,
                       myUid: myUid,
                       onLongPress: () => _showMessageActions(msg, isMe),
+                      onReactionTap: (emoji) => _react(msg, emoji),
                     );
                   },
                 );
@@ -872,7 +879,7 @@ class _BlockedBanner extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 18, color: oc.secondaryText),
+          Icon(icon, size: 24, color: oc.secondaryText),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
@@ -894,9 +901,12 @@ class _BlockedBanner extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _ReactionChips extends StatelessWidget {
-  const _ReactionChips({required this.reactions});
+  const _ReactionChips({required this.reactions, this.onTapEmoji});
 
   final Map<String, String> reactions;
+
+  /// Tapping a chip toggles the current user's reaction for that emoji.
+  final void Function(String emoji)? onTapEmoji;
 
   @override
   Widget build(BuildContext context) {
@@ -912,16 +922,19 @@ class _ReactionChips extends StatelessWidget {
         spacing: 4,
         children: [
           for (final entry in counts.entries)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: oc.surfaceVariant,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: oc.border),
-              ),
-              child: Text(
-                entry.value > 1 ? '${entry.key} ${entry.value}' : entry.key,
-                style: const TextStyle(fontSize: 12),
+            GestureDetector(
+              onTap: onTapEmoji == null ? null : () => onTapEmoji!(entry.key),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: oc.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: oc.border),
+                ),
+                child: Text(
+                  entry.value > 1 ? '${entry.key} ${entry.value}' : entry.key,
+                  style: const TextStyle(fontSize: 13),
+                ),
               ),
             ),
         ],
@@ -1042,12 +1055,14 @@ class _MessageBubble extends ConsumerWidget {
     required this.isMe,
     required this.myUid,
     this.onLongPress,
+    this.onReactionTap,
   });
 
   final ChatMessage message;
   final bool isMe;
   final String? myUid;
   final VoidCallback? onLongPress;
+  final void Function(String emoji)? onReactionTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1139,7 +1154,10 @@ class _MessageBubble extends ConsumerWidget {
                 ),
               ),
               if (message.reactions.isNotEmpty && !message.deleted)
-                _ReactionChips(reactions: message.reactions),
+                _ReactionChips(
+                  reactions: message.reactions,
+                  onTapEmoji: onReactionTap,
+                ),
               const SizedBox(height: 3),
               Row(
                 mainAxisSize: MainAxisSize.min,
