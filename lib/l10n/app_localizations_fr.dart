@@ -579,7 +579,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bookingOpenChat => 'Accéder au chat';
 
   @override
-  String get bookingReviewSent => 'Avis envoyé — merci !';
+  String get bookingReviewSent => 'Avis envoyé, merci !';
 
   @override
   String get bookingLeaveReview => 'Laisser un avis';
@@ -1248,7 +1248,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get chatMissionEndedBanner =>
-      'Mission terminée — conversation en lecture seule.';
+      'Mission terminée. Conversation en lecture seule.';
 
   @override
   String get chatVoiceError => 'Impossible d\'envoyer le vocal.';

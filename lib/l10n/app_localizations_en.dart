@@ -571,7 +571,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingOpenChat => 'Open chat';
 
   @override
-  String get bookingReviewSent => 'Review sent — thank you!';
+  String get bookingReviewSent => 'Review sent, thank you!';
 
   @override
   String get bookingLeaveReview => 'Leave a review';
@@ -1234,7 +1234,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatMissionEndedBanner =>
-      'Mission completed — conversation is read-only.';
+      'Mission completed. Conversation is read-only.';
 
   @override
   String get chatVoiceError => 'Could not send voice message.';

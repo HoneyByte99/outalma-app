@@ -1151,7 +1151,7 @@ abstract class AppLocalizations {
   /// No description provided for @bookingReviewSent.
   ///
   /// In en, this message translates to:
-  /// **'Review sent — thank you!'**
+  /// **'Review sent, thank you!'**
   String get bookingReviewSent;
 
   /// No description provided for @bookingLeaveReview.
@@ -2393,7 +2393,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatMissionEndedBanner.
   ///
   /// In en, this message translates to:
-  /// **'Mission completed — conversation is read-only.'**
+  /// **'Mission completed. Conversation is read-only.'**
   String get chatMissionEndedBanner;
 
   /// No description provided for @chatVoiceError.

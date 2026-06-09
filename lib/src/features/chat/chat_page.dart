@@ -534,6 +534,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           const RecordConfig(encoder: AudioEncoder.opus),
           path: '',
         );
+        if (mounted) _beginRecordingTimer();
       } else {
         // hasPermission() also requests the permission on first use.
         if (!await _recorder.hasPermission()) {
@@ -547,12 +548,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           }
           return;
         }
+        // Start the on-screen countdown immediately, before the native recorder
+        // and audio session spin up. On device that startup can take a beat, and
+        // if we waited for it the timer stayed frozen at 00:00 ("pas de
+        // décompte"). If start fails below, we roll the timer back in catch.
+        if (mounted) _beginRecordingTimer();
         // Critical: claim the audio session for recording (see helper doc).
         await _configureRecordingSession();
         // Use dart:io systemTemp instead of path_provider's getTemporaryDirectory:
         // path_provider_foundation fails to load objective_c.framework on the
         // x86_64 iOS simulator (FFI DOBJC_initializeApi), which broke voice
-        // recording. systemTemp reads TMPDIR directly — works on sim and device.
+        // recording. systemTemp reads TMPDIR directly (works on sim and device).
         final dir = Directory.systemTemp;
         final path =
             '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
@@ -561,25 +567,31 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           path: path,
         );
       }
-      if (mounted) {
-        setState(() {
-          _recording = true;
-          _recordingSeconds = 0;
-        });
-        _recordingTimer?.cancel();
-        _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-          if (mounted) setState(() => _recordingSeconds++);
-        });
-      }
     } catch (e, st) {
       // Was silently swallowed before — log the real cause for diagnosis.
       debugPrint('[Voice] recorder.start failed: $e\n$st');
+      // Roll back the optimistic countdown if recording never actually started.
+      _recordingTimer?.cancel();
+      _recordingTimer = null;
       if (mounted) {
+        setState(() => _recording = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
         );
       }
     }
+  }
+
+  /// Shows the recording state and starts the 1-second elapsed-time counter.
+  void _beginRecordingTimer() {
+    setState(() {
+      _recording = true;
+      _recordingSeconds = 0;
+    });
+    _recordingTimer?.cancel();
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _recordingSeconds++);
+    });
   }
 
   Future<void> _stopAndSendRecording() async {
