@@ -40,7 +40,12 @@ class FirestoreChatRepository implements ChatRepository {
     return FirestoreCollections.chatMessages(db: _db, chatId: chatId)
         .orderBy('createdAt', descending: false)
         .limitToLast(limit)
-        .snapshots()
+        // includeMetadataChanges: a sent message first emits with
+        // hasPendingWrites=true (local write → clock icon). Without this flag,
+        // Firestore never re-emits when the server ack arrives, so the clock
+        // would stay forever even though the message is sent. With it, we get a
+        // second emission with hasPendingWrites=false and the clock clears.
+        .snapshots(includeMetadataChanges: true)
         .map(
           (qs) => qs.docs
               .map(
