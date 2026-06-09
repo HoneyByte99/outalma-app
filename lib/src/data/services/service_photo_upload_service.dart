@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,15 +6,23 @@ import 'package:image_picker/image_picker.dart';
 
 /// Handles service photo picking from the gallery and upload to Firebase Storage.
 ///
-/// Storage path: /public/services/{serviceId}/photo_{timestamp}.jpg
+/// Storage path: /public/services/{serviceId}/{uid}/photo_{timestamp}.jpg
+/// The uploader uid is in the path so Storage rules authorise via isSelf(uid)
+/// WITHOUT a cross-service firestore.get (those silently fail from Storage in
+/// this project — same constraint as chat media). This also works during the
+/// new-service flow, before the Firestore service doc exists.
 /// Each upload uses a unique filename so existing photos are preserved
 /// (services support multiple photos).
 /// Returns the HTTPS download URL on success, null if the user cancelled.
 class ServicePhotoUploadService {
-  ServicePhotoUploadService({required FirebaseStorage storage})
-    : _storage = storage;
+  ServicePhotoUploadService({
+    required FirebaseStorage storage,
+    required FirebaseAuth auth,
+  }) : _storage = storage,
+       _auth = auth;
 
   final FirebaseStorage _storage;
+  final FirebaseAuth _auth;
 
   /// Opens the photo gallery, lets the user pick an image, compresses it,
   /// uploads it to Storage under the given [serviceId], and returns the
@@ -34,13 +43,18 @@ class ServicePhotoUploadService {
 
     if (file == null) return null;
 
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Cannot upload service photo: no authenticated user');
+    }
+
     final bytes = await file.readAsBytes();
     final contentType = _mimeType(file.path);
 
     // Unique filename per upload so we never overwrite existing photos.
     final ext = _extension(file.path);
     final filename = 'photo_${DateTime.now().millisecondsSinceEpoch}.$ext';
-    final ref = _storage.ref('public/services/$serviceId/$filename');
+    final ref = _storage.ref('public/services/$serviceId/$uid/$filename');
     await ref.putData(bytes, SettableMetadata(contentType: contentType));
 
     return ref.getDownloadURL();
@@ -86,5 +100,8 @@ class ServicePhotoUploadService {
 final servicePhotoUploadServiceProvider = Provider<ServicePhotoUploadService>((
   ref,
 ) {
-  return ServicePhotoUploadService(storage: FirebaseStorage.instance);
+  return ServicePhotoUploadService(
+    storage: FirebaseStorage.instance,
+    auth: FirebaseAuth.instance,
+  );
 });

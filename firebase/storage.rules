@@ -33,23 +33,28 @@ service firebase.storage {
     // Path: /public/services/{serviceId}/{filename}
     // Write restricted to the provider who owns the service document.
     // This prevents arbitrary uploads to other providers' service paths.
-    // New-service flow: the service doc does not exist yet at upload time (the
-    // form pre-generates the serviceId and creates the doc on Save). Allow a
-    // signed-in user to upload images to a service path when either the doc
-    // does not exist yet, or it exists and they own it. This unblocks photo
-    // import during creation while still preventing uploads onto an existing
-    // provider's service path.
-    match /public/services/{serviceId}/{filename} {
+    // Service images are uploaded under the uploader's uid segment so writes
+    // authorise via isSelf(uid) — NO cross-service firestore.get (those silently
+    // fail from Storage in this project, which is why the previous doc-ownership
+    // rule denied legitimate uploads). This also works during the new-service
+    // flow, before the Firestore service doc exists. The photo URLs are stored
+    // on the service doc, whose write access is gated by Firestore rules
+    // (provider-owner only), so uid-scoping here is sufficient.
+    // Path: /public/services/{serviceId}/{uid}/{filename}
+    match /public/services/{serviceId}/{uid}/{filename} {
       allow read: if true;
       allow write: if isAdmin() || (
-        signedIn()
+        isSelf(uid)
         && isImage()
         && smallEnough(5 * 1024 * 1024)
-        && (
-          !firestore.exists(/databases/(default)/documents/services/$(serviceId))
-          || firestore.get(/databases/(default)/documents/services/$(serviceId)).data.providerId == request.auth.uid
-        )
       );
+    }
+
+    // Legacy single-level service image path (pre uid-scoping). Public read for
+    // already-uploaded photos; new uploads use the uid-scoped path above.
+    match /public/services/{serviceId}/{filename} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // User avatars

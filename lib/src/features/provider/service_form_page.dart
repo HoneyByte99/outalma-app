@@ -91,7 +91,8 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
       if (url != null && mounted) {
         setState(() => _photos = [..._photos, url]);
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[ServicePhoto] pickAndUpload failed: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(photoErrorMsg), backgroundColor: errorColor),
