@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show File;
+import 'dart:io' show Directory, File;
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -109,7 +108,9 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         );
       } else {
         if (!await _recorder.hasPermission()) return;
-        final dir = await getTemporaryDirectory();
+        // dart:io systemTemp avoids path_provider's objective_c.framework FFI
+        // crash on the x86_64 iOS simulator (works on sim and device).
+        final dir = Directory.systemTemp;
         final path =
             '${dir.path}/booking_voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
         await _recorder.start(
