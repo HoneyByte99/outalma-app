@@ -48,6 +48,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   final _recorder = AudioRecorder();
   bool _sending = false;
   bool _recording = false;
+  bool _uploadingVoice = false;
   int _recordingSeconds = 0;
   Timer? _recordingTimer;
   int _lastMarkedReadCount = 0;
@@ -600,6 +601,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       return;
     }
 
+    setState(() => _uploadingVoice = true);
     try {
       final media = ref.read(chatMediaServiceProvider);
       // path is a blob URL on web (fetch via http) or a filesystem path on
@@ -623,6 +625,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           SnackBar(content: Text(errorMsg), backgroundColor: context.oc.error),
         );
       }
+    } finally {
+      if (mounted) setState(() => _uploadingVoice = false);
     }
   }
 
@@ -817,6 +821,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               message: l10n.chatMissionEndedBanner,
               icon: Icons.lock_outline_rounded,
             )
+          // Voice message uploading — show progress instead of the composer.
+          else if (_uploadingVoice)
+            _SendingBar(message: l10n.chatVoiceSending)
           // Image preview overlay (WhatsApp-style)
           else if (_pendingImageUrl != null)
             _ImagePreviewBar(
@@ -888,6 +895,49 @@ class _BlockedBanner extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sending bar (shown instead of the composer while media is uploading)
+// ---------------------------------------------------------------------------
+
+class _SendingBar extends StatelessWidget {
+  const _SendingBar({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + bottomPadding),
+      decoration: BoxDecoration(
+        color: oc.cardSurface,
+        border: Border(top: BorderSide(color: oc.border)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2, color: oc.primary),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              message,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
             ),
           ),
         ],
@@ -1183,8 +1233,14 @@ class _MessageBubble extends ConsumerWidget {
                   ),
                   if (isMe) ...[
                     const SizedBox(width: 3),
+                    // Pending (not yet synced, e.g. offline) → clock; sent →
+                    // single check; read → double check.
                     Icon(
-                      isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                      message.isPending
+                          ? Icons.schedule_rounded
+                          : isRead
+                          ? Icons.done_all_rounded
+                          : Icons.done_rounded,
                       size: 13,
                       color: isRead ? oc.primary : oc.icons,
                     ),

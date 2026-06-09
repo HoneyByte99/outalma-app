@@ -41,7 +41,14 @@ class FirestoreChatRepository implements ChatRepository {
         .orderBy('createdAt', descending: false)
         .limitToLast(limit)
         .snapshots()
-        .map((qs) => qs.docs.map((d) => d.data()).toList());
+        .map(
+          (qs) => qs.docs
+              .map(
+                (d) =>
+                    d.data().copyWith(isPending: d.metadata.hasPendingWrites),
+              )
+              .toList(),
+        );
   }
 
   @override

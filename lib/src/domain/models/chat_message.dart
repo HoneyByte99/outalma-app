@@ -16,6 +16,7 @@ class ChatMessage {
     this.replyToText,
     this.replyToSenderId,
     this.reactions = const {},
+    this.isPending = false,
   });
 
   final String id;
@@ -43,6 +44,11 @@ class ChatMessage {
   /// Emoji reactions keyed by reactor uid → emoji (one reaction per user).
   final Map<String, String> reactions;
 
+  /// Transient (not persisted): true while the write is buffered locally and
+  /// not yet acknowledged by the server (e.g. offline / slow connection).
+  /// Drives the "pending" clock indicator on sent messages.
+  final bool isPending;
+
   bool get isReply => replyToId != null && replyToId!.isNotEmpty;
 
   ChatMessage copyWith({
@@ -59,6 +65,7 @@ class ChatMessage {
     String? replyToText,
     String? replyToSenderId,
     Map<String, String>? reactions,
+    bool? isPending,
   }) {
     return ChatMessage(
       id: id,
@@ -75,6 +82,7 @@ class ChatMessage {
       replyToText: replyToText ?? this.replyToText,
       replyToSenderId: replyToSenderId ?? this.replyToSenderId,
       reactions: reactions ?? this.reactions,
+      isPending: isPending ?? this.isPending,
     );
   }
 }

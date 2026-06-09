@@ -2402,6 +2402,12 @@ abstract class AppLocalizations {
   /// **'Could not send voice message.'**
   String get chatVoiceError;
 
+  /// No description provided for @chatVoiceSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending voice message…'**
+  String get chatVoiceSending;
+
   /// No description provided for @chatFileError.
   ///
   /// In en, this message translates to:

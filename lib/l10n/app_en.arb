@@ -505,6 +505,7 @@
   "chatMicPermission": "Allow microphone access to send a voice message.",
   "chatMissionEndedBanner": "Mission completed — conversation is read-only.",
   "chatVoiceError": "Could not send voice message.",
+  "chatVoiceSending": "Sending voice message…",
   "chatFileError": "Could not send file.",
   "chatAddCaption": "Add a message\u2026",
   "chatGallery": "Gallery",

@@ -1254,6 +1254,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get chatVoiceError => 'Impossible d\'envoyer le vocal.';
 
   @override
+  String get chatVoiceSending => 'Envoi du message vocal…';
+
+  @override
   String get chatFileError => 'Impossible d\'envoyer le fichier.';
 
   @override

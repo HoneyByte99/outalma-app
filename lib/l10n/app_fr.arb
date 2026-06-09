@@ -505,6 +505,7 @@
   "chatMicPermission": "Autorisez l'accès au micro pour envoyer un vocal.",
   "chatMissionEndedBanner": "Mission terminée — conversation en lecture seule.",
   "chatVoiceError": "Impossible d'envoyer le vocal.",
+  "chatVoiceSending": "Envoi du message vocal…",
   "chatFileError": "Impossible d'envoyer le fichier.",
   "chatAddCaption": "Ajouter un message\u2026",
   "chatGallery": "Galerie",
