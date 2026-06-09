@@ -156,8 +156,13 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      builder: (context, child) =>
-          ConnectivityBanner(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => GestureDetector(
+        // Tap anywhere outside a focused field to dismiss the keyboard — applies
+        // app-wide. Translucent so taps still reach buttons/fields underneath.
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: ConnectivityBanner(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

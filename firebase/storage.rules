@@ -33,15 +33,22 @@ service firebase.storage {
     // Path: /public/services/{serviceId}/{filename}
     // Write restricted to the provider who owns the service document.
     // This prevents arbitrary uploads to other providers' service paths.
-    // Note: if the service doc does not exist yet (new service flow), the
-    // upload must happen after the Firestore service doc is created.
+    // New-service flow: the service doc does not exist yet at upload time (the
+    // form pre-generates the serviceId and creates the doc on Save). Allow a
+    // signed-in user to upload images to a service path when either the doc
+    // does not exist yet, or it exists and they own it. This unblocks photo
+    // import during creation while still preventing uploads onto an existing
+    // provider's service path.
     match /public/services/{serviceId}/{filename} {
       allow read: if true;
       allow write: if isAdmin() || (
         signedIn()
         && isImage()
         && smallEnough(5 * 1024 * 1024)
-        && firestore.get(/databases/(default)/documents/services/$(serviceId)).data.providerId == request.auth.uid
+        && (
+          !firestore.exists(/databases/(default)/documents/services/$(serviceId))
+          || firestore.get(/databases/(default)/documents/services/$(serviceId)).data.providerId == request.auth.uid
+        )
       );
     }
 
