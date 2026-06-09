@@ -613,6 +613,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingReport => 'Report';
 
   @override
+  String get bookingViewProviderProfile => 'View profile';
+
+  @override
+  String get providerProfileUnavailable => 'Profile unavailable';
+
+  @override
   String get bookingAccept => 'Accept';
 
   @override
@@ -1424,6 +1430,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatEdited => 'edited';
+
+  @override
+  String get chatDateToday => 'Today';
+
+  @override
+  String get chatDateYesterday => 'Yesterday';
+
+  @override
+  String get chatLoadOlder => 'Show older messages';
 
   @override
   String get zoneSheetEditTitle => 'Edit area';

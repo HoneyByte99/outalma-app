@@ -14,12 +14,14 @@ import '../../application/booking/booking_providers.dart';
 import '../../application/phone_share/phone_share_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
+import '../../application/user/user_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
 import '../../domain/models/service.dart';
 import '../../core/utils/date_utils.dart' as date_utils;
 import '../../domain/utils/distance.dart';
 import '../shared/maps_launcher.dart';
+import '../shared/user_avatar.dart';
 
 String _formatSchedule(DateTime dt, String locale) {
   final dateFmt = DateFormat('EEE d MMMM yyyy', locale);
@@ -178,6 +180,12 @@ class _DetailContent extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         children: [
+          // ---- Provider link (client viewing their provider) ----
+          if (uid == booking.customerId) ...[
+            _ProviderLink(providerId: booking.providerId),
+            const SizedBox(height: 16),
+          ],
+
           // ---- Service info ----
           _Section(
             title: l10n.bookingService,
@@ -270,6 +278,69 @@ class _DetailContent extends ConsumerWidget {
             child: _StatusTimeline(booking: booking),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Provider link — tappable card opening the public provider profile
+// ---------------------------------------------------------------------------
+
+class _ProviderLink extends ConsumerWidget {
+  const _ProviderLink({required this.providerId});
+
+  final String providerId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final provider = ref.watch(userByIdProvider(providerId)).valueOrNull;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () => context.push(AppRoutes.providerProfile(providerId)),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: oc.cardSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: oc.border),
+        ),
+        child: Row(
+          children: [
+            UserAvatar(
+              displayName: provider?.displayName ?? '',
+              photoPath: provider?.photoPath,
+              radius: 24,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    provider?.displayName ?? '—',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.bookingViewProviderProfile,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: oc.primary),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: oc.icons, size: 22),
+          ],
+        ),
       ),
     );
   }

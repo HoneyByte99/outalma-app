@@ -2114,6 +2114,28 @@ export const onServiceCreated = onDocumentCreated('services/{serviceId}', async 
   await incrementStatIdempotent(event.id, 'service_created', {
     totalServices: admin.firestore.FieldValue.increment(1),
   });
+
+  // Ensure a providers/{providerId} document exists so the public provider
+  // profile is never empty, even if the provider published a service without
+  // completing provider onboarding. merge:true never overwrites an existing
+  // profile (bio, serviceArea, suspended, etc. are preserved).
+  const service = event.data?.data() as { providerId?: string } | undefined;
+  const providerId = service?.providerId;
+  if (providerId) {
+    const providerRef = db.collection('providers').doc(providerId);
+    const snap = await providerRef.get();
+    if (!snap.exists) {
+      await providerRef.set(
+        {
+          uid: providerId,
+          active: true,
+          suspended: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    }
+  }
 });
 
 export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async (event) => {

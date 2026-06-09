@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
@@ -938,13 +939,26 @@ class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
     try {
       final data = await ref.read(authNotifierProvider.notifier).exportMyData();
       final json = const JsonEncoder.withIndent('  ').convert(data);
-      // Share the JSON as text. File-based sharing routes through path_provider
-      // (broken on the iOS simulator); plain text sharing does not, so this
-      // works everywhere.
-      await Share.share(json, subject: l10n.accountExportData);
-    } catch (_) {
+      // Try the native share sheet; if it fails (share_plus can throw on some
+      // iOS setups), fall back to copying the JSON to the clipboard so the
+      // export still succeeds. Either way the user gets their data.
+      try {
+        await Share.share(json, subject: l10n.accountExportData);
+      } catch (_) {
+        await Clipboard.setData(ClipboardData(text: json));
+        if (mounted) {
+          messenger.showSnackBar(SnackBar(content: Text(l10n.chatCopied)));
+        }
+      }
+    } catch (e) {
+      // Surface the real error (not a generic message) so any remaining failure
+      // is diagnosable from the field.
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.errorGeneral), backgroundColor: oc.error),
+        SnackBar(
+          content: Text('${l10n.errorGeneral} ($e)'),
+          backgroundColor: oc.error,
+          duration: const Duration(seconds: 8),
+        ),
       );
     } finally {
       if (mounted) setState(() => _loading = false);

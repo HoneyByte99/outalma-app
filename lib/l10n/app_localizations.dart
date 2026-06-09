@@ -1232,6 +1232,18 @@ abstract class AppLocalizations {
   /// **'Report'**
   String get bookingReport;
 
+  /// No description provided for @bookingViewProviderProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View profile'**
+  String get bookingViewProviderProfile;
+
+  /// No description provided for @providerProfileUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile unavailable'**
+  String get providerProfileUnavailable;
+
   /// No description provided for @bookingAccept.
   ///
   /// In en, this message translates to:
@@ -2743,6 +2755,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'edited'**
   String get chatEdited;
+
+  /// No description provided for @chatDateToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get chatDateToday;
+
+  /// No description provided for @chatDateYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get chatDateYesterday;
+
+  /// No description provided for @chatLoadOlder.
+  ///
+  /// In en, this message translates to:
+  /// **'Show older messages'**
+  String get chatLoadOlder;
 
   /// No description provided for @zoneSheetEditTitle.
   ///

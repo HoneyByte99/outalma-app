@@ -25,8 +25,40 @@ class PublicProviderProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+    final userAsync = ref.watch(userByIdProvider(providerId));
     final reviewsAsync = ref.watch(reviewsForUserProvider(providerId));
     final servicesAsync = ref.watch(publicProviderServicesProvider(providerId));
+
+    // The page hinges on the USER document. The providers/{uid} doc is optional
+    // (it only adds bio / serviceArea / verified badge). While the user doc is
+    // still loading we show a spinner; if it resolves to null the provider does
+    // not exist and we show a graceful unavailable state.
+    if (userAsync.isLoading && !userAsync.hasValue) {
+      return Scaffold(
+        backgroundColor: oc.background,
+        appBar: AppBar(backgroundColor: oc.surface),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (userAsync.valueOrNull == null) {
+      return Scaffold(
+        backgroundColor: oc.background,
+        appBar: AppBar(backgroundColor: oc.surface),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.person_off_outlined, size: 56, color: oc.icons),
+              const SizedBox(height: 16),
+              Text(
+                l10n.providerProfileUnavailable,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: oc.background,

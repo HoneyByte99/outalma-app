@@ -24,6 +24,7 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/booking/booking_providers.dart';
 import '../../application/chat/chat_providers.dart';
+import '../../application/notification/notification_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../core/utils/date_utils.dart' as date_utils;
 import '../../data/services/chat_media_service.dart';
@@ -91,6 +92,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     await ref
         .read(chatRepositoryProvider)
         .markMessagesRead(chatId: widget.chatId, uid: authState.user.id);
+    // Also clear the in-app (bell) notifications tied to this chat, so the
+    // badge decrements when the user opens the conversation.
+    final notifs = ref.read(notificationsProvider).valueOrNull ?? const [];
+    final db = ref.read(firestoreProvider);
+    for (final n in notifs) {
+      if (!n.read && n.chatId == widget.chatId) {
+        // ignore: unawaited_futures — best-effort, fire and forget
+        markNotificationRead(db: db, uid: authState.user.id, notifId: n.id);
+      }
+    }
   }
 
   void _scrollToBottom() {
@@ -813,12 +824,27 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   itemBuilder: (context, i) {
                     final msg = messages[i];
                     final isMe = msg.senderId == myUid;
-                    return _MessageBubble(
+                    // Insert a day separator above the first message of each
+                    // calendar day so multi-day threads stay readable.
+                    final showDaySeparator =
+                        i == 0 ||
+                        date_utils.isDifferentDay(
+                          messages[i - 1].createdAt,
+                          msg.createdAt,
+                        );
+                    final bubble = _MessageBubble(
                       message: msg,
                       isMe: isMe,
                       myUid: myUid,
                       onLongPress: () => _showMessageActions(msg, isMe),
                       onReactionTap: (emoji) => _react(msg, emoji),
+                    );
+                    if (!showDaySeparator) return bubble;
+                    return Column(
+                      children: [
+                        _DateSeparator(date: msg.createdAt),
+                        bubble,
+                      ],
                     );
                   },
                 );
@@ -880,6 +906,43 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 // ---------------------------------------------------------------------------
 // Blocked banner (shown instead of the composer when the other user is blocked)
 // ---------------------------------------------------------------------------
+
+/// Centered pill marking the start of a new calendar day in the thread.
+class _DateSeparator extends StatelessWidget {
+  const _DateSeparator({required this.date});
+
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final label = date_utils.formatChatDaySeparator(
+      date,
+      today: l10n.chatDateToday,
+      yesterday: l10n.chatDateYesterday,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: oc.surfaceVariant,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: oc.secondaryText,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _BlockedBanner extends StatelessWidget {
   const _BlockedBanner({required this.message, this.icon = Icons.block});

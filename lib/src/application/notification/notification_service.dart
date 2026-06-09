@@ -27,15 +27,6 @@ class NotificationService {
     // FCM on Flutter Web requires a VAPID key — skip until configured.
     if (kIsWeb) return;
 
-    // Diagnostic trail written to users/{uid}.notifDebug so we can see, without
-    // device logs, exactly how far token registration gets on a real iPhone.
-    // TODO(notif): remove this instrumentation once push is confirmed working.
-    final debug = <String, Object?>{
-      'step': 'start',
-      'platform': '$defaultTargetPlatform',
-    };
-    await _writeDebug(debug);
-
     // 1. Listen for token refreshes FIRST. On iOS the FCM token often becomes
     //    available only after the APNs token arrives (a few seconds post-launch);
     //    subscribing first guarantees we never miss that late token even if the
@@ -48,8 +39,6 @@ class NotificationService {
       badge: true,
       sound: true,
     );
-    debug['authStatus'] = '${settings.authorizationStatus}';
-    await _writeDebug(debug);
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
       if (kDebugMode) {
         debugPrint('[Notif] permission denied, no token will register');
@@ -58,24 +47,20 @@ class NotificationService {
     }
 
     // 3. On Apple platforms the FCM token requires the APNs token, which is not
-    //    ready at the instant the app launches. Poll briefly so getToken() does
-    //    not throw `apns-token-not-set`.
+    //    ready at the instant the app launches (the AppDelegate triggers
+    //    registerForRemoteNotifications). Poll briefly so getToken() does not
+    //    throw `apns-token-not-set`; onTokenRefresh (step 1) catches the late one.
     if (defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS) {
       String? apnsToken;
       for (var attempt = 0; attempt < 12; attempt++) {
         try {
           apnsToken = await _messaging.getAPNSToken();
-        } catch (e) {
-          debug['apnsError'] = e.toString();
+        } catch (_) {
+          // ignore; retry
         }
         if (apnsToken != null) break;
         await Future<void>.delayed(const Duration(milliseconds: 500));
-      }
-      debug['apnsPresent'] = apnsToken != null;
-      await _writeDebug(debug);
-      if (apnsToken == null && kDebugMode) {
-        debugPrint('[Notif] APNs token still null after ~6s');
       }
     }
 
@@ -83,30 +68,11 @@ class NotificationService {
     //    APNs token is not set yet — onTokenRefresh (step 1) will deliver it.
     try {
       final token = await _messaging.getToken();
-      debug['fcmTokenPresent'] = token != null;
-      debug['step'] = 'getToken_done';
-      await _writeDebug(debug);
       if (token != null) {
         await _saveToken(token);
-      } else if (kDebugMode) {
-        debugPrint('[Notif] getToken() returned null (APNs not ready?)');
       }
     } catch (e) {
-      debug['fcmError'] = e.toString();
-      debug['step'] = 'getToken_threw';
-      await _writeDebug(debug);
       if (kDebugMode) debugPrint('[Notif] getToken() failed: $e');
-    }
-  }
-
-  /// Writes a diagnostic snapshot to users/{uid}.notifDebug (best-effort).
-  Future<void> _writeDebug(Map<String, Object?> data) async {
-    try {
-      await _db.collection('users').doc(_uid).set({
-        'notifDebug': {...data, 'ts': FieldValue.serverTimestamp()},
-      }, SetOptions(merge: true));
-    } catch (_) {
-      // best-effort; never block init on the debug write
     }
   }
 

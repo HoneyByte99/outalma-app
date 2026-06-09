@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../application/auth/auth_providers.dart';
+import '../application/auth/auth_state.dart';
 import '../application/locale/locale_provider.dart';
 import '../application/notification/notification_service.dart';
 import '../application/theme/theme_provider.dart';
@@ -44,7 +45,7 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
       if (initial != null) {
         // Defer until the router is mounted on first frame.
         WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _handleNotificationTap(initial),
+          (_) => unawaited(_handleNotificationTap(initial)),
         );
       }
     } catch (e) {
@@ -52,17 +53,33 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
     }
   }
 
-  void _handleNotificationTap(RemoteMessage message) {
+  Future<void> _handleNotificationTap(RemoteMessage message) async {
     final data = message.data;
     final chatId = data['chatId'] as String?;
     final bookingId = data['bookingId'] as String?;
-    if (!mounted) return;
-    final router = ref.read(routerProvider);
-    if (chatId != null && chatId.isNotEmpty) {
-      router.push(AppRoutes.chat(chatId));
-    } else if (bookingId != null && bookingId.isNotEmpty) {
-      router.push(AppRoutes.bookingDetail(bookingId));
+    final route = (chatId != null && chatId.isNotEmpty)
+        ? AppRoutes.chat(chatId)
+        : (bookingId != null && bookingId.isNotEmpty)
+        ? AppRoutes.bookingDetail(bookingId)
+        : null;
+    if (route == null) return;
+
+    // Cold start: getInitialMessage resolves before auth + the shell are ready,
+    // so an immediate push gets overwritten by the auth/home redirect. Wait
+    // until the user is authenticated, then push on top of the home shell.
+    for (var i = 0; i < 40; i++) {
+      if (!mounted) return;
+      if (ref.read(authNotifierProvider).valueOrNull is AuthAuthenticated) break;
+      await Future<void>.delayed(const Duration(milliseconds: 250));
     }
+    if (!mounted ||
+        ref.read(authNotifierProvider).valueOrNull is! AuthAuthenticated) {
+      return;
+    }
+    // Let the redirect settle on the home route before pushing the deep link.
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    ref.read(routerProvider).push(route);
   }
 
   /// Listens for incoming Universal / App Links — primarily Firebase email
