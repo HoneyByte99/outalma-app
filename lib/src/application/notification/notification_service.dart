@@ -51,8 +51,9 @@ class NotificationService {
     debug['authStatus'] = '${settings.authorizationStatus}';
     await _writeDebug(debug);
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint('[Notif] permission denied, no token will register');
+      }
       return;
     }
 
