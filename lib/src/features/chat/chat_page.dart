@@ -936,21 +936,56 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 // ---------------------------------------------------------------------------
 
 /// Header control to fetch one more page of older messages.
-class _LoadOlderButton extends StatelessWidget {
+/// Stateful so it can show a spinner and block double-taps while the next
+/// page streams in.
+class _LoadOlderButton extends StatefulWidget {
   const _LoadOlderButton({required this.onPressed});
 
   final VoidCallback onPressed;
 
   @override
+  State<_LoadOlderButton> createState() => _LoadOlderButtonState();
+}
+
+class _LoadOlderButtonState extends State<_LoadOlderButton> {
+  bool _loading = false;
+
+  void _handle() {
+    if (_loading) return;
+    setState(() => _loading = true);
+    widget.onPressed();
+    // The list rebuilds with the larger window once the stream emits, which
+    // replaces this widget instance. This is a fallback in case the window is
+    // already at the end (no new data, same instance kept).
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _loading = false);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Center(
-        child: TextButton.icon(
-          onPressed: onPressed,
-          icon: const Icon(Icons.history_rounded, size: 18),
+        child: OutlinedButton.icon(
+          onPressed: _loading ? null : _handle,
+          icon: _loading
+              ? SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: oc.primary,
+                  ),
+                )
+              : const Icon(Icons.keyboard_arrow_up_rounded, size: 20),
           label: Text(l10n.chatLoadOlder),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
         ),
       ),
     );
@@ -976,14 +1011,14 @@ class _DateSeparator extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             color: oc.surfaceVariant,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: oc.secondaryText,
               fontWeight: FontWeight.w600,
             ),
