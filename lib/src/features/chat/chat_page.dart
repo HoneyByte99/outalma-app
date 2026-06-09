@@ -51,8 +51,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _uploadingVoice = false;
   int _recordingSeconds = 0;
   Timer? _recordingTimer;
-  int _lastMarkedReadCount = 0;
-  int _lastScrolledCount = 0;
+  // Id of the newest message we last auto-scrolled to. Tracking the id (not a
+  // count) means prepending older messages via pagination never triggers a
+  // jump to the bottom — only a genuinely new latest message does.
+  String? _lastBottomMsgId;
   Timer? _typingCooldown;
 
   @override
@@ -702,17 +704,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final otherIsProvider =
         otherUid != null && otherUid.isNotEmpty && chat?.providerId == otherUid;
 
-    // Mark messages read only when the message count actually grows — not on
-    // every rebuild. Prevents a runaway Firestore write loop in the chat view.
+    // Mark messages read whenever the set of unread messages from the other
+    // party changes — keyed on the newest unread message id rather than the
+    // raw count, so edits/deletes and pagination don't miss (or spam) the
+    // write. Idempotent: markMessagesRead only writes for genuinely unread docs.
     ref.listen<AsyncValue<List<ChatMessage>>>(
       chatMessagesProvider(widget.chatId),
       (_, next) {
         final msgs = next.valueOrNull;
-        if (msgs == null) return;
-        if (msgs.length != _lastMarkedReadCount) {
-          _lastMarkedReadCount = msgs.length;
-          _markRead();
-        }
+        if (msgs == null || myUid == null) return;
+        final hasUnread = msgs.any(
+          (m) => m.senderId != myUid && !m.readBy.contains(myUid),
+        );
+        if (hasUnread) _markRead();
       },
     );
 
@@ -808,20 +812,44 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 if (messages.isEmpty) {
                   return _EmptyChat();
                 }
-                // Auto-scroll only when new messages arrive, not on every
-                // rebuild (e.g. keystrokes), to avoid scroll fighting.
-                if (messages.length > _lastScrolledCount) {
-                  _lastScrolledCount = messages.length;
+                // Auto-scroll only when the newest message changes (a real new
+                // message or first load) — never when older messages are
+                // prepended via pagination, and not on plain rebuilds.
+                final newestId = messages.last.id;
+                if (newestId != _lastBottomMsgId) {
+                  _lastBottomMsgId = newestId;
                   SchedulerBinding.instance.addPostFrameCallback((_) {
                     _scrollToBottom();
                   });
                 }
 
+                // When the loaded window is full there are probably older
+                // messages on the server: show a header to fetch one more page.
+                final currentLimit = ref.watch(
+                  chatMessageLimitProvider(widget.chatId),
+                );
+                final hasOlder = messages.length >= currentLimit;
+                final headerCount = hasOlder ? 1 : 0;
+
                 return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  itemCount: messages.length,
-                  itemBuilder: (context, i) {
+                  itemCount: messages.length + headerCount,
+                  itemBuilder: (context, rawIndex) {
+                    if (hasOlder && rawIndex == 0) {
+                      return _LoadOlderButton(
+                        onPressed: () =>
+                            ref
+                                    .read(
+                                      chatMessageLimitProvider(
+                                        widget.chatId,
+                                      ).notifier,
+                                    )
+                                    .state +=
+                                chatMessagePageSize,
+                      );
+                    }
+                    final i = rawIndex - headerCount;
                     final msg = messages[i];
                     final isMe = msg.senderId == myUid;
                     // Insert a day separator above the first message of each
@@ -906,6 +934,28 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 // ---------------------------------------------------------------------------
 // Blocked banner (shown instead of the composer when the other user is blocked)
 // ---------------------------------------------------------------------------
+
+/// Header control to fetch one more page of older messages.
+class _LoadOlderButton extends StatelessWidget {
+  const _LoadOlderButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Center(
+        child: TextButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.history_rounded, size: 18),
+          label: Text(l10n.chatLoadOlder),
+        ),
+      ),
+    );
+  }
+}
 
 /// Centered pill marking the start of a new calendar day in the thread.
 class _DateSeparator extends StatelessWidget {

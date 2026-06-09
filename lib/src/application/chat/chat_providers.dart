@@ -22,12 +22,23 @@ final chatDetailProvider = StreamProvider.autoDispose.family<Chat?, String>((
   return ref.watch(chatRepositoryProvider).watchChat(chatId);
 });
 
-/// Watches the latest 50 messages for a chat.
+/// Default number of messages loaded, and the increment per "load older" tap.
+const chatMessagePageSize = 50;
+
+/// How many messages to load for a chat. Bumped by [chatMessagePageSize] each
+/// time the user requests older messages. Auto-disposes with the chat view, so
+/// the window resets to one page next time the conversation is opened.
+final chatMessageLimitProvider = StateProvider.autoDispose.family<int, String>(
+  (ref, chatId) => chatMessagePageSize,
+);
+
+/// Watches the most recent messages for a chat, up to the current limit.
 final chatMessagesProvider = StreamProvider.autoDispose
     .family<List<ChatMessage>, String>((ref, chatId) {
+      final limit = ref.watch(chatMessageLimitProvider(chatId));
       return ref
           .watch(chatRepositoryProvider)
-          .watchMessages(chatId: chatId, limit: 50);
+          .watchMessages(chatId: chatId, limit: limit);
     });
 
 /// Stable UID — avoids transient null during auth re-evaluation.

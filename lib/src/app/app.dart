@@ -79,7 +79,7 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
     // Let the redirect settle on the home route before pushing the deep link.
     await Future<void>.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
-    ref.read(routerProvider).push(route);
+    unawaited(ref.read(routerProvider).push(route));
   }
 
   /// Listens for incoming Universal / App Links — primarily Firebase email
