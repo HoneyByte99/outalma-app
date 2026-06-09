@@ -76,6 +76,8 @@
 		<string>Outalma Service utilise le micro pour les messages vocaux.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Outalma Service utilise votre position pour afficher les services près de vous.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Outalma Service utilise votre position pour afficher les services près de vous.</string>
 		<key>LSApplicationQueriesSchemes</key>
 		<array>
 			<string>comgooglemaps</string>
