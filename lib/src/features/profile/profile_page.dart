@@ -1442,40 +1442,35 @@ class _ReviewTile extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: () =>
-                context.push(AppRoutes.providerProfile(review.reviewerId)),
-            child: Row(
-              children: [
-                UserAvatar(
-                  displayName: reviewer?.displayName ?? '',
-                  photoPath: reviewer?.photoPath,
-                  radius: 16,
+          Row(
+            children: [
+              UserAvatar(
+                displayName: reviewer?.displayName ?? '',
+                photoPath: reviewer?.photoPath,
+                radius: 16,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  reviewer?.displayName ?? '—',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    reviewer?.displayName ?? '—',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+              ),
+              Row(
+                children: List.generate(
+                  5,
+                  (i) => Icon(
+                    i < review.rating
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 14,
+                    color: context.oc.star,
                   ),
                 ),
-                Icon(Icons.chevron_right_rounded, size: 16, color: oc.icons),
-                Row(
-                  children: List.generate(
-                    5,
-                    (i) => Icon(
-                      i < review.rating
-                          ? Icons.star_rounded
-                          : Icons.star_outline_rounded,
-                      size: 14,
-                      color: context.oc.star,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
           if (review.comment != null && review.comment!.isNotEmpty) ...[
             const SizedBox(height: 8),

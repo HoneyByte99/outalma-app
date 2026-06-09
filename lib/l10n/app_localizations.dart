@@ -1931,14 +1931,26 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingZone.
   ///
   /// In en, this message translates to:
-  /// **'Service area (optional)'**
+  /// **'Service area'**
   String get onboardingZone;
 
   /// No description provided for @onboardingZoneHint.
   ///
   /// In en, this message translates to:
-  /// **'E.g. Paris and suburbs, Île-de-France…'**
+  /// **'Search for a city or address…'**
   String get onboardingZoneHint;
+
+  /// No description provided for @onboardingZoneRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your service area from the suggestions.'**
+  String get onboardingZoneRequired;
+
+  /// No description provided for @onboardingZoneConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Service area confirmed'**
+  String get onboardingZoneConfirmed;
 
   /// No description provided for @onboardingActivate.
   ///
@@ -2059,6 +2071,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not upload photo. Please try again.'**
   String get serviceFormPhotoError;
+
+  /// No description provided for @serviceFormPhotoAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a photo (optional)'**
+  String get serviceFormPhotoAdd;
+
+  /// No description provided for @serviceFormPhotoMax.
+  ///
+  /// In en, this message translates to:
+  /// **'You can add up to {max} photos.'**
+  String serviceFormPhotoMax(int max);
+
+  /// No description provided for @serviceFormPhotoCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {max} photos'**
+  String serviceFormPhotoCount(int count, int max);
 
   /// No description provided for @serviceFormSaveError.
   ///

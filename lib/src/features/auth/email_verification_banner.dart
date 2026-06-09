@@ -24,13 +24,22 @@ class _EmailVerificationBannerState
     extends ConsumerState<EmailVerificationBanner> {
   bool _sending = false;
 
+  /// Resolves the current FirebaseAuth user, tolerating environments where
+  /// Firebase is not initialised (e.g. widget tests) by returning null.
+  User? _currentUser() {
+    try {
+      return ref.read(firebaseAuthProvider).currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     // Refresh the cached emailVerified flag once on mount (e.g. after the user
     // verified in another app and came back).
-    final user = ref.read(firebaseAuthProvider).currentUser;
-    user?.reload().then((_) {
+    _currentUser()?.reload().then((_) {
       if (mounted) setState(() {});
     });
   }
@@ -56,7 +65,7 @@ class _EmailVerificationBannerState
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.read(firebaseAuthProvider).currentUser;
+    final user = _currentUser();
     if (!_isUnverifiedEmailUser(user)) return const SizedBox.shrink();
 
     final oc = context.oc;

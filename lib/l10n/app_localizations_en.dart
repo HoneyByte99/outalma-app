@@ -984,10 +984,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'E.g. Plumber with 10 years of experience, available in the Paris area…';
 
   @override
-  String get onboardingZone => 'Service area (optional)';
+  String get onboardingZone => 'Service area';
 
   @override
-  String get onboardingZoneHint => 'E.g. Paris and suburbs, Île-de-France…';
+  String get onboardingZoneHint => 'Search for a city or address…';
+
+  @override
+  String get onboardingZoneRequired =>
+      'Choose your service area from the suggestions.';
+
+  @override
+  String get onboardingZoneConfirmed => 'Service area confirmed';
 
   @override
   String get onboardingActivate => 'Activate my provider profile';
@@ -1049,6 +1056,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get serviceFormPhotoError =>
       'Could not upload photo. Please try again.';
+
+  @override
+  String get serviceFormPhotoAdd => 'Add a photo (optional)';
+
+  @override
+  String serviceFormPhotoMax(int max) {
+    return 'You can add up to $max photos.';
+  }
+
+  @override
+  String serviceFormPhotoCount(int count, int max) {
+    return '$count of $max photos';
+  }
 
   @override
   String get serviceFormSaveError => 'Could not save. Please try again.';

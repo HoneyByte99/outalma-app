@@ -69,16 +69,27 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     super.dispose();
   }
 
+  static const int _maxPhotos = 5;
+
   Future<void> _pickPhoto() async {
     final l10n = AppLocalizations.of(context)!;
     final photoErrorMsg = l10n.serviceFormPhotoError;
+    final maxReachedMsg = l10n.serviceFormPhotoMax(_maxPhotos);
     final errorColor = context.oc.error;
+
+    if (_photos.length >= _maxPhotos) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(maxReachedMsg), backgroundColor: errorColor),
+      );
+      return;
+    }
+
     final uploader = ref.read(servicePhotoUploadServiceProvider);
     setState(() => _uploadingPhoto = true);
     try {
       final url = await uploader.pickAndUpload(_pendingServiceId);
       if (url != null && mounted) {
-        setState(() => _photos = [url]);
+        setState(() => _photos = [..._photos, url]);
       }
     } catch (_) {
       if (mounted) {
@@ -91,8 +102,15 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     }
   }
 
-  void _removePhoto() {
-    setState(() => _photos = []);
+  void _removePhoto(int index) {
+    final removed = _photos[index];
+    setState(() => _photos = [..._photos]..removeAt(index));
+    // Best-effort delete from storage; ignore failures (the listing is already
+    // updated and a stray object is harmless).
+    ref
+        .read(servicePhotoUploadServiceProvider)
+        .deletePhotoByUrl(removed)
+        .catchError((_) {});
   }
 
   void _removeZone(int index) {
@@ -240,6 +258,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               _PhotoSection(
                 photos: _photos,
                 uploading: _uploadingPhoto,
+                maxPhotos: _maxPhotos,
                 onPick: _pickPhoto,
                 onRemove: _removePhoto,
               ),
@@ -790,44 +809,109 @@ class _PhotoSection extends StatelessWidget {
   const _PhotoSection({
     required this.photos,
     required this.uploading,
+    required this.maxPhotos,
     required this.onPick,
     required this.onRemove,
   });
 
   final List<String> photos;
   final bool uploading;
+  final int maxPhotos;
   final VoidCallback onPick;
+  final void Function(int index) onRemove;
+
+  static const double _thumbSize = 104;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final canAddMore = photos.length < maxPhotos;
+
+    // Empty state: full-width tappable placeholder so the first photo is easy
+    // to add. Once photos exist, switch to a horizontal thumbnail strip.
+    if (photos.isEmpty && !uploading) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: _AddPhotoTile(onTap: onPick, large: true),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: _thumbSize,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: photos.length + ((canAddMore || uploading) ? 1 : 0),
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, i) {
+              if (i < photos.length) {
+                return _PhotoThumb(
+                  url: photos[i],
+                  size: _thumbSize,
+                  onRemove: () => onRemove(i),
+                );
+              }
+              // Trailing add / uploading tile.
+              return SizedBox(
+                width: _thumbSize,
+                height: _thumbSize,
+                child: uploading
+                    ? Container(
+                        decoration: BoxDecoration(
+                          color: oc.border,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : _AddPhotoTile(onTap: onPick, large: false),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          l10n.serviceFormPhotoCount(photos.length, maxPhotos),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+        ),
+      ],
+    );
+  }
+}
+
+class _PhotoThumb extends StatelessWidget {
+  const _PhotoThumb({
+    required this.url,
+    required this.size,
+    required this.onRemove,
+  });
+
+  final String url;
+  final double size;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: _buildContent(context, oc),
-      ),
-    );
-  }
-
-  Widget _buildContent(BuildContext context, OutalmaColors oc) {
-    if (uploading) {
-      return SizedBox.expand(
-        child: ColoredBox(
-          color: context.oc.border,
-          child: const Center(child: CircularProgressIndicator()),
-        ),
-      );
-    }
-
-    if (photos.isNotEmpty) {
-      return SizedBox.expand(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(
-              photos.first,
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              url,
               fit: BoxFit.cover,
               headers: const {'Accept': '*/*'},
               frameBuilder: (_, child, frame, loaded) {
@@ -838,7 +922,7 @@ class _PhotoSection extends StatelessWidget {
                     child,
                     if (frame == null)
                       ColoredBox(
-                        color: context.oc.border,
+                        color: oc.border,
                         child: const Center(
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
@@ -846,64 +930,73 @@ class _PhotoSection extends StatelessWidget {
                   ],
                 );
               },
-              errorBuilder: (_, __, ___) => _Placeholder(onTap: onPick),
-            ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: GestureDetector(
-                onTap: onRemove,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 16),
+              errorBuilder: (_, __, ___) => ColoredBox(
+                color: oc.border,
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  color: oc.icons,
+                  size: 28,
                 ),
               ),
             ),
-          ],
-        ),
-      );
-    }
-
-    return SizedBox.expand(child: _Placeholder(onTap: onPick));
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 16),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.onTap});
+class _AddPhotoTile extends StatelessWidget {
+  const _AddPhotoTile({required this.onTap, required this.large});
 
   final VoidCallback onTap;
+  final bool large;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: oc.cardSurface,
-          border: Border.all(
-            color: oc.border,
-            width: 1.5,
-            style: BorderStyle.solid,
-          ),
+          border: Border.all(color: oc.border, width: 1.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_photo_alternate_outlined, size: 36, color: oc.icons),
-            const SizedBox(height: 8),
-            Text(
-              'Ajouter une photo (optionnel)',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+            Icon(
+              Icons.add_photo_alternate_outlined,
+              size: large ? 36 : 28,
+              color: oc.icons,
             ),
+            if (large) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n.serviceFormPhotoAdd,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+              ),
+            ],
           ],
         ),
       ),

@@ -394,8 +394,10 @@
   "onboardingBody": "Créez votre profil prestataire en quelques secondes. Vous pourrez ensuite publier vos services et recevoir des demandes.",
   "onboardingBio": "Présentation (optionnel)",
   "onboardingBioHint": "Ex: Plombier avec 10 ans d'expérience, disponible en région parisienne…",
-  "onboardingZone": "Zone d'intervention (optionnel)",
-  "onboardingZoneHint": "Ex: Paris et banlieue, Île-de-France…",
+  "onboardingZone": "Zone d'intervention",
+  "onboardingZoneHint": "Recherchez une ville ou une adresse…",
+  "onboardingZoneRequired": "Choisissez votre zone d'intervention parmi les suggestions.",
+  "onboardingZoneConfirmed": "Zone d'intervention confirmée",
   "onboardingActivate": "Activer mon profil prestataire",
   "onboardingError": "Impossible d'activer le profil. Réessayez.",
 
@@ -417,6 +419,15 @@
   "serviceFormSave": "Enregistrer",
   "serviceFormCreate": "Créer le service",
   "serviceFormPhotoError": "Impossible d'importer la photo. Réessayez.",
+  "serviceFormPhotoAdd": "Ajouter une photo (optionnel)",
+  "serviceFormPhotoMax": "Vous pouvez ajouter jusqu'à {max} photos.",
+  "@serviceFormPhotoMax": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "serviceFormPhotoCount": "{count} photo(s) sur {max}",
+  "@serviceFormPhotoCount": {
+    "placeholders": { "count": { "type": "int" }, "max": { "type": "int" } }
+  },
   "serviceFormSaveError": "Impossible d'enregistrer. Réessayez.",
   "zoneAddTitle": "Ajouter une zone",
   "zoneEditTitle": "Modifier la zone",

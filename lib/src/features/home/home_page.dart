@@ -17,6 +17,7 @@ import '../../application/user/user_providers.dart';
 import '../../core/utils/format_utils.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
+import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/enums/price_type.dart';
 import '../../domain/models/review.dart';
@@ -939,6 +940,13 @@ class _ServiceGrid extends ConsumerWidget {
     final searchQuery = rawQuery.toLowerCase();
     final servicesAsync = ref.watch(serviceListProvider);
 
+    // In client mode, a user must not discover their own provider listings.
+    final isClientMode = ref.watch(activeModeProvider) == ActiveMode.client;
+    final authState = ref.watch(authNotifierProvider).valueOrNull;
+    final currentUid = authState is AuthAuthenticated
+        ? authState.user.id
+        : null;
+
     return servicesAsync.when(
       loading: () => const _ServiceGridLoading(),
       error: (_, __) =>
@@ -947,6 +955,11 @@ class _ServiceGrid extends ConsumerWidget {
         var filtered = selectedCategory == null
             ? services
             : services.where((s) => s.categoryId == selectedCategory).toList();
+
+        // Client mode: hide the user's own provider services from discovery.
+        if (isClientMode && currentUid != null) {
+          filtered = filtered.where((s) => s.providerId != currentUid).toList();
+        }
 
         if (locationFilter != null) {
           filtered = filtered

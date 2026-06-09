@@ -5,7 +5,9 @@ import 'package:image_picker/image_picker.dart';
 
 /// Handles service photo picking from the gallery and upload to Firebase Storage.
 ///
-/// Storage path: /public/services/{serviceId}/photo_0.jpg
+/// Storage path: /public/services/{serviceId}/photo_{timestamp}.jpg
+/// Each upload uses a unique filename so existing photos are preserved
+/// (services support multiple photos).
 /// Returns the HTTPS download URL on success, null if the user cancelled.
 class ServicePhotoUploadService {
   ServicePhotoUploadService({required FirebaseStorage storage})
@@ -35,18 +37,35 @@ class ServicePhotoUploadService {
     final bytes = await file.readAsBytes();
     final contentType = _mimeType(file.path);
 
-    final ref = _storage.ref('public/services/$serviceId/photo_0.jpg');
+    // Unique filename per upload so we never overwrite existing photos.
+    final ext = _extension(file.path);
+    final filename = 'photo_${DateTime.now().millisecondsSinceEpoch}.$ext';
+    final ref = _storage.ref('public/services/$serviceId/$filename');
     await ref.putData(bytes, SettableMetadata(contentType: contentType));
 
     return ref.getDownloadURL();
   }
 
-  /// Deletes the stored photo. Ignores errors if the file does not exist.
-  Future<void> deletePhoto(String serviceId) async {
+  /// Deletes a stored photo by its download URL. Ignores errors if the file
+  /// does not exist.
+  Future<void> deletePhotoByUrl(String url) async {
     try {
-      await _storage.ref('public/services/$serviceId/photo_0.jpg').delete();
+      await _storage.refFromURL(url).delete();
     } on FirebaseException catch (e) {
       if (e.code != 'object-not-found') rethrow;
+    }
+  }
+
+  String _extension(String path) {
+    switch (path.split('.').last.toLowerCase()) {
+      case 'png':
+        return 'png';
+      case 'gif':
+        return 'gif';
+      case 'webp':
+        return 'webp';
+      default:
+        return 'jpg';
     }
   }
 

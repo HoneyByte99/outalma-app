@@ -994,10 +994,17 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ex: Plombier avec 10 ans d\'expérience, disponible en région parisienne…';
 
   @override
-  String get onboardingZone => 'Zone d\'intervention (optionnel)';
+  String get onboardingZone => 'Zone d\'intervention';
 
   @override
-  String get onboardingZoneHint => 'Ex: Paris et banlieue, Île-de-France…';
+  String get onboardingZoneHint => 'Recherchez une ville ou une adresse…';
+
+  @override
+  String get onboardingZoneRequired =>
+      'Choisissez votre zone d\'intervention parmi les suggestions.';
+
+  @override
+  String get onboardingZoneConfirmed => 'Zone d\'intervention confirmée';
 
   @override
   String get onboardingActivate => 'Activer mon profil prestataire';
@@ -1060,6 +1067,19 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get serviceFormPhotoError =>
       'Impossible d\'importer la photo. Réessayez.';
+
+  @override
+  String get serviceFormPhotoAdd => 'Ajouter une photo (optionnel)';
+
+  @override
+  String serviceFormPhotoMax(int max) {
+    return 'Vous pouvez ajouter jusqu\'à $max photos.';
+  }
+
+  @override
+  String serviceFormPhotoCount(int count, int max) {
+    return '$count photo(s) sur $max';
+  }
 
   @override
   String get serviceFormSaveError => 'Impossible d\'enregistrer. Réessayez.';

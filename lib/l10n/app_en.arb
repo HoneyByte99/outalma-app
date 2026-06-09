@@ -394,8 +394,10 @@
   "onboardingBody": "Create your provider profile in seconds. You can then publish your services and receive requests.",
   "onboardingBio": "Introduction (optional)",
   "onboardingBioHint": "E.g. Plumber with 10 years of experience, available in the Paris area…",
-  "onboardingZone": "Service area (optional)",
-  "onboardingZoneHint": "E.g. Paris and suburbs, Île-de-France…",
+  "onboardingZone": "Service area",
+  "onboardingZoneHint": "Search for a city or address…",
+  "onboardingZoneRequired": "Choose your service area from the suggestions.",
+  "onboardingZoneConfirmed": "Service area confirmed",
   "onboardingActivate": "Activate my provider profile",
   "onboardingError": "Could not activate profile. Please try again.",
 
@@ -417,6 +419,15 @@
   "serviceFormSave": "Save",
   "serviceFormCreate": "Create service",
   "serviceFormPhotoError": "Could not upload photo. Please try again.",
+  "serviceFormPhotoAdd": "Add a photo (optional)",
+  "serviceFormPhotoMax": "You can add up to {max} photos.",
+  "@serviceFormPhotoMax": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "serviceFormPhotoCount": "{count} of {max} photos",
+  "@serviceFormPhotoCount": {
+    "placeholders": { "count": { "type": "int" }, "max": { "type": "int" } }
+  },
   "serviceFormSaveError": "Could not save. Please try again.",
   "zoneAddTitle": "Add area",
   "zoneEditTitle": "Edit area",
