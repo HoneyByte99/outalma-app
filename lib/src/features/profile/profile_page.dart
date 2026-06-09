@@ -20,7 +20,6 @@ import '../../data/services/avatar_upload_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_user.dart';
 import '../../domain/models/review.dart';
-import '../../domain/utils/country_utils.dart';
 import '../shared/user_avatar.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -239,27 +238,6 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (user.country.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: oc.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      CountryUtils.flagAndName(user.country),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: oc.primary,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -288,8 +266,6 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
   late String? _phone; // E.164 from PhoneField
   late String _country;
   bool _saving = false;
-
-  static const _countries = [('FR', 'France'), ('SN', 'Sénégal')];
 
   @override
   void initState() {
@@ -393,14 +369,6 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
               value: _phone == null || _phone!.isEmpty ? '—' : _phone!,
               icon: Icons.phone_outlined,
             ),
-            const SizedBox(height: 14),
-
-            // Country picker
-            _CountryPicker(
-              selected: _country,
-              countries: _countries,
-              onChanged: (v) => setState(() => _country = v),
-            ),
             const SizedBox(height: 20),
 
             // Save button
@@ -483,76 +451,6 @@ class _ReadOnlyField extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CountryPicker extends StatelessWidget {
-  const _CountryPicker({
-    required this.selected,
-    required this.countries,
-    required this.onChanged,
-  });
-
-  final String selected;
-  final List<(String, String)> countries;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final oc = context.oc;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppLocalizations.of(context)!.fieldCountry,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: oc.secondaryText,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: countries.map((entry) {
-            final (code, label) = entry;
-            final isSelected = code == selected;
-            return Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  right: code == countries.last.$1 ? 0 : 8,
-                ),
-                child: GestureDetector(
-                  onTap: () => onChanged(code),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? oc.primary.withValues(alpha: 0.08)
-                          : oc.surfaceVariant,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isSelected ? oc.primary : oc.border,
-                        width: isSelected ? 1.5 : 1,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '${CountryUtils.flag(code)} $label',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isSelected ? oc.primary : oc.primaryText,
-                        fontWeight: isSelected
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
         ),
       ],
     );
