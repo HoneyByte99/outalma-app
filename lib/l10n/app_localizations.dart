@@ -1868,6 +1868,12 @@ abstract class AppLocalizations {
   /// **'View profile'**
   String get serviceViewProfile;
 
+  /// No description provided for @servicePhotoCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo {current} of {total}'**
+  String servicePhotoCounter(int current, int total);
+
   /// No description provided for @serviceBook.
   ///
   /// In en, this message translates to:

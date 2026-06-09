@@ -383,6 +383,13 @@
   "serviceDescription": "Description",
   "serviceProviderLabel": "Provider",
   "serviceViewProfile": "View profile",
+  "servicePhotoCounter": "Photo {current} of {total}",
+  "@servicePhotoCounter": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "serviceBook": "Request this service",
   "serviceEditListing": "Edit this listing",
   "serviceNotFound": "Service not found",

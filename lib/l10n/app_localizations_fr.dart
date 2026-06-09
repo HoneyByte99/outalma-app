@@ -962,6 +962,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get serviceViewProfile => 'Voir le profil';
 
   @override
+  String servicePhotoCounter(int current, int total) {
+    return 'Photo $current sur $total';
+  }
+
+  @override
   String get serviceBook => 'Demander ce service';
 
   @override

@@ -38,13 +38,13 @@ final _fakeService = Service(
   updatedAt: DateTime(2024, 1, 1),
 );
 
-Widget _wrap() => ProviderScope(
+Widget _wrap({Service? service}) => ProviderScope(
   overrides: [
     authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
     activeModeProvider.overrideWith((_) => ActiveMode.client),
     serviceDetailProvider(
       'svc_test',
-    ).overrideWith((_) => Stream.value(_fakeService)),
+    ).overrideWith((_) => Stream.value(service ?? _fakeService)),
     userByIdProvider('prov_1').overrideWith((_) => const Stream.empty()),
     reviewsForUserProvider('prov_1').overrideWith((_) => Stream.value([])),
   ],
@@ -79,6 +79,67 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(find.byType(ElevatedButton), findsWidgets);
+    });
+  });
+
+  group('ServiceDetailPage hero gallery', () {
+    Service withPhotos(List<String> photos) => Service(
+      id: 'svc_test',
+      providerId: 'prov_1',
+      categoryId: CategoryId.menage,
+      title: 'Ménage à domicile',
+      photos: photos,
+      priceType: PriceType.fixed,
+      price: 5000,
+      published: true,
+      serviceZones: [],
+      createdAt: DateTime(2024, 1, 1),
+      updatedAt: DateTime(2024, 1, 1),
+    );
+
+    testWidgets('no PageView when service has zero or one photo', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap(service: withPhotos([])));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(PageView), findsNothing);
+
+      await tester.pumpWidget(
+        _wrap(service: withPhotos(['https://example.com/a.jpg'])),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(PageView), findsNothing);
+    });
+
+    testWidgets('shows swipeable PageView with dots for multiple photos', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          service: withPhotos([
+            'https://example.com/a.jpg',
+            'https://example.com/b.jpg',
+            'https://example.com/c.jpg',
+          ]),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(PageView), findsOneWidget);
+
+      // One indicator dot per photo (AnimatedContainer inside the dots row).
+      final dots = tester.widgetList<AnimatedContainer>(
+        find.byType(AnimatedContainer),
+      );
+      expect(dots.length, greaterThanOrEqualTo(3));
+
+      // Swiping advances the page without throwing.
+      await tester.drag(find.byType(PageView), const Offset(-400, 0));
+      await tester.pumpAndSettle();
+      expect(find.byType(PageView), findsOneWidget);
     });
   });
 }

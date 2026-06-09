@@ -121,14 +121,10 @@ class _ServiceDetailContent extends ConsumerWidget {
             ],
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.none,
-              background: service.photos.isNotEmpty
-                  ? AppNetworkImage(
-                      url: service.photos.first,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorWidget: _heroFallback(oc),
-                    )
-                  : _heroFallback(oc),
+              background: _HeroGallery(
+                photos: service.photos,
+                fallback: _heroFallback(oc),
+              ),
             ),
           ),
 
@@ -233,6 +229,122 @@ class _ServiceDetailContent extends ConsumerWidget {
           'assets/images/logo_icon_cropped.png',
           height: 100,
           fit: BoxFit.contain,
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hero gallery — swipeable photo carousel with page indicators
+// ---------------------------------------------------------------------------
+
+class _HeroGallery extends StatefulWidget {
+  const _HeroGallery({required this.photos, required this.fallback});
+
+  final List<String> photos;
+  final Widget fallback;
+
+  @override
+  State<_HeroGallery> createState() => _HeroGalleryState();
+}
+
+class _HeroGalleryState extends State<_HeroGallery> {
+  // viewportFraction < 1 lets the next photo peek in from the right — the
+  // primary visual cue that the hero is swipeable (no text needed).
+  final _controller = PageController(viewportFraction: 0.92);
+  int _current = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final photos = widget.photos;
+
+    // Empty state — no photos uploaded.
+    if (photos.isEmpty) return widget.fallback;
+
+    // Single photo — no carousel chrome needed.
+    if (photos.length == 1) {
+      return AppNetworkImage(
+        url: photos.first,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        errorWidget: widget.fallback,
+      );
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Semantics(
+          label: l10n.servicePhotoCounter(_current + 1, photos.length),
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: photos.length,
+            onPageChanged: (i) => setState(() => _current = i),
+            itemBuilder: (_, i) => Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: AppNetworkImage(
+                url: photos[i],
+                fit: BoxFit.cover,
+                width: double.infinity,
+                errorWidget: widget.fallback,
+              ),
+            ),
+          ),
+        ),
+        // Page indicator dots — anchored to the bottom of the hero.
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: AppSpacing.m,
+          child: _PageDots(count: photos.length, current: _current),
+        ),
+      ],
+    );
+  }
+}
+
+class _PageDots extends StatelessWidget {
+  const _PageDots({required this.count, required this.current});
+
+  final int count;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    // A dark pill behind the dots guarantees contrast against any photo
+    // (bright walls, tiles, sky) without per-background contrast math.
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < count; i++)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == current ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: i == current
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+          ],
         ),
       ),
     );
