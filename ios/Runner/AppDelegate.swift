@@ -21,6 +21,15 @@ import GoogleMaps
     }
     #endif
     GMSServices.provideAPIKey(mapsApiKey)
+
+    // Explicitly trigger APNs registration. With this app's custom Flutter
+    // engine setup, FirebaseMessaging's automatic registration was not firing,
+    // so iOS never delivered an APNs device token (getAPNSToken() stayed null
+    // and getToken() threw `apns-token-not-set`). Firebase's swizzled
+    // didRegisterForRemoteNotificationsWithDeviceToken captures the token once
+    // it arrives, so getToken() then succeeds.
+    application.registerForRemoteNotifications()
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

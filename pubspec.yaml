@@ -2,7 +2,7 @@ name: outalma_app
 description: "Outalma — service marketplace MVP"
 publish_to: 'none'
 
-version: 1.0.0+17
+version: 1.0.0+18
 
 environment:
   sdk: ^3.11.3
