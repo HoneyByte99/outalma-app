@@ -920,13 +920,13 @@ export const sendBookingReminders = onSchedule(
         });
         if (shouldSend24h) {
           await sendPushToUsers(participants, {
-            title: 'Rappel — RDV demain',
+            title: 'Rappel : RDV demain',
             body: `Votre prestation est prévue demain à ${timeStr}.`,
           });
           for (const uid of participants) {
             await createNotification(uid, {
               type: 'booking_reminder',
-              title: 'Rappel — RDV demain',
+              title: 'Rappel : RDV demain',
               body: `Votre prestation est prévue demain à ${timeStr}.`,
               bookingId: doc.id,
             });
@@ -947,13 +947,13 @@ export const sendBookingReminders = onSchedule(
         });
         if (shouldSend1h) {
           await sendPushToUsers(participants, {
-            title: 'Rappel — RDV dans 1h',
+            title: 'Rappel : RDV dans 1h',
             body: 'Votre prestation commence bientôt !',
           });
           for (const uid of participants) {
             await createNotification(uid, {
               type: 'booking_reminder',
-              title: 'Rappel — RDV dans 1h',
+              title: 'Rappel : RDV dans 1h',
               body: 'Votre prestation commence bientôt !',
               bookingId: doc.id,
             });
