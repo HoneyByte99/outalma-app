@@ -5,7 +5,8 @@ A new Flutter project.
 ## Dev setup
 
 One-time per clone — activate the versioned git hooks (pre-commit runs the
-same `dart format` check as CI):
+CI checks locally: format, analyze, tests, and a 90% coverage bar on staged
+critical-layer files; see `.githooks/pre-commit` for bypass options):
 
 ```sh
 git config core.hooksPath .githooks

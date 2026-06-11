@@ -6,9 +6,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.command // \"\"' | grep -q 'git commit' && jq -n --rawfile c \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-checklist.md\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:(\"Pre-commit checklist (.claude/hooks/pre-commit-checklist.md):\\n\" + $c)}}' || true",
+            "if": "Bash(git commit*)",
+            "command": "jq -n --rawfile c \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-checklist.md\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:(\"Pre-commit checklist (.claude/hooks/pre-commit-checklist.md):\\n\" + $c)}}' || true",
             "timeout": 10,
             "statusMessage": "Pre-commit checklist"
+          },
+          {
+            "type": "agent",
+            "if": "Bash(git commit*)",
+            "prompt": "A git commit is about to run: $ARGUMENTS\n\nFirst look at the tool call's command above: if it does not actually execute `git commit`, reply allow immediately without running anything.\n\nReview the STAGED changes before allowing it. Run `git diff --cached --stat`, then `git diff --cached`. Read surrounding code only if needed to judge.\n\nCheck against this repo's rules (CLAUDE.md, .claude/rules/):\n1. Layer boundaries — lib/src/domain stays pure Dart (no Firebase imports); data owns Firebase details; application orchestrates; features is UI only. No direct Firestore .collection() calls in features/, no booking status transitions performed client-side.\n2. Hygiene — no hardcoded secrets or API keys, no leftover debug prints, no large commented-out code blocks.\n3. Regression bar — a bug fix must include (or demonstrably already have) a regression test; new or changed business logic in lib/src/{domain,data,application} should come with tests in the same commit.\n\nDENY only on clear violations: a committed secret, a broken layer boundary, client-side booking status mutation, a bug fix with no regression test, or new critical-layer logic with zero tests. Otherwise ALLOW — for style nits or when uncertain, allow and briefly mention the concern.",
+            "timeout": 120,
+            "statusMessage": "Reviewing staged changes"
           }
         ]
       }

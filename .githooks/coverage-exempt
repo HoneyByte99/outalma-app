@@ -1,0 +1,8 @@
+# Files exempt from the 90% pre-commit coverage bar (one path per line).
+# Only for structural files with nothing meaningful to unit-test:
+# barrel exports, platform-conditional stubs. Business logic never goes here.
+lib/src/domain/domain.dart
+lib/src/data/data.dart
+lib/src/data/auth/phone_otp_service.dart
+lib/src/data/auth/phone_otp_service_web.dart
+lib/src/data/auth/phone_otp_service_stub.dart

@@ -1,16 +1,84 @@
 #!/bin/sh
-# Blocks commits containing unformatted Dart code — mirrors the CI
-# "Check formatting" step so format breakage is caught before push.
+# Quality gate mirroring CI + the project testing bar (.claude/rules/testing-bar.md):
+#   1. dart format check (mirrors CI "Check formatting")
+#   2. flutter analyze --fatal-warnings (mirrors CI "Analyze")
+#   3. full test suite (regression gate, mirrors CI "Test")
+#   4. >= 90% line coverage on staged critical-layer files
+#      (lib/src/{domain,data,application}; structural exemptions in
+#      .githooks/coverage-exempt)
+#
+# Steps 2-4 only run when lib/ or test/ Dart files are staged.
+# Bypass once:  OUTALMA_SKIP_GATE=1 git commit ...   (keeps the format check)
+#               git commit --no-verify              (skips everything)
 #
 # One-time setup per clone:
 #   git config core.hooksPath .githooks
 
-files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.dart')
-[ -z "$files" ] && exit 0
+staged_dart=$(git diff --cached --name-only --diff-filter=ACMR -- '*.dart')
+[ -z "$staged_dart" ] && exit 0
 
-if ! dart format --output=none --set-exit-if-changed $files; then
+# ── 1. Format ────────────────────────────────────────────────────────────────
+if ! dart format --output=none --set-exit-if-changed $staged_dart; then
   echo ""
   echo "Commit blocked: unformatted Dart files (listed above)."
   echo "Fix with:  dart format lib/ test/   then re-stage and commit."
   exit 1
 fi
+
+[ "$OUTALMA_SKIP_GATE" = "1" ] && exit 0
+
+code_changed=$(printf '%s\n' "$staged_dart" | grep -E '^(lib|test)/' || true)
+[ -z "$code_changed" ] && exit 0
+
+out=$(mktemp)
+trap 'rm -f "$out"' EXIT
+
+# ── 2. Analyze ───────────────────────────────────────────────────────────────
+echo "pre-commit: flutter analyze..."
+if ! flutter analyze --fatal-warnings > "$out" 2>&1; then
+  cat "$out"
+  echo "Commit blocked: flutter analyze failed."
+  exit 1
+fi
+
+# ── 3. Tests (regression gate) ───────────────────────────────────────────────
+echo "pre-commit: flutter test --coverage..."
+if ! flutter test --coverage > "$out" 2>&1; then
+  tail -40 "$out"
+  echo "Commit blocked: tests failed."
+  exit 1
+fi
+
+# ── 4. Coverage bar on staged critical-layer files ───────────────────────────
+critical=$(printf '%s\n' "$staged_dart" | grep -E '^lib/src/(domain|data|application)/' || true)
+fail=0
+for f in $critical; do
+  grep -qxF "$f" .githooks/coverage-exempt 2>/dev/null && continue
+  # Pure contracts (abstract repositories) have no executable lines.
+  case "$f" in lib/src/domain/repositories/*) continue ;; esac
+  pct=$(awk -F: -v f="$f" '
+    $1=="SF" && $2==f {hit=1}
+    hit && $1=="LF" {lf=$2}
+    hit && $1=="LH" {lh=$2}
+    hit && /^end_of_record/ {exit}
+    END {if (lf>0) printf "%d", 100*lh/lf; else if (hit) print 100; else print -1}
+  ' coverage/lcov.info)
+  if [ "$pct" -lt 0 ]; then
+    echo "COVERAGE  $f: not exercised by any test (0%)"
+    fail=1
+  elif [ "$pct" -lt 90 ]; then
+    echo "COVERAGE  $f: ${pct}% (< 90%)"
+    fail=1
+  fi
+done
+
+if [ "$fail" = "1" ]; then
+  echo ""
+  echo "Commit blocked: staged critical-layer files are below the 90% coverage bar."
+  echo "Add tests for the files above, or bypass once with:"
+  echo "  OUTALMA_SKIP_GATE=1 git commit ..."
+  echo "(Structural exemptions: .githooks/coverage-exempt)"
+  exit 1
+fi
+
+exit 0
