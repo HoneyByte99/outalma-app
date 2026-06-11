@@ -1485,33 +1485,49 @@ class _MessageBubble extends ConsumerWidget {
             if (message.mediaUrl != null)
               GestureDetector(
                 onTap: () => _showFullImage(context, message.mediaUrl!),
-                child: CachedNetworkImage(
-                  imageUrl: message.mediaUrl!,
-                  width: 220,
-                  height: 180,
-                  fit: BoxFit.cover,
-                  // 2× for Retina — 440×360 keeps memory reasonable
-                  memCacheWidth: 440,
-                  memCacheHeight: 360,
-                  httpHeaders: const {'Accept': '*/*'},
-                  placeholder: (_, __) => SizedBox(
-                    width: 220,
-                    height: 180,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: fg.withValues(alpha: 0.5),
-                      ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  // No fixed width/height: bound the image and let it keep its
+                  // natural aspect ratio inside the box. The old 220x180 +
+                  // cover cropped portrait photos into a stretched-looking band.
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 140,
+                      maxWidth: 240,
+                      minHeight: 120,
+                      maxHeight: 300,
                     ),
-                  ),
-                  errorWidget: (_, __, ___) => SizedBox(
-                    width: 220,
-                    height: 80,
-                    child: Center(
-                      child: Icon(
-                        Icons.broken_image_outlined,
-                        color: fg.withValues(alpha: 0.5),
-                        size: 32,
+                    child: CachedNetworkImage(
+                      imageUrl: message.mediaUrl!,
+                      // Width-capped retina budget; height follows the ratio.
+                      memCacheWidth: 480,
+                      httpHeaders: const {'Accept': '*/*'},
+                      placeholder: (_, __) => SizedBox(
+                        width: 200,
+                        height: 150,
+                        child: ColoredBox(
+                          color: fg.withValues(alpha: 0.08),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: fg.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) => SizedBox(
+                        width: 200,
+                        height: 120,
+                        child: ColoredBox(
+                          color: fg.withValues(alpha: 0.08),
+                          child: Center(
+                            child: Icon(
+                              Icons.broken_image_outlined,
+                              color: fg.withValues(alpha: 0.5),
+                              size: 32,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1593,11 +1609,19 @@ class _FullImageViewer extends StatelessWidget {
       ),
       body: GestureDetector(
         onTap: () => Navigator.of(context).pop(),
-        child: Center(
-          child: InteractiveViewer(
-            minScale: 0.8,
-            maxScale: 4,
-            child: AppNetworkImage(url: url, fit: BoxFit.contain),
+        child: InteractiveViewer(
+          minScale: 0.8,
+          maxScale: 4,
+          // Fill the screen so the image is centered at its natural ratio
+          // instead of collapsing to its intrinsic size in an odd spot.
+          child: SizedBox.expand(
+            child: AppNetworkImage(
+              url: url,
+              fit: BoxFit.contain,
+              placeholder: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+            ),
           ),
         ),
       ),
