@@ -2,6 +2,15 @@
 
 A new Flutter project.
 
+## Dev setup
+
+One-time per clone — activate the versioned git hooks (pre-commit runs the
+same `dart format` check as CI):
+
+```sh
+git config core.hooksPath .githooks
+```
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

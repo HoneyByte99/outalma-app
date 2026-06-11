@@ -1,0 +1,16 @@
+#!/bin/sh
+# Blocks commits containing unformatted Dart code — mirrors the CI
+# "Check formatting" step so format breakage is caught before push.
+#
+# One-time setup per clone:
+#   git config core.hooksPath .githooks
+
+files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.dart')
+[ -z "$files" ] && exit 0
+
+if ! dart format --output=none --set-exit-if-changed $files; then
+  echo ""
+  echo "Commit blocked: unformatted Dart files (listed above)."
+  echo "Fix with:  dart format lib/ test/   then re-stage and commit."
+  exit 1
+fi
