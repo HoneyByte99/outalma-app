@@ -13,6 +13,7 @@ import '../application/notification/notification_service.dart';
 import '../application/theme/theme_provider.dart';
 import 'app_theme.dart';
 import 'connectivity_banner.dart';
+import 'notification_route.dart';
 import 'router.dart';
 
 class OutalmaServiceApp extends ConsumerStatefulWidget {
@@ -54,14 +55,7 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
   }
 
   Future<void> _handleNotificationTap(RemoteMessage message) async {
-    final data = message.data;
-    final chatId = data['chatId'] as String?;
-    final bookingId = data['bookingId'] as String?;
-    final route = (chatId != null && chatId.isNotEmpty)
-        ? AppRoutes.chat(chatId)
-        : (bookingId != null && bookingId.isNotEmpty)
-        ? AppRoutes.bookingDetail(bookingId)
-        : null;
+    final route = notificationRouteForData(message.data);
     if (route == null) return;
 
     // Cold start: getInitialMessage resolves before auth + the shell are ready,
@@ -69,7 +63,9 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
     // until the user is authenticated, then push on top of the home shell.
     for (var i = 0; i < 40; i++) {
       if (!mounted) return;
-      if (ref.read(authNotifierProvider).valueOrNull is AuthAuthenticated) break;
+      if (ref.read(authNotifierProvider).valueOrNull is AuthAuthenticated) {
+        break;
+      }
       await Future<void>.delayed(const Duration(milliseconds: 250));
     }
     if (!mounted ||
