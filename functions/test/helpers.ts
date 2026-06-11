@@ -179,3 +179,8 @@ export async function authUserExists(uid: string): Promise<boolean> {
     return false;
   }
 }
+
+export async function authUserDisabled(uid: string): Promise<boolean> {
+  const u = await admin.auth().getUser(uid);
+  return u.disabled;
+}
