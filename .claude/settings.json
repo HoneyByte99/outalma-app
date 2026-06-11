@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // \"\"' | grep -q 'git commit' && jq -n --rawfile c \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-checklist.md\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:(\"Pre-commit checklist (.claude/hooks/pre-commit-checklist.md):\\n\" + $c)}}' || true",
+            "timeout": 10,
+            "statusMessage": "Pre-commit checklist"
+          }
+        ]
+      }
+    ]
+  }
+}
