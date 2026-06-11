@@ -2420,6 +2420,12 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get micEnableAction;
 
+  /// No description provided for @bookingVoiceMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice message'**
+  String get bookingVoiceMessage;
+
   /// No description provided for @chatMissionEndedBanner.
   ///
   /// In en, this message translates to:

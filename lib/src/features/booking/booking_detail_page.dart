@@ -22,6 +22,7 @@ import '../../core/utils/date_utils.dart' as date_utils;
 import '../../domain/utils/distance.dart';
 import '../shared/maps_launcher.dart';
 import '../shared/user_avatar.dart';
+import '../shared/voice_message_player.dart';
 
 String _formatSchedule(DateTime dt, String locale) {
   final dateFmt = DateFormat('EEE d MMMM yyyy', locale);
@@ -210,6 +211,16 @@ class _DetailContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
+
+          // ---- Voice message (client's recorded note) ----
+          if (booking.audioMessageUrl != null &&
+              booking.audioMessageUrl!.isNotEmpty) ...[
+            _Section(
+              title: l10n.bookingVoiceMessage,
+              child: VoiceMessagePlayer(url: booking.audioMessageUrl!),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // ---- Schedule ----
           if (booking.scheduledAt != null) ...[

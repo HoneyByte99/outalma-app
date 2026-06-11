@@ -1263,6 +1263,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get micEnableAction => 'Réglages';
 
   @override
+  String get bookingVoiceMessage => 'Message vocal';
+
+  @override
   String get chatMissionEndedBanner =>
       'Mission terminée. Conversation en lecture seule.';
 

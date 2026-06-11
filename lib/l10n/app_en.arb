@@ -508,6 +508,7 @@
   "notifDisabledBanner": "Turn on notifications so you don't miss anything.",
   "notifEnableAction": "Enable",
   "micEnableAction": "Settings",
+  "bookingVoiceMessage": "Voice message",
   "chatMissionEndedBanner": "Mission completed. Conversation is read-only.",
   "chatVoiceError": "Could not send voice message.",
   "chatVoiceSending": "Sending voice message…",

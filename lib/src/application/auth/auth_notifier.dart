@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -125,7 +126,23 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<void> signOut() async {
-    await ref.read(firebaseAuthProvider).signOut();
+    // Clear this device's push token from the user doc BEFORE signing out.
+    // Otherwise the phone keeps receiving the previous account's notifications,
+    // and if another account signs in on the same device both accounts point
+    // their pushToken at it — a confidentiality leak (someone else's chat
+    // previews on the lock screen). Best-effort: never block sign-out.
+    final auth = ref.read(firebaseAuthProvider);
+    final uid = auth.currentUser?.uid;
+    if (uid != null) {
+      try {
+        await ref.read(firestoreProvider).collection('users').doc(uid).set({
+          'pushToken': FieldValue.delete(),
+        }, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint('[AuthNotifier] failed to clear pushToken on signOut: $e');
+      }
+    }
+    await auth.signOut();
   }
 
   /// Permanently deletes the current user's account and personal data via a

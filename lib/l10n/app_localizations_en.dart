@@ -1249,6 +1249,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get micEnableAction => 'Settings';
 
   @override
+  String get bookingVoiceMessage => 'Voice message';
+
+  @override
   String get chatMissionEndedBanner =>
       'Mission completed. Conversation is read-only.';
 
