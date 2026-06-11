@@ -76,7 +76,15 @@ service cloud.firestore {
     match /providers/{uid} {
       allow read: if true;
       allow create: if isAdmin() || isSelf(uid);
-      allow update: if isAdmin() || isSelf(uid);
+      // Owner may edit their own profile (bio, serviceArea…) but NOT the
+      // moderation-controlled fields: a suspended provider must not be able to
+      // self-write `suspended:false` and undo moderation. Those keys are set
+      // exclusively by suspendProvider/unsuspendProvider (Admin SDK) and read
+      // back as a gate in createBooking. (Security review S2.)
+      allow update: if isAdmin()
+        || (isSelf(uid)
+            && !request.resource.data.diff(resource.data).affectedKeys()
+                  .hasAny(['suspended', 'suspendedAt', 'suspendedReason', 'active']));
       allow delete: if isAdmin();
     }
 
@@ -130,14 +138,14 @@ service cloud.firestore {
       // status/field bypass attacks.
       allow create: if false;
 
-      // Update: participants may update non-status fields only.
-      // Status is immutable from client — all transitions via Cloud Functions.
-      allow update: if isAdmin()
-        || (isParticipant()
-            && request.resource.data.customerId == resource.data.customerId
-            && request.resource.data.providerId == resource.data.providerId
-            && request.resource.data.serviceId == resource.data.serviceId
-            && request.resource.data.status == resource.data.status);
+      // Update: bookings are mutated EXCLUSIVELY by Cloud Functions (accept,
+      // reject, cancel, markInProgress, confirmDone — Admin SDK bypasses rules).
+      // The client never writes a booking document (the repository only reads),
+      // so any client update is denied. This closes the previous hole where a
+      // participant could forge server-authoritative fields (chatId, doneAt,
+      // cancelledBy, reminded24h/1h…) as long as status + ids were unchanged.
+      // (Security review S3.)
+      allow update: if isAdmin();
 
       allow delete: if isAdmin();
     }
@@ -206,21 +214,30 @@ service cloud.firestore {
           || (isParticipantViaChat()
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
               && request.auth.uid in request.resource.data.readBy)
-          // Any participant may add/update emoji reactions (reactions map only).
+          // A participant may add/update emoji reactions — but ONLY their own
+          // entry in the reactions map (keyed by uid). Previously any
+          // participant could overwrite/delete the OTHER party's reaction.
+          // (Security review S4.)
           || (isParticipantViaChat()
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']))
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+              && request.resource.data.reactions.diff(resource.data.get('reactions', {}))
+                  .affectedKeys().hasOnly([request.auth.uid]))
           // Sender soft-deletes their own message: only the `deleted` flag may
           // change, and it can only flip to true.
           || (resource.data.senderId == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted'])
               && request.resource.data.deleted == true)
           // Sender edits their own message text within 15 minutes of sending:
-          // only text + edited may change, edited flips to true.
+          // only text + edited may change, edited flips to true. Edits are also
+          // blocked once the booking is done (conversation read-only) or when
+          // the pair is blocked — same gate as create. (Security review S4.)
           || (resource.data.senderId == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited'])
               && request.resource.data.edited == true
               && request.resource.data.text is string
-              && request.time < resource.data.createdAt + duration.value(15, 'm'));
+              && request.time < resource.data.createdAt + duration.value(15, 'm')
+              && bookingActiveForChat()
+              && notBlockedPair());
 
         allow delete: if isAdmin();
       }
