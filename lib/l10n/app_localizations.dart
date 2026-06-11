@@ -2402,6 +2402,24 @@ abstract class AppLocalizations {
   /// **'Allow microphone access to send a voice message.'**
   String get chatMicPermission;
 
+  /// No description provided for @notifDisabledBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notifications so you don\'t miss anything.'**
+  String get notifDisabledBanner;
+
+  /// No description provided for @notifEnableAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get notifEnableAction;
+
+  /// No description provided for @micEnableAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get micEnableAction;
+
   /// No description provided for @chatMissionEndedBanner.
   ///
   /// In en, this message translates to:

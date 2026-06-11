@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../shared/network_image.dart';
+import '../shared/open_settings.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
 import 'package:record/record.dart';
@@ -556,6 +557,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               SnackBar(
                 content: Text(permissionMsg),
                 backgroundColor: context.oc.error,
+                // iOS only prompts once; if the user denied the mic at first
+                // launch, the only way back is Settings. Surface a deep-link
+                // instead of failing silently (same root cause as notifs).
+                action: SnackBarAction(
+                  label: l10n.micEnableAction,
+                  textColor: Colors.white,
+                  onPressed: openAppSettings,
+                ),
+                duration: const Duration(seconds: 10),
               ),
             );
           }

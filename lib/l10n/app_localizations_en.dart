@@ -1239,6 +1239,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Allow microphone access to send a voice message.';
 
   @override
+  String get notifDisabledBanner =>
+      'Turn on notifications so you don\'t miss anything.';
+
+  @override
+  String get notifEnableAction => 'Enable';
+
+  @override
+  String get micEnableAction => 'Settings';
+
+  @override
   String get chatMissionEndedBanner =>
       'Mission completed. Conversation is read-only.';
 

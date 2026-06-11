@@ -1,10 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../data/firestore/firestore_collections.dart';
 import '../../domain/models/app_notification.dart';
+import 'notification_service.dart';
+
+/// Current OS notification authorization status (no prompt). Invalidated on app
+/// resume so the "notifications disabled" banner reflects a Settings toggle the
+/// moment the user comes back. `denied`/`notDetermined` → banner is shown.
+final notificationPermissionProvider = FutureProvider<AuthorizationStatus>((
+  ref,
+) {
+  final authState = ref.watch(authNotifierProvider).valueOrNull;
+  if (authState is! AuthAuthenticated) {
+    return Future.value(AuthorizationStatus.authorized);
+  }
+  return NotificationService.currentStatus();
+});
 
 /// Stream of the current user's notifications, newest first, capped at 50.
 final notificationsProvider = StreamProvider<List<AppNotification>>((ref) {

@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../application/notification/notification_providers.dart';
 import '../application/provider/provider_providers.dart';
 import '../application/user/user_providers.dart';
 import '../domain/enums/active_mode.dart';
+import '../features/shared/open_settings.dart';
 import '../../l10n/app_localizations.dart';
 import 'app_theme.dart';
 
@@ -25,7 +27,7 @@ import 'app_theme.dart';
 /// Logical tab → branch index mapping:
 ///   Client:   0→0, 1→1, 2→4, 3→5
 ///   Provider: 0→2, 1→3, 2→4, 3→5
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
@@ -35,12 +37,45 @@ class AppShell extends ConsumerWidget {
   static const _providerBranches = [2, 3, 4, 5];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When the user returns to the app — typically right after toggling
+    // notifications on in iOS Settings via our banner — re-run token
+    // registration (so a now-granted permission finally yields a pushToken)
+    // and refresh the permission status that drives the banner.
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(notificationInitProvider);
+      ref.invalidate(notificationPermissionProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = widget.shell;
     ref.watch(notificationInitProvider);
 
     final l10n = AppLocalizations.of(context)!;
     final isProvider = ref.watch(activeModeProvider) == ActiveMode.provider;
-    final branches = isProvider ? _providerBranches : _clientBranches;
+    final branches = isProvider
+        ? AppShell._providerBranches
+        : AppShell._clientBranches;
 
     // Find which logical tab corresponds to the current branch.
     final currentBranch = shell.currentIndex;
@@ -70,8 +105,22 @@ class AppShell extends ConsumerWidget {
     // Material 3 NavigationBar (A.7): cleaner active state via a pill
     // indicator behind the selected icon, smoother transitions, better
     // dark-mode contrast than the legacy BottomNavigationBar.
+    // Non-blocking banner when OS notifications are off. iOS only shows the
+    // permission prompt once, so without this a single "Don't Allow" silently
+    // kills push forever — the root cause of "others don't receive notifs".
+    final notifStatus = ref.watch(notificationPermissionProvider).valueOrNull;
+    // Only for `denied` — `notDetermined` means initialize() is about to fire
+    // the OS prompt, so a banner then would be premature and misleading.
+    final showNotifBanner = notifStatus == AuthorizationStatus.denied;
+
     return Scaffold(
-      body: shell,
+      body: Column(
+        children: [
+          if (showNotifBanner)
+            SafeArea(bottom: false, child: _NotifDisabledBanner(l10n: l10n)),
+          Expanded(child: shell),
+        ],
+      ),
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: oc.border, width: 1)),
@@ -182,6 +231,81 @@ List<NavigationDestination> _providerDestinations(
       label: l10n.navProfile,
     ),
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Notifications-disabled banner → deep-link to iOS Settings
+// ---------------------------------------------------------------------------
+
+class _NotifDisabledBanner extends StatelessWidget {
+  const _NotifDisabledBanner({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    // Amber "warning" reads as "needs attention" (not error) and stays visible
+    // in sunlight, unlike the near-white primary tint. Combined accessible
+    // label so screen readers announce the whole row as one Settings button.
+    return Semantics(
+      button: true,
+      label: '${l10n.notifDisabledBanner} ${l10n.notifEnableAction}',
+      onTap: openAppSettings,
+      child: Material(
+        color: oc.warning.withValues(alpha: 0.15),
+        child: InkWell(
+          onTap: openAppSettings,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 52),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: oc.border)),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.notifications_off_rounded,
+                  color: oc.warning,
+                  size: 22,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.notifDisabledBanner,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: oc.primaryText,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Pill button — the app's standard CTA shape, instantly read as
+                // tappable even by users who don't read the label.
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: oc.warning,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    l10n.notifEnableAction,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

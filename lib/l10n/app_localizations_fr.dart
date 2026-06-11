@@ -1253,6 +1253,16 @@ class AppLocalizationsFr extends AppLocalizations {
       'Autorisez l\'accès au micro pour envoyer un vocal.';
 
   @override
+  String get notifDisabledBanner =>
+      'Activez les notifications pour ne rien manquer.';
+
+  @override
+  String get notifEnableAction => 'Activer';
+
+  @override
+  String get micEnableAction => 'Réglages';
+
+  @override
   String get chatMissionEndedBanner =>
       'Mission terminée. Conversation en lecture seule.';
 
