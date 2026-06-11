@@ -136,9 +136,11 @@ void main() {
       );
       expect(dots.length, greaterThanOrEqualTo(3));
 
-      // Swiping advances the page without throwing.
+      // Swiping advances the page without throwing. Use a bounded pump rather
+      // than pumpAndSettle: AppNetworkImage shows a perpetual loading spinner
+      // for the (never-loading) test image, so pumpAndSettle would never settle.
       await tester.drag(find.byType(PageView), const Offset(-400, 0));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(PageView), findsOneWidget);
     });
   });

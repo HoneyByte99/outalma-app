@@ -72,12 +72,24 @@ class _DefaultLoadingPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       width: width,
       height: height,
-      color: Theme.of(
-        context,
-      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
+      // Small centered spinner so loading is visible everywhere AppNetworkImage
+      // is used (service cards, hero, thumbnails). Kept at 22px so it never
+      // overflows the small list thumbnails.
+      child: Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: cs.primary.withValues(alpha: 0.6),
+          ),
+        ),
+      ),
     );
   }
 }
