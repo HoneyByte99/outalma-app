@@ -202,6 +202,9 @@ async function createNotification(
     body: string;
     bookingId?: string;
     chatId?: string;
+    // Which role this notification targets — drives the Client/Provider tabs in
+    // the app. Always set it: the caller knows the recipient's role.
+    audience?: 'client' | 'provider';
   }
 ): Promise<void> {
   await db
@@ -214,6 +217,7 @@ async function createNotification(
       body: data.body,
       bookingId: data.bookingId ?? null,
       chatId: data.chatId ?? null,
+      ...(data.audience ? { audience: data.audience } : {}),
       read: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
@@ -440,9 +444,11 @@ export const onMessageCreate = onDocumentCreated(
     const chat = chatSnap.data() as {
       participantIds?: string[];
       bookingId?: string;
+      customerId?: string;
     };
     const participants = chat.participantIds ?? [];
     const bookingId = chat.bookingId;
+    const chatCustomerId = chat.customerId;
 
     // Update lastMessageAt on the chat document
     await db.collection('chats').doc(chatId).update({
@@ -479,6 +485,9 @@ export const onMessageCreate = onDocumentCreated(
         body: notifBody,
         chatId,
         bookingId,
+        // The recipient's role in this chat: the customer of the booking is
+        // acting as client, the other party as provider.
+        audience: uid === chatCustomerId ? 'client' : 'provider',
       });
     }
   }
@@ -514,6 +523,9 @@ export const onBookingStatusChange = onDocumentUpdated(
       type: string;
       title: string;
       body: string;
+      // Which role the recipients are acting as for this event — drives the
+      // Client/Provider notification tabs.
+      audience: 'client' | 'provider';
     };
     const notifications: NotifEntry[] = [];
 
@@ -525,6 +537,7 @@ export const onBookingStatusChange = onDocumentUpdated(
             type: 'booking_accepted',
             title: 'Demande acceptée',
             body: 'Votre prestataire a accepté votre demande. Vous pouvez maintenant discuter.',
+            audience: 'client',
           });
         }
         break;
@@ -535,6 +548,7 @@ export const onBookingStatusChange = onDocumentUpdated(
             type: 'booking_rejected',
             title: 'Demande refusée',
             body: 'Votre demande a été refusée. Vous pouvez en soumettre une nouvelle.',
+            audience: 'client',
           });
         }
         break;
@@ -545,6 +559,7 @@ export const onBookingStatusChange = onDocumentUpdated(
             type: 'booking_in_progress',
             title: 'Service démarré',
             body: 'Votre prestataire a démarré le service.',
+            audience: 'client',
           });
         }
         break;
@@ -555,6 +570,7 @@ export const onBookingStatusChange = onDocumentUpdated(
             type: 'booking_done',
             title: 'Service terminé',
             body: 'Le service est terminé. Laissez un avis !',
+            audience: 'client',
           });
         }
         if (providerId) {
@@ -563,23 +579,31 @@ export const onBookingStatusChange = onDocumentUpdated(
             type: 'booking_done',
             title: 'Service terminé',
             body: 'Le service est marqué comme terminé. Laissez un avis au client !',
+            audience: 'provider',
           });
         }
         break;
       case 'cancelled': {
-        // Notify the party who did NOT trigger the cancellation, so they don't
-        // show up for a service that's off (e.g. a provider travelling to a
-        // cancelled appointment).
+        // Notify the party who did NOT trigger the cancellation, each in their
+        // own role, so they don't show up for a service that's off.
         const canceller = after.cancelledBy;
-        const recipients = [customerId, providerId].filter(
-          (id): id is string => !!id && id !== canceller
-        );
-        if (recipients.length > 0) {
+        const body = 'Une réservation a été annulée.';
+        if (customerId && customerId !== canceller) {
           notifications.push({
-            uids: recipients,
+            uids: [customerId],
             type: 'booking_cancelled',
             title: 'Réservation annulée',
-            body: 'Une réservation a été annulée.',
+            body,
+            audience: 'client',
+          });
+        }
+        if (providerId && providerId !== canceller) {
+          notifications.push({
+            uids: [providerId],
+            type: 'booking_cancelled',
+            title: 'Réservation annulée',
+            body,
+            audience: 'provider',
           });
         }
         break;
@@ -598,6 +622,7 @@ export const onBookingStatusChange = onDocumentUpdated(
           title: n.title,
           body: n.body,
           bookingId,
+          audience: n.audience,
         });
       }
     }
@@ -929,6 +954,7 @@ export const sendBookingReminders = onSchedule(
               title: 'Rappel : RDV demain',
               body: `Votre prestation est prévue demain à ${timeStr}.`,
               bookingId: doc.id,
+              audience: uid === data.customerId ? 'client' : 'provider',
             });
           }
           sent++;
@@ -956,6 +982,7 @@ export const sendBookingReminders = onSchedule(
               title: 'Rappel : RDV dans 1h',
               body: 'Votre prestation commence bientôt !',
               bookingId: doc.id,
+              audience: uid === data.customerId ? 'client' : 'provider',
             });
           }
           sent++;
@@ -2237,6 +2264,7 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
       title,
       body,
       bookingId,
+      audience: 'provider',
     });
   }
 });

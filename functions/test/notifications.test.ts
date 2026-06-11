@@ -61,8 +61,12 @@ describe('onMessageCreate → notify the other participant', () => {
     } as never);
   }
 
-  it('pushes to the recipient (not the sender) with the chat deep-link', async () => {
-    await seedChat({ participantIds: [customer, provider], bookingId: 'b1' });
+  it('pushes to the recipient (not the sender) with the chat deep-link + role', async () => {
+    await seedChat({
+      participantIds: [customer, provider],
+      bookingId: 'b1',
+      customerId: customer,
+    });
     await seedUser(customer, { pushToken: 'tok-cust' });
     await seedUser(provider, { pushToken: 'tok-prov' });
 
@@ -77,8 +81,22 @@ describe('onMessageCreate → notify the other participant', () => {
     expect(arg.data?.type).toBe('new_message');
     expect(arg.data?.chatId).toBe('c1');
 
-    expect(await getNotifications(provider)).toHaveLength(1);
+    const provNotifs = await getNotifications(provider);
+    expect(provNotifs).toHaveLength(1);
+    // The customer sent it → the recipient (provider) is notified in provider role.
+    expect(provNotifs[0]?.audience).toBe('provider');
     expect(await getNotifications(customer)).toHaveLength(0);
+  });
+
+  it('tags the message notification client when the recipient is the customer', async () => {
+    await seedChat({
+      participantIds: [customer, provider],
+      customerId: customer,
+    });
+    await seedUser(customer, { pushToken: 'tok-cust' });
+    // Provider sends → recipient is the customer → client role.
+    await fireMessage({ senderId: provider, text: 'Réponse', type: 'text' });
+    expect((await getNotifications(customer))[0]?.audience).toBe('client');
   });
 
   it('uses a media-aware body for an image message', async () => {
@@ -123,6 +141,7 @@ describe('onBookingCreated → provider notification', () => {
     const notifs = await getNotifications(provider);
     expect(notifs).toHaveLength(1);
     expect(notifs[0]?.type).toBe('booking_requested');
+    expect(notifs[0]?.audience).toBe('provider');
   });
 });
 
@@ -149,19 +168,21 @@ describe('onBookingStatusChange → recipient selection', () => {
       { status: 'requested', customerId: customer, providerId: provider },
       { status: 'accepted', customerId: customer, providerId: provider }
     );
-    expect(await getNotifications(customer)).toHaveLength(1);
+    const cust = await getNotifications(customer);
+    expect(cust).toHaveLength(1);
+    expect(cust[0]?.audience).toBe('client'); // recipient acts as client
     expect(await getNotifications(provider)).toHaveLength(0);
   });
 
-  it('notifies both parties on done', async () => {
+  it('notifies both parties on done, each in their own role', async () => {
     await seedUser(customer, { pushToken: 'tok-cust' });
     await seedUser(provider, { pushToken: 'tok-prov' });
     await runChange(
       { status: 'in_progress', customerId: customer, providerId: provider },
       { status: 'done', customerId: customer, providerId: provider }
     );
-    expect(await getNotifications(customer)).toHaveLength(1);
-    expect(await getNotifications(provider)).toHaveLength(1);
+    expect((await getNotifications(customer))[0]?.audience).toBe('client');
+    expect((await getNotifications(provider))[0]?.audience).toBe('provider');
   });
 
   it('on cancel, notifies the party who did NOT cancel', async () => {
@@ -181,6 +202,7 @@ describe('onBookingStatusChange → recipient selection', () => {
     const custNotifs = await getNotifications(customer);
     expect(provNotifs).toHaveLength(1);
     expect(provNotifs[0]?.type).toBe('booking_cancelled');
+    expect(provNotifs[0]?.audience).toBe('provider'); // notified in provider role
     expect(custNotifs).toHaveLength(0);
   });
 });
