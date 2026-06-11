@@ -881,10 +881,7 @@ class _PhotoSection extends StatelessWidget {
     if (photos.length == 1 && maxPhotos == 1 && !uploading) {
       return AspectRatio(
         aspectRatio: 16 / 9,
-        child: _PhotoThumb(
-          url: photos.first,
-          onRemove: () => onRemove(0),
-        ),
+        child: _PhotoThumb(url: photos.first, onRemove: () => onRemove(0)),
       );
     }
 
@@ -937,11 +934,7 @@ class _PhotoSection extends StatelessWidget {
 }
 
 class _PhotoThumb extends StatelessWidget {
-  const _PhotoThumb({
-    required this.url,
-    this.size,
-    required this.onRemove,
-  });
+  const _PhotoThumb({required this.url, this.size, required this.onRemove});
 
   final String url;
   // Fixed square thumbnail in the strip; null = fill the parent (large preview).

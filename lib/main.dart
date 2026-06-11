@@ -39,7 +39,9 @@ Future<void> main() async {
       ]);
 
       // Register the background message handler once Firebase is ready.
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
 
       final onboardingDone = results[2] as bool;
 
