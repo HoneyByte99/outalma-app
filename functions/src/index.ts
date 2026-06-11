@@ -119,32 +119,32 @@ async function sendPushToUsers(
 ): Promise<void> {
   if (uids.length === 0) return;
 
-  // Fetch push tokens from user documents
+  // Fetch push tokens from user documents, keeping the uid↔token mapping so we
+  // can purge a token that FCM reports as permanently invalid (below).
   const snapshots = await Promise.all(
     uids.map(uid => db.collection('users').doc(uid).get())
   );
 
-  const tokens: string[] = [];
+  const entries: { uid: string; token: string }[] = [];
   for (const snap of snapshots) {
     const token = snap.data()?.pushToken as string | undefined;
-    if (token) tokens.push(token);
+    if (token) entries.push({ uid: snap.id, token });
   }
 
-  if (tokens.length === 0) return;
+  if (entries.length === 0) return;
 
-  // Send multicast
+  // Send multicast. No Android `clickAction`: modern firebase_messaging routes
+  // notification taps natively via onMessageOpenedApp/getInitialMessage, so the
+  // legacy FLUTTER_NOTIFICATION_CLICK intent is unnecessary (and was a no-op
+  // without a matching intent-filter).
   const result = await admin.messaging().sendEachForMulticast({
-    tokens,
+    tokens: entries.map(e => e.token),
     notification: {
       title: notification.title,
       body: notification.body,
     },
     ...(data ? { data } : {}),
-    android: {
-      priority: 'high',
-      // Ensures the tap intent carries the data payload on Android.
-      notification: { clickAction: 'FLUTTER_NOTIFICATION_CLICK' },
-    },
+    android: { priority: 'high' },
     apns: { payload: { aps: { sound: 'default' } } },
   });
 
@@ -152,6 +152,42 @@ async function sendPushToUsers(
     successCount: result.successCount,
     failureCount: result.failureCount,
   });
+
+  // Purge tokens FCM reports as permanently invalid (uninstalled / reinstalled
+  // app, expired token). Otherwise they linger forever and every send silently
+  // fails. Delete only if the stored token still matches — never clobber a
+  // fresh token registered in the meantime.
+  const stale: { uid: string; token: string }[] = [];
+  result.responses.forEach((resp, i) => {
+    if (resp.success) return;
+    const entry = entries[i];
+    if (!entry) return;
+    const code = resp.error?.code;
+    if (
+      code === 'messaging/registration-token-not-registered' ||
+      code === 'messaging/invalid-registration-token' ||
+      code === 'messaging/invalid-argument'
+    ) {
+      stale.push(entry);
+    }
+  });
+  await Promise.all(
+    stale.map(async ({ uid, token }) => {
+      try {
+        const ref = db.collection('users').doc(uid);
+        await db.runTransaction(async (tx) => {
+          const cur = await tx.get(ref);
+          if (cur.data()?.pushToken === token) {
+            tx.update(ref, {
+              pushToken: admin.firestore.FieldValue.delete(),
+            });
+          }
+        });
+      } catch {
+        logger.warn('Failed to purge stale token', { uid });
+      }
+    })
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -460,6 +496,7 @@ export const onBookingStatusChange = onDocumentUpdated(
       status?: string;
       customerId?: string;
       providerId?: string;
+      cancelledBy?: string;
     } | undefined;
 
     if (!before || !after) return;
@@ -529,6 +566,24 @@ export const onBookingStatusChange = onDocumentUpdated(
           });
         }
         break;
+      case 'cancelled': {
+        // Notify the party who did NOT trigger the cancellation, so they don't
+        // show up for a service that's off (e.g. a provider travelling to a
+        // cancelled appointment).
+        const canceller = after.cancelledBy;
+        const recipients = [customerId, providerId].filter(
+          (id): id is string => !!id && id !== canceller
+        );
+        if (recipients.length > 0) {
+          notifications.push({
+            uids: recipients,
+            type: 'booking_cancelled',
+            title: 'Réservation annulée',
+            body: 'Une réservation a été annulée.',
+          });
+        }
+        break;
+      }
     }
 
     for (const n of notifications) {
@@ -805,6 +860,14 @@ export const setAdminClaim = onCall(async (request) => {
 // Scheduled: booking reminders (every 30 min)
 // ---------------------------------------------------------------------------
 
+/// IANA timezone for a user's country. Cloud Functions run in UTC, so a bare
+/// toLocaleTimeString() prints UTC — "votre RDV à 12:00" for a 14:00 Paris
+/// appointment. Senegal is UTC+0 (correct by accident before this fix); France
+/// is UTC+1/+2. Defaults to Paris (primary market).
+function timeZoneForCountry(country?: string): string {
+  return country === 'SN' ? 'Africa/Dakar' : 'Europe/Paris';
+}
+
 export const sendBookingReminders = onSchedule(
   { schedule: 'every 30 minutes', timeZone: 'Europe/Paris' },
   async () => {
@@ -834,9 +897,18 @@ export const sendBookingReminders = onSchedule(
 
       // 24h reminder (between 23.5h and 24.5h before)
       if (!data.reminded24h && diffHours >= 23.5 && diffHours <= 24.5) {
+        // Format the appointment in the customer's local timezone (both
+        // participants share the same market in practice). Without timeZone the
+        // string is UTC — an hour or two off for France.
+        let country: string | undefined;
+        if (data.customerId) {
+          const cs = await db.collection('users').doc(data.customerId).get();
+          country = cs.data()?.country as string | undefined;
+        }
         const timeStr = scheduledAt.toLocaleTimeString('fr-FR', {
           hour: '2-digit',
           minute: '2-digit',
+          timeZone: timeZoneForCountry(country),
         });
         // Wrap flag-check + flag-set in a transaction to prevent double-send on scheduler retry
         let shouldSend24h = false;
@@ -2142,6 +2214,31 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
   await incrementStatIdempotent(event.id, 'booking_created', {
     totalBookings: admin.firestore.FieldValue.increment(1),
   });
+
+  // Notify the provider that a new request just arrived. This is the single
+  // most important notification of the marketplace: without it a provider who
+  // isn't actively in the app never learns they were solicited (requests would
+  // silently expire). Booking creation is a `create` with status 'requested',
+  // which onBookingStatusChange (an update trigger) never sees — so it lives
+  // here.
+  const booking = event.data?.data() as { providerId?: string } | undefined;
+  const providerId = booking?.providerId;
+  if (providerId) {
+    const bookingId = event.params.bookingId;
+    const title = 'Nouvelle demande';
+    const body = 'Vous avez reçu une nouvelle demande de réservation.';
+    await sendPushToUsers(
+      [providerId],
+      { title, body },
+      { type: 'booking_requested', bookingId }
+    );
+    await createNotification(providerId, {
+      type: 'booking_requested',
+      title,
+      body,
+      bookingId,
+    });
+  }
 });
 
 export const onBookingUpdatedStats = onDocumentUpdated('bookings/{bookingId}', async (event) => {
