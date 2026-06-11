@@ -69,7 +69,11 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     super.dispose();
   }
 
-  static const int _maxPhotos = 5;
+  // A service carries a single photo. The model stays a List<String> for
+  // backward compatibility with services created earlier (which may hold more),
+  // but the form caps new input at one: once a photo is added the "add more"
+  // tile disappears.
+  static const int _maxPhotos = 1;
 
   Future<void> _pickPhoto() async {
     final l10n = AppLocalizations.of(context)!;
@@ -872,6 +876,18 @@ class _PhotoSection extends StatelessWidget {
       );
     }
 
+    // Single-photo case (the standard now): show one large 16:9 preview with a
+    // remove button, not a tiny thumbnail strip + counter (leftover multi UI).
+    if (photos.length == 1 && maxPhotos == 1 && !uploading) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: _PhotoThumb(
+          url: photos.first,
+          onRemove: () => onRemove(0),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -923,12 +939,13 @@ class _PhotoSection extends StatelessWidget {
 class _PhotoThumb extends StatelessWidget {
   const _PhotoThumb({
     required this.url,
-    required this.size,
+    this.size,
     required this.onRemove,
   });
 
   final String url;
-  final double size;
+  // Fixed square thumbnail in the strip; null = fill the parent (large preview).
+  final double? size;
   final VoidCallback onRemove;
 
   @override
