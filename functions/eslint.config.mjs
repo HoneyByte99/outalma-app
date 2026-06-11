@@ -19,6 +19,6 @@ export default [
     }
   },
   {
-    ignores: ['lib/**', 'node_modules/**', 'scripts/**']
+    ignores: ['lib/**', 'node_modules/**', 'scripts/**', 'jest.config.js']
   }
 ];

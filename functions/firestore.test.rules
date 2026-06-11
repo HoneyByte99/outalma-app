@@ -1,0 +1,11 @@
+rules_version = '2';
+// Permissive rules for the LOCAL EMULATOR TEST RUN ONLY — never deployed.
+// Cloud Function handlers under test use the admin SDK, which bypasses rules
+// entirely, so production rules (firebase/firestore.rules) are irrelevant here.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
