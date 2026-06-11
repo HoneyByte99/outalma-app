@@ -15,7 +15,8 @@
     "test": "firebase emulators:exec --only firestore,auth --project demo-outalma --config firebase.emulator.json \"jest --runInBand --forceExit\"",
     "serve": "firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "notif:test": "node scripts/send-test-notification.js"
   },
   "dependencies": {
     "firebase-admin": "^12.1.0",
