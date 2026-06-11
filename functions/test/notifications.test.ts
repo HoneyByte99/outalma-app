@@ -48,6 +48,60 @@ function bookingSnapshot(data: Record<string, unknown>, id = 'b1') {
   return tf.firestore.makeDocumentSnapshot(data, `bookings/${id}`);
 }
 
+describe('onMessageCreate → notify the other participant', () => {
+  async function seedChat(data: Record<string, unknown>) {
+    await admin.firestore().collection('chats').doc('c1').set(data);
+  }
+
+  function fireMessage(message: Record<string, unknown>) {
+    return tf.wrap(fns.onMessageCreate)({
+      data: tf.firestore.makeDocumentSnapshot(message, 'chats/c1/messages/m1'),
+      params: { chatId: 'c1', messageId: 'm1' },
+      id: 'evt-msg-1',
+    } as never);
+  }
+
+  it('pushes to the recipient (not the sender) with the chat deep-link', async () => {
+    await seedChat({ participantIds: [customer, provider], bookingId: 'b1' });
+    await seedUser(customer, { pushToken: 'tok-cust' });
+    await seedUser(provider, { pushToken: 'tok-prov' });
+
+    await fireMessage({ senderId: customer, text: 'Bonjour', type: 'text' });
+
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+    const arg = sendSpy.mock.calls[0][0] as {
+      tokens: string[];
+      data?: { type?: string; chatId?: string };
+    };
+    expect(arg.tokens).toEqual(['tok-prov']); // recipient only, not the sender
+    expect(arg.data?.type).toBe('new_message');
+    expect(arg.data?.chatId).toBe('c1');
+
+    expect(await getNotifications(provider)).toHaveLength(1);
+    expect(await getNotifications(customer)).toHaveLength(0);
+  });
+
+  it('uses a media-aware body for an image message', async () => {
+    await seedChat({ participantIds: [customer, provider] });
+    await seedUser(provider, { pushToken: 'tok-prov' });
+
+    await fireMessage({ senderId: customer, type: 'image', mediaUrl: 'x' });
+
+    const imgNotif = (await getNotifications(provider))[0];
+    expect(imgNotif?.body).toContain('image');
+  });
+
+  it('updates lastMessageAt on the chat', async () => {
+    await seedChat({ participantIds: [customer, provider] });
+    await seedUser(provider, { pushToken: 'tok-prov' });
+
+    await fireMessage({ senderId: customer, text: 'hi', type: 'text' });
+
+    const chat = await admin.firestore().collection('chats').doc('c1').get();
+    expect(chat.data()?.lastMessageAt).toBeTruthy();
+  });
+});
+
 describe('onBookingCreated → provider notification', () => {
   it('pushes and writes an in-app notification to the provider', async () => {
     await seedUser(provider, { pushToken: 'tok-prov' });
