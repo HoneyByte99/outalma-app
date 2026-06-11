@@ -111,8 +111,17 @@ class FirestoreChatRepository implements ChatRepository {
     required String chatId,
     required String uid,
   }) async {
-    final col = FirestoreCollections.chatMessages(db: _db, chatId: chatId);
-    final snap = await col.get();
+    // Bound the read: only the most recent window of messages can plausibly be
+    // unread. The old `col.get()` fetched the ENTIRE message history on every
+    // read-trigger (and the chat page fires this on each stream emission), so a
+    // long thread re-downloaded all docs repeatedly. Ordering by createdAt desc
+    // + a cap keeps it cheap; older unread messages (rare) are caught on a later
+    // pass. (Bug C2.)
+    const window = 100;
+    final snap = await FirestoreCollections.chatMessages(
+      db: _db,
+      chatId: chatId,
+    ).orderBy('createdAt', descending: true).limit(window).get();
     final batch = _db.batch();
     var count = 0;
     for (final doc in snap.docs) {

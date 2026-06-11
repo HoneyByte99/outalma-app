@@ -835,10 +835,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
                 // When the loaded window is full there are probably older
                 // messages on the server: show a header to fetch one more page.
+                // Compare against the RAW fetched count, not the blocked-filtered
+                // list — otherwise filtering even one message makes
+                // `messages.length` never reach the limit and the "load older"
+                // header vanishes permanently, trapping the user. (Bug C1.)
                 final currentLimit = ref.watch(
                   chatMessageLimitProvider(widget.chatId),
                 );
-                final hasOlder = messages.length >= currentLimit;
+                final hasOlder = allMessages.length >= currentLimit;
                 final headerCount = hasOlder ? 1 : 0;
 
                 return ListView.builder(
