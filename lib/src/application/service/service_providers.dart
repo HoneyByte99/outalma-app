@@ -4,6 +4,7 @@ import '../../application/auth/auth_providers.dart';
 import '../../data/repositories/firestore_service_repository.dart';
 import '../../domain/models/service.dart';
 import '../../domain/repositories/service_repository.dart';
+import '../chat/chat_providers.dart';
 
 final serviceRepositoryProvider = Provider<ServiceRepository>((ref) {
   return FirestoreServiceRepository(ref.watch(firestoreProvider));
@@ -19,6 +20,22 @@ final serviceListPageSizeProvider = StateProvider<int>((_) => 30);
 final serviceListProvider = StreamProvider<List<Service>>((ref) {
   final limit = ref.watch(serviceListPageSizeProvider);
   return ref.watch(serviceRepositoryProvider).watchAllPublished(limit: limit);
+});
+
+/// Published services with blocked providers removed — the base list the
+/// discovery page should consume. Blocking is a trust-and-safety policy
+/// (coupure totale), so it is enforced in the application layer here — and
+/// server-side at booking/review time — rather than left to the UI. The
+/// remaining view filters (category, search, location, own listings) are
+/// applied on top by the discovery page.
+final discoverableServicesProvider = Provider<AsyncValue<List<Service>>>((ref) {
+  final servicesAsync = ref.watch(serviceListProvider);
+  final blocked =
+      ref.watch(blockedUserIdsProvider).valueOrNull ?? const <String>{};
+  return servicesAsync.whenData(
+    (services) =>
+        services.where((s) => !blocked.contains(s.providerId)).toList(),
+  );
 });
 
 /// Single service by id — used for detail page.

@@ -938,7 +938,7 @@ class _ServiceGrid extends ConsumerWidget {
     final locationFilter = ref.watch(locationFilterProvider);
     final rawQuery = ref.watch(_searchQueryProvider);
     final searchQuery = rawQuery.toLowerCase();
-    final servicesAsync = ref.watch(serviceListProvider);
+    final servicesAsync = ref.watch(discoverableServicesProvider);
 
     // In client mode, a user must not discover their own provider listings.
     final isClientMode = ref.watch(activeModeProvider) == ActiveMode.client;

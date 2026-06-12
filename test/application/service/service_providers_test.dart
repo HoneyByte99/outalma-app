@@ -11,6 +11,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:outalma_app/src/application/chat/chat_providers.dart';
 import 'package:outalma_app/src/application/service/service_providers.dart';
 import 'package:outalma_app/src/domain/enums/category_id.dart';
 import 'package:outalma_app/src/domain/enums/price_type.dart';
@@ -222,6 +223,49 @@ void main() {
 
       expect(a?.id, 'a');
       expect(b?.id, 'b');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // discoverableServicesProvider — blocked providers removed (coupure totale)
+  // -------------------------------------------------------------------------
+
+  group('discoverableServicesProvider', () {
+    ProviderContainer container(Set<String> blocked) {
+      when(
+        () => mockRepo.watchAllPublished(limit: any(named: 'limit')),
+      ).thenAnswer(
+        (_) => Stream.value([
+          _makeService(id: 's1', providerId: 'p1'),
+          _makeService(id: 's2', providerId: 'blocked_pro'),
+          _makeService(id: 's3', providerId: 'p3'),
+        ]),
+      );
+      return ProviderContainer(
+        overrides: [
+          serviceRepositoryProvider.overrideWithValue(mockRepo),
+          blockedUserIdsProvider.overrideWith((_) => Stream.value(blocked)),
+        ],
+      );
+    }
+
+    test('hides services of blocked providers', () async {
+      final c = container({'blocked_pro'});
+      addTearDown(c.dispose);
+      // Resolve the underlying streams first.
+      await c.read(serviceListProvider.future);
+      await c.read(blockedUserIdsProvider.future);
+      final list = c.read(discoverableServicesProvider).valueOrNull ?? [];
+      expect(list.map((s) => s.id), ['s1', 's3']);
+    });
+
+    test('returns everything when nothing is blocked', () async {
+      final c = container(const {});
+      addTearDown(c.dispose);
+      await c.read(serviceListProvider.future);
+      await c.read(blockedUserIdsProvider.future);
+      final list = c.read(discoverableServicesProvider).valueOrNull ?? [];
+      expect(list, hasLength(3));
     });
   });
 }
