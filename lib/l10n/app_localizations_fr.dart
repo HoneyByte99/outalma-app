@@ -1111,6 +1111,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get serviceFormSaveError => 'Impossible d\'enregistrer. Réessayez.';
 
   @override
+  String get serviceFormPublishNeedsProfile =>
+      'Complétez votre profil prestataire avant de publier. Vous pouvez l\'enregistrer en brouillon pour l\'instant.';
+
+  @override
   String get zoneAddTitle => 'Ajouter une zone';
 
   @override

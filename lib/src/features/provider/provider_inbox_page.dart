@@ -291,10 +291,11 @@ class _InboxCard extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            // Chat shortcut for accepted/in_progress bookings
-            if (booking.chatId != null &&
-                (booking.status == BookingStatus.accepted ||
-                    booking.status == BookingStatus.inProgress)) ...[
+            // Chat shortcut whenever a chat exists. A chatId is only set once a
+            // booking has been accepted, and the chat stays readable as history
+            // afterwards (done, or cancelled-after-accept) — so this covers
+            // active missions AND revisiting a completed mission's conversation.
+            if (booking.chatId != null) ...[
               const SizedBox(height: 8),
               const Divider(height: 1),
               GestureDetector(

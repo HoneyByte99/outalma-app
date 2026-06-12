@@ -8,6 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/service_photo_upload_service.dart';
@@ -195,6 +196,22 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
 
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
+
+    // E1: a service can only be published once provider onboarding is complete
+    // (active, non-suspended profile). Mirror the server rule with a friendly
+    // message instead of letting the write hit a raw permission error.
+    if (_published) {
+      final profile = ref.read(currentProviderProfileProvider).valueOrNull;
+      if (profile == null || !profile.active || profile.suspended) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.serviceFormPublishNeedsProfile),
+            backgroundColor: errorColor,
+          ),
+        );
+        return;
+      }
+    }
 
     final priceEuros = int.tryParse(_priceController.text.trim()) ?? 0;
 

@@ -445,6 +445,7 @@
     "placeholders": { "count": { "type": "int" }, "max": { "type": "int" } }
   },
   "serviceFormSaveError": "Could not save. Please try again.",
+  "serviceFormPublishNeedsProfile": "Complete your provider profile before publishing. You can save it as a draft for now.",
   "zoneAddTitle": "Add area",
   "zoneEditTitle": "Edit area",
   "zoneAddressHint": "City or address",

@@ -1100,6 +1100,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serviceFormSaveError => 'Could not save. Please try again.';
 
   @override
+  String get serviceFormPublishNeedsProfile =>
+      'Complete your provider profile before publishing. You can save it as a draft for now.';
+
+  @override
   String get zoneAddTitle => 'Add area';
 
   @override

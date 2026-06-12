@@ -445,6 +445,7 @@
     "placeholders": { "count": { "type": "int" }, "max": { "type": "int" } }
   },
   "serviceFormSaveError": "Impossible d'enregistrer. Réessayez.",
+  "serviceFormPublishNeedsProfile": "Complétez votre profil prestataire avant de publier. Vous pouvez l'enregistrer en brouillon pour l'instant.",
   "zoneAddTitle": "Ajouter une zone",
   "zoneEditTitle": "Modifier la zone",
   "zoneAddressHint": "Ville ou adresse",

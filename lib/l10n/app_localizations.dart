@@ -2138,6 +2138,12 @@ abstract class AppLocalizations {
   /// **'Could not save. Please try again.'**
   String get serviceFormSaveError;
 
+  /// No description provided for @serviceFormPublishNeedsProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete your provider profile before publishing. You can save it as a draft for now.'**
+  String get serviceFormPublishNeedsProfile;
+
   /// No description provided for @zoneAddTitle.
   ///
   /// In en, this message translates to:
