@@ -46,6 +46,14 @@
             "timeout": 240,
             "model": "claude-sonnet-4-6",
             "statusMessage": "UI/UX lead review"
+          },
+          {
+            "type": "agent",
+            "if": "Bash(firebase deploy*)",
+            "prompt": "A firebase deploy is about to run: $ARGUMENTS\n\nIf the command does not actually execute `firebase deploy`, allow immediately. Otherwise you are the deployment guardian for Outalma — security is deny-by-default (.claude/rules/firebase-safety.md) and booking transitions are server-authoritative. Determine the targets from --only (absent = everything deploys).\n\nIF RULES deploy (firestore, storage, or no --only): run `git diff HEAD -- firebase/firestore.rules firebase/storage.rules` to see uncommitted edits about to go live, then Read firebase/firestore.rules and firebase/storage.rules. DENY on clear weakening: any `allow read` or `allow write: if true` on real collections; blanket auth-only writes to sensitive collections (users, bookings, chats, reviews); client-side writes to booking `status` or chat creation (must stay Cloud-Functions-only); removal of owner/participant checks. Deploying UNCOMMITTED rules edits is suspicious — deny unless the diff is plainly a tightening.\n\nIF FUNCTIONS deploy: run `cd functions && npm run build`; DENY if tsc fails. If the working tree has uncommitted functions/src changes, warn that untested code is being deployed and deny unless the change is trivial.\n\nWhen denying, name the exact rule/file and why. For anything ambiguous but not clearly weakening, allow with a one-line warning.",
+            "timeout": 300,
+            "model": "claude-sonnet-4-6",
+            "statusMessage": "Deploy guardian review"
           }
         ]
       }
