@@ -159,6 +159,7 @@
   "signOutButton": "Sign out",
   "signOut": "Sign out",
   "reviewsEmpty": "No reviews received yet",
+  "reviewsTitle": "Reviews",
   "reviewsCount": "{count, plural, =0{No reviews} =1{1 review} other{{count} reviews}}",
   "@reviewsCount": {
     "placeholders": {
@@ -261,6 +262,7 @@
   "bookingTitle": "Booking",
   "bookingReport": "Report",
   "bookingViewProviderProfile": "View profile",
+  "bookingViewClientReviews": "View reviews",
   "providerProfileUnavailable": "Profile unavailable",
   "bookingAccept": "Accept",
   "bookingReject": "Reject",

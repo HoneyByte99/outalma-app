@@ -412,6 +412,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reviewsEmpty => 'Aucun avis reçu pour le moment';
 
   @override
+  String get reviewsTitle => 'Avis';
+
+  @override
   String reviewsCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -654,6 +657,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bookingViewProviderProfile => 'Voir le profil';
+
+  @override
+  String get bookingViewClientReviews => 'Voir les avis';
 
   @override
   String get providerProfileUnavailable => 'Profil indisponible';

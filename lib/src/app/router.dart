@@ -31,6 +31,7 @@ import '../features/notifications/notifications_page.dart';
 import '../features/profile/blocked_users_page.dart';
 import '../features/report/report_page.dart';
 import '../features/review/review_form_page.dart';
+import '../features/review/user_reviews_page.dart';
 import '../features/service/service_detail_page.dart';
 import 'app_shell.dart';
 
@@ -76,6 +77,7 @@ abstract final class AppRoutes {
 
   static String chat(String chatId) => '/chat/$chatId';
   static String review(String bookingId) => '/review/$bookingId';
+  static String userReviews(String uid) => '/reviews/$uid';
   static String report({required String type, required String id}) =>
       '/report/$type/$id';
   static String providerProfile(String uid) => '/provider-profile/$uid';
@@ -421,6 +423,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.myReviews,
         name: 'my-reviews',
         builder: (_, __) => const MyReviewsPage(),
+      ),
+
+      // ---- Any user's received reviews (e.g. a client, from a booking) ----
+      GoRoute(
+        path: '/reviews/:uid',
+        name: 'user-reviews',
+        builder: (_, state) =>
+            UserReviewsPage(userId: state.pathParameters['uid']!),
       ),
 
       // ---- Public provider profile ----

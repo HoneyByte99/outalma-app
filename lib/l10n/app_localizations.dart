@@ -854,6 +854,12 @@ abstract class AppLocalizations {
   /// **'No reviews received yet'**
   String get reviewsEmpty;
 
+  /// No description provided for @reviewsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviews'**
+  String get reviewsTitle;
+
   /// No description provided for @reviewsCount.
   ///
   /// In en, this message translates to:
@@ -1297,6 +1303,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View profile'**
   String get bookingViewProviderProfile;
+
+  /// No description provided for @bookingViewClientReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'View reviews'**
+  String get bookingViewClientReviews;
 
   /// No description provided for @providerProfileUnavailable.
   ///

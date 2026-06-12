@@ -380,48 +380,56 @@ class _ClientSummary extends ConsumerWidget {
     final oc = context.oc;
     final client = ref.watch(userByIdProvider(clientId)).valueOrNull;
 
-    // Inert info block (no client profile page by design). Uses a borderless
-    // background fill — deliberately unlike the bordered, tappable _ProviderLink
-    // card the client sees — so the provider does not read it as a button.
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: oc.background,
+    // Tappable trust card — opens the client's reviews so the provider can
+    // judge them (e.g. before accepting a request).
+    return Material(
+      color: oc.cardSurface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          UserAvatar(
-            displayName: client?.displayName ?? '',
-            photoPath: client?.photoPath,
-            radius: 24,
+        onTap: () => context.push(AppRoutes.userReviews(clientId)),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: oc.border),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  client?.displayName ?? '—',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              UserAvatar(
+                displayName: client?.displayName ?? '',
+                photoPath: client?.photoPath,
+                radius: 24,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      client?.displayName ?? '—',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.bookingViewClientReviews,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: oc.primary),
+                    ),
+                    const SizedBox(height: 6),
+                    RatingSummary(userId: clientId),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.modeClient,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
-                ),
-                const SizedBox(height: 6),
-                RatingSummary(userId: clientId),
-              ],
-            ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: oc.icons, size: 22),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -159,6 +159,7 @@
   "signOutButton": "Déconnexion",
   "signOut": "Se déconnecter",
   "reviewsEmpty": "Aucun avis reçu pour le moment",
+  "reviewsTitle": "Avis",
   "reviewsCount": "{count, plural, =0{Aucun avis} =1{1 avis} other{{count} avis}}",
   "@reviewsCount": {
     "placeholders": {
@@ -261,6 +262,7 @@
   "bookingTitle": "Réservation",
   "bookingReport": "Signaler",
   "bookingViewProviderProfile": "Voir le profil",
+  "bookingViewClientReviews": "Voir les avis",
   "providerProfileUnavailable": "Profil indisponible",
   "bookingAccept": "Accepter",
   "bookingReject": "Refuser",

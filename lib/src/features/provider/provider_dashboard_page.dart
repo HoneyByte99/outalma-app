@@ -31,14 +31,10 @@ class ProviderDashboardPage extends ConsumerWidget {
     // first, then "create first service" if there are none, then the normal
     // services dashboard. Only the screen for the current state shows a
     // strong CTA — no competing primary actions (security review A.3).
+    // Every provider is active by default — there is no "activate/complete
+    // your profile" concept. Profile details (bio / service area / hours) are
+    // edited from the profile card; only listings are activated/deactivated.
     final profile = profileAsync.valueOrNull;
-    // A profile may be auto-created when a service is published, but it isn't
-    // "complete" until the provider has set their bio and (geocoded) service
-    // area. We nudge — never block — until then.
-    final profileComplete =
-        profile != null &&
-        (profile.bio?.trim().isNotEmpty ?? false) &&
-        (profile.serviceArea?.trim().isNotEmpty ?? false);
     final servicesCount = servicesAsync.valueOrNull?.length ?? 0;
     final showFab = servicesCount > 0;
 
@@ -57,16 +53,12 @@ class ProviderDashboardPage extends ConsumerWidget {
             actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
           ),
 
-          // Providers are active by default — no blocking "activate" gate. We
-          // always show the operational dashboard; profile completion (bio /
-          // service area / working hours) is a non-blocking nudge.
-
-          // No service yet : (nudge) + profile card + create-first-service CTA.
+          // Operational dashboard. No service yet : profile card +
+          // create-first-service CTA.
           if (servicesCount == 0)
             SliverToBoxAdapter(
               child: Column(
                 children: [
-                  if (!profileComplete) const _CompleteProfileBanner(),
                   if (profile != null) _ProfileCard(profile: profile),
                   servicesAsync.when(
                     loading: () => const Padding(
@@ -80,10 +72,8 @@ class ProviderDashboardPage extends ConsumerWidget {
                 ],
               ),
             )
-          // Has services : (nudge) + profile card + stats + services list.
+          // Has services : profile card + stats + services list.
           else ...[
-            if (!profileComplete)
-              const SliverToBoxAdapter(child: _CompleteProfileBanner()),
             if (profile != null)
               SliverToBoxAdapter(child: _ProfileCard(profile: profile)),
             const SliverToBoxAdapter(child: _ProviderStatsRow()),
@@ -132,61 +122,6 @@ class ProviderDashboardPage extends ConsumerWidget {
               child: const Icon(Icons.add_rounded, color: Colors.white),
             )
           : null,
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Complete-profile nudge (non-blocking) — lazy onboarding
-// ---------------------------------------------------------------------------
-
-class _CompleteProfileBanner extends StatelessWidget {
-  const _CompleteProfileBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final oc = context.oc;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Material(
-        color: oc.warning.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => GoRouter.of(context).push(AppRoutes.providerOnboarding),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline_rounded, color: oc.warning, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.dashboardCompleteProfileTitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.dashboardCompleteProfileBody,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.secondaryText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right_rounded, color: oc.icons, size: 22),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -382,13 +317,6 @@ class _ServiceTile extends ConsumerWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: () => _confirmDelete(context, ref),
-                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                  label: Text(l10n.serviceDelete),
-                  style: TextButton.styleFrom(foregroundColor: oc.error),
-                ),
               ],
             ),
           ),
@@ -411,45 +339,6 @@ class _ServiceTile extends ConsumerWidget {
           .update(
             service.copyWith(published: value, updatedAt: DateTime.now()),
           );
-    } catch (_) {
-      if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.serviceFormSaveError),
-            backgroundColor: oc.error,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context)!;
-    final oc = context.oc;
-    final messenger = ScaffoldMessenger.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.serviceDeleteTitle),
-        content: Text(l10n.serviceDeleteBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.bookingBack),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.serviceDelete, style: TextStyle(color: oc.error)),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await ref.read(serviceRepositoryProvider).delete(service.id);
-      if (context.mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.serviceDeleted)));
-      }
     } catch (_) {
       if (context.mounted) {
         messenger.showSnackBar(
