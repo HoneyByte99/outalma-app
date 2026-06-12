@@ -335,6 +335,11 @@ class FirestoreCollections {
           : null,
       if (booking.audioMessageUrl != null)
         'audioMessageUrl': booking.audioMessageUrl,
+      // Cancellation metadata — set server-side by cancelBooking. Included here
+      // so the typed converter round-trips a Booking fully (clients do not write
+      // bookings today; this keeps the serializer aligned with the model).
+      if (booking.cancelReason != null) 'cancelReason': booking.cancelReason,
+      if (booking.cancelledBy != null) 'cancelledBy': booking.cancelledBy,
     };
   }
 

@@ -68,20 +68,17 @@ For large changes, plan first. Do not jump straight into code.
 ## Known gaps (audited 2026-06-12)
 
 The original "critical known risks" list (model/enum mismatches, missing
-repositories, no navigation, no notifications) is fully resolved. The current
-prioritized gap inventory lives in docs/known-gaps.md — read it before starting
-work on bookings, blocking, reviews, or notifications. Headlines:
+repositories, no navigation, no notifications) is fully resolved. The 2026-06-12
+provider-journey audit (provider history + reviews, total-cutoff blocking,
+moderation/review/reminder notifications + audience deep-link, publish-needs-
+profile) is also implemented — but the **Firestore rules + Cloud Functions
+changes are committed and not yet deployed**: run
+`firebase deploy --only firestore:rules,functions` and ship a build.
 
-- Provider mode has no view of done/cancelled/rejected bookings (router redirect
-  blocks `/bookings`, which is already mode-aware) — also starves the
-  provider→client review flow.
-- Blocking is inconsistent: a blocked client can still book (and an accepted
-  booking then gets an unusable chat), can still review, and stays discoverable.
-- Moderation outcomes (service approve/reject) and received reviews trigger no
-  notification; booking reminders have no deep-link.
-- A service can be published without an active provider profile (no server check).
-
-Keep docs/known-gaps.md current: remove items when fixed.
+The current gap inventory (what's done, the two minor items still open, and the
+pending deploy) lives in docs/known-gaps.md — read it before starting work on
+bookings, blocking, reviews, or notifications. Keep it current: remove items
+when fixed.
 
 ## Git autonomy
 

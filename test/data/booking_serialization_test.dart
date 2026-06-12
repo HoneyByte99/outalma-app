@@ -147,6 +147,38 @@ void main() {
     });
   });
 
+  group('Booking serialization — cancellation metadata', () {
+    test('cancelReason/cancelledBy round-trip through the converter', () async {
+      final booking = Booking(
+        id: 'b_cancel',
+        customerId: 'customer_1',
+        providerId: 'provider_1',
+        serviceId: 'service_1',
+        status: BookingStatus.cancelled,
+        requestMessage: 'x',
+        createdAt: DateTime(2024, 1, 15).toUtc(),
+        cancelledAt: DateTime(2024, 1, 17).toUtc(),
+        cancelReason: 'Plus disponible',
+        cancelledBy: 'provider_1',
+      );
+      final col = FirestoreCollections.bookings(fakeDb);
+      await col.doc(booking.id).set(booking);
+      final result = (await col.doc(booking.id).get()).data()!;
+      expect(result.cancelReason, 'Plus disponible');
+      expect(result.cancelledBy, 'provider_1');
+    });
+
+    test('cancel fields are absent when not set', () async {
+      final booking = _makeBooking(status: BookingStatus.requested);
+      final col = FirestoreCollections.bookings(fakeDb);
+      await col.doc(booking.id).set(booking);
+      final raw = (await fakeDb.collection('bookings').doc(booking.id).get())
+          .data()!;
+      expect(raw.containsKey('cancelReason'), isFalse);
+      expect(raw.containsKey('cancelledBy'), isFalse);
+    });
+  });
+
   group('Booking serialization — timestamp fields', () {
     test('all timestamp fields roundtrip with millisecond precision', () async {
       final t = DateTime(2024, 3, 10, 14, 30, 0).toUtc();
