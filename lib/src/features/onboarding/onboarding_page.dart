@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../application/onboarding/onboarding_provider.dart';
+import '../shared/marketplace_disclaimer.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -118,6 +119,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
                         children: [
+                          // How the marketplace works + the user's
+                          // responsibility, shown before consent.
+                          const MarketplaceDisclaimer(),
+                          const SizedBox(height: 16),
                           // Read first, then decide: in-app links above the
                           // acceptance checkbox (no remote URL).
                           Wrap(

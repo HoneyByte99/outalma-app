@@ -295,6 +295,7 @@
   "bookingStep2PickTime": "Choose a time",
   "bookingPickSlot": "Choose an available time",
   "bookingNoSlots": "No free slots that day. Try another date.",
+  "marketplaceDisclaimer": "Outalma only connects clients and independent providers. Any agreement and payment is made directly between you, outside the app and at your own risk. Always check who you are dealing with.",
   "bookingStep3Title": "Service address",
   "bookingStep3Subtitle": "Where should the provider intervene? (optional)",
   "bookingStep3Hint": "E.g. 12 rue de la Paix, Paris 75001",

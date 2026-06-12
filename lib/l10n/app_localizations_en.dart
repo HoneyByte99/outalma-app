@@ -735,6 +735,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingNoSlots => 'No free slots that day. Try another date.';
 
   @override
+  String get marketplaceDisclaimer =>
+      'Outalma only connects clients and independent providers. Any agreement and payment is made directly between you, outside the app and at your own risk. Always check who you are dealing with.';
+
+  @override
   String get bookingStep3Title => 'Service address';
 
   @override

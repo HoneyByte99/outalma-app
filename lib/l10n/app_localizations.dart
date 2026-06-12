@@ -1466,6 +1466,12 @@ abstract class AppLocalizations {
   /// **'No free slots that day. Try another date.'**
   String get bookingNoSlots;
 
+  /// No description provided for @marketplaceDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Outalma only connects clients and independent providers. Any agreement and payment is made directly between you, outside the app and at your own risk. Always check who you are dealing with.'**
+  String get marketplaceDisclaimer;
+
   /// No description provided for @bookingStep3Title.
   ///
   /// In en, this message translates to:

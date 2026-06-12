@@ -745,6 +745,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun créneau libre ce jour-là. Essayez une autre date.';
 
   @override
+  String get marketplaceDisclaimer =>
+      'Outalma met uniquement en relation des clients et des prestataires indépendants. Tout accord et paiement se fait directement entre vous, hors de l\'application et sous votre responsabilité. Vérifiez toujours à qui vous avez affaire.';
+
+  @override
   String get bookingStep3Title => 'Adresse d\'intervention';
 
   @override

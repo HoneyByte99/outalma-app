@@ -20,6 +20,7 @@ import '../../application/provider/provider_providers.dart';
 import '../../data/services/chat_media_service.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../domain/models/provider_profile.dart';
+import '../shared/marketplace_disclaimer.dart';
 
 class BookingRequestSheet extends ConsumerStatefulWidget {
   const BookingRequestSheet({
@@ -1215,6 +1216,8 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
             ),
           ),
         ],
+        const SizedBox(height: 20),
+        const MarketplaceDisclaimer(),
       ],
     );
   }

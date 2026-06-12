@@ -17,6 +17,7 @@ import '../../domain/enums/price_type.dart';
 import '../../domain/models/service.dart';
 import '../booking/booking_request_sheet.dart';
 import '../shared/network_image.dart';
+import '../shared/marketplace_disclaimer.dart';
 import '../shared/verified_badge.dart';
 import 'service_zones_map.dart';
 import '../shared/user_avatar.dart';
@@ -571,9 +572,16 @@ class _BookingBottomBar extends StatelessWidget {
         color: oc.cardSurface,
         border: Border(top: BorderSide(color: oc.border)),
       ),
-      child: ElevatedButton(
-        onPressed: () => _openBookingSheet(context),
-        child: Text(l10n.serviceBook),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MarketplaceDisclaimer(dense: true),
+          const SizedBox(height: AppSpacing.m),
+          ElevatedButton(
+            onPressed: () => _openBookingSheet(context),
+            child: Text(l10n.serviceBook),
+          ),
+        ],
       ),
     );
   }

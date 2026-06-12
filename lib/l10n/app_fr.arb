@@ -295,6 +295,7 @@
   "bookingStep2PickTime": "Choisir une heure",
   "bookingPickSlot": "Choisir un créneau disponible",
   "bookingNoSlots": "Aucun créneau libre ce jour-là. Essayez une autre date.",
+  "marketplaceDisclaimer": "Outalma met uniquement en relation des clients et des prestataires indépendants. Tout accord et paiement se fait directement entre vous, hors de l'application et sous votre responsabilité. Vérifiez toujours à qui vous avez affaire.",
   "bookingStep3Title": "Adresse d'intervention",
   "bookingStep3Subtitle": "Où souhaitez-vous que le prestataire intervienne ? (optionnel)",
   "bookingStep3Hint": "Ex: 12 rue de la Paix, Paris 75001",
