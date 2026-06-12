@@ -57,6 +57,35 @@ void main() {
     repo = FirestoreServiceRepository(fakeDb);
   });
 
+  group('update', () {
+    test('merges changed fields into the existing document', () async {
+      await _writeService(fakeDb, _makeService(id: 'u1', published: false));
+      await repo.update(
+        _makeService(id: 'u1', published: true).copyWith(title: 'Renamed'),
+      );
+      final result = (await FirestoreCollections.services(
+        fakeDb,
+      ).doc('u1').get()).data()!;
+      expect(result.published, isTrue);
+      expect(result.title, 'Renamed');
+    });
+  });
+
+  group('delete', () {
+    test('removes the service document', () async {
+      await _writeService(fakeDb, _makeService(id: 'gone'));
+      expect(
+        (await fakeDb.collection('services').doc('gone').get()).exists,
+        isTrue,
+      );
+      await repo.delete('gone');
+      expect(
+        (await fakeDb.collection('services').doc('gone').get()).exists,
+        isFalse,
+      );
+    });
+  });
+
   // -------------------------------------------------------------------------
   // watchAllPublished
   // -------------------------------------------------------------------------

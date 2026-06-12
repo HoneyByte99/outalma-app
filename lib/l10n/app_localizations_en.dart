@@ -473,6 +473,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serviceStatusRejected => 'Rejected';
 
   @override
+  String get serviceActive => 'Active';
+
+  @override
+  String get serviceInactive => 'Inactive';
+
+  @override
+  String get serviceDelete => 'Delete';
+
+  @override
+  String get serviceDeleteTitle => 'Delete this service?';
+
+  @override
+  String get serviceDeleteBody => 'This listing will be permanently removed.';
+
+  @override
+  String get serviceDeleted => 'Service deleted';
+
+  @override
   String get ratingNew => 'New';
 
   @override

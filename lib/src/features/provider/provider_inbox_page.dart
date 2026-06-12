@@ -64,8 +64,7 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
             ],
             bottom: TabBar(
               controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
+              // Fill the full width — 3 fixed tabs share the bar evenly.
               tabs: [
                 Tab(
                   icon: const Icon(Icons.inbox_outlined, size: 18),

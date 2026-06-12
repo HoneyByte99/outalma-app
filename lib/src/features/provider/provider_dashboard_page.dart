@@ -9,6 +9,7 @@ import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
+import '../../application/service/service_providers.dart';
 import '../../core/utils/format_utils.dart';
 import '../shared/mode_badge.dart';
 import '../../domain/enums/category_id.dart';
@@ -31,16 +32,15 @@ class ProviderDashboardPage extends ConsumerWidget {
     // services dashboard. Only the screen for the current state shows a
     // strong CTA — no competing primary actions (security review A.3).
     final profile = profileAsync.valueOrNull;
-    final hasProfile = profile != null;
-    // Lazy onboarding: a profile doc may be auto-created when a service is
-    // published, but it isn't "complete" until the provider has set their bio
-    // and (geocoded) service area. We nudge — never block — until then.
+    // A profile may be auto-created when a service is published, but it isn't
+    // "complete" until the provider has set their bio and (geocoded) service
+    // area. We nudge — never block — until then.
     final profileComplete =
-        hasProfile &&
+        profile != null &&
         (profile.bio?.trim().isNotEmpty ?? false) &&
         (profile.serviceArea?.trim().isNotEmpty ?? false);
     final servicesCount = servicesAsync.valueOrNull?.length ?? 0;
-    final showFab = hasProfile && servicesCount > 0;
+    final showFab = servicesCount > 0;
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -57,25 +57,17 @@ class ProviderDashboardPage extends ConsumerWidget {
             actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
           ),
 
-          // State 1 — no profile yet : full-bleed onboarding, only CTA.
-          if (!hasProfile)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: profileAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, __) =>
-                    _ErrorState(message: l10n.dashboardServicesError),
-                data: (_) => _OnboardingBanner(),
-              ),
-            )
-          // State 2 — profile OK but no service : compact profile card +
-          // single dominant CTA to create the first service.
-          else if (servicesCount == 0)
+          // Providers are active by default — no blocking "activate" gate. We
+          // always show the operational dashboard; profile completion (bio /
+          // service area / working hours) is a non-blocking nudge.
+
+          // No service yet : (nudge) + profile card + create-first-service CTA.
+          if (servicesCount == 0)
             SliverToBoxAdapter(
               child: Column(
                 children: [
                   if (!profileComplete) const _CompleteProfileBanner(),
-                  _ProfileCard(profile: profileAsync.value!),
+                  if (profile != null) _ProfileCard(profile: profile),
                   servicesAsync.when(
                     loading: () => const Padding(
                       padding: EdgeInsets.all(32),
@@ -88,13 +80,12 @@ class ProviderDashboardPage extends ConsumerWidget {
                 ],
               ),
             )
-          // State 3 — profile + services : normal dashboard.
+          // Has services : (nudge) + profile card + stats + services list.
           else ...[
             if (!profileComplete)
               const SliverToBoxAdapter(child: _CompleteProfileBanner()),
-            SliverToBoxAdapter(
-              child: _ProfileCard(profile: profileAsync.value!),
-            ),
+            if (profile != null)
+              SliverToBoxAdapter(child: _ProfileCard(profile: profile)),
             const SliverToBoxAdapter(child: _ProviderStatsRow()),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
@@ -201,95 +192,6 @@ class _CompleteProfileBanner extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Onboarding banner
-// ---------------------------------------------------------------------------
-
-class _OnboardingBanner extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final oc = context.oc;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: oc.cardSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: oc.border),
-          boxShadow: [
-            BoxShadow(
-              color: oc.shadow,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: oc.warning.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.lock_open_rounded,
-                    color: oc.warning,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.dashboardActivateTitle,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: oc.primaryText,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.dashboardActivateBody,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.secondaryText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () =>
-                  GoRouter.of(context).push(AppRoutes.providerOnboarding),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: oc.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 48),
-                textStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              child: Text(l10n.dashboardActivateButton),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Profile card
 // ---------------------------------------------------------------------------
 
@@ -387,10 +289,15 @@ class _ServiceTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     final formattedPrice = formatPriceFromCents(service.price);
     final priceLabel = service.priceType.name == 'hourly'
         ? '$formattedPrice/h'
         : '$formattedPrice (forfait)';
+    // A rejected/pending service can't be toggled live by the provider — the
+    // moderation flow governs it.
+    final moderationLocked =
+        service.status == 'rejected' || service.status == 'pending_review';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -399,58 +306,160 @@ class _ServiceTile extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: oc.border),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: SizedBox(
-            width: 52,
-            height: 52,
-            child: service.photos.isNotEmpty
-                ? AppNetworkImage(
-                    url: service.photos.first,
-                    fit: BoxFit.cover,
-                    errorWidget: _iconFallback(oc),
-                  )
-                : _iconFallback(oc),
-          ),
-        ),
-        title: Text(
-          service.title,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Row(
-          children: [
-            Flexible(
-              child: Text(
-                priceLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: oc.primary,
-                  fontWeight: FontWeight.w500,
-                ),
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 52,
+                height: 52,
+                child: service.photos.isNotEmpty
+                    ? AppNetworkImage(
+                        url: service.photos.first,
+                        fit: BoxFit.cover,
+                        errorWidget: _iconFallback(oc),
+                      )
+                    : _iconFallback(oc),
               ),
             ),
-            const SizedBox(width: 8),
-            Flexible(child: _CategoryChip(categoryId: service.categoryId)),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _ServiceStatusBadge(service: service),
-            const SizedBox(width: AppSpacing.xs),
-            Icon(Icons.chevron_right_rounded, color: oc.icons, size: 20),
-          ],
-        ),
-        onTap: () => context.push(AppRoutes.serviceEdit(service.id)),
+            title: Text(
+              service.title,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    priceLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: oc.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(child: _CategoryChip(categoryId: service.categoryId)),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Only moderation states (pending/rejected) — the active/
+                // inactive state is the toggle below.
+                _ServiceStatusBadge(service: service),
+                Icon(Icons.chevron_right_rounded, color: oc.icons, size: 20),
+              ],
+            ),
+            onTap: () => context.push(AppRoutes.serviceEdit(service.id)),
+          ),
+          Divider(height: 1, color: oc.border, indent: 16, endIndent: 16),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 8, 2),
+            child: Row(
+              children: [
+                // On/off shortcut — activate/deactivate without opening details.
+                Switch(
+                  value: service.published,
+                  onChanged: moderationLocked
+                      ? null
+                      : (v) => _setPublished(context, ref, v),
+                ),
+                Text(
+                  service.published ? l10n.serviceActive : l10n.serviceInactive,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: service.published ? oc.success : oc.secondaryText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () => _confirmDelete(context, ref),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: Text(l10n.serviceDelete),
+                  style: TextButton.styleFrom(foregroundColor: oc.error),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _setPublished(
+    BuildContext context,
+    WidgetRef ref,
+    bool value,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(serviceRepositoryProvider)
+          .update(
+            service.copyWith(published: value, updatedAt: DateTime.now()),
+          );
+    } catch (_) {
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.serviceFormSaveError),
+            backgroundColor: oc.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.serviceDeleteTitle),
+        content: Text(l10n.serviceDeleteBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.bookingBack),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.serviceDelete, style: TextStyle(color: oc.error)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(serviceRepositoryProvider).delete(service.id);
+      if (context.mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.serviceDeleted)));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.serviceFormSaveError),
+            backgroundColor: oc.error,
+          ),
+        );
+      }
+    }
   }
 
   Widget _iconFallback(OutalmaColors oc) {
@@ -510,6 +519,8 @@ class _ServiceStatusBadge extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
 
+    // Only the moderation states need a badge — the live/offline state is shown
+    // by the activate/deactivate toggle on the card.
     final (label, color, icon) = switch (service.status) {
       'rejected' => (l10n.serviceStatusRejected, oc.error, Icons.block_rounded),
       'pending_review' => (
@@ -517,15 +528,9 @@ class _ServiceStatusBadge extends StatelessWidget {
         oc.warning,
         Icons.hourglass_top_rounded,
       ),
-      _ =>
-        service.published
-            ? (l10n.published, oc.success, Icons.check_circle_rounded)
-            : (
-                l10n.notPublished,
-                oc.secondaryText,
-                Icons.visibility_off_rounded,
-              ),
+      _ => (null, oc.secondaryText, Icons.circle),
     };
+    if (label == null) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.symmetric(

@@ -54,4 +54,9 @@ class FirestoreServiceRepository implements ServiceRepository {
       _db,
     ).doc(service.id).set(service, SetOptions(merge: true));
   }
+
+  @override
+  Future<void> delete(String serviceId) async {
+    await FirestoreCollections.services(_db).doc(serviceId).delete();
+  }
 }

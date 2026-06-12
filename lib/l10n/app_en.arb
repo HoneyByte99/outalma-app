@@ -184,6 +184,12 @@
   "notPublished": "Unpublished",
   "serviceStatusPending": "Pending review",
   "serviceStatusRejected": "Rejected",
+  "serviceActive": "Active",
+  "serviceInactive": "Inactive",
+  "serviceDelete": "Delete",
+  "serviceDeleteTitle": "Delete this service?",
+  "serviceDeleteBody": "This listing will be permanently removed.",
+  "serviceDeleted": "Service deleted",
   "ratingNew": "New",
   "tooltipProviderProfile": "My provider profile",
 

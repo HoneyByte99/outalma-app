@@ -11,4 +11,7 @@ abstract interface class ServiceRepository {
 
   Future<Service> create(Service service);
   Future<void> update(Service service);
+
+  /// Permanently deletes a service (owner-only, enforced by Firestore rules).
+  Future<void> delete(String serviceId);
 }

@@ -968,6 +968,42 @@ abstract class AppLocalizations {
   /// **'Rejected'**
   String get serviceStatusRejected;
 
+  /// No description provided for @serviceActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get serviceActive;
+
+  /// No description provided for @serviceInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get serviceInactive;
+
+  /// No description provided for @serviceDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get serviceDelete;
+
+  /// No description provided for @serviceDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this service?'**
+  String get serviceDeleteTitle;
+
+  /// No description provided for @serviceDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This listing will be permanently removed.'**
+  String get serviceDeleteBody;
+
+  /// No description provided for @serviceDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Service deleted'**
+  String get serviceDeleted;
+
   /// No description provided for @ratingNew.
   ///
   /// In en, this message translates to:

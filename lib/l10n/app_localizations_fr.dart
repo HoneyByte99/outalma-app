@@ -21,7 +21,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
-  String get navDashboard => 'Dashboard';
+  String get navDashboard => 'Accueil';
 
   @override
   String get navMissions => 'Missions';
@@ -479,6 +479,25 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get serviceStatusRejected => 'Refusé';
+
+  @override
+  String get serviceActive => 'Activé';
+
+  @override
+  String get serviceInactive => 'Désactivé';
+
+  @override
+  String get serviceDelete => 'Supprimer';
+
+  @override
+  String get serviceDeleteTitle => 'Supprimer ce service ?';
+
+  @override
+  String get serviceDeleteBody =>
+      'Cette annonce sera définitivement supprimée.';
+
+  @override
+  String get serviceDeleted => 'Service supprimé';
 
   @override
   String get ratingNew => 'Nouveau';
