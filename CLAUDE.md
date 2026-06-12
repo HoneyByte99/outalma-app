@@ -71,14 +71,14 @@ The original "critical known risks" list (model/enum mismatches, missing
 repositories, no navigation, no notifications) is fully resolved. The 2026-06-12
 provider-journey audit (provider history + reviews, total-cutoff blocking,
 moderation/review/reminder notifications + audience deep-link, publish-needs-
-profile) is also implemented — but the **Firestore rules + Cloud Functions
-changes are committed and not yet deployed**: run
-`firebase deploy --only firestore:rules,functions` and ship a build.
+profile) is also implemented. The Firestore rules + Cloud Functions were
+**deployed to `outalmaservice-d1e59` on 2026-06-12** (build `1.0.0+23` shipped
+to TestFlight), so the server-authoritative behaviour (incl. the notification
+client/provider split) is now live.
 
-The current gap inventory (what's done, the two minor items still open, and the
-pending deploy) lives in docs/known-gaps.md — read it before starting work on
-bookings, blocking, reviews, or notifications. Keep it current: remove items
-when fixed.
+The current gap inventory (what's done, the two minor items still open) lives in
+docs/known-gaps.md — read it before starting work on bookings, blocking,
+reviews, or notifications. Keep it current: remove items when fixed.
 
 ## Git autonomy
 

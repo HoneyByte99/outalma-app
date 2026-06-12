@@ -4,11 +4,12 @@ Full-codebase audit of client/provider logic asymmetries (Flutter, Cloud Functio
 Firestore rules). Items are removed as they are fixed; re-date the file when a new
 audit replaces it.
 
-## Resolved 2026-06-12 (⚠️ server side needs deploy)
+## Resolved 2026-06-12 (✅ deployed)
 
-The provider-journey plan (Batches 1–5 below) was implemented. Code is on `main`;
-the **Firestore rules + Cloud Functions changes are not yet deployed** — run
-`firebase deploy --only firestore:rules,functions` and ship a build.
+The provider-journey plan (Batches 1–5 below) was implemented and the
+**Firestore rules + Cloud Functions were deployed to `outalmaservice-d1e59` on
+2026-06-12** (build `1.0.0+23` to TestFlight). Server-authoritative behaviour is
+live.
 
 - **Batch 1 — Provider journey.** Provider inbox now has a Completed tab
   (`providerCompletedBookingsProvider`) listing done/rejected/cancelled bookings;
@@ -31,7 +32,7 @@ the **Firestore rules + Cloud Functions changes are not yet deployed** — run
   fields on update (create vs update split); `_bookingToFirestore` now serializes
   `cancelReason`/`cancelledBy`.
 
-### Round 2 — field-testing feedback (2026-06-12, also pending deploy)
+### Round 2 — field-testing feedback (2026-06-12, deployed with the above)
 
 - **Reservation safety (server).** `createBooking` now rejects an address outside
   the service's intervention zones (haversine), and rejects a slot overlapping
