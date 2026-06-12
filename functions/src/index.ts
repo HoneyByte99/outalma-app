@@ -922,6 +922,39 @@ export const exportMyData = onCall(async (request) => {
   };
 });
 
+// Request-based export (RGPD): instead of returning data to the device, the
+// user files a request that surfaces on the admin dashboard; an admin compiles
+// and emails the export. Stores the destination email (the user may type it
+// when signed in by phone). The request doc + email are readable only by the
+// owner and support+ (Firestore rules).
+export const requestDataExport = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  assertAuthenticated(uid);
+
+  const provided =
+    typeof request.data?.email === 'string' ? request.data.email.trim() : '';
+  let email = provided;
+  if (!email) {
+    const authUser = await admin.auth().getUser(uid as string).catch(() => null);
+    email = authUser?.email ?? '';
+  }
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    throw new HttpsError(
+      'invalid-argument',
+      'A valid destination email is required.'
+    );
+  }
+
+  const ref = await db.collection('data_export_requests').add({
+    userId: uid,
+    email,
+    status: 'pending',
+    requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { requestId: ref.id, status: 'pending' };
+});
+
 export const setAdminClaim = onCall(async (request) => {
   const callerUid = request.auth?.uid;
   assertAuthenticated(callerUid);

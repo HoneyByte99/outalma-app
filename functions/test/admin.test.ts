@@ -65,6 +65,52 @@ describe('exportMyData', () => {
   });
 });
 
+describe('requestDataExport', () => {
+  it('rejects an unauthenticated caller', async () => {
+    await expectReject(call(fns.requestDataExport, {}), 'unauthenticated');
+  });
+
+  it('files a pending request using the account email', async () => {
+    await createAuthUser('u1'); // email = u1@test.dev
+    const res = (await call(fns.requestDataExport, {}, { uid: 'u1' })) as {
+      requestId: string;
+      status: string;
+    };
+    expect(res.status).toBe('pending');
+    const doc = await admin
+      .firestore()
+      .collection('data_export_requests')
+      .doc(res.requestId)
+      .get();
+    expect(doc.data()?.userId).toBe('u1');
+    expect(doc.data()?.email).toBe('u1@test.dev');
+    expect(doc.data()?.status).toBe('pending');
+  });
+
+  it('accepts an explicit destination email (phone-only users)', async () => {
+    await createAuthUser('u2');
+    const res = (await call(
+      fns.requestDataExport,
+      { email: 'me@example.com' },
+      { uid: 'u2' }
+    )) as { requestId: string };
+    const doc = await admin
+      .firestore()
+      .collection('data_export_requests')
+      .doc(res.requestId)
+      .get();
+    expect(doc.data()?.email).toBe('me@example.com');
+  });
+
+  it('rejects an invalid email', async () => {
+    await createAuthUser('u3');
+    await expectReject(
+      call(fns.requestDataExport, { email: 'not-an-email' }, { uid: 'u3' }),
+      'invalid-argument'
+    );
+  });
+});
+
 describe('deleteMyAccount', () => {
   it('deletes the user doc, owned services, provider doc and auth account', async () => {
     await createAuthUser('u1');

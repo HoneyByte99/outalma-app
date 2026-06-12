@@ -358,6 +358,45 @@ describe('services publish gate', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Data export requests — owner + support read; client cannot self-create
+// ---------------------------------------------------------------------------
+describe('data export requests', () => {
+  beforeEach(async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'data_export_requests/r1'), {
+        userId: 'alice',
+        email: 'alice@example.com',
+        status: 'pending',
+      })
+    );
+  });
+
+  test('owner can read their own request', async () => {
+    await assertSucceeds(getDoc(doc(asUser('alice'), 'data_export_requests/r1')));
+  });
+
+  test('another user cannot read it', async () => {
+    await assertFails(getDoc(doc(asUser('bob'), 'data_export_requests/r1')));
+  });
+
+  test('support can read it', async () => {
+    await assertSucceeds(
+      getDoc(doc(asUser('sup', { support: true }), 'data_export_requests/r1'))
+    );
+  });
+
+  test('a client cannot create a request directly (Cloud Function only)', async () => {
+    await assertFails(
+      setDoc(doc(asUser('alice'), 'data_export_requests/r2'), {
+        userId: 'alice',
+        email: 'alice@example.com',
+        status: 'pending',
+      })
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Core invariants — users PII guard, notifications, default deny
 // ---------------------------------------------------------------------------
 describe('core access invariants', () => {

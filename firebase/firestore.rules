@@ -350,6 +350,16 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---------- DATA EXPORT REQUESTS (RGPD portability) ----------
+    // Created exclusively by the requestDataExport Cloud Function (Admin SDK).
+    // The doc holds the destination email (PII) — readable only by the owner
+    // and support+, who fulfil it from the admin dashboard.
+    match /data_export_requests/{reqId} {
+      allow read: if isMinSupport()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create, update, delete: if isAdmin();
+    }
+
     // ---------- USER ROLES (admin visibility on privileged accounts) ----------
     match /user_roles/{uid} {
       allow read: if isReadonly();
