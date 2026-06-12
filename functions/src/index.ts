@@ -957,10 +957,14 @@ export const sendBookingReminders = onSchedule(
           shouldSend24h = true;
         });
         if (shouldSend24h) {
-          await sendPushToUsers(participants, {
-            title: 'Rappel : RDV demain',
-            body: `Votre prestation est prévue demain à ${timeStr}.`,
-          });
+          await sendPushToUsers(
+            participants,
+            {
+              title: 'Rappel : RDV demain',
+              body: `Votre prestation est prévue demain à ${timeStr}.`,
+            },
+            { type: 'booking_reminder', bookingId: doc.id }
+          );
           for (const uid of participants) {
             await createNotification(uid, {
               type: 'booking_reminder',
@@ -985,10 +989,14 @@ export const sendBookingReminders = onSchedule(
           shouldSend1h = true;
         });
         if (shouldSend1h) {
-          await sendPushToUsers(participants, {
-            title: 'Rappel : RDV dans 1h',
-            body: 'Votre prestation commence bientôt !',
-          });
+          await sendPushToUsers(
+            participants,
+            {
+              title: 'Rappel : RDV dans 1h',
+              body: 'Votre prestation commence bientôt !',
+            },
+            { type: 'booking_reminder', bookingId: doc.id }
+          );
           for (const uid of participants) {
             await createNotification(uid, {
               type: 'booking_reminder',
@@ -1194,6 +1202,25 @@ export const suspendProvider = onCall(async (request) => {
     targetId: targetUid,
     notes: reason ?? undefined,
   });
+
+  // Tell the provider their account is suspended and their listings are
+  // offline (audience: provider), with the reason if one was given.
+  {
+    const body = reason
+      ? `Votre profil prestataire a été suspendu : ${reason}`
+      : 'Votre profil prestataire a été suspendu. Vos services ne sont plus visibles.';
+    await sendPushToUsers(
+      [targetUid],
+      { title: 'Profil suspendu', body },
+      { type: 'provider_suspended' }
+    );
+    await createNotification(targetUid, {
+      type: 'provider_suspended',
+      title: 'Profil suspendu',
+      body,
+      audience: 'provider',
+    });
+  }
 
   return { uid: targetUid, suspended: true, servicesUnpublished: servicesSnap.size };
 });
@@ -1526,6 +1553,25 @@ export const approveService = onCall(async (request) => {
     targetId: item.serviceId,
   });
 
+  // Tell the provider their service is live (audience: provider).
+  const approved = (
+    await db.collection('services').doc(item.serviceId).get()
+  ).data() as { providerId?: string; title?: string } | undefined;
+  if (approved?.providerId) {
+    const body = `« ${approved.title ?? 'Votre service'} » est maintenant en ligne.`;
+    await sendPushToUsers(
+      [approved.providerId],
+      { title: 'Service approuvé', body },
+      { type: 'service_approved' }
+    );
+    await createNotification(approved.providerId, {
+      type: 'service_approved',
+      title: 'Service approuvé',
+      body,
+      audience: 'provider',
+    });
+  }
+
   return { queueItemId, serviceId: item.serviceId, status: 'approved' };
 });
 
@@ -1605,6 +1651,26 @@ export const rejectService = onCall(async (request) => {
     targetId: item.serviceId,
     notes: reason,
   });
+
+  // Tell the provider their service was rejected, with the reason
+  // (audience: provider) so they can fix and resubmit.
+  const rejected = (
+    await db.collection('services').doc(item.serviceId).get()
+  ).data() as { providerId?: string; title?: string } | undefined;
+  if (rejected?.providerId) {
+    const body = `« ${rejected.title ?? 'Votre service'} » a été refusé : ${reason}`;
+    await sendPushToUsers(
+      [rejected.providerId],
+      { title: 'Service refusé', body },
+      { type: 'service_rejected' }
+    );
+    await createNotification(rejected.providerId, {
+      type: 'service_rejected',
+      title: 'Service refusé',
+      body,
+      audience: 'provider',
+    });
+  }
 
   return { queueItemId, serviceId: item.serviceId, status: 'rejected' };
 });
@@ -2280,6 +2346,39 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
       audience: 'provider',
     });
   }
+});
+
+export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (event) => {
+  const review = event.data?.data() as {
+    revieweeId?: string;
+    reviewerRole?: string;
+    bookingId?: string;
+  } | undefined;
+  const revieweeId = review?.revieweeId;
+  if (!revieweeId) return;
+
+  // The reviewee is the opposite role of the reviewer: a client-authored review
+  // lands on the provider, a provider-authored review lands on the client. Drive
+  // the right Client/Provider notification tab accordingly.
+  const audience: 'client' | 'provider' =
+    review?.reviewerRole === 'client' ? 'provider' : 'client';
+  const title = 'Nouvel avis';
+  const body = 'Vous avez reçu un nouvel avis.';
+  await sendPushToUsers(
+    [revieweeId],
+    { title, body },
+    {
+      type: 'review_received',
+      ...(review?.bookingId ? { bookingId: review.bookingId } : {}),
+    }
+  );
+  await createNotification(revieweeId, {
+    type: 'review_received',
+    title,
+    body,
+    bookingId: review?.bookingId,
+    audience,
+  });
 });
 
 export const onBookingUpdatedStats = onDocumentUpdated('bookings/{bookingId}', async (event) => {

@@ -145,6 +145,54 @@ describe('onBookingCreated → provider notification', () => {
   });
 });
 
+describe('onReviewCreated → notify the reviewee', () => {
+  function reviewSnapshot(data: Record<string, unknown>, id = 'rev1') {
+    return tf.firestore.makeDocumentSnapshot(data, `reviews/${id}`);
+  }
+
+  it('a client review notifies the provider (audience provider)', async () => {
+    await seedUser(provider, { pushToken: 'tok-prov' });
+    const snap = reviewSnapshot({
+      revieweeId: provider,
+      reviewerId: customer,
+      reviewerRole: 'client',
+      bookingId: 'b1',
+      rating: 5,
+    });
+    await tf.wrap(fns.onReviewCreated)({
+      data: snap,
+      params: { reviewId: `b1_${customer}` },
+      id: 'evt-rev-1',
+    } as never);
+
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+    const notifs = await getNotifications(provider);
+    expect(notifs).toHaveLength(1);
+    expect(notifs[0]?.type).toBe('review_received');
+    expect(notifs[0]?.audience).toBe('provider');
+    expect(notifs[0]?.bookingId).toBe('b1');
+  });
+
+  it('a provider review notifies the client (audience client)', async () => {
+    await seedUser(customer, { pushToken: 'tok-cust' });
+    const snap = reviewSnapshot({
+      revieweeId: customer,
+      reviewerId: provider,
+      reviewerRole: 'provider',
+      bookingId: 'b1',
+    });
+    await tf.wrap(fns.onReviewCreated)({
+      data: snap,
+      params: { reviewId: `b1_${provider}` },
+      id: 'evt-rev-2',
+    } as never);
+
+    const notifs = await getNotifications(customer);
+    expect(notifs).toHaveLength(1);
+    expect(notifs[0]?.audience).toBe('client');
+  });
+});
+
 describe('onBookingStatusChange → recipient selection', () => {
   function runChange(
     before: Record<string, unknown>,

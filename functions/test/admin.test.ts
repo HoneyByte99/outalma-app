@@ -17,6 +17,7 @@ import {
   getService,
   getProvider,
   getMessage,
+  getNotifications,
   createAuthUser,
   authUserExists,
 } from './helpers';
@@ -129,6 +130,12 @@ describe('suspendProvider / unsuspendProvider', () => {
     expect(res.servicesUnpublished).toBe(1);
     expect((await getProvider('p1'))?.suspended).toBe(true);
     expect((await getService('s1'))?.published).toBe(false);
+
+    // The provider is notified (provider-audience) that they are suspended.
+    const notifs = await getNotifications('p1');
+    expect(notifs).toHaveLength(1);
+    expect(notifs[0]?.type).toBe('provider_suspended');
+    expect(notifs[0]?.audience).toBe('provider');
   });
 
   it('rejects a caller without admin/moderator', async () => {

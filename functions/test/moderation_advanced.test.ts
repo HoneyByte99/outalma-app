@@ -14,6 +14,7 @@ import {
   seedReview,
   getService,
   getReview,
+  getNotifications,
   createAuthUser,
   authUserDisabled,
 } from './helpers';
@@ -168,6 +169,11 @@ describe('service moderation queue', () => {
     await call(fns.approveService, { queueItemId: q.id }, SUPPORT);
     expect((await getService('svc1'))?.published).toBe(true);
     expect((await db().collection('moderation_queue').doc(q.id).get()).data()?.status).toBe('approved');
+    // Provider is notified (provider-audience) that their service is live.
+    const notifs = await getNotifications('owner');
+    expect(notifs).toHaveLength(1);
+    expect(notifs[0]?.type).toBe('service_approved');
+    expect(notifs[0]?.audience).toBe('provider');
   });
 
   it('reject requires a reason and marks the service rejected', async () => {
@@ -176,6 +182,11 @@ describe('service moderation queue', () => {
     await expectReject(call(fns.rejectService, { queueItemId: q.id }, SUPPORT), 'invalid-argument');
     await call(fns.rejectService, { queueItemId: q.id, reason: 'not allowed' }, SUPPORT);
     expect((await getService('svc1'))?.status).toBe('rejected');
+    // Provider is notified (provider-audience) of the rejection.
+    const notifs = await getNotifications('owner');
+    expect(notifs).toHaveLength(1);
+    expect(notifs[0]?.type).toBe('service_rejected');
+    expect(notifs[0]?.audience).toBe('provider');
   });
 
   it('republish is blocked for a service still in moderation', async () => {
