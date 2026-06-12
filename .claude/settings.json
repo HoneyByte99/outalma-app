@@ -3,7 +3,7 @@
     "allow": [
       "Bash(flutter analyze *)",
       "Bash(flutter test *)",
-      "Bash(dart format --output=none *)",
+      "Bash(dart format *)",
       "Bash(lcov --summary *)",
       "mcp__firebase__firebase_validate_security_rules",
       "mcp__firebase__firestore_query_collection",
