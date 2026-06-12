@@ -105,15 +105,13 @@ service cloud.firestore {
     match /services/{serviceId} {
       allow read: if true;
 
-      // A service may go live (published == true) only when the owner has an
-      // active, non-suspended provider profile — i.e. provider onboarding is
-      // complete. Drafts (published false/omitted) are always allowed, so a
-      // service can be built before onboarding, just not published. (E1)
+      // Providers are active by default — publishing is NOT gated on onboarding.
+      // The only block is moderation: a suspended provider cannot publish. No
+      // provider doc yet → allowed (active by default). (E1, relaxed.)
       function publishAllowed() {
         return request.resource.data.published != true
-          || (exists(/databases/$(database)/documents/providers/$(request.auth.uid))
-              && get(/databases/$(database)/documents/providers/$(request.auth.uid)).data.active == true
-              && get(/databases/$(database)/documents/providers/$(request.auth.uid)).data.suspended != true);
+          || !exists(/databases/$(database)/documents/providers/$(request.auth.uid))
+          || get(/databases/$(database)/documents/providers/$(request.auth.uid)).data.suspended != true;
       }
 
       // categoryId must be one of the fixed catalogue categories — no

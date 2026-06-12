@@ -316,8 +316,8 @@ describe('services publish gate', () => {
     await assertSucceeds(svc(asUser('alice'), false));
   });
 
-  test('publish is blocked without a provider profile', async () => {
-    await assertFails(svc(asUser('alice'), true));
+  test('publish is allowed without a profile (active by default)', async () => {
+    await assertSucceeds(svc(asUser('alice'), true));
   });
 
   test('publish is blocked when the provider profile is suspended', async () => {
