@@ -114,6 +114,28 @@ describe('createBooking', () => {
     );
   });
 
+  it('rejects when the customer has blocked the provider', async () => {
+    await admin
+      .firestore()
+      .doc(`users/${customer}/blockedUsers/${provider}`)
+      .set({ at: admin.firestore.FieldValue.serverTimestamp() });
+    await expectReject(
+      call(fns.createBooking, validData, { uid: customer }),
+      'failed-precondition'
+    );
+  });
+
+  it('rejects when the provider has blocked the customer', async () => {
+    await admin
+      .firestore()
+      .doc(`users/${provider}/blockedUsers/${customer}`)
+      .set({ at: admin.firestore.FieldValue.serverTimestamp() });
+    await expectReject(
+      call(fns.createBooking, validData, { uid: customer }),
+      'failed-precondition'
+    );
+  });
+
   it('creates a booking with status=requested on the happy path', async () => {
     const res = (await call(fns.createBooking, validData, {
       uid: customer,

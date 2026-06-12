@@ -256,6 +256,49 @@ describe('message create gating', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Reviews create gating — bilateral after done, but never between a blocked
+// pair (coupure totale).
+// ---------------------------------------------------------------------------
+describe('reviews block gating', () => {
+  beforeEach(async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'bookings/b1'), {
+        customerId: 'alice',
+        providerId: 'bob',
+        status: 'done',
+      })
+    );
+  });
+
+  function review(db: Firestore) {
+    return setDoc(doc(db, 'reviews/b1_alice'), {
+      bookingId: 'b1',
+      reviewerId: 'alice',
+      revieweeId: 'bob',
+      rating: 5,
+    });
+  }
+
+  test('client CAN review provider after done when not blocked', async () => {
+    await assertSucceeds(review(asUser('alice')));
+  });
+
+  test('CANNOT review when the reviewer blocked the reviewee', async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'users/alice/blockedUsers/bob'), { at: Timestamp.now() })
+    );
+    await assertFails(review(asUser('alice')));
+  });
+
+  test('CANNOT review when the reviewee blocked the reviewer', async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'users/bob/blockedUsers/alice'), { at: Timestamp.now() })
+    );
+    await assertFails(review(asUser('alice')));
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Core invariants — users PII guard, notifications, default deny
 // ---------------------------------------------------------------------------
 describe('core access invariants', () => {

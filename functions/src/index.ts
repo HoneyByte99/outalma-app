@@ -298,6 +298,19 @@ export const createBooking = onCall(async (request) => {
       throw new HttpsError('failed-precondition', 'Provider is currently unavailable.');
     }
 
+    // Coupure totale: a booking must not be possible if either party has
+    // blocked the other. This prevents a blocked pair from creating a booking
+    // (and the chat that acceptance would unlock). All reads precede the write.
+    const clientBlockedProvider = await tx.get(
+      db.collection('users').doc(uid).collection('blockedUsers').doc(providerId)
+    );
+    const providerBlockedClient = await tx.get(
+      db.collection('users').doc(providerId).collection('blockedUsers').doc(uid)
+    );
+    if (clientBlockedProvider.exists || providerBlockedClient.exists) {
+      throw new HttpsError('failed-precondition', 'A block exists between you and this provider.');
+    }
+
     tx.set(bookingRef, {
       customerId: uid,
       providerId,

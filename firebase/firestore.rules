@@ -309,7 +309,10 @@ service cloud.firestore {
             && request.resource.data.revieweeId == bookingData(request.resource.data.bookingId).providerId)
           || (bookingData(request.resource.data.bookingId).providerId == request.auth.uid
             && request.resource.data.revieweeId == bookingData(request.resource.data.bookingId).customerId)
-        );
+        )
+        // Coupure totale: no review between a blocked pair (either direction).
+        && !exists(/databases/$(database)/documents/users/$(request.auth.uid)/blockedUsers/$(request.resource.data.revieweeId))
+        && !exists(/databases/$(database)/documents/users/$(request.resource.data.revieweeId)/blockedUsers/$(request.auth.uid));
 
       allow update, delete: if isAdmin();
     }
