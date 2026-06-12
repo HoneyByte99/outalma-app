@@ -435,6 +435,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardActivateButton => 'Get started';
 
   @override
+  String get dashboardCompleteProfileTitle => 'Complete your profile';
+
+  @override
+  String get dashboardCompleteProfileBody =>
+      'Add your bio and service area to build client trust.';
+
+  @override
   String get profileActive => 'Active profile';
 
   @override

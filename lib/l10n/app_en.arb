@@ -172,6 +172,8 @@
   "dashboardActivateTitle": "Activate your profile",
   "dashboardActivateBody": "A few details to start receiving requests.",
   "dashboardActivateButton": "Get started",
+  "dashboardCompleteProfileTitle": "Complete your profile",
+  "dashboardCompleteProfileBody": "Add your bio and service area to build client trust.",
   "profileActive": "Active profile",
   "profileInactive": "Inactive profile",
   "dashboardServicesError": "Could not load your services.",

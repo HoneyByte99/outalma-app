@@ -172,6 +172,8 @@
   "dashboardActivateTitle": "Activez votre profil",
   "dashboardActivateBody": "Quelques infos pour commencer à recevoir des demandes.",
   "dashboardActivateButton": "Commencer",
+  "dashboardCompleteProfileTitle": "Complétez votre profil",
+  "dashboardCompleteProfileBody": "Ajoutez votre bio et votre zone d'intervention pour rassurer les clients.",
   "profileActive": "Profil actif",
   "profileInactive": "Profil inactif",
   "dashboardServicesError": "Impossible de charger vos services.",

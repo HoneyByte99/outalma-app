@@ -30,7 +30,15 @@ class ProviderDashboardPage extends ConsumerWidget {
     // first, then "create first service" if there are none, then the normal
     // services dashboard. Only the screen for the current state shows a
     // strong CTA — no competing primary actions (security review A.3).
-    final hasProfile = profileAsync.valueOrNull != null;
+    final profile = profileAsync.valueOrNull;
+    final hasProfile = profile != null;
+    // Lazy onboarding: a profile doc may be auto-created when a service is
+    // published, but it isn't "complete" until the provider has set their bio
+    // and (geocoded) service area. We nudge — never block — until then.
+    final profileComplete =
+        hasProfile &&
+        (profile.bio?.trim().isNotEmpty ?? false) &&
+        (profile.serviceArea?.trim().isNotEmpty ?? false);
     final servicesCount = servicesAsync.valueOrNull?.length ?? 0;
     final showFab = hasProfile && servicesCount > 0;
 
@@ -66,6 +74,7 @@ class ProviderDashboardPage extends ConsumerWidget {
             SliverToBoxAdapter(
               child: Column(
                 children: [
+                  if (!profileComplete) const _CompleteProfileBanner(),
                   _ProfileCard(profile: profileAsync.value!),
                   servicesAsync.when(
                     loading: () => const Padding(
@@ -81,6 +90,8 @@ class ProviderDashboardPage extends ConsumerWidget {
             )
           // State 3 — profile + services : normal dashboard.
           else ...[
+            if (!profileComplete)
+              const SliverToBoxAdapter(child: _CompleteProfileBanner()),
             SliverToBoxAdapter(
               child: _ProfileCard(profile: profileAsync.value!),
             ),
@@ -130,6 +141,61 @@ class ProviderDashboardPage extends ConsumerWidget {
               child: const Icon(Icons.add_rounded, color: Colors.white),
             )
           : null,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Complete-profile nudge (non-blocking) — lazy onboarding
+// ---------------------------------------------------------------------------
+
+class _CompleteProfileBanner extends StatelessWidget {
+  const _CompleteProfileBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Material(
+        color: oc.warning.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => GoRouter.of(context).push(AppRoutes.providerOnboarding),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline_rounded, color: oc.warning, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.dashboardCompleteProfileTitle,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        l10n.dashboardCompleteProfileBody,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: oc.icons, size: 22),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

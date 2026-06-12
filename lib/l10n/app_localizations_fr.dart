@@ -443,6 +443,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get dashboardActivateButton => 'Commencer';
 
   @override
+  String get dashboardCompleteProfileTitle => 'Complétez votre profil';
+
+  @override
+  String get dashboardCompleteProfileBody =>
+      'Ajoutez votre bio et votre zone d\'intervention pour rassurer les clients.';
+
+  @override
   String get profileActive => 'Profil actif';
 
   @override

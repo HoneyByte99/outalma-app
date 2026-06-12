@@ -896,6 +896,18 @@ abstract class AppLocalizations {
   /// **'Get started'**
   String get dashboardActivateButton;
 
+  /// No description provided for @dashboardCompleteProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete your profile'**
+  String get dashboardCompleteProfileTitle;
+
+  /// No description provided for @dashboardCompleteProfileBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your bio and service area to build client trust.'**
+  String get dashboardCompleteProfileBody;
+
   /// No description provided for @profileActive.
   ///
   /// In en, this message translates to:
