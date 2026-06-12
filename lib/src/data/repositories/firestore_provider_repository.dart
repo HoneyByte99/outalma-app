@@ -28,9 +28,28 @@ class FirestoreProviderRepository implements ProviderRepository {
 
   @override
   Future<void> upsert(ProviderProfile profile) async {
-    await FirestoreCollections.providers(
-      _db,
-    ).doc(profile.uid).set(profile, SetOptions(merge: true));
+    final ref = FirestoreCollections.providers(_db).doc(profile.uid);
+    final existing = await ref.get();
+    if (existing.exists) {
+      // Update: write only the owner-editable fields via an explicit map.
+      // Everything else on a provider document (`active`, `suspended`,
+      // `suspendedAt`, `suspendedReason`, `createdAt`) is server-authoritative
+      // — set once on create, then mutated only by the moderation Cloud
+      // Functions. The client must never rewrite them, both to avoid resetting
+      // `createdAt` on every edit and to satisfy the Firestore `providers`
+      // update rule (S2), which rejects any client diff touching the
+      // moderation keys.
+      await ref.update(<String, Object?>{
+        'bio': profile.bio,
+        'serviceArea': profile.serviceArea,
+        'serviceAreaLat': profile.serviceAreaLat,
+        'serviceAreaLng': profile.serviceAreaLng,
+      });
+    } else {
+      // Create: write the full document, including the initial
+      // active/suspended state and createdAt.
+      await ref.set(profile);
+    }
   }
 
   // -- Blocked slots --
