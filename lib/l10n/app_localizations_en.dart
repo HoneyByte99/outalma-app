@@ -496,7 +496,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hubPauseCta => 'Pause';
 
   @override
-  String get serviceMaskedPaused => 'Hidden — paused';
+  String get serviceMaskedPaused => 'Paused';
 
   @override
   String get dashboardServicesError => 'Could not load your services.';

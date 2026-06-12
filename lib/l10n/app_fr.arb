@@ -196,7 +196,7 @@
   },
   "hubPauseBodyNoCount": "Vos annonces seront masquées aux clients. Réactivez quand vous voulez.",
   "hubPauseCta": "Mettre en pause",
-  "serviceMaskedPaused": "Masqué — en pause",
+  "serviceMaskedPaused": "En pause",
   "dashboardServicesError": "Impossible de charger vos services.",
   "serviceEmptyTitle": "Aucun service publié",
   "serviceEmptyBody": "Créez votre premier service pour commencer\nà recevoir des demandes.",

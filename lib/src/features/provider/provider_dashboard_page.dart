@@ -204,57 +204,65 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                 height: 3,
                 color: canToggle ? accent : Colors.transparent,
               ),
-              // Row 1 — identity
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 8, 12),
-                child: Row(
-                  children: [
-                    UserAvatar(
-                      displayName: appUser?.displayName ?? '',
-                      photoPath: appUser?.photoPath,
-                      radius: 22,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+              // Row 1 — identity. The whole row opens the profile editor (like
+              // tapping a service tile), the pencil is just the affordance.
+              Semantics(
+                button: true,
+                label: l10n.hubEditProfile,
+                child: InkWell(
+                  onTap: () =>
+                      GoRouter.of(context).push(AppRoutes.providerOnboarding),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+                    child: Row(
+                      children: [
+                        UserAvatar(
+                          displayName: appUser?.displayName ?? '',
+                          photoPath: appUser?.photoPath,
+                          radius: 22,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Flexible(
-                                child: Text(
-                                  (appUser?.displayName.isNotEmpty ?? false)
-                                      ? appUser!.displayName
-                                      : l10n.hubFallbackName,
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w700),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      (appUser?.displayName.isNotEmpty ?? false)
+                                          ? appUser!.displayName
+                                          : l10n.hubFallbackName,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (isVerified) ...[
+                                    const SizedBox(width: 6),
+                                    const VerifiedBadge(compact: true),
+                                  ],
+                                ],
                               ),
-                              if (isVerified) ...[
-                                const SizedBox(width: 6),
-                                const VerifiedBadge(compact: true),
-                              ],
+                              const SizedBox(height: 2),
+                              RatingSummary(userId: widget.profile.uid),
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          RatingSummary(userId: widget.profile.uid),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 20,
+                          color: oc.secondaryText,
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.edit_outlined,
-                        size: 20,
-                        color: oc.secondaryText,
-                      ),
-                      tooltip: l10n.hubEditProfile,
-                      onPressed: () => GoRouter.of(
-                        context,
-                      ).push(AppRoutes.providerOnboarding),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               Divider(height: 1, color: oc.border),

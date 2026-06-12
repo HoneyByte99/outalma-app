@@ -196,7 +196,7 @@
   },
   "hubPauseBodyNoCount": "Your listings will be hidden from clients. Resume whenever you want.",
   "hubPauseCta": "Pause",
-  "serviceMaskedPaused": "Hidden — paused",
+  "serviceMaskedPaused": "Paused",
   "dashboardServicesError": "Could not load your services.",
   "serviceEmptyTitle": "No services published",
   "serviceEmptyBody": "Create your first service to start receiving requests.",

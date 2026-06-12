@@ -1013,7 +1013,7 @@ abstract class AppLocalizations {
   /// No description provided for @serviceMaskedPaused.
   ///
   /// In en, this message translates to:
-  /// **'Hidden — paused'**
+  /// **'Paused'**
   String get serviceMaskedPaused;
 
   /// No description provided for @dashboardServicesError.
