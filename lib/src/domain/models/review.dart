@@ -1,3 +1,4 @@
+import '../enums/category_id.dart';
 import '../enums/reviewer_role.dart';
 
 class Review {
@@ -10,6 +11,7 @@ class Review {
     required this.rating,
     required this.createdAt,
     this.comment,
+    this.categoryId,
   });
 
   final String id;
@@ -21,6 +23,12 @@ class Review {
   /// Rating from 1 to 5 inclusive.
   final int rating;
   final String? comment;
+
+  /// Service category the review concerns — captured from the booking's service
+  /// at review time. Lets a rating be read in context (a provider may be great
+  /// at one category and weak at another). Null for legacy reviews.
+  final CategoryId? categoryId;
+
   final DateTime createdAt;
 
   Review copyWith({
@@ -30,6 +38,7 @@ class Review {
     ReviewerRole? reviewerRole,
     int? rating,
     String? comment,
+    CategoryId? categoryId,
     DateTime? createdAt,
   }) {
     return Review(
@@ -40,6 +49,7 @@ class Review {
       reviewerRole: reviewerRole ?? this.reviewerRole,
       rating: rating ?? this.rating,
       comment: comment ?? this.comment,
+      categoryId: categoryId ?? this.categoryId,
       createdAt: createdAt ?? this.createdAt,
     );
   }

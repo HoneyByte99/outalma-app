@@ -499,6 +499,9 @@ class FirestoreCollections {
       ),
       rating: (data['rating'] as num?)?.toInt() ?? 1,
       comment: data['comment'] as String?,
+      categoryId: data['categoryId'] != null
+          ? CategoryId.fromString(data['categoryId'] as String)
+          : null,
       createdAt: dateTimeFromFirestore(data['createdAt']),
     );
   }
@@ -511,6 +514,7 @@ class FirestoreCollections {
       'reviewerRole': review.reviewerRole.name,
       'rating': review.rating,
       'comment': review.comment,
+      if (review.categoryId != null) 'categoryId': review.categoryId!.name,
       'createdAt': dateTimeToFirestore(review.createdAt),
     };
   }

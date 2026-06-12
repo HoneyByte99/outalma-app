@@ -6,7 +6,9 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/booking/booking_providers.dart';
 import '../../application/review/review_providers.dart';
+import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
+import '../../domain/enums/category_id.dart';
 import '../../domain/enums/reviewer_role.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -50,12 +52,18 @@ class ReviewFormPage extends ConsumerWidget {
         final reviewerId = uid;
         final revieweeId = isClient ? booking.providerId : booking.customerId;
         final role = isClient ? ReviewerRole.client : ReviewerRole.provider;
+        // Capture the service category so the review can be read in context.
+        final category = ref
+            .watch(serviceDetailProvider(booking.serviceId))
+            .valueOrNull
+            ?.categoryId;
 
         return _ReviewForm(
           bookingId: bookingId,
           reviewerId: reviewerId,
           revieweeId: revieweeId,
           reviewerRole: role,
+          categoryId: category,
         );
       },
     );
@@ -72,12 +80,14 @@ class _ReviewForm extends ConsumerStatefulWidget {
     required this.reviewerId,
     required this.revieweeId,
     required this.reviewerRole,
+    required this.categoryId,
   });
 
   final String bookingId;
   final String reviewerId;
   final String revieweeId;
   final ReviewerRole reviewerRole;
+  final CategoryId? categoryId;
 
   @override
   ConsumerState<_ReviewForm> createState() => _ReviewFormState();
@@ -107,6 +117,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             reviewerRole: widget.reviewerRole,
             rating: _rating,
             comment: _commentController.text,
+            categoryId: widget.categoryId,
           );
       if (mounted) Navigator.of(context).pop();
     } catch (_) {

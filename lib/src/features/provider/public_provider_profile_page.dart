@@ -13,6 +13,7 @@ import '../../application/user/user_providers.dart';
 import '../../core/utils/format_utils.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
+import '../shared/category_icon.dart';
 import '../../domain/utils/country_utils.dart';
 import '../shared/user_avatar.dart';
 
@@ -375,6 +376,25 @@ class _ReviewTile extends ConsumerWidget {
               ),
             ],
           ),
+          // Which service category this rating concerns (context: a provider
+          // may be strong in one category and weak in another).
+          if (review.categoryId != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(review.categoryId!.icon, size: 13, color: oc.primary),
+                const SizedBox(width: 4),
+                Text(
+                  review.categoryId!.label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: oc.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (review.comment != null && review.comment!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(

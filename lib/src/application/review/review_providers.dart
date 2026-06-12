@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../data/repositories/firestore_review_repository.dart';
+import '../../domain/enums/category_id.dart';
 import '../../domain/enums/reviewer_role.dart';
 import '../../domain/models/review.dart';
 import '../../domain/repositories/review_repository.dart';
@@ -56,6 +57,7 @@ class CreateReviewUseCase {
     required ReviewerRole reviewerRole,
     required int rating,
     String? comment,
+    CategoryId? categoryId,
   }) async {
     final review = Review(
       id: '', // will be replaced by repo with Firestore doc id
@@ -65,6 +67,7 @@ class CreateReviewUseCase {
       reviewerRole: reviewerRole,
       rating: rating,
       comment: comment?.trim().isEmpty == true ? null : comment?.trim(),
+      categoryId: categoryId,
       createdAt: DateTime.now(),
     );
     await _repo.create(review);

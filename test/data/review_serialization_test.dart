@@ -11,6 +11,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/src/data/firestore/firestore_collections.dart';
+import 'package:outalma_app/src/domain/enums/category_id.dart';
 import 'package:outalma_app/src/domain/enums/reviewer_role.dart';
 import 'package:outalma_app/src/domain/models/review.dart';
 
@@ -168,6 +169,37 @@ void main() {
       expect(result.reviewerRole, ReviewerRole.client);
       expect(result.rating, 1);
       expect(result.comment, isNull);
+      expect(result.categoryId, isNull);
+    });
+  });
+
+  group('Review serialization — service category', () {
+    test('categoryId round-trips', () async {
+      final review = Review(
+        id: 'r_cat',
+        bookingId: 'b1',
+        reviewerId: 'u1',
+        revieweeId: 'u2',
+        reviewerRole: ReviewerRole.client,
+        rating: 5,
+        categoryId: CategoryId.jardinage,
+        createdAt: DateTime(2024, 1, 1).toUtc(),
+      );
+      final col = FirestoreCollections.reviews(fakeDb);
+      await col.doc(review.id).set(review);
+      expect(
+        (await col.doc(review.id).get()).data()!.categoryId,
+        CategoryId.jardinage,
+      );
+    });
+
+    test('categoryId is omitted from the doc when null', () async {
+      final col = FirestoreCollections.reviews(fakeDb);
+      await col.doc(_makeReview().id).set(_makeReview());
+      final raw =
+          (await fakeDb.collection('reviews').doc(_makeReview().id).get())
+              .data()!;
+      expect(raw.containsKey('categoryId'), isFalse);
     });
   });
 }

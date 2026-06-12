@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:outalma_app/src/domain/enums/category_id.dart';
 import 'package:outalma_app/src/domain/enums/reviewer_role.dart';
 import 'package:outalma_app/src/domain/models/review.dart';
 
@@ -33,6 +34,12 @@ void main() {
     test('comment can be set via copyWith', () {
       final r = _base().copyWith(comment: 'Excellent travail');
       expect(r.comment, 'Excellent travail');
+    });
+
+    test('categoryId defaults to null and can be set via copyWith', () {
+      expect(_base().categoryId, isNull);
+      final r = _base().copyWith(categoryId: CategoryId.jardinage);
+      expect(r.categoryId, CategoryId.jardinage);
     });
   });
 
