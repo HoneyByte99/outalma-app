@@ -29,7 +29,14 @@ key id/issuer, team id, bundle id, distribution cert name, profile name, and the
    - runs `flutter build ipa`, validates, and uploads via `xcrun altool`.
 3. Long steps (archive, upload) should be run with `run_in_background: true`;
    wait for the completion notification, then check the log tail.
-4. After a successful upload, tell the user: App Store Connect needs ~5–15 min to
+4. **After a successful upload, tag the shipped commit** so `/whats-unshipped`
+   can tell what reached devices:
+   ```bash
+   git tag -a "build/ios/<version>" -m "TestFlight upload <version>" && git push origin "build/ios/<version>"
+   ```
+   where `<version>` is the full pubspec version (e.g. `1.0.0+23`). Tag the
+   exact commit the IPA was built from.
+5. After a successful upload, tell the user: App Store Connect needs ~5–15 min to
    process the build; they may be asked for export-compliance (encryption) in the
    ASC UI unless `ITSAppUsesNonExemptEncryption` is set in `ios/Runner/Info.plist`.
 
