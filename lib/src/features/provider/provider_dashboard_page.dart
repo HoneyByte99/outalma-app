@@ -190,128 +190,134 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
         decoration: BoxDecoration(
           color: oc.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          // Top-edge accent encodes the state before any text is read.
-          border: Border(
-            top: BorderSide(color: canToggle ? accent : oc.border, width: 3),
-            left: BorderSide(color: oc.border),
-            right: BorderSide(color: oc.border),
-            bottom: BorderSide(color: oc.border),
-          ),
+          // Uniform border — a non-uniform border can't be combined with a
+          // borderRadius. The state accent is the clipped top strip below.
+          border: Border.all(color: oc.border),
         ),
-        child: Column(
-          children: [
-            // Row 1 — identity
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 8, 12),
-              child: Row(
-                children: [
-                  UserAvatar(
-                    displayName: appUser?.displayName ?? '',
-                    photoPath: appUser?.photoPath,
-                    radius: 22,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                (appUser?.displayName.isNotEmpty ?? false)
-                                    ? appUser!.displayName
-                                    : l10n.hubFallbackName,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+        // Clip so the accent strip's top corners follow the card radius.
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: Column(
+            children: [
+              // Top-edge accent encodes the state before any text is read.
+              Container(
+                height: 3,
+                color: canToggle ? accent : Colors.transparent,
+              ),
+              // Row 1 — identity
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 8, 12),
+                child: Row(
+                  children: [
+                    UserAvatar(
+                      displayName: appUser?.displayName ?? '',
+                      photoPath: appUser?.photoPath,
+                      radius: 22,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  (appUser?.displayName.isNotEmpty ?? false)
+                                      ? appUser!.displayName
+                                      : l10n.hubFallbackName,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                            if (isVerified) ...[
-                              const SizedBox(width: 6),
-                              const VerifiedBadge(compact: true),
+                              if (isVerified) ...[
+                                const SizedBox(width: 6),
+                                const VerifiedBadge(compact: true),
+                              ],
                             ],
-                          ],
+                          ),
+                          const SizedBox(height: 2),
+                          RatingSummary(userId: widget.profile.uid),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        size: 20,
+                        color: oc.secondaryText,
+                      ),
+                      tooltip: l10n.hubEditProfile,
+                      onPressed: () => GoRouter.of(
+                        context,
+                      ).push(AppRoutes.providerOnboarding),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: oc.border),
+              // Row 2 — availability (the whole row is the tap target)
+              Semantics(
+                button: canToggle,
+                label: available ? l10n.hubSemanticsOn : l10n.hubSemanticsOff,
+                child: InkWell(
+                  onTap: canToggle
+                      ? () => _onToggle(available, publishedCount)
+                      : null,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.storefront_rounded,
+                          size: 22,
+                          color: canToggle ? accent : oc.secondaryText,
                         ),
-                        const SizedBox(height: 2),
-                        RatingSummary(userId: widget.profile.uid),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                available ? l10n.hubAvailable : l10n.hubPaused,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: canToggle
+                                          ? accent
+                                          : oc.secondaryText,
+                                    ),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                canToggle
+                                    ? (available
+                                          ? l10n.hubAvailableSub
+                                          : l10n.hubPausedSub)
+                                    : l10n.hubNoServicesHint,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: oc.secondaryText),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _AvailabilityPill(
+                          available: available,
+                          enabled: canToggle,
+                        ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.edit_outlined,
-                      size: 20,
-                      color: oc.secondaryText,
-                    ),
-                    tooltip: l10n.hubEditProfile,
-                    onPressed: () =>
-                        GoRouter.of(context).push(AppRoutes.providerOnboarding),
-                  ),
-                ],
-              ),
-            ),
-            Divider(height: 1, color: oc.border),
-            // Row 2 — availability (the whole row is the tap target)
-            Semantics(
-              button: canToggle,
-              label: available ? l10n.hubSemanticsOn : l10n.hubSemanticsOff,
-              child: InkWell(
-                onTap: canToggle
-                    ? () => _onToggle(available, publishedCount)
-                    : null,
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.storefront_rounded,
-                        size: 22,
-                        color: canToggle ? accent : oc.secondaryText,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              available ? l10n.hubAvailable : l10n.hubPaused,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: canToggle
-                                        ? accent
-                                        : oc.secondaryText,
-                                  ),
-                            ),
-                            const SizedBox(height: 1),
-                            Text(
-                              canToggle
-                                  ? (available
-                                        ? l10n.hubAvailableSub
-                                        : l10n.hubPausedSub)
-                                  : l10n.hubNoServicesHint,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: oc.secondaryText),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      _AvailabilityPill(
-                        available: available,
-                        enabled: canToggle,
-                      ),
-                    ],
-                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
