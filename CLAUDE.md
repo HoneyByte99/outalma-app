@@ -65,19 +65,23 @@ For large changes, plan first. Do not jump straight into code.
 - Firestore schema, Dart models, and Cloud Functions contracts must stay aligned.
 - If TypeScript and Dart disagree, stop and align them before building more.
 
-## Critical known risks
+## Known gaps (audited 2026-06-12)
 
-- `BookingStatus` enum in Dart does not match Cloud Functions or canonical spec — deserialization fails silently
-- `Booking` model uses `userId` instead of `customerId`/`providerId`, missing 7 fields written by Cloud Functions
-- `AppUser` missing `activeMode`, `country`, `phoneE164`
-- `Service` model uses `ownerId` instead of `providerId`, missing `categoryId`, `photos`, `published`, `priceType`
-- No `Chat` or `Provider` Dart models
-- Zero repository implementations
-- Riverpod declared but unused
-- No navigation (app shows Placeholder)
-- No tests beyond a smoke test
-- Notifications not implemented
-- Maps/location not implemented
+The original "critical known risks" list (model/enum mismatches, missing
+repositories, no navigation, no notifications) is fully resolved. The current
+prioritized gap inventory lives in docs/known-gaps.md — read it before starting
+work on bookings, blocking, reviews, or notifications. Headlines:
+
+- Provider mode has no view of done/cancelled/rejected bookings (router redirect
+  blocks `/bookings`, which is already mode-aware) — also starves the
+  provider→client review flow.
+- Blocking is inconsistent: a blocked client can still book (and an accepted
+  booking then gets an unusable chat), can still review, and stays discoverable.
+- Moderation outcomes (service approve/reject) and received reviews trigger no
+  notification; booking reminders have no deep-link.
+- A service can be published without an active provider profile (no server check).
+
+Keep docs/known-gaps.md current: remove items when fixed.
 
 ## Git autonomy
 
@@ -135,5 +139,6 @@ Use these as reference material when relevant:
 - docs/domain-model-canonical.md — canonical models, field names, enums (align code here)
 - docs/ARCHITECTURE.md — layer structure, patterns, naming conventions
 - docs/mvp-roadmap.md — phased delivery plan with concrete tasks
+- docs/known-gaps.md — prioritized inventory of open logic gaps (audited 2026-06-12)
 - docs/release-readiness.md — launch checklist
 - docs/flutterflow-migration.md — how to reuse the FlutterFlow reference app
