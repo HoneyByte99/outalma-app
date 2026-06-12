@@ -11,6 +11,7 @@ import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
+import '../review/rating_summary.dart';
 import '../../../l10n/app_localizations.dart';
 
 class ProviderInboxPage extends ConsumerStatefulWidget {
@@ -27,7 +28,7 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -63,16 +64,19 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
             ],
             bottom: TabBar(
               controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
               tabs: [
                 Tab(text: l10n.inboxTabRequests),
                 Tab(text: l10n.inboxTabActive),
+                Tab(text: l10n.inboxTabCompleted),
               ],
             ),
           ),
         ],
         body: TabBarView(
           controller: _tabController,
-          children: const [_RequestsTab(), _ActiveTab()],
+          children: const [_RequestsTab(), _ActiveTab(), _CompletedTab()],
         ),
       ),
     );
@@ -95,7 +99,9 @@ class _RequestsTab extends ConsumerWidget {
       error: (_, __) =>
           _ErrorState(onRetry: () => ref.invalidate(providerInboxProvider)),
       data: (bookings) {
-        if (bookings.isEmpty) return const _EmptyState(isActive: false);
+        if (bookings.isEmpty) {
+          return const _EmptyState(kind: _InboxEmptyKind.requests);
+        }
         final sorted = [...bookings]
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
         return ListView.separated(
@@ -126,7 +132,44 @@ class _ActiveTab extends ConsumerWidget {
         onRetry: () => ref.invalidate(providerActiveBookingsProvider),
       ),
       data: (bookings) {
-        if (bookings.isEmpty) return const _EmptyState(isActive: true);
+        if (bookings.isEmpty) {
+          return const _EmptyState(kind: _InboxEmptyKind.active);
+        }
+        final sorted = [...bookings]
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          itemCount: sorted.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, i) => _InboxCard(booking: sorted[i]),
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tab: completed/terminal bookings (status = done | rejected | cancelled).
+// `done` entries are where the provider leaves a review on the client.
+// ---------------------------------------------------------------------------
+
+class _CompletedTab extends ConsumerWidget {
+  const _CompletedTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final completedAsync = ref.watch(providerCompletedBookingsProvider);
+
+    return completedAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => _ErrorState(
+        onRetry: () => ref.invalidate(providerCompletedBookingsProvider),
+      ),
+      data: (bookings) {
+        if (bookings.isEmpty) {
+          return const _EmptyState(kind: _InboxEmptyKind.completed);
+        }
+        // Most recent activity first (completed/cancelled at the top).
         final sorted = [...bookings]
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
         return ListView.separated(
@@ -216,6 +259,9 @@ class _InboxCard extends ConsumerWidget {
                                 fontWeight: FontWeight.w500,
                               ),
                         ),
+                      // Client trust signal (rating + review count).
+                      const SizedBox(height: 4),
+                      RatingSummary(userId: booking.customerId),
                     ],
                   ),
                 ),
@@ -315,36 +361,46 @@ class _StatusChip extends StatelessWidget {
 // Empty + error states
 // ---------------------------------------------------------------------------
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.isActive});
+enum _InboxEmptyKind { requests, active, completed }
 
-  final bool isActive;
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.kind});
+
+  final _InboxEmptyKind kind;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+    final (icon, title, subtitle) = switch (kind) {
+      _InboxEmptyKind.requests => (
+        Icons.inbox_outlined,
+        l10n.inboxEmptyRequests,
+        l10n.inboxEmptyRequestsSubtitle,
+      ),
+      _InboxEmptyKind.active => (
+        Icons.hourglass_empty_outlined,
+        l10n.inboxEmptyActive,
+        l10n.inboxEmptyActiveSubtitle,
+      ),
+      _InboxEmptyKind.completed => (
+        Icons.history_rounded,
+        l10n.inboxEmptyCompleted,
+        l10n.inboxEmptyCompletedSubtitle,
+      ),
+    };
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isActive ? Icons.hourglass_empty_outlined : Icons.inbox_outlined,
-              size: 56,
-              color: oc.icons,
-            ),
+            Icon(icon, size: 56, color: oc.icons),
             const SizedBox(height: 16),
-            Text(
-              isActive ? l10n.inboxEmptyActive : l10n.inboxEmptyRequests,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             Text(
-              isActive
-                  ? l10n.inboxEmptyActiveSubtitle
-                  : l10n.inboxEmptyRequestsSubtitle,
+              subtitle,
               textAlign: TextAlign.center,
               style: Theme.of(
                 context,

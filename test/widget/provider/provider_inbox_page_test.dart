@@ -36,6 +36,7 @@ Widget _wrap() => ProviderScope(
     activeModeProvider.overrideWith((_) => ActiveMode.provider),
     providerInboxProvider.overrideWith((_) => Stream.value([])),
     providerActiveBookingsProvider.overrideWith((_) => Stream.value([])),
+    providerCompletedBookingsProvider.overrideWith((_) => Stream.value([])),
   ],
   child: MaterialApp(
     theme: AppTheme.light(),
@@ -53,10 +54,11 @@ void main() {
       expect(find.byType(ProviderInboxPage), findsOneWidget);
     });
 
-    testWidgets('TabBar with two tabs is present', (tester) async {
+    testWidgets('TabBar with three tabs is present', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       expect(find.byType(TabBar), findsOneWidget);
+      expect(find.byType(Tab), findsNWidgets(3));
     });
 
     testWidgets('empty state renders for requests tab', (tester) async {

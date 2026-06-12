@@ -23,6 +23,21 @@ final reviewsForBookingProvider = StreamProvider.autoDispose
       return ref.watch(reviewRepositoryProvider).watchForBooking(bookingId);
     });
 
+/// Aggregate trust signal for a user: average rating + number of reviews
+/// received (as reviewee). `count == 0` means the user has no reviews yet.
+typedef RatingStats = ({double average, int count});
+
+final ratingSummaryProvider = StreamProvider.autoDispose
+    .family<RatingStats, String>((ref, userId) {
+      return ref.watch(reviewRepositoryProvider).watchForUser(userId).map((
+        reviews,
+      ) {
+        if (reviews.isEmpty) return (average: 0.0, count: 0);
+        final sum = reviews.fold<int>(0, (acc, r) => acc + r.rating);
+        return (average: sum / reviews.length, count: reviews.length);
+      });
+    });
+
 // ---------------------------------------------------------------------------
 // Create review use case
 // ---------------------------------------------------------------------------

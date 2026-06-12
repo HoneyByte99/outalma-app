@@ -354,10 +354,13 @@
   "inboxCalendarTooltip": "My calendar",
   "inboxTabRequests": "Requests",
   "inboxTabActive": "In progress",
+  "inboxTabCompleted": "Completed",
   "inboxEmptyRequests": "No pending requests",
   "inboxEmptyRequestsSubtitle": "New client requests will appear here.",
   "inboxEmptyActive": "No active missions",
   "inboxEmptyActiveSubtitle": "Accepted missions will appear here.",
+  "inboxEmptyCompleted": "No completed missions",
+  "inboxEmptyCompletedSubtitle": "Finished, declined or cancelled missions appear here.",
   "inboxLoadError": "Could not load data.",
   "inboxOpenChat": "Open chat",
 

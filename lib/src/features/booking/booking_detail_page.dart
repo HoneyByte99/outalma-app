@@ -20,6 +20,7 @@ import '../../domain/models/booking.dart';
 import '../../domain/models/service.dart';
 import '../../core/utils/date_utils.dart' as date_utils;
 import '../../domain/utils/distance.dart';
+import '../review/rating_summary.dart';
 import '../shared/maps_launcher.dart';
 import '../shared/user_avatar.dart';
 import '../shared/voice_message_player.dart';
@@ -184,6 +185,12 @@ class _DetailContent extends ConsumerWidget {
           // ---- Provider link (client viewing their provider) ----
           if (uid == booking.customerId) ...[
             _ProviderLink(providerId: booking.providerId),
+            const SizedBox(height: 16),
+          ],
+
+          // ---- Client summary (provider viewing their client) ----
+          if (uid == booking.providerId) ...[
+            _ClientSummary(clientId: booking.customerId),
             const SizedBox(height: 16),
           ],
 
@@ -352,6 +359,67 @@ class _ProviderLink extends ConsumerWidget {
             Icon(Icons.chevron_right_rounded, color: oc.icons, size: 22),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Client summary — read-only trust card shown to the provider. There is no
+// public client profile (by design), so this card is intentionally not tappable.
+// ---------------------------------------------------------------------------
+
+class _ClientSummary extends ConsumerWidget {
+  const _ClientSummary({required this.clientId});
+
+  final String clientId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final client = ref.watch(userByIdProvider(clientId)).valueOrNull;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: oc.cardSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: oc.border),
+      ),
+      child: Row(
+        children: [
+          UserAvatar(
+            displayName: client?.displayName ?? '',
+            photoPath: client?.photoPath,
+            radius: 24,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  client?.displayName ?? '—',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.modeClient,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                ),
+                const SizedBox(height: 6),
+                RatingSummary(userId: clientId),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

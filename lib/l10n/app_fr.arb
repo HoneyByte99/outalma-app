@@ -354,10 +354,13 @@
   "inboxCalendarTooltip": "Mon calendrier",
   "inboxTabRequests": "Demandes",
   "inboxTabActive": "En cours",
+  "inboxTabCompleted": "Terminées",
   "inboxEmptyRequests": "Aucune demande en attente",
   "inboxEmptyRequestsSubtitle": "Les nouvelles demandes clients apparaîtront ici.",
   "inboxEmptyActive": "Aucune mission en cours",
   "inboxEmptyActiveSubtitle": "Les missions acceptées apparaîtront ici.",
+  "inboxEmptyCompleted": "Aucune mission terminée",
+  "inboxEmptyCompletedSubtitle": "Les missions terminées, refusées ou annulées apparaissent ici.",
   "inboxLoadError": "Impossible de charger les données.",
   "inboxOpenChat": "Ouvrir le chat",
 

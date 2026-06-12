@@ -77,6 +77,27 @@ final providerActiveBookingsProvider = StreamProvider<List<Booking>>((ref) {
       );
 });
 
+/// Completed/terminal bookings for the current provider
+/// (done + rejected + cancelled). Powers the inbox "Completed" tab and, via the
+/// done entries, the provider→client review flow.
+final providerCompletedBookingsProvider = StreamProvider<List<Booking>>((ref) {
+  final uid = ref.watch(_stableUidProvider);
+  if (uid == null) return const Stream.empty();
+  return ref
+      .watch(bookingRepositoryProvider)
+      .watchForProvider(uid)
+      .map(
+        (list) => list
+            .where(
+              (b) =>
+                  b.status == BookingStatus.done ||
+                  b.status == BookingStatus.rejected ||
+                  b.status == BookingStatus.cancelled,
+            )
+            .toList(),
+      );
+});
+
 /// Published services for any given provider uid — used on public profile pages.
 final publicProviderServicesProvider = StreamProvider.autoDispose
     .family<List<Service>, String>((ref, uid) {

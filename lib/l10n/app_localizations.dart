@@ -1694,6 +1694,12 @@ abstract class AppLocalizations {
   /// **'In progress'**
   String get inboxTabActive;
 
+  /// No description provided for @inboxTabCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get inboxTabCompleted;
+
   /// No description provided for @inboxEmptyRequests.
   ///
   /// In en, this message translates to:
@@ -1717,6 +1723,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accepted missions will appear here.'**
   String get inboxEmptyActiveSubtitle;
+
+  /// No description provided for @inboxEmptyCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed missions'**
+  String get inboxEmptyCompleted;
+
+  /// No description provided for @inboxEmptyCompletedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Finished, declined or cancelled missions appear here.'**
+  String get inboxEmptyCompletedSubtitle;
 
   /// No description provided for @inboxLoadError.
   ///

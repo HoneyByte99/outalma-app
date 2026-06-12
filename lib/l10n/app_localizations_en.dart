@@ -864,6 +864,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inboxTabActive => 'In progress';
 
   @override
+  String get inboxTabCompleted => 'Completed';
+
+  @override
   String get inboxEmptyRequests => 'No pending requests';
 
   @override
@@ -875,6 +878,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inboxEmptyActiveSubtitle => 'Accepted missions will appear here.';
+
+  @override
+  String get inboxEmptyCompleted => 'No completed missions';
+
+  @override
+  String get inboxEmptyCompletedSubtitle =>
+      'Finished, declined or cancelled missions appear here.';
 
   @override
   String get inboxLoadError => 'Could not load data.';
