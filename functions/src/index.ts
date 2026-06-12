@@ -285,7 +285,11 @@ export const createBooking = onCall(async (request) => {
     if (!serviceSnap.exists) {
       throw new HttpsError('not-found', 'Service not found.');
     }
-    const service = serviceSnap.data() as { providerId?: string; published?: boolean };
+    const service = serviceSnap.data() as {
+      providerId?: string;
+      published?: boolean;
+      serviceZones?: Array<{ lat?: number; lng?: number; radiusKm?: number }>;
+    };
     if (service.providerId !== providerId) {
       throw new HttpsError('failed-precondition', 'Service does not belong to this provider.');
     }
@@ -309,6 +313,66 @@ export const createBooking = onCall(async (request) => {
     );
     if (clientBlockedProvider.exists || providerBlockedClient.exists) {
       throw new HttpsError('failed-precondition', 'A block exists between you and this provider.');
+    }
+
+    // Zone coverage: when the client supplies a geocoded address and the service
+    // declares intervention zones, the address must fall within at least one
+    // zone. No coordinates or no declared zones → allowed (provider discretion).
+    const zones = service.serviceZones ?? [];
+    const addr = addressSnapshot as { lat?: unknown; lng?: unknown } | null;
+    if (
+      addr &&
+      typeof addr.lat === 'number' &&
+      typeof addr.lng === 'number' &&
+      zones.length > 0
+    ) {
+      const aLat = addr.lat;
+      const aLng = addr.lng;
+      const inZone = zones.some(
+        (z) =>
+          typeof z.lat === 'number' &&
+          typeof z.lng === 'number' &&
+          typeof z.radiusKm === 'number' &&
+          haversineKm(aLat, aLng, z.lat, z.lng) <= z.radiusKm
+      );
+      if (!inZone) {
+        throw new HttpsError(
+          'failed-precondition',
+          'Booking address is outside the service intervention zones.'
+        );
+      }
+    }
+
+    // Anti-double-booking: refuse a slot that overlaps (±60 min) an existing
+    // non-terminal booking for the same provider. Bookings are read by provider
+    // and filtered in code (single-field index; add a (providerId, scheduledAt)
+    // composite index if volume grows).
+    if (scheduledAt) {
+      const windowMs = 60 * 60 * 1000;
+      const existing = await tx.get(
+        db.collection('bookings').where('providerId', '==', providerId)
+      );
+      const conflict = existing.docs.some((d) => {
+        const b = d.data() as {
+          status?: string;
+          scheduledAt?: admin.firestore.Timestamp | null;
+        };
+        if (!b.scheduledAt) return false;
+        if (
+          b.status !== 'requested' &&
+          b.status !== 'accepted' &&
+          b.status !== 'in_progress'
+        ) {
+          return false;
+        }
+        return Math.abs(b.scheduledAt.toMillis() - scheduledAt.toMillis()) < windowMs;
+      });
+      if (conflict) {
+        throw new HttpsError(
+          'failed-precondition',
+          'The provider already has a booking around this time.'
+        );
+      }
     }
 
     tx.set(bookingRef, {

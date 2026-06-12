@@ -12,6 +12,7 @@ import * as admin from 'firebase-admin';
 import {
   clearFirestore,
   seedService,
+  seedService_raw,
   seedProvider,
   seedBooking,
   getBooking,
@@ -134,6 +135,114 @@ describe('createBooking', () => {
       call(fns.createBooking, validData, { uid: customer }),
       'failed-precondition'
     );
+  });
+
+  it('rejects a booking whose address is outside the service zones', async () => {
+    await seedService_raw('svcZone', {
+      providerId: provider,
+      published: true,
+      serviceZones: [{ label: 'Dakar', lat: 14.69, lng: -17.44, radiusKm: 10 }],
+    });
+    await expectReject(
+      call(
+        fns.createBooking,
+        {
+          providerId: provider,
+          serviceId: 'svcZone',
+          requestMessage: 'hi',
+          addressSnapshot: { address: 'Paris', lat: 48.85, lng: 2.35 },
+        },
+        { uid: customer }
+      ),
+      'failed-precondition'
+    );
+  });
+
+  it('accepts a booking whose address is inside a service zone', async () => {
+    await seedService_raw('svcZone', {
+      providerId: provider,
+      published: true,
+      serviceZones: [{ label: 'Dakar', lat: 14.69, lng: -17.44, radiusKm: 10 }],
+    });
+    const res = (await call(
+      fns.createBooking,
+      {
+        providerId: provider,
+        serviceId: 'svcZone',
+        requestMessage: 'hi',
+        addressSnapshot: { address: 'Dakar centre', lat: 14.70, lng: -17.45 },
+      },
+      { uid: customer }
+    )) as { bookingId: string };
+    expect(res.bookingId).toBeTruthy();
+  });
+
+  it('allows a zoned service when the address has no coordinates', async () => {
+    await seedService_raw('svcZone', {
+      providerId: provider,
+      published: true,
+      serviceZones: [{ label: 'Dakar', lat: 14.69, lng: -17.44, radiusKm: 10 }],
+    });
+    const res = (await call(
+      fns.createBooking,
+      {
+        providerId: provider,
+        serviceId: 'svcZone',
+        requestMessage: 'hi',
+        addressSnapshot: { address: 'no coords' },
+      },
+      { uid: customer }
+    )) as { bookingId: string };
+    expect(res.bookingId).toBeTruthy();
+  });
+
+  it('rejects a booking conflicting (±60min) with an existing one', async () => {
+    const when = new Date(Date.now() + 7 * 24 * 3600 * 1000);
+    await admin
+      .firestore()
+      .collection('bookings')
+      .doc('existing')
+      .set({
+        customerId: 'other',
+        providerId: provider,
+        serviceId: 'svc1',
+        status: 'accepted',
+        requestMessage: 'x',
+        scheduledAt: admin.firestore.Timestamp.fromDate(when),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    await expectReject(
+      call(
+        fns.createBooking,
+        { ...validData, scheduledAt: when.toISOString() },
+        { uid: customer }
+      ),
+      'failed-precondition'
+    );
+  });
+
+  it('allows a booking 3h away from an existing one', async () => {
+    const when = new Date(Date.now() + 7 * 24 * 3600 * 1000);
+    const later = new Date(when.getTime() + 3 * 3600 * 1000);
+    await admin
+      .firestore()
+      .collection('bookings')
+      .doc('existing')
+      .set({
+        customerId: 'other',
+        providerId: provider,
+        serviceId: 'svc1',
+        status: 'accepted',
+        requestMessage: 'x',
+        scheduledAt: admin.firestore.Timestamp.fromDate(when),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    const res = (await call(
+      fns.createBooking,
+      { ...validData, scheduledAt: later.toISOString() },
+      { uid: customer }
+    )) as { bookingId: string };
+    expect(res.bookingId).toBeTruthy();
   });
 
   it('creates a booking with status=requested on the happy path', async () => {

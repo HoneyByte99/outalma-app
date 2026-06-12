@@ -116,10 +116,20 @@ service cloud.firestore {
               && get(/databases/$(database)/documents/providers/$(request.auth.uid)).data.suspended != true);
       }
 
+      // categoryId must be one of the fixed catalogue categories — no
+      // off-catalogue services, regardless of client or direct API write.
+      function validCategory() {
+        return request.resource.data.categoryId in [
+          'menage', 'plomberie', 'jardinage', 'electricite',
+          'peinture', 'bricolage', 'gardeEnfants'
+        ];
+      }
+
       // Create by owner provider
       allow create: if isAdmin()
         || (signedIn()
             && request.resource.data.providerId == request.auth.uid
+            && validCategory()
             && publishAllowed());
 
       // Update by owner; providerId immutable
@@ -127,6 +137,7 @@ service cloud.firestore {
         || (signedIn()
             && resource.data.providerId == request.auth.uid
             && request.resource.data.providerId == resource.data.providerId
+            && validCategory()
             && publishAllowed());
 
       allow delete: if isAdmin()

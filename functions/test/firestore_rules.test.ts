@@ -308,6 +308,7 @@ describe('services publish gate', () => {
       providerId: 'alice',
       published,
       title: 'x',
+      categoryId: 'menage',
     });
   }
 
@@ -331,6 +332,28 @@ describe('services publish gate', () => {
       setDoc(doc(db, 'providers/alice'), { active: true, suspended: false })
     );
     await assertSucceeds(svc(asUser('alice'), true));
+  });
+
+  test('rejects an off-catalogue categoryId', async () => {
+    await assertFails(
+      setDoc(doc(asUser('alice'), 'services/s2'), {
+        providerId: 'alice',
+        published: false,
+        title: 'x',
+        categoryId: 'hacking',
+      })
+    );
+  });
+
+  test('accepts a catalogue categoryId (draft)', async () => {
+    await assertSucceeds(
+      setDoc(doc(asUser('alice'), 'services/s2'), {
+        providerId: 'alice',
+        published: false,
+        title: 'x',
+        categoryId: 'plomberie',
+      })
+    );
   });
 });
 
