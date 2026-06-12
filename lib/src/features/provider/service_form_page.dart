@@ -14,6 +14,7 @@ import '../../data/services/geocoding_service.dart';
 import '../../data/services/service_photo_upload_service.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/enums/price_type.dart';
+import '../shared/category_icon.dart';
 import '../../domain/models/service.dart';
 import '../../domain/models/service_zone.dart';
 
@@ -1121,7 +1122,13 @@ class _CategorySelector extends StatelessWidget {
       spacing: 8,
       children: CategoryId.values.map((c) {
         final selected = c == value;
+        // Icon + label so the category reads visually, not by text alone.
         return ChoiceChip(
+          avatar: Icon(
+            c.icon,
+            size: 18,
+            color: selected ? oc.primary : oc.icons,
+          ),
           label: Text(_labels[c]!),
           selected: selected,
           selectedColor: oc.primary.withValues(alpha: 0.12),
