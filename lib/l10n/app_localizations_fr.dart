@@ -738,6 +738,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bookingStep2PickTime => 'Choisir une heure';
 
   @override
+  String get bookingPickSlot => 'Choisir un créneau disponible';
+
+  @override
+  String get bookingNoSlots =>
+      'Aucun créneau libre ce jour-là. Essayez une autre date.';
+
+  @override
   String get bookingStep3Title => 'Adresse d\'intervention';
 
   @override
@@ -878,6 +885,18 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get inboxCalendarTooltip => 'Mon calendrier';
+
+  @override
+  String get calendarFullDay => 'Journée entière';
+
+  @override
+  String get calendarDeleteSlotTitle => 'Supprimer ce blocage ?';
+
+  @override
+  String get calendarDeleteSlotBody => 'Ce créneau redeviendra réservable.';
+
+  @override
+  String get calendarDeleteSlotConfirm => 'Supprimer';
 
   @override
   String get inboxTabRequests => 'Demandes';
@@ -1050,6 +1069,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get onboardingActivate => 'Activer mon profil prestataire';
+
+  @override
+  String get onboardingHours => 'Horaires de travail';
+
+  @override
+  String get onboardingHoursHint =>
+      'Les clients ne peuvent réserver qu\'à l\'intérieur de ce créneau.';
+
+  @override
+  String get onboardingHoursStart => 'De';
+
+  @override
+  String get onboardingHoursEnd => 'À';
 
   @override
   String get onboardingError => 'Impossible d\'activer le profil. Réessayez.';

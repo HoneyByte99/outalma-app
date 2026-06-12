@@ -154,4 +154,45 @@ void main() {
       );
     });
   });
+
+  group('ProviderProfile — working hours', () {
+    test('round-trips workingHourStart/End', () async {
+      final profile = ProviderProfile(
+        uid: 'p1',
+        active: true,
+        suspended: false,
+        createdAt: DateTime(2024, 1, 1).toUtc(),
+        workingHourStart: 9,
+        workingHourEnd: 17,
+      );
+      final col = FirestoreCollections.providers(fakeDb);
+      await col.doc('p1').set(profile);
+      final result = (await col.doc('p1').get()).data()!;
+      expect(result.workingHourStart, 9);
+      expect(result.workingHourEnd, 17);
+      expect(result.effectiveHourStart, 9);
+      expect(result.effectiveHourEnd, 17);
+    });
+
+    test('effective getters fall back to defaults when unset', () {
+      final p = _makeProfile();
+      expect(p.workingHourStart, isNull);
+      expect(p.effectiveHourStart, kDefaultWorkingHourStart);
+      expect(p.effectiveHourEnd, kDefaultWorkingHourEnd);
+    });
+
+    test('effective end guards against an invalid window (end <= start)', () {
+      final p = ProviderProfile(
+        uid: 'p',
+        active: true,
+        suspended: false,
+        createdAt: DateTime(2024, 1, 1).toUtc(),
+        workingHourStart: 20,
+        workingHourEnd: 8,
+      );
+      expect(p.effectiveHourStart, 20);
+      // end (8) <= start (20) → falls back to the default end.
+      expect(p.effectiveHourEnd, kDefaultWorkingHourEnd);
+    });
+  });
 }

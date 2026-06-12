@@ -35,6 +35,23 @@ class _ProviderOnboardingPageState
 
   bool _saving = false;
 
+  // Daily working-hours window the client's booking picker uses to offer slots.
+  int _hourStart = kDefaultWorkingHourStart;
+  int _hourEnd = kDefaultWorkingHourEnd;
+
+  @override
+  void initState() {
+    super.initState();
+    // Prefill from an existing profile (lazy onboarding sends incomplete
+    // providers back here): keep the bio and working hours they already have.
+    final existing = ref.read(currentProviderProfileProvider).valueOrNull;
+    if (existing != null) {
+      if ((existing.bio ?? '').isNotEmpty) _bioController.text = existing.bio!;
+      _hourStart = existing.effectiveHourStart;
+      _hourEnd = existing.effectiveHourEnd;
+    }
+  }
+
   @override
   void dispose() {
     _bioController.dispose();
@@ -149,6 +166,8 @@ class _ProviderOnboardingPageState
         serviceArea: _selected!.description,
         serviceAreaLat: _selectedLat,
         serviceAreaLng: _selectedLng,
+        workingHourStart: _hourStart,
+        workingHourEnd: _hourEnd,
         active: true,
         suspended: false,
         createdAt: DateTime.now(),
@@ -347,6 +366,47 @@ class _ProviderOnboardingPageState
                     ],
                   ),
                 ],
+                const SizedBox(height: 24),
+
+                // Working hours — drives the slots the client can book.
+                Text(
+                  l10n.onboardingHours,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.onboardingHoursHint,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HourField(
+                        label: l10n.onboardingHoursStart,
+                        value: _hourStart,
+                        onChanged: (v) => setState(() {
+                          _hourStart = v;
+                          if (_hourEnd <= _hourStart) {
+                            _hourEnd = (_hourStart + 1).clamp(1, 23);
+                          }
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _HourField(
+                        label: l10n.onboardingHoursEnd,
+                        value: _hourEnd,
+                        onChanged: (v) => setState(() {
+                          _hourEnd = v <= _hourStart ? _hourStart + 1 : v;
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 40),
 
                 // CTA
@@ -379,6 +439,40 @@ class _ProviderOnboardingPageState
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A 24h hour picker (00:00 … 23:00) used for the working-hours window.
+class _HourField extends StatelessWidget {
+  const _HourField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<int>(
+      // Key by value so a programmatic change (auto-bump of the end hour)
+      // rebuilds the field with the new selection.
+      key: ValueKey('$label-$value'),
+      initialValue: value,
+      decoration: InputDecoration(labelText: label),
+      items: [
+        for (var h = 0; h < 24; h++)
+          DropdownMenuItem(
+            value: h,
+            child: Text('${h.toString().padLeft(2, '0')}:00'),
+          ),
+      ],
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
     );
   }
 }

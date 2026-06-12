@@ -44,6 +44,8 @@ class FirestoreProviderRepository implements ProviderRepository {
         'serviceArea': profile.serviceArea,
         'serviceAreaLat': profile.serviceAreaLat,
         'serviceAreaLng': profile.serviceAreaLng,
+        'workingHourStart': profile.workingHourStart,
+        'workingHourEnd': profile.workingHourEnd,
       });
     } else {
       // Create: write the full document, including the initial

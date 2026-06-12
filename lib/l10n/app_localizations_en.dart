@@ -729,6 +729,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingStep2PickTime => 'Choose a time';
 
   @override
+  String get bookingPickSlot => 'Choose an available time';
+
+  @override
+  String get bookingNoSlots => 'No free slots that day. Try another date.';
+
+  @override
   String get bookingStep3Title => 'Service address';
 
   @override
@@ -869,6 +875,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inboxCalendarTooltip => 'My calendar';
+
+  @override
+  String get calendarFullDay => 'All day';
+
+  @override
+  String get calendarDeleteSlotTitle => 'Remove this block?';
+
+  @override
+  String get calendarDeleteSlotBody => 'This time will become bookable again.';
+
+  @override
+  String get calendarDeleteSlotConfirm => 'Remove';
 
   @override
   String get inboxTabRequests => 'Requests';
@@ -1040,6 +1058,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingActivate => 'Activate my provider profile';
+
+  @override
+  String get onboardingHours => 'Working hours';
+
+  @override
+  String get onboardingHoursHint =>
+      'Clients can only book time slots within this window.';
+
+  @override
+  String get onboardingHoursStart => 'From';
+
+  @override
+  String get onboardingHoursEnd => 'To';
 
   @override
   String get onboardingError => 'Could not activate profile. Please try again.';

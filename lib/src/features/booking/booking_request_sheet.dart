@@ -19,6 +19,7 @@ import '../../application/booking/booking_providers.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../data/services/chat_media_service.dart';
 import '../../data/services/geocoding_service.dart';
+import '../../domain/models/provider_profile.dart';
 
 class BookingRequestSheet extends ConsumerStatefulWidget {
   const BookingRequestSheet({
@@ -58,7 +59,11 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
-  String? _scheduleConflict; // warning message if slot is busy
+  // Bookable hours for the chosen date = provider working hours minus blocked
+  // periods, existing bookings, and (for today) past hours. The client picks
+  // from these instead of free-typing a time.
+  List<int> _availableSlots = const [];
+  bool _slotsLoading = false;
 
   // Place id of the selected suggestion, if any. Cleared as soon as the user
   // edits the address text by hand.
@@ -333,73 +338,80 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       locale: Localizations.localeOf(context),
     );
     if (picked != null && mounted) {
-      setState(() => _selectedDate = picked);
-      await _checkConflict();
+      setState(() {
+        _selectedDate = picked;
+        _selectedTime = null; // a new date invalidates the chosen slot
+      });
+      await _recomputeSlots();
     }
   }
 
-  Future<void> _pickTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime ?? const TimeOfDay(hour: 9, minute: 0),
-    );
-    if (picked != null && mounted) {
-      setState(() => _selectedTime = picked);
-      await _checkConflict();
-    }
+  void _selectSlot(int hour) {
+    setState(() => _selectedTime = TimeOfDay(hour: hour, minute: 0));
   }
 
-  Future<void> _checkConflict() async {
-    final dt = _scheduledAt;
-    if (dt == null) {
-      setState(() => _scheduleConflict = null);
+  /// Builds the list of bookable hours for [_selectedDate]: the provider's
+  /// working-hours window, minus blocked periods, minus hours within 60 min of
+  /// an existing booking, minus past hours when the date is today.
+  Future<void> _recomputeSlots() async {
+    final date = _selectedDate;
+    if (date == null) {
+      setState(() => _availableSlots = const []);
       return;
     }
-    if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    final dateKey = (providerId: widget.providerId, date: dt);
-    ref.invalidate(providerBookingsForDateProvider(dateKey));
-
-    String? conflict;
+    setState(() => _slotsLoading = true);
     try {
+      final profile = await ref.read(
+        providerProfileByIdProvider(widget.providerId).future,
+      );
+      final start = profile?.effectiveHourStart ?? kDefaultWorkingHourStart;
+      final end = profile?.effectiveHourEnd ?? kDefaultWorkingHourEnd;
+
+      final blocked = await ref.read(
+        blockedSlotsForProviderProvider(widget.providerId).future,
+      );
+      final dateKey = (providerId: widget.providerId, date: date);
+      ref.invalidate(providerBookingsForDateProvider(dateKey));
       final bookings = await ref.read(
         providerBookingsForDateProvider(dateKey).future,
       );
-      for (final b in bookings) {
-        if (b.scheduledAt != null) {
-          final diff = (b.scheduledAt!.difference(dt).inMinutes).abs();
-          if (diff < 120) {
-            conflict = l10n.bookingConflictBusy;
-            break;
-          }
-        }
-      }
 
-      if (conflict == null) {
-        final slots = await ref.read(
-          blockedSlotsForProviderProvider(widget.providerId).future,
+      final now = DateTime.now();
+      final slots = <int>[];
+      for (var h = start; h < end; h++) {
+        final slotDt = DateTime(date.year, date.month, date.day, h);
+        if (slotDt.isBefore(now)) continue; // past hour today
+        final isBlocked = blocked.any((s) {
+          if (s.isFullDay) {
+            return s.date.year == date.year &&
+                s.date.month == date.month &&
+                s.date.day == date.day;
+          }
+          return s.endDate != null &&
+              !slotDt.isBefore(s.date) &&
+              slotDt.isBefore(s.endDate!);
+        });
+        if (isBlocked) continue;
+        final clash = bookings.any(
+          (b) =>
+              b.scheduledAt != null &&
+              b.scheduledAt!.difference(slotDt).inMinutes.abs() < 60,
         );
-        for (final slot in slots) {
-          if (slot.isFullDay &&
-              slot.date.year == dt.year &&
-              slot.date.month == dt.month &&
-              slot.date.day == dt.day) {
-            conflict = l10n.bookingConflictUnavailableDay;
-            break;
-          }
-          if (slot.endDate != null &&
-              dt.isAfter(slot.date) &&
-              dt.isBefore(slot.endDate!)) {
-            conflict = l10n.bookingConflictUnavailableSlot;
-            break;
-          }
-        }
+        if (clash) continue;
+        slots.add(h);
       }
+      if (!mounted) return;
+      setState(() {
+        _availableSlots = slots;
+        if (_selectedTime != null && !slots.contains(_selectedTime!.hour)) {
+          _selectedTime = null;
+        }
+      });
     } catch (_) {
-      // Non-blocking — conflict detection failure should not block submission.
+      if (mounted) setState(() => _availableSlots = const []);
+    } finally {
+      if (mounted) setState(() => _slotsLoading = false);
     }
-
-    if (mounted) setState(() => _scheduleConflict = conflict);
   }
 
   @override
@@ -546,10 +558,11 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       case 1:
         return _StepSchedule(
           selectedDate: _selectedDate,
-          selectedTime: _selectedTime,
-          conflictMessage: _scheduleConflict,
+          selectedHour: _selectedTime?.hour,
+          availableHours: _availableSlots,
+          slotsLoading: _slotsLoading,
           onPickDate: _pickDate,
-          onPickTime: _pickTime,
+          onSelectHour: _selectSlot,
         );
       case 2:
         return _StepAddress(
@@ -917,17 +930,19 @@ class _VoiceRecorder extends StatelessWidget {
 class _StepSchedule extends StatelessWidget {
   const _StepSchedule({
     required this.selectedDate,
-    required this.selectedTime,
-    required this.conflictMessage,
+    required this.selectedHour,
+    required this.availableHours,
+    required this.slotsLoading,
     required this.onPickDate,
-    required this.onPickTime,
+    required this.onSelectHour,
   });
 
   final DateTime? selectedDate;
-  final TimeOfDay? selectedTime;
-  final String? conflictMessage;
+  final int? selectedHour;
+  final List<int> availableHours;
+  final bool slotsLoading;
   final VoidCallback onPickDate;
-  final VoidCallback onPickTime;
+  final ValueChanged<int> onSelectHour;
 
   @override
   Widget build(BuildContext context) {
@@ -937,9 +952,6 @@ class _StepSchedule extends StatelessWidget {
     final dateLabel = selectedDate != null
         ? dateFmt.format(selectedDate!)
         : l10n.bookingStep2PickDate;
-    final timeLabel = selectedTime != null
-        ? '${selectedTime!.hour.toString().padLeft(2, '0')}h${selectedTime!.minute.toString().padLeft(2, '0')}'
-        : l10n.bookingStep2PickTime;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -964,42 +976,57 @@ class _StepSchedule extends StatelessWidget {
           filled: selectedDate != null,
           onTap: onPickDate,
         ),
-        const SizedBox(height: AppSpacing.m),
 
-        // Time picker button
-        _PickerButton(
-          icon: Icons.access_time_outlined,
-          label: timeLabel,
-          filled: selectedTime != null,
-          onTap: onPickTime,
-        ),
-
-        // Conflict warning
-        if (conflictMessage != null) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: oc.warning.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: oc.warning.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.warning_amber_rounded, size: 18, color: oc.warning),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    conflictMessage!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: oc.warning,
-                      fontWeight: FontWeight.w500,
+        // Slot picker — only the provider's free hours, no free typing.
+        if (selectedDate != null) ...[
+          const SizedBox(height: AppSpacing.m),
+          Text(
+            l10n.bookingPickSlot,
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 8),
+          if (slotsLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (availableHours.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: oc.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: oc.warning.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.event_busy_rounded, size: 18, color: oc.warning),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.bookingNoSlots,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: oc.warning,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
+                ],
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final h in availableHours)
+                  ChoiceChip(
+                    label: Text('${h.toString().padLeft(2, '0')}:00'),
+                    selected: selectedHour == h,
+                    onSelected: (_) => onSelectHour(h),
+                  ),
               ],
             ),
-          ),
         ],
       ],
     );

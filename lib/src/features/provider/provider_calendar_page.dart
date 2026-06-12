@@ -368,10 +368,29 @@ class _DayDetailSliver extends ConsumerWidget {
       for (final s in daySlots)
         _BlockedSlotTile(
           slot: s,
-          onDelete: () {
+          onDelete: () async {
             final authState = ref.read(authNotifierProvider).valueOrNull;
-            if (authState is AuthAuthenticated) {
-              ref
+            if (authState is! AuthAuthenticated) return;
+            final l10n = AppLocalizations.of(context)!;
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(l10n.calendarDeleteSlotTitle),
+                content: Text(l10n.calendarDeleteSlotBody),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: Text(l10n.bookingBack),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: Text(l10n.calendarDeleteSlotConfirm),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true) {
+              await ref
                   .read(providerRepositoryProvider)
                   .removeBlockedSlot(authState.user.id, s.id);
             }
@@ -617,14 +636,11 @@ class _BlockedSlotTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
     final timeFmt = DateFormat('HH:mm', locale);
-    // "Journée entière" — no dedicated ARB key; reuse bookingScheduleUnspecified
-    // is wrong, so fall back to the statusInProgress key which is closest available.
-    // Instead we keep the French literal since no key matches "full day".
-    // TODO: add a dedicated ARB key for "full day" if needed.
     final label = slot.isFullDay
-        ? 'Journ\u00e9e enti\u00e8re'
+        ? l10n.calendarFullDay
         : '${timeFmt.format(slot.date)} \u2013 ${timeFmt.format(slot.endDate!)}';
 
     return Container(

@@ -1454,6 +1454,18 @@ abstract class AppLocalizations {
   /// **'Choose a time'**
   String get bookingStep2PickTime;
 
+  /// No description provided for @bookingPickSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an available time'**
+  String get bookingPickSlot;
+
+  /// No description provided for @bookingNoSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'No free slots that day. Try another date.'**
+  String get bookingNoSlots;
+
   /// No description provided for @bookingStep3Title.
   ///
   /// In en, this message translates to:
@@ -1705,6 +1717,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My calendar'**
   String get inboxCalendarTooltip;
+
+  /// No description provided for @calendarFullDay.
+  ///
+  /// In en, this message translates to:
+  /// **'All day'**
+  String get calendarFullDay;
+
+  /// No description provided for @calendarDeleteSlotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this block?'**
+  String get calendarDeleteSlotTitle;
+
+  /// No description provided for @calendarDeleteSlotBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This time will become bookable again.'**
+  String get calendarDeleteSlotBody;
+
+  /// No description provided for @calendarDeleteSlotConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get calendarDeleteSlotConfirm;
 
   /// No description provided for @inboxTabRequests.
   ///
@@ -2029,6 +2065,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Activate my provider profile'**
   String get onboardingActivate;
+
+  /// No description provided for @onboardingHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Working hours'**
+  String get onboardingHours;
+
+  /// No description provided for @onboardingHoursHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients can only book time slots within this window.'**
+  String get onboardingHoursHint;
+
+  /// No description provided for @onboardingHoursStart.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get onboardingHoursStart;
+
+  /// No description provided for @onboardingHoursEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get onboardingHoursEnd;
 
   /// No description provided for @onboardingError.
   ///
