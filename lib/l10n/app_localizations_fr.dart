@@ -456,10 +456,56 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ajoutez votre bio et votre zone d\'intervention pour rassurer les clients.';
 
   @override
-  String get profileActive => 'Profil actif';
+  String get hubFallbackName => 'Mon profil';
 
   @override
-  String get profileInactive => 'Profil inactif';
+  String get hubEditProfile => 'Modifier le profil';
+
+  @override
+  String get hubAvailable => 'Disponible';
+
+  @override
+  String get hubPaused => 'En pause';
+
+  @override
+  String get hubAvailableSub => 'Les clients peuvent vous réserver';
+
+  @override
+  String get hubPausedSub => 'Vos annonces sont masquées';
+
+  @override
+  String get hubNoServicesHint => 'Publiez une annonce pour devenir disponible';
+
+  @override
+  String get hubSemanticsOn => 'Disponible. Appuyez pour mettre en pause.';
+
+  @override
+  String get hubSemanticsOff => 'En pause. Appuyez pour redevenir disponible.';
+
+  @override
+  String get hubResumed => 'Vous êtes de nouveau disponible';
+
+  @override
+  String get hubToggleError =>
+      'Impossible de mettre à jour votre disponibilité. Réessayez.';
+
+  @override
+  String get hubPauseTitle => 'Mettre en pause ?';
+
+  @override
+  String hubPauseBody(int count) {
+    return 'Vos $count annonces seront masquées aux clients. Réactivez quand vous voulez.';
+  }
+
+  @override
+  String get hubPauseBodyNoCount =>
+      'Vos annonces seront masquées aux clients. Réactivez quand vous voulez.';
+
+  @override
+  String get hubPauseCta => 'Mettre en pause';
+
+  @override
+  String get serviceMaskedPaused => 'Masqué — en pause';
 
   @override
   String get dashboardServicesError => 'Impossible de charger vos services.';
@@ -783,6 +829,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun créneau libre ce jour-là. Essayez une autre date.';
 
   @override
+  String get bookingProviderUnavailable =>
+      'Ce prestataire est indisponible pour le moment.';
+
+  @override
   String get marketplaceDisclaimer =>
       'Outalma met uniquement en relation des clients et des prestataires indépendants. Tout accord et paiement se fait directement entre vous, hors de l\'application et sous votre responsabilité. Vérifiez toujours à qui vous avez affaire.';
 
@@ -821,6 +871,12 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get bookingVoiceUploadFailed =>
       'Échec de l\'envoi du message vocal. Réessayez.';
+
+  @override
+  String get bookingVoicePlayLabel => 'Lecture';
+
+  @override
+  String get bookingVoiceStopLabel => 'Stop';
 
   @override
   String get bookingSentSuccess => 'Demande envoyée avec succès ✓';
@@ -1095,19 +1151,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get onboardingBioHint =>
       'Ex: Plombier avec 10 ans d\'expérience, disponible en région parisienne…';
-
-  @override
-  String get onboardingZone => 'Zone d\'intervention';
-
-  @override
-  String get onboardingZoneHint => 'Recherchez une ville ou une adresse…';
-
-  @override
-  String get onboardingZoneRequired =>
-      'Choisissez votre zone d\'intervention parmi les suggestions.';
-
-  @override
-  String get onboardingZoneConfirmed => 'Zone d\'intervention confirmée';
 
   @override
   String get onboardingActivate => 'Activer mon profil prestataire';
@@ -1630,7 +1673,4 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get serviceFormPhotoUndo => 'Annuler';
-
-  @override
-  String get zoneGeocodeFailed => 'Adresse introuvable, précisez-la.';
 }

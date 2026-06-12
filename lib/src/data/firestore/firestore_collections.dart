@@ -431,12 +431,11 @@ class FirestoreCollections {
     return ProviderProfile(
       uid: snap.id,
       bio: data['bio'] as String?,
-      serviceArea: data['serviceArea'] as String?,
-      serviceAreaLat: (data['serviceAreaLat'] as num?)?.toDouble(),
-      serviceAreaLng: (data['serviceAreaLng'] as num?)?.toDouble(),
       workingHourStart: (data['workingHourStart'] as num?)?.toInt(),
       workingHourEnd: (data['workingHourEnd'] as num?)?.toInt(),
-      active: (data['active'] as bool?) ?? false,
+      // Availability defaults to true (available) when the field is missing —
+      // a provider is hidden only if they explicitly paused.
+      active: (data['active'] as bool?) ?? true,
       suspended: (data['suspended'] as bool?) ?? false,
       createdAt: dateTimeFromFirestore(data['createdAt']),
     );
@@ -446,9 +445,6 @@ class FirestoreCollections {
     return {
       'uid': profile.uid,
       'bio': profile.bio,
-      'serviceArea': profile.serviceArea,
-      'serviceAreaLat': profile.serviceAreaLat,
-      'serviceAreaLng': profile.serviceAreaLng,
       'workingHourStart': profile.workingHourStart,
       'workingHourEnd': profile.workingHourEnd,
       'active': profile.active,

@@ -115,6 +115,14 @@ describe('createBooking', () => {
     );
   });
 
+  it('rejects when the provider is paused (active=false)', async () => {
+    await seedProvider(provider, { active: false });
+    await expectReject(
+      call(fns.createBooking, validData, { uid: customer }),
+      'failed-precondition'
+    );
+  });
+
   it('rejects when the customer has blocked the provider', async () => {
     await admin
       .firestore()

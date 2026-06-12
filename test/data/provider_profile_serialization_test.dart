@@ -3,10 +3,10 @@
 //
 // Critical cases:
 //   - All fields present roundtrip
-//   - Null optional fields (bio, serviceArea)
+//   - Null optional fields (bio)
 //   - active / suspended flags
 //   - createdAt Timestamp ↔ DateTime conversion
-//   - Missing fields → safe defaults, no crash
+//   - Missing fields → safe defaults (active defaults to available), no crash
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
@@ -17,7 +17,6 @@ import 'package:outalma_app/src/domain/models/provider_profile.dart';
 ProviderProfile _makeProfile({
   String uid = 'provider_1',
   String? bio = 'Expert en ménage depuis 10 ans.',
-  String? serviceArea = 'Paris 15e',
   bool active = true,
   bool suspended = false,
   DateTime? createdAt,
@@ -25,7 +24,6 @@ ProviderProfile _makeProfile({
   return ProviderProfile(
     uid: uid,
     bio: bio,
-    serviceArea: serviceArea,
     active: active,
     suspended: suspended,
     createdAt: createdAt ?? DateTime(2024, 1, 15, 10, 0).toUtc(),
@@ -48,7 +46,6 @@ void main() {
 
       expect(result.uid, profile.uid);
       expect(result.bio, 'Expert en ménage depuis 10 ans.');
-      expect(result.serviceArea, 'Paris 15e');
       expect(result.active, true);
       expect(result.suspended, false);
     });
@@ -61,23 +58,6 @@ void main() {
       await col.doc(profile.uid).set(profile);
       final result = (await col.doc(profile.uid).get()).data()!;
       expect(result.bio, isNull);
-    });
-
-    test('null serviceArea roundtrips as null', () async {
-      final profile = _makeProfile(serviceArea: null);
-      final col = FirestoreCollections.providers(fakeDb);
-      await col.doc(profile.uid).set(profile);
-      final result = (await col.doc(profile.uid).get()).data()!;
-      expect(result.serviceArea, isNull);
-    });
-
-    test('both bio and serviceArea null roundtrip as null', () async {
-      final profile = _makeProfile(bio: null, serviceArea: null);
-      final col = FirestoreCollections.providers(fakeDb);
-      await col.doc(profile.uid).set(profile);
-      final result = (await col.doc(profile.uid).get()).data()!;
-      expect(result.bio, isNull);
-      expect(result.serviceArea, isNull);
     });
   });
 
@@ -136,8 +116,8 @@ void main() {
       final result = (await col.doc('minimal').get()).data()!;
 
       expect(result.bio, isNull);
-      expect(result.serviceArea, isNull);
-      expect(result.active, false);
+      // Availability defaults to available when the field is missing.
+      expect(result.active, true);
       expect(result.suspended, false);
     });
 

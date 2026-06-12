@@ -82,6 +82,14 @@ describe('S2 providers moderation fields', () => {
     );
   });
 
+  test('owner CAN flip their own availability (active)', async () => {
+    // `active` is the owner-controlled Disponible/En pause switch — not a
+    // moderation field, so self-writes are allowed.
+    await assertSucceeds(
+      updateDoc(doc(asUser('p1'), 'providers/p1'), { active: false })
+    );
+  });
+
   test('admin CAN lift suspension', async () => {
     await assertSucceeds(
       updateDoc(doc(asAdmin(), 'providers/p1'), { suspended: false })

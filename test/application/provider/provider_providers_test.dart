@@ -178,6 +178,16 @@ void main() {
       expect((await c.read(providerProfileByIdProvider('x').future))?.uid, pid);
     });
 
+    test('pausedProviderIdsProvider streams the paused set', () async {
+      when(
+        () => providerRepo.watchPausedProviderIds(),
+      ).thenAnswer((_) => Stream.value({'paused_a', 'paused_b'}));
+      final c = authed();
+      addTearDown(c.dispose);
+      final ids = await c.read(pausedProviderIdsProvider.future);
+      expect(ids, {'paused_a', 'paused_b'});
+    });
+
     test('providerServicesProvider streams own services', () async {
       when(
         () => serviceRepo.watchForProvider(pid),

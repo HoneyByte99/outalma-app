@@ -237,7 +237,15 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         if (_voiceMode) return _recordedBytes != null;
         return _messageController.text.trim().isNotEmpty;
       case 1:
-        return true; // schedule is optional
+        // Schedule is optional — but a paused provider can't be booked, so
+        // don't let the client advance past the "indisponible" banner.
+        final paused =
+            ref
+                .read(providerProfileByIdProvider(widget.providerId))
+                .valueOrNull
+                ?.active ==
+            false;
+        return !paused;
       case 2:
         return true; // address is optional
       default:
@@ -250,6 +258,24 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     final successMsg = l10n.bookingSentSuccess;
     final errorMsg = l10n.errorGeneral;
     final errorColor = context.oc.error;
+
+    // Provider is "En pause": block the request client-side with a clear
+    // message. The server (createBooking) also refuses — this is just UX.
+    final providerPaused =
+        ref
+            .read(providerProfileByIdProvider(widget.providerId))
+            .valueOrNull
+            ?.active ==
+        false;
+    if (providerPaused) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.bookingProviderUnavailable),
+          backgroundColor: errorColor,
+        ),
+      );
+      return;
+    }
 
     setState(() => _loading = true);
     try {
@@ -562,6 +588,12 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
           selectedHour: _selectedTime?.hour,
           availableHours: _availableSlots,
           slotsLoading: _slotsLoading,
+          providerUnavailable:
+              ref
+                  .watch(providerProfileByIdProvider(widget.providerId))
+                  .valueOrNull
+                  ?.active ==
+              false,
           onPickDate: _pickDate,
           onSelectHour: _selectSlot,
         );
@@ -815,6 +847,7 @@ class _VoiceRecorder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
 
     if (recordedBytes != null) {
       // Playback / delete UI
@@ -832,7 +865,9 @@ class _VoiceRecorder extends StatelessWidget {
               onTap: playing ? onStopPlay : onPlay,
               child: Semantics(
                 button: true,
-                label: playing ? 'Stop' : 'Lecture',
+                label: playing
+                    ? l10n.bookingVoiceStopLabel
+                    : l10n.bookingVoicePlayLabel,
                 child: Container(
                   width: 48,
                   height: 48,
@@ -934,6 +969,7 @@ class _StepSchedule extends StatelessWidget {
     required this.selectedHour,
     required this.availableHours,
     required this.slotsLoading,
+    required this.providerUnavailable,
     required this.onPickDate,
     required this.onSelectHour,
   });
@@ -942,6 +978,7 @@ class _StepSchedule extends StatelessWidget {
   final int? selectedHour;
   final List<int> availableHours;
   final bool slotsLoading;
+  final bool providerUnavailable;
   final VoidCallback onPickDate;
   final ValueChanged<int> onSelectHour;
 
@@ -953,6 +990,44 @@ class _StepSchedule extends StatelessWidget {
     final dateLabel = selectedDate != null
         ? dateFmt.format(selectedDate!)
         : l10n.bookingStep2PickDate;
+
+    // Provider paused their whole catalogue — surface it plainly and hide the
+    // date/slot picker (the request would be refused anyway).
+    if (providerUnavailable) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.bookingStep2Title,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: oc.warning.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: oc.warning.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.pause_circle_outline, size: 20, color: oc.warning),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l10n.bookingProviderUnavailable,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: oc.warning,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

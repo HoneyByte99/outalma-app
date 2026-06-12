@@ -13,9 +13,6 @@ void main() {
     test('overrides every field when provided', () {
       final p = _base().copyWith(
         bio: 'b',
-        serviceArea: 'sa',
-        serviceAreaLat: 1.0,
-        serviceAreaLng: 2.0,
         workingHourStart: 9,
         workingHourEnd: 17,
         active: false,
@@ -24,9 +21,6 @@ void main() {
       );
       expect(p.uid, 'p'); // uid is identity, never copied
       expect(p.bio, 'b');
-      expect(p.serviceArea, 'sa');
-      expect(p.serviceAreaLat, 1.0);
-      expect(p.serviceAreaLng, 2.0);
       expect(p.workingHourStart, 9);
       expect(p.workingHourEnd, 17);
       expect(p.active, false);

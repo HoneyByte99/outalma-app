@@ -920,17 +920,101 @@ abstract class AppLocalizations {
   /// **'Add your bio and service area to build client trust.'**
   String get dashboardCompleteProfileBody;
 
-  /// No description provided for @profileActive.
+  /// No description provided for @hubFallbackName.
   ///
   /// In en, this message translates to:
-  /// **'Active profile'**
-  String get profileActive;
+  /// **'My profile'**
+  String get hubFallbackName;
 
-  /// No description provided for @profileInactive.
+  /// No description provided for @hubEditProfile.
   ///
   /// In en, this message translates to:
-  /// **'Inactive profile'**
-  String get profileInactive;
+  /// **'Edit profile'**
+  String get hubEditProfile;
+
+  /// No description provided for @hubAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get hubAvailable;
+
+  /// No description provided for @hubPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get hubPaused;
+
+  /// No description provided for @hubAvailableSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients can book you'**
+  String get hubAvailableSub;
+
+  /// No description provided for @hubPausedSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Your listings are hidden'**
+  String get hubPausedSub;
+
+  /// No description provided for @hubNoServicesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish a listing to become available'**
+  String get hubNoServicesHint;
+
+  /// No description provided for @hubSemanticsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Available. Tap to pause.'**
+  String get hubSemanticsOn;
+
+  /// No description provided for @hubSemanticsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused. Tap to become available.'**
+  String get hubSemanticsOff;
+
+  /// No description provided for @hubResumed.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re available again'**
+  String get hubResumed;
+
+  /// No description provided for @hubToggleError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update your availability. Try again.'**
+  String get hubToggleError;
+
+  /// No description provided for @hubPauseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause your activity?'**
+  String get hubPauseTitle;
+
+  /// No description provided for @hubPauseBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your {count} listings will be hidden from clients. Resume whenever you want.'**
+  String hubPauseBody(int count);
+
+  /// No description provided for @hubPauseBodyNoCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Your listings will be hidden from clients. Resume whenever you want.'**
+  String get hubPauseBodyNoCount;
+
+  /// No description provided for @hubPauseCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get hubPauseCta;
+
+  /// No description provided for @serviceMaskedPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden — paused'**
+  String get serviceMaskedPaused;
 
   /// No description provided for @dashboardServicesError.
   ///
@@ -1532,6 +1616,12 @@ abstract class AppLocalizations {
   /// **'No free slots that day. Try another date.'**
   String get bookingNoSlots;
 
+  /// No description provided for @bookingProviderUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This provider is currently unavailable.'**
+  String get bookingProviderUnavailable;
+
   /// No description provided for @marketplaceDisclaimer.
   ///
   /// In en, this message translates to:
@@ -1603,6 +1693,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Voice message upload failed. Please try again.'**
   String get bookingVoiceUploadFailed;
+
+  /// No description provided for @bookingVoicePlayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get bookingVoicePlayLabel;
+
+  /// No description provided for @bookingVoiceStopLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get bookingVoiceStopLabel;
 
   /// No description provided for @bookingSentSuccess.
   ///
@@ -2107,30 +2209,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'E.g. Plumber with 10 years of experience, available in the Paris area…'**
   String get onboardingBioHint;
-
-  /// No description provided for @onboardingZone.
-  ///
-  /// In en, this message translates to:
-  /// **'Service area'**
-  String get onboardingZone;
-
-  /// No description provided for @onboardingZoneHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search for a city or address…'**
-  String get onboardingZoneHint;
-
-  /// No description provided for @onboardingZoneRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose your service area from the suggestions.'**
-  String get onboardingZoneRequired;
-
-  /// No description provided for @onboardingZoneConfirmed.
-  ///
-  /// In en, this message translates to:
-  /// **'Service area confirmed'**
-  String get onboardingZoneConfirmed;
 
   /// No description provided for @onboardingActivate.
   ///
@@ -3091,12 +3169,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Undo'**
   String get serviceFormPhotoUndo;
-
-  /// No description provided for @zoneGeocodeFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Address not found, please refine it.'**
-  String get zoneGeocodeFailed;
 }
 
 class _AppLocalizationsDelegate

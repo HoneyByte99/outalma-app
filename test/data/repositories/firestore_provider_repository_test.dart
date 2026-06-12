@@ -22,9 +22,6 @@ void main() {
   }) => ProviderProfile(
     uid: 'p1',
     bio: bio,
-    serviceArea: 'Dakar',
-    serviceAreaLat: 14.7,
-    serviceAreaLng: -17.4,
     active: active,
     suspended: suspended,
     createdAt: createdAt ?? DateTime(2024, 1, 1).toUtc(),
@@ -46,7 +43,6 @@ void main() {
         expect(data['suspended'], false);
         expect(data['bio'], 'Hi');
         expect(data['createdAt'], isNotNull);
-        expect(data['serviceArea'], 'Dakar');
       },
     );
   });
@@ -103,24 +99,43 @@ void main() {
     });
   });
 
-  group('watchAll', () {
-    test('returns only active, non-suspended providers', () async {
-      Future<void> seed(
-        String uid, {
-        required bool active,
-        required bool suspended,
-      }) => db.collection('providers').doc(uid).set({
-        'uid': uid,
-        'active': active,
-        'suspended': suspended,
+  group('watchPausedProviderIds', () {
+    test('returns only providers with active == false', () async {
+      Future<void> seed(String uid, {required bool active}) =>
+          db.collection('providers').doc(uid).set({
+            'uid': uid,
+            'active': active,
+            'suspended': false,
+            'createdAt': DateTime(2024, 1, 1).toUtc(),
+          });
+      await seed('live', active: true);
+      await seed('paused', active: false);
+      // A doc missing `active` (legacy) must NOT count as paused.
+      await db.collection('providers').doc('legacy').set({
+        'uid': 'legacy',
         'createdAt': DateTime(2024, 1, 1).toUtc(),
       });
-      await seed('live', active: true, suspended: false);
-      await seed('paused', active: false, suspended: false);
-      await seed('banned', active: true, suspended: true);
 
-      final list = await repo.watchAll().first;
-      expect(list.map((p) => p.uid), ['live']);
+      final ids = await repo.watchPausedProviderIds().first;
+      expect(ids, {'paused'});
+    });
+  });
+
+  group('setActive', () {
+    test('flips only the active flag, leaving other fields intact', () async {
+      await repo.upsert(profile(active: true, bio: 'Hi'));
+
+      await repo.setActive('p1', false);
+
+      final data = await rawDoc();
+      expect(data['active'], false);
+      // Non-destructive: bio / suspended / createdAt untouched.
+      expect(data['bio'], 'Hi');
+      expect(data['suspended'], false);
+      expect(data['createdAt'], isNotNull);
+
+      await repo.setActive('p1', true);
+      expect((await rawDoc())['active'], true);
     });
   });
 

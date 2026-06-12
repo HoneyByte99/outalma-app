@@ -298,8 +298,20 @@ export const createBooking = onCall(async (request) => {
     }
 
     const providerSnap = await tx.get(db.collection('providers').doc(providerId));
-    if (providerSnap.exists && (providerSnap.data() as { suspended?: boolean }).suspended === true) {
-      throw new HttpsError('failed-precondition', 'Provider is currently unavailable.');
+    if (providerSnap.exists) {
+      const providerData = providerSnap.data() as {
+        suspended?: boolean;
+        active?: boolean;
+      };
+      // `suspended` = admin moderation; `active === false` = provider paused
+      // ("En pause"). Either makes the provider unbookable. `active` defaults to
+      // available, so only an explicit `false` blocks (missing/undefined = ok).
+      if (providerData.suspended === true || providerData.active === false) {
+        throw new HttpsError(
+          'failed-precondition',
+          'Provider is currently unavailable.',
+        );
+      }
     }
 
     // Coupure totale: a booking must not be possible if either party has

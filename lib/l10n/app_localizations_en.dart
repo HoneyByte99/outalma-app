@@ -448,10 +448,55 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add your bio and service area to build client trust.';
 
   @override
-  String get profileActive => 'Active profile';
+  String get hubFallbackName => 'My profile';
 
   @override
-  String get profileInactive => 'Inactive profile';
+  String get hubEditProfile => 'Edit profile';
+
+  @override
+  String get hubAvailable => 'Available';
+
+  @override
+  String get hubPaused => 'Paused';
+
+  @override
+  String get hubAvailableSub => 'Clients can book you';
+
+  @override
+  String get hubPausedSub => 'Your listings are hidden';
+
+  @override
+  String get hubNoServicesHint => 'Publish a listing to become available';
+
+  @override
+  String get hubSemanticsOn => 'Available. Tap to pause.';
+
+  @override
+  String get hubSemanticsOff => 'Paused. Tap to become available.';
+
+  @override
+  String get hubResumed => 'You\'re available again';
+
+  @override
+  String get hubToggleError => 'Couldn\'t update your availability. Try again.';
+
+  @override
+  String get hubPauseTitle => 'Pause your activity?';
+
+  @override
+  String hubPauseBody(int count) {
+    return 'Your $count listings will be hidden from clients. Resume whenever you want.';
+  }
+
+  @override
+  String get hubPauseBodyNoCount =>
+      'Your listings will be hidden from clients. Resume whenever you want.';
+
+  @override
+  String get hubPauseCta => 'Pause';
+
+  @override
+  String get serviceMaskedPaused => 'Hidden — paused';
 
   @override
   String get dashboardServicesError => 'Could not load your services.';
@@ -772,6 +817,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingNoSlots => 'No free slots that day. Try another date.';
 
   @override
+  String get bookingProviderUnavailable =>
+      'This provider is currently unavailable.';
+
+  @override
   String get marketplaceDisclaimer =>
       'Outalma only connects clients and independent providers. Any agreement and payment is made directly between you, outside the app and at your own risk. Always check who you are dealing with.';
 
@@ -810,6 +859,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get bookingVoiceUploadFailed =>
       'Voice message upload failed. Please try again.';
+
+  @override
+  String get bookingVoicePlayLabel => 'Play';
+
+  @override
+  String get bookingVoiceStopLabel => 'Stop';
 
   @override
   String get bookingSentSuccess => 'Request sent successfully ✓';
@@ -1083,19 +1138,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingBioHint =>
       'E.g. Plumber with 10 years of experience, available in the Paris area…';
-
-  @override
-  String get onboardingZone => 'Service area';
-
-  @override
-  String get onboardingZoneHint => 'Search for a city or address…';
-
-  @override
-  String get onboardingZoneRequired =>
-      'Choose your service area from the suggestions.';
-
-  @override
-  String get onboardingZoneConfirmed => 'Service area confirmed';
 
   @override
   String get onboardingActivate => 'Activate my provider profile';
@@ -1613,7 +1655,4 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serviceFormPhotoUndo => 'Undo';
-
-  @override
-  String get zoneGeocodeFailed => 'Address not found, please refine it.';
 }

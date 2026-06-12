@@ -8,13 +8,18 @@ import '../../app/app_shell.dart';
 import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
+import '../../application/auth/auth_providers.dart';
+import '../../application/auth/auth_state.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../core/utils/format_utils.dart';
+import '../review/rating_summary.dart';
 import '../shared/mode_badge.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/models/provider_profile.dart';
 import '../shared/category_icon.dart';
+import '../shared/user_avatar.dart';
+import '../shared/verified_badge.dart';
 import '../../domain/models/service.dart';
 
 class ProviderDashboardPage extends ConsumerWidget {
@@ -31,9 +36,10 @@ class ProviderDashboardPage extends ConsumerWidget {
     // first, then "create first service" if there are none, then the normal
     // services dashboard. Only the screen for the current state shows a
     // strong CTA — no competing primary actions (security review A.3).
-    // Every provider is active by default — there is no "activate/complete
-    // your profile" concept. Profile details (bio / service area / hours) are
-    // edited from the profile card; only listings are activated/deactivated.
+    // Every provider is available by default. The hub card carries a self-
+    // service availability toggle (Disponible/En pause) that hides the whole
+    // catalogue at once; per-listing on/off lives on each service tile. Profile
+    // details (bio / working hours) are edited via the hub's edit pencil.
     final profile = profileAsync.valueOrNull;
     final servicesCount = servicesAsync.valueOrNull?.length ?? 0;
     final showFab = servicesCount > 0;
@@ -59,7 +65,7 @@ class ProviderDashboardPage extends ConsumerWidget {
             SliverToBoxAdapter(
               child: Column(
                 children: [
-                  if (profile != null) _ProfileCard(profile: profile),
+                  if (profile != null) _ProviderHubCard(profile: profile),
                   servicesAsync.when(
                     loading: () => const Padding(
                       padding: EdgeInsets.all(32),
@@ -75,7 +81,7 @@ class ProviderDashboardPage extends ConsumerWidget {
           // Has services : profile card + stats + services list.
           else ...[
             if (profile != null)
-              SliverToBoxAdapter(child: _ProfileCard(profile: profile)),
+              SliverToBoxAdapter(child: _ProviderHubCard(profile: profile)),
             const SliverToBoxAdapter(child: _ProviderStatsRow()),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
@@ -105,8 +111,13 @@ class ProviderDashboardPage extends ConsumerWidget {
               ),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (context, i) =>
-                      _ServiceTile(service: servicesAsync.value![i]),
+                  (context, i) => _ServiceTile(
+                    service: servicesAsync.value![i],
+                    // When the provider is paused, every listing is hidden from
+                    // clients regardless of its own published flag — reflect
+                    // that on the tile so the hub/listing hierarchy is clear.
+                    providerPaused: profile != null && !profile.active,
+                  ),
                   childCount: servicesCount,
                 ),
               ),
@@ -130,82 +141,331 @@ class ProviderDashboardPage extends ConsumerWidget {
 // Profile card
 // ---------------------------------------------------------------------------
 
-class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.profile});
+/// "Mon activité" — the provider hub. Identity row (avatar + name + verified +
+/// rating + edit) over an availability control: a pill toggle distinct from the
+/// per-listing switches below. "Disponible" → listings visible & bookable;
+/// "En pause" → the whole catalogue is hidden (non-destructive, instant resume).
+class _ProviderHubCard extends ConsumerStatefulWidget {
+  const _ProviderHubCard({required this.profile});
 
   final ProviderProfile profile;
+
+  @override
+  ConsumerState<_ProviderHubCard> createState() => _ProviderHubCardState();
+}
+
+class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
+  /// Optimistic availability — reflects the tap immediately, reverts on error.
+  bool? _pending;
+
+  @override
+  void didUpdateWidget(covariant _ProviderHubCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_pending != null && widget.profile.active == _pending) _pending = null;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+
+    final available = _pending ?? widget.profile.active;
+    final auth = ref.watch(authNotifierProvider).valueOrNull;
+    final appUser = auth is AuthAuthenticated ? auth.user : null;
+    final isVerified = appUser?.phoneE164?.isNotEmpty ?? false;
+    final publishedCount =
+        ref
+            .watch(providerServicesProvider)
+            .valueOrNull
+            ?.where((s) => s.published)
+            .length ??
+        0;
+    // Toggling "Disponible" only makes sense once at least one listing is live.
+    final canToggle = publishedCount > 0;
+    final accent = available ? oc.success : oc.warning;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: oc.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: oc.border),
+          // Top-edge accent encodes the state before any text is read.
+          border: Border(
+            top: BorderSide(color: canToggle ? accent : oc.border, width: 3),
+            left: BorderSide(color: oc.border),
+            right: BorderSide(color: oc.border),
+            bottom: BorderSide(color: oc.border),
+          ),
         ),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: oc.success.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.verified_outlined, color: oc.success, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // Row 1 — identity
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 8, 12),
+              child: Row(
                 children: [
-                  Text(
-                    profile.active ? l10n.profileActive : l10n.profileInactive,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: profile.active ? oc.success : oc.secondaryText,
-                    ),
+                  UserAvatar(
+                    displayName: appUser?.displayName ?? '',
+                    photoPath: appUser?.photoPath,
+                    radius: 22,
                   ),
-                  if (profile.serviceArea != null) ...[
-                    const SizedBox(height: 2),
-                    Row(
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 14,
-                          color: oc.secondaryText,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                (appUser?.displayName.isNotEmpty ?? false)
+                                    ? appUser!.displayName
+                                    : l10n.hubFallbackName,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isVerified) ...[
+                              const SizedBox(width: 6),
+                              const VerifiedBadge(compact: true),
+                            ],
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            profile.serviceArea!,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: oc.secondaryText),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
+                        const SizedBox(height: 2),
+                        RatingSummary(userId: widget.profile.uid),
                       ],
                     ),
-                  ],
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.edit_outlined,
+                      size: 20,
+                      color: oc.secondaryText,
+                    ),
+                    tooltip: l10n.hubEditProfile,
+                    onPressed: () =>
+                        GoRouter.of(context).push(AppRoutes.providerOnboarding),
+                  ),
                 ],
               ),
             ),
-            IconButton(
-              icon: Icon(
-                Icons.edit_outlined,
-                size: 20,
-                color: oc.secondaryText,
+            Divider(height: 1, color: oc.border),
+            // Row 2 — availability (the whole row is the tap target)
+            Semantics(
+              button: canToggle,
+              label: available ? l10n.hubSemanticsOn : l10n.hubSemanticsOff,
+              child: InkWell(
+                onTap: canToggle
+                    ? () => _onToggle(available, publishedCount)
+                    : null,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.storefront_rounded,
+                        size: 22,
+                        color: canToggle ? accent : oc.secondaryText,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              available ? l10n.hubAvailable : l10n.hubPaused,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: canToggle
+                                        ? accent
+                                        : oc.secondaryText,
+                                  ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              canToggle
+                                  ? (available
+                                        ? l10n.hubAvailableSub
+                                        : l10n.hubPausedSub)
+                                  : l10n.hubNoServicesHint,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: oc.secondaryText),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _AvailabilityPill(
+                        available: available,
+                        enabled: canToggle,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              onPressed: () =>
-                  GoRouter.of(context).push(AppRoutes.providerOnboarding),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onToggle(bool currentlyAvailable, int publishedCount) async {
+    if (currentlyAvailable) {
+      final confirmed = await _showPauseSheet(publishedCount);
+      if (confirmed != true) return;
+      await _apply(false);
+    } else {
+      await _apply(true);
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      final oc = context.oc;
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(child: Text(l10n.hubResumed)),
+              ],
+            ),
+            backgroundColor: oc.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+    }
+  }
+
+  Future<void> _apply(bool value) async {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _pending = value);
+    try {
+      await ref
+          .read(providerRepositoryProvider)
+          .setActive(widget.profile.uid, value);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _pending = null);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.hubToggleError), backgroundColor: oc.error),
+      );
+    }
+  }
+
+  Future<bool?> _showPauseSheet(int count) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    return showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.storefront_rounded, size: 48, color: oc.warning),
+              const SizedBox(height: 16),
+              Text(
+                l10n.hubPauseTitle,
+                style: Theme.of(ctx).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                count > 0 ? l10n.hubPauseBody(count) : l10n.hubPauseBodyNoCount,
+                style: Theme.of(
+                  ctx,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: oc.warning,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(l10n.hubPauseCta),
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(l10n.cancel),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Custom availability pill — deliberately NOT a [Switch], so a provider never
+/// confuses this whole-account control with the per-listing switches below.
+class _AvailabilityPill extends StatelessWidget {
+  const _AvailabilityPill({required this.available, required this.enabled});
+
+  final bool available;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final track = !enabled
+        ? oc.border
+        : available
+        ? oc.success
+        : oc.warning.withValues(alpha: 0.28);
+    return Container(
+      width: 72,
+      height: 36,
+      decoration: BoxDecoration(
+        color: track,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: AnimatedAlign(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeInOut,
+        alignment: available ? Alignment.centerRight : Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+            ),
+            child: Icon(
+              available ? Icons.storefront_rounded : Icons.pause_rounded,
+              size: 16,
+              color: !enabled
+                  ? oc.secondaryText
+                  : available
+                  ? oc.success
+                  : oc.warning,
+            ),
+          ),
         ),
       ),
     );
@@ -217,9 +477,13 @@ class _ProfileCard extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _ServiceTile extends ConsumerStatefulWidget {
-  const _ServiceTile({required this.service});
+  const _ServiceTile({required this.service, this.providerPaused = false});
 
   final Service service;
+
+  /// When the provider is "En pause", every listing is hidden from clients
+  /// regardless of its own `published` flag — the footer reflects that.
+  final bool providerPaused;
 
   @override
   ConsumerState<_ServiceTile> createState() => _ServiceTileState();
@@ -332,19 +596,36 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: published ? oc.success : oc.border,
+                      // Paused → a pause icon (not a colour-only dot) so the
+                      // state reads without relying on colour alone.
+                      if (widget.providerPaused)
+                        Icon(
+                          Icons.pause_circle_outline,
+                          size: 14,
+                          color: oc.warning,
+                        )
+                      else
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: published ? oc.success : oc.border,
+                          ),
                         ),
-                      ),
                       const SizedBox(width: 6),
                       Text(
-                        published ? l10n.serviceActive : l10n.serviceInactive,
+                        widget.providerPaused
+                            ? l10n.serviceMaskedPaused
+                            : published
+                            ? l10n.serviceActive
+                            : l10n.serviceInactive,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: published ? oc.success : oc.secondaryText,
+                          color: widget.providerPaused
+                              ? oc.warning
+                              : published
+                              ? oc.success
+                              : oc.secondaryText,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -354,9 +635,13 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
                     label: published
                         ? l10n.serviceToggleDeactivate(service.title)
                         : l10n.serviceToggleActivate(service.title),
+                    // Disabled while the whole profile is paused — a live-looking
+                    // switch that does nothing visible to clients would confuse.
                     child: Switch(
                       value: published,
-                      onChanged: (v) => _setPublished(v),
+                      onChanged: widget.providerPaused
+                          ? null
+                          : (v) => _setPublished(v),
                     ),
                   ),
                 ],

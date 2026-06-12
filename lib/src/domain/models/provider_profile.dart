@@ -10,9 +10,6 @@ class ProviderProfile {
     required this.suspended,
     required this.createdAt,
     this.bio,
-    this.serviceArea,
-    this.serviceAreaLat,
-    this.serviceAreaLng,
     this.workingHourStart,
     this.workingHourEnd,
   });
@@ -20,21 +17,21 @@ class ProviderProfile {
   final String uid;
   final String? bio;
 
-  /// Human-readable service-area label (geocoded address).
-  final String? serviceArea;
-
-  /// Geocoded coordinates for [serviceArea]. Both are null for legacy profiles
-  /// created before address geocoding was enforced.
-  final double? serviceAreaLat;
-  final double? serviceAreaLng;
-
   /// Daily working-hours window [start, end) in 24h local hours. Null when the
   /// provider hasn't configured it — callers fall back to the k* defaults.
   /// Clients can offer bookings only on hourly slots inside this window.
   final int? workingHourStart;
   final int? workingHourEnd;
 
+  /// Provider-controlled availability. `true` = "Disponible" (listings visible
+  /// & bookable); `false` = "En pause" (the provider hid their whole catalogue
+  /// to manage their schedule). Non-destructive: it never touches each service's
+  /// `published` flag, so resuming restores everything instantly. Distinct from
+  /// [suspended], which is admin moderation. Server-authoritative gate lives in
+  /// `createBooking`; discovery filters paused providers client-side.
   final bool active;
+
+  /// Admin moderation flag (set only by suspendProvider/unsuspendProvider).
   final bool suspended;
   final DateTime createdAt;
 
@@ -48,9 +45,6 @@ class ProviderProfile {
 
   ProviderProfile copyWith({
     String? bio,
-    String? serviceArea,
-    double? serviceAreaLat,
-    double? serviceAreaLng,
     int? workingHourStart,
     int? workingHourEnd,
     bool? active,
@@ -60,9 +54,6 @@ class ProviderProfile {
     return ProviderProfile(
       uid: uid,
       bio: bio ?? this.bio,
-      serviceArea: serviceArea ?? this.serviceArea,
-      serviceAreaLat: serviceAreaLat ?? this.serviceAreaLat,
-      serviceAreaLng: serviceAreaLng ?? this.serviceAreaLng,
       workingHourStart: workingHourStart ?? this.workingHourStart,
       workingHourEnd: workingHourEnd ?? this.workingHourEnd,
       active: active ?? this.active,

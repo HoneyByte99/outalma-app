@@ -31,6 +31,13 @@ final currentProviderProfileProvider = StreamProvider<ProviderProfile?>((ref) {
   return ref.watch(providerRepositoryProvider).watchByUid(uid);
 });
 
+/// UIDs of providers currently "En pause" (`active == false`). Consumed by
+/// [discoverableServicesProvider] to hide their listings from clients. The
+/// server-side `createBooking` gate is the real guarantee; this is UX.
+final pausedProviderIdsProvider = StreamProvider<Set<String>>((ref) {
+  return ref.watch(providerRepositoryProvider).watchPausedProviderIds();
+});
+
 /// Any provider's profile by uid — used by public provider profile pages,
 /// service cards, and trust signals.
 final providerProfileByIdProvider = StreamProvider.autoDispose

@@ -41,11 +41,11 @@ export async function seedService(
 
 export async function seedProvider(
   id: string,
-  opts: { suspended?: boolean } = {}
+  opts: { suspended?: boolean; active?: boolean } = {}
 ): Promise<void> {
   await db().collection('providers').doc(id).set({
     uid: id,
-    active: true,
+    active: opts.active ?? true,
     suspended: opts.suspended ?? false,
   });
 }

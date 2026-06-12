@@ -18,12 +18,13 @@ class FirestoreProviderRepository implements ProviderRepository {
   }
 
   @override
-  Stream<List<ProviderProfile>> watchAll() {
+  Stream<Set<String>> watchPausedProviderIds() {
+    // Only providers who explicitly paused (active == false). Docs missing the
+    // field don't match `== false`, which is correct: missing = available.
     return FirestoreCollections.providers(_db)
-        .where('active', isEqualTo: true)
-        .where('suspended', isEqualTo: false)
+        .where('active', isEqualTo: false)
         .snapshots()
-        .map((qs) => qs.docs.map((d) => d.data()).toList());
+        .map((qs) => qs.docs.map((d) => d.id).toSet());
   }
 
   @override
@@ -31,19 +32,13 @@ class FirestoreProviderRepository implements ProviderRepository {
     final ref = FirestoreCollections.providers(_db).doc(profile.uid);
     final existing = await ref.get();
     if (existing.exists) {
-      // Update: write only the owner-editable fields via an explicit map.
-      // Everything else on a provider document (`active`, `suspended`,
-      // `suspendedAt`, `suspendedReason`, `createdAt`) is server-authoritative
-      // — set once on create, then mutated only by the moderation Cloud
-      // Functions. The client must never rewrite them, both to avoid resetting
-      // `createdAt` on every edit and to satisfy the Firestore `providers`
-      // update rule (S2), which rejects any client diff touching the
-      // moderation keys.
+      // Update: write only the owner-editable profile fields via an explicit
+      // map. `suspended`/`suspendedAt`/`suspendedReason`/`createdAt` are
+      // server-authoritative (moderation Cloud Functions only). `active`
+      // (availability) is owner-controlled but flipped via [setActive], not
+      // here, so a profile edit never disturbs availability.
       await ref.update(<String, Object?>{
         'bio': profile.bio,
-        'serviceArea': profile.serviceArea,
-        'serviceAreaLat': profile.serviceAreaLat,
-        'serviceAreaLng': profile.serviceAreaLng,
         'workingHourStart': profile.workingHourStart,
         'workingHourEnd': profile.workingHourEnd,
       });
@@ -52,6 +47,15 @@ class FirestoreProviderRepository implements ProviderRepository {
       // active/suspended state and createdAt.
       await ref.set(profile);
     }
+  }
+
+  @override
+  Future<void> setActive(String uid, bool active) async {
+    // Targeted single-field write — the diff touches only `active`, which the
+    // Firestore `providers` update rule permits the owner (but not `suspended`).
+    await FirestoreCollections.providers(
+      _db,
+    ).doc(uid).update({'active': active});
   }
 
   // -- Blocked slots --

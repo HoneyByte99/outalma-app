@@ -76,15 +76,18 @@ service cloud.firestore {
     match /providers/{uid} {
       allow read: if true;
       allow create: if isAdmin() || isSelf(uid);
-      // Owner may edit their own profile (bio, serviceArea…) but NOT the
-      // moderation-controlled fields: a suspended provider must not be able to
-      // self-write `suspended:false` and undo moderation. Those keys are set
-      // exclusively by suspendProvider/unsuspendProvider (Admin SDK) and read
-      // back as a gate in createBooking. (Security review S2.)
+      // Owner may edit their own profile (bio, working hours) AND flip their own
+      // availability `active` (Disponible/En pause). But NOT the moderation
+      // fields: a suspended provider must not be able to self-write
+      // `suspended:false` and undo moderation. Those keys are set exclusively by
+      // suspendProvider/unsuspendProvider (Admin SDK) and read back as a gate in
+      // createBooking. (Security review S2.) `active` is intentionally NOT in
+      // this list — it is the owner-controlled pause switch, also gated server-
+      // side in createBooking.
       allow update: if isAdmin()
         || (isSelf(uid)
             && !request.resource.data.diff(resource.data).affectedKeys()
-                  .hasAny(['suspended', 'suspendedAt', 'suspendedReason', 'active']));
+                  .hasAny(['suspended', 'suspendedAt', 'suspendedReason']));
       allow delete: if isAdmin();
     }
 
