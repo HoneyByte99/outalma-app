@@ -977,14 +977,26 @@ abstract class AppLocalizations {
   /// No description provided for @serviceActive.
   ///
   /// In en, this message translates to:
-  /// **'Active'**
+  /// **'Online'**
   String get serviceActive;
 
   /// No description provided for @serviceInactive.
   ///
   /// In en, this message translates to:
-  /// **'Inactive'**
+  /// **'Offline'**
   String get serviceInactive;
+
+  /// No description provided for @serviceToggleActivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring {title} online'**
+  String serviceToggleActivate(String title);
+
+  /// No description provided for @serviceToggleDeactivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Take {title} offline'**
+  String serviceToggleDeactivate(String title);
 
   /// No description provided for @serviceDelete.
   ///

@@ -185,8 +185,20 @@
   "notPublished": "Non publié",
   "serviceStatusPending": "En attente de validation",
   "serviceStatusRejected": "Refusé",
-  "serviceActive": "Activé",
-  "serviceInactive": "Désactivé",
+  "serviceActive": "En ligne",
+  "serviceInactive": "Hors ligne",
+  "serviceToggleActivate": "Mettre {title} en ligne",
+  "@serviceToggleActivate": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "serviceToggleDeactivate": "Mettre {title} hors ligne",
+  "@serviceToggleDeactivate": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
   "serviceDelete": "Supprimer",
   "serviceDeleteTitle": "Supprimer ce service ?",
   "serviceDeleteBody": "Cette annonce sera définitivement supprimée.",

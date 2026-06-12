@@ -476,10 +476,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serviceStatusRejected => 'Rejected';
 
   @override
-  String get serviceActive => 'Active';
+  String get serviceActive => 'Online';
 
   @override
-  String get serviceInactive => 'Inactive';
+  String get serviceInactive => 'Offline';
+
+  @override
+  String serviceToggleActivate(String title) {
+    return 'Bring $title online';
+  }
+
+  @override
+  String serviceToggleDeactivate(String title) {
+    return 'Take $title offline';
+  }
 
   @override
   String get serviceDelete => 'Delete';

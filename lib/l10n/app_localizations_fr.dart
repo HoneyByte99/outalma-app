@@ -484,10 +484,20 @@ class AppLocalizationsFr extends AppLocalizations {
   String get serviceStatusRejected => 'Refusé';
 
   @override
-  String get serviceActive => 'Activé';
+  String get serviceActive => 'En ligne';
 
   @override
-  String get serviceInactive => 'Désactivé';
+  String get serviceInactive => 'Hors ligne';
+
+  @override
+  String serviceToggleActivate(String title) {
+    return 'Mettre $title en ligne';
+  }
+
+  @override
+  String serviceToggleDeactivate(String title) {
+    return 'Mettre $title hors ligne';
+  }
 
   @override
   String get serviceDelete => 'Supprimer';

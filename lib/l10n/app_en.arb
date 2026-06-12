@@ -185,8 +185,20 @@
   "notPublished": "Unpublished",
   "serviceStatusPending": "Pending review",
   "serviceStatusRejected": "Rejected",
-  "serviceActive": "Active",
-  "serviceInactive": "Inactive",
+  "serviceActive": "Online",
+  "serviceInactive": "Offline",
+  "serviceToggleActivate": "Bring {title} online",
+  "@serviceToggleActivate": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "serviceToggleDeactivate": "Take {title} offline",
+  "@serviceToggleDeactivate": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
   "serviceDelete": "Delete",
   "serviceDeleteTitle": "Delete this service?",
   "serviceDeleteBody": "This listing will be permanently removed.",

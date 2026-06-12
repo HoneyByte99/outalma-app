@@ -216,13 +216,33 @@ class _ProfileCard extends StatelessWidget {
 // Service tile
 // ---------------------------------------------------------------------------
 
-class _ServiceTile extends ConsumerWidget {
+class _ServiceTile extends ConsumerStatefulWidget {
   const _ServiceTile({required this.service});
 
   final Service service;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ServiceTile> createState() => _ServiceTileState();
+}
+
+class _ServiceTileState extends ConsumerState<_ServiceTile> {
+  /// Optimistic published state: the value the provider just requested, held
+  /// until the Firestore stream catches up (often slow on Senegal networks).
+  /// `null` means "track the source of truth".
+  bool? _pending;
+
+  @override
+  void didUpdateWidget(covariant _ServiceTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Stream has caught up to our optimistic value — stop overriding it.
+    if (_pending != null && widget.service.published == _pending) {
+      _pending = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final service = widget.service;
     final oc = context.oc;
     final l10n = AppLocalizations.of(context)!;
     final formattedPrice = formatPriceFromCents(service.price);
@@ -233,6 +253,7 @@ class _ServiceTile extends ConsumerWidget {
     // moderation flow governs it.
     final moderationLocked =
         service.status == 'rejected' || service.status == 'pending_review';
+    final published = _pending ?? service.published;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -298,56 +319,78 @@ class _ServiceTile extends ConsumerWidget {
             ),
             onTap: () => context.push(AppRoutes.serviceEdit(service.id)),
           ),
-          Divider(height: 1, color: oc.border, indent: 16, endIndent: 16),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 2, 8, 2),
-            child: Row(
-              children: [
-                // On/off shortcut — activate/deactivate without opening details.
-                Switch(
-                  value: service.published,
-                  onChanged: moderationLocked
-                      ? null
-                      : (v) => _setPublished(context, ref, v),
-                ),
-                Text(
-                  service.published ? l10n.serviceActive : l10n.serviceInactive,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: service.published ? oc.success : oc.secondaryText,
-                    fontWeight: FontWeight.w600,
+          // On/off footer — status (dot + label) on the left, control on the
+          // right. Hidden entirely under moderation: the trailing badge already
+          // explains why, and a disabled switch reads as "broken". No divider —
+          // this is a light footer of the same card, not a separate section.
+          if (!moderationLocked)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 12, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: published ? oc.success : oc.border,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        published ? l10n.serviceActive : l10n.serviceInactive,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: published ? oc.success : oc.secondaryText,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  Semantics(
+                    label: published
+                        ? l10n.serviceToggleDeactivate(service.title)
+                        : l10n.serviceToggleActivate(service.title),
+                    child: Switch(
+                      value: published,
+                      onChanged: (v) => _setPublished(v),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Future<void> _setPublished(
-    BuildContext context,
-    WidgetRef ref,
-    bool value,
-  ) async {
+  Future<void> _setPublished(bool value) async {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final messenger = ScaffoldMessenger.of(context);
+    // Reflect the choice immediately; revert if the write fails.
+    setState(() => _pending = value);
     try {
       await ref
           .read(serviceRepositoryProvider)
           .update(
-            service.copyWith(published: value, updatedAt: DateTime.now()),
+            widget.service.copyWith(
+              published: value,
+              updatedAt: DateTime.now(),
+            ),
           );
     } catch (_) {
-      if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.serviceFormSaveError),
-            backgroundColor: oc.error,
-          ),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _pending = null);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.serviceFormSaveError),
+          backgroundColor: oc.error,
+        ),
+      );
     }
   }
 
@@ -355,7 +398,7 @@ class _ServiceTile extends ConsumerWidget {
     return ColoredBox(
       color: oc.primary.withValues(alpha: 0.08),
       child: Icon(
-        _categoryIcon(service.categoryId),
+        _categoryIcon(widget.service.categoryId),
         size: 22,
         color: oc.primary,
       ),
