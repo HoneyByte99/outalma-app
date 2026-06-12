@@ -568,6 +568,7 @@ class FirestoreCollections {
       createdAt: dateTimeFromFirestore(data['createdAt']),
       bookingId: data['bookingId'] as String?,
       chatId: data['chatId'] as String?,
+      audience: data['audience'] as String?,
     );
   }
 
@@ -580,6 +581,7 @@ class FirestoreCollections {
       'createdAt': dateTimeToFirestore(n.createdAt),
       'bookingId': n.bookingId,
       'chatId': n.chatId,
+      if (n.audience != null) 'audience': n.audience,
     };
   }
 }

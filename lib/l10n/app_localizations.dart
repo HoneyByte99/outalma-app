@@ -1616,6 +1616,12 @@ abstract class AppLocalizations {
   /// **'Mark all read'**
   String get notificationsReadAll;
 
+  /// No description provided for @notificationsUnreadCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unread'**
+  String notificationsUnreadCount(int count);
+
   /// No description provided for @notificationsEmpty.
   ///
   /// In en, this message translates to:

@@ -825,6 +825,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notificationsReadAll => 'Tout lire';
 
   @override
+  String notificationsUnreadCount(int count) {
+    return '$count non lues';
+  }
+
+  @override
   String get notificationsEmpty => 'Aucune notification';
 
   @override

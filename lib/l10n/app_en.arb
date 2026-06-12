@@ -322,6 +322,10 @@
 
   "notificationsTitle": "Notifications",
   "notificationsReadAll": "Mark all read",
+  "notificationsUnreadCount": "{count} unread",
+  "@notificationsUnreadCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "notificationsEmpty": "No notifications",
   "notificationsEmptySubtitle": "You will be notified here\nwhen something happens.",
   "notificationsError": "Could not load notifications.",

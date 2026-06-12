@@ -322,6 +322,10 @@
 
   "notificationsTitle": "Notifications",
   "notificationsReadAll": "Tout lire",
+  "notificationsUnreadCount": "{count} non lues",
+  "@notificationsUnreadCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "notificationsEmpty": "Aucune notification",
   "notificationsEmptySubtitle": "Vous serez notifié ici lorsque\nquelque chose se passe.",
   "notificationsError": "Impossible de charger les notifications.",

@@ -1,26 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/notification/notification_providers.dart';
+import '../../application/user/user_providers.dart';
+import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_notification.dart';
 import '../../../l10n/app_localizations.dart';
 
-class NotificationsPage extends ConsumerWidget {
+class NotificationsPage extends ConsumerStatefulWidget {
   const NotificationsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends ConsumerState<NotificationsPage> {
+  // Selected tab; defaults to the active app mode so the user lands on the role
+  // they're currently operating as.
+  late ActiveMode _tab;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = ref.read(activeModeProvider);
+  }
+
+  /// Whether a notification belongs in [tab]. `both` (ambiguous legacy notifs)
+  /// appear under both tabs so nothing is ever hidden.
+  bool _inTab(AppNotification n, ActiveMode tab) {
+    final a = notificationAudienceOf(n);
+    if (a == NotificationAudience.both) return true;
+    return tab == ActiveMode.client
+        ? a == NotificationAudience.client
+        : a == NotificationAudience.provider;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final notifAsync = ref.watch(notificationsProvider);
     final db = ref.read(firestoreProvider);
     final authState = ref.watch(authNotifierProvider).valueOrNull;
     final uid = authState is AuthAuthenticated ? authState.user.id : null;
+    final tab = _tab;
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -31,13 +60,15 @@ class NotificationsPage extends ConsumerWidget {
         actions: [
           notifAsync.maybeWhen(
             data: (list) {
-              final hasUnread = list.any((n) => !n.read);
+              // "Mark all read" acts on the visible tab only.
+              final visible = list.where((n) => _inTab(n, tab)).toList();
+              final hasUnread = visible.any((n) => !n.read);
               if (!hasUnread || uid == null) return const SizedBox.shrink();
               return TextButton(
                 onPressed: () => markAllNotificationsRead(
                   db: db,
                   uid: uid,
-                  notifications: list,
+                  notifications: visible,
                 ),
                 child: Text(l10n.notificationsReadAll),
               );
@@ -73,24 +104,43 @@ class NotificationsPage extends ConsumerWidget {
             ),
           ),
         ),
-        data: (notifications) {
-          if (notifications.isEmpty) {
-            return _EmptyNotifications();
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: notifications.length,
-            separatorBuilder: (_, __) =>
-                const Divider(height: 1, indent: 72, endIndent: 16),
-            itemBuilder: (context, i) {
-              final notif = notifications[i];
-              return _NotificationTile(
-                notification: notif,
-                uid: uid,
-                db: ref.read(firestoreProvider),
-                onTap: () => _handleTap(context, notif, uid, ref),
-              );
-            },
+        data: (all) {
+          final clientUnread = all
+              .where((n) => !n.read && _inTab(n, ActiveMode.client))
+              .length;
+          final providerUnread = all
+              .where((n) => !n.read && _inTab(n, ActiveMode.provider))
+              .length;
+          final list = all.where((n) => _inTab(n, tab)).toList();
+
+          return Column(
+            children: [
+              _AudienceTabs(
+                selected: tab,
+                clientUnread: clientUnread,
+                providerUnread: providerUnread,
+                onSelect: (m) => setState(() => _tab = m),
+              ),
+              Expanded(
+                child: list.isEmpty
+                    ? _EmptyNotifications()
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: list.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1, indent: 72, endIndent: 16),
+                        itemBuilder: (context, i) {
+                          final notif = list[i];
+                          return _NotificationTile(
+                            notification: notif,
+                            uid: uid,
+                            db: db,
+                            onTap: () => _handleTap(context, notif, uid, ref),
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
         },
       ),
@@ -120,6 +170,154 @@ class NotificationsPage extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Client / Provider segmented tabs
+// ---------------------------------------------------------------------------
+
+class _AudienceTabs extends StatelessWidget {
+  const _AudienceTabs({
+    required this.selected,
+    required this.clientUnread,
+    required this.providerUnread,
+    required this.onSelect,
+  });
+
+  final ActiveMode selected;
+  final int clientUnread;
+  final int providerUnread;
+  final ValueChanged<ActiveMode> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    return Container(
+      color: oc.surface,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: oc.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            _Segment(
+              icon: Icons.person_outline_rounded,
+              label: l10n.modeClient,
+              unread: clientUnread,
+              isSelected: selected == ActiveMode.client,
+              onTap: () => onSelect(ActiveMode.client),
+            ),
+            _Segment(
+              icon: Icons.handyman_outlined,
+              label: l10n.modeProvider,
+              unread: providerUnread,
+              isSelected: selected == ActiveMode.provider,
+              onTap: () => onSelect(ActiveMode.provider),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Segment extends StatelessWidget {
+  const _Segment({
+    required this.icon,
+    required this.label,
+    required this.unread,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final int unread;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final fg = isSelected ? oc.primary : oc.secondaryText;
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: unread > 0
+            ? '$label, ${l10n.notificationsUnreadCount(unread)}'
+            : label,
+        // Selected pill: a fill alone is near-invisible against the track in
+        // dark mode, so add elevation + a border as the primary affordance.
+        child: Material(
+          color: isSelected ? oc.surface : Colors.transparent,
+          elevation: isSelected ? 1 : 0,
+          shadowColor: oc.shadow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(9),
+            side: isSelected ? BorderSide(color: oc.border) : BorderSide.none,
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(9),
+            onTap: onTap,
+            child: Container(
+              height: 48,
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 18, color: fg),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: fg,
+                      ),
+                    ),
+                  ),
+                  if (unread > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: oc.primary,
+                        borderRadius: BorderRadius.circular(999),
+                        // White stroke so the count pops off both the selected
+                        // surface and the track (the pill fill == primary).
+                        border: Border.all(color: oc.surface, width: 1.5),
+                      ),
+                      child: Text(
+                        unread > 9 ? '9+' : '$unread',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          // Pairs with the oc.primary fill in both themes
+                          // (light: light-on-navy, dark: dark-on-mint).
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Notification tile
 // ---------------------------------------------------------------------------
 
@@ -145,7 +343,9 @@ class _NotificationTile extends StatelessWidget {
     if (diff.inHours < 24) return l10n.notificationTimeHours(diff.inHours);
     if (diff.inDays == 1) return l10n.notificationTimeYesterday;
     if (diff.inDays < 7) return l10n.notificationTimeDays(diff.inDays);
-    return '${dt.day}/${dt.month}/${dt.year}';
+    // Locale-aware numeric date (fr → d/M/y, en → M/d/y) instead of a hardcoded
+    // order.
+    return DateFormat.yMd(l10n.localeName).format(dt);
   }
 
   @override
