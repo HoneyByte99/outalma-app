@@ -10,33 +10,36 @@ import 'package:image_picker/image_picker.dart';
 /// - Images: /private/chats/{chatId}/media/{timestamp}_image.jpg
 /// - Voice:  /private/chats/{chatId}/media/{timestamp}_voice.m4a
 class ChatMediaService {
-  ChatMediaService({required FirebaseStorage storage}) : _storage = storage;
+  ChatMediaService({required FirebaseStorage storage, ImagePicker? picker})
+    : _storage = storage,
+      _picker = picker ?? ImagePicker();
 
   final FirebaseStorage _storage;
-  final _picker = ImagePicker();
+  final ImagePicker _picker;
+
+  /// Picks an image with a consistent size budget on every platform: bounded to
+  /// 1024×1024 at 80% quality. Bounding BOTH dimensions (not just width) keeps a
+  /// tall portrait photo from being uploaded huge and rendering awkwardly in the
+  /// chat bubble.
+  Future<XFile?> _pickImage(ImageSource source) {
+    return _picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 80,
+    );
+  }
 
   /// Pick an image from gallery and upload. Returns download URL or null.
   Future<String?> pickImageFromGallery(String chatId) async {
-    final file = kIsWeb
-        ? await _picker.pickImage(source: ImageSource.gallery)
-        : await _picker.pickImage(
-            source: ImageSource.gallery,
-            maxWidth: 1024,
-            imageQuality: 80,
-          );
+    final file = await _pickImage(ImageSource.gallery);
     if (file == null) return null;
     return _uploadFile(chatId, file, 'image');
   }
 
   /// Take a photo with camera and upload. Returns download URL or null.
   Future<String?> takePhoto(String chatId) async {
-    final file = kIsWeb
-        ? await _picker.pickImage(source: ImageSource.camera)
-        : await _picker.pickImage(
-            source: ImageSource.camera,
-            maxWidth: 1024,
-            imageQuality: 80,
-          );
+    final file = await _pickImage(ImageSource.camera);
     if (file == null) return null;
     return _uploadFile(chatId, file, 'image');
   }

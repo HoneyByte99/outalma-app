@@ -6,3 +6,8 @@ lib/src/data/data.dart
 lib/src/data/auth/phone_otp_service.dart
 lib/src/data/auth/phone_otp_service_web.dart
 lib/src/data/auth/phone_otp_service_stub.dart
+# Firebase Storage + ImagePicker I/O wrapper (uploads, download URLs). Its only
+# pure logic — the image size budget — is regression-tested in
+# test/data/services/chat_media_service_test.dart; the rest is untestable
+# plumbing, like the phone_otp_service wrappers above.
+lib/src/data/services/chat_media_service.dart
