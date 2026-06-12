@@ -11,6 +11,8 @@ import '../application/auth/auth_state.dart';
 import '../application/locale/locale_provider.dart';
 import '../application/notification/notification_service.dart';
 import '../application/theme/theme_provider.dart';
+import '../application/user/user_providers.dart';
+import '../domain/models/app_notification.dart';
 import 'app_theme.dart';
 import 'connectivity_banner.dart';
 import 'notification_route.dart';
@@ -71,6 +73,17 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
     if (!mounted ||
         ref.read(authNotifierProvider).valueOrNull is! AuthAuthenticated) {
       return;
+    }
+    // Open in the role the notification concerns so the deep-link lands in the
+    // right mode/tab (e.g. a provider's "new request" opens provider mode).
+    final mode = activeModeForAudience(
+      notificationAudienceFor(
+        audience: message.data['audience'] as String?,
+        type: message.data['type'] as String?,
+      ),
+    );
+    if (mode != null && ref.read(activeModeProvider) != mode) {
+      await ref.read(authNotifierProvider.notifier).switchMode(mode);
     }
     // Let the redirect settle on the home route before pushing the deep link.
     await Future<void>.delayed(const Duration(milliseconds: 350));

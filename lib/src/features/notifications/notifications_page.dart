@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -147,24 +149,35 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     );
   }
 
-  void _handleTap(
+  Future<void> _handleTap(
     BuildContext context,
     AppNotification notif,
     String? uid,
     WidgetRef ref,
-  ) {
+  ) async {
     if (uid != null && !notif.read) {
-      markNotificationRead(
-        db: ref.read(firestoreProvider),
-        uid: uid,
-        notifId: notif.id,
+      unawaited(
+        markNotificationRead(
+          db: ref.read(firestoreProvider),
+          uid: uid,
+          notifId: notif.id,
+        ),
       );
     }
 
+    // Open the notification in the role it concerns: a provider-audience
+    // notification switches to provider mode (and vice versa) so the deep-link
+    // target lands in the right mode/tab. Ambiguous audiences leave mode as-is.
+    final targetMode = activeModeForAudience(notificationAudienceOf(notif));
+    if (targetMode != null && ref.read(activeModeProvider) != targetMode) {
+      await ref.read(authNotifierProvider.notifier).switchMode(targetMode);
+    }
+    if (!context.mounted) return;
+
     if (notif.chatId != null) {
-      context.push(AppRoutes.chat(notif.chatId!));
+      unawaited(context.push(AppRoutes.chat(notif.chatId!)));
     } else if (notif.bookingId != null) {
-      context.push(AppRoutes.bookingDeepLink(notif.bookingId!));
+      unawaited(context.push(AppRoutes.bookingDeepLink(notif.bookingId!)));
     }
   }
 }

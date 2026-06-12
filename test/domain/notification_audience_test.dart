@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:outalma_app/src/domain/enums/active_mode.dart';
 import 'package:outalma_app/src/domain/models/app_notification.dart';
 
 AppNotification notif({String type = 'new_message', String? audience}) =>
@@ -59,12 +60,27 @@ void main() {
         }
       });
 
+      test('service moderation + suspension → provider', () {
+        for (final t in [
+          'service_approved',
+          'service_rejected',
+          'provider_suspended',
+        ]) {
+          expect(
+            notificationAudienceOf(notif(type: t)),
+            NotificationAudience.provider,
+            reason: t,
+          );
+        }
+      });
+
       test('ambiguous types → both (never hidden)', () {
         for (final t in [
           'booking_done',
           'booking_cancelled',
           'new_message',
           'booking_reminder',
+          'review_received',
           'something_unknown',
         ]) {
           expect(
@@ -74,6 +90,41 @@ void main() {
           );
         }
       });
+    });
+  });
+
+  group('activeModeForAudience — deep-link mode switch', () {
+    test('client/provider map to their mode, both leaves mode unchanged', () {
+      expect(
+        activeModeForAudience(NotificationAudience.client),
+        ActiveMode.client,
+      );
+      expect(
+        activeModeForAudience(NotificationAudience.provider),
+        ActiveMode.provider,
+      );
+      expect(activeModeForAudience(NotificationAudience.both), isNull);
+    });
+  });
+
+  group('notificationAudienceFor — raw fields (push payloads)', () {
+    test('explicit audience wins; type infers otherwise', () {
+      expect(
+        notificationAudienceFor(audience: 'provider', type: 'new_message'),
+        NotificationAudience.provider,
+      );
+      expect(
+        notificationAudienceFor(audience: null, type: 'booking_requested'),
+        NotificationAudience.provider,
+      );
+      expect(
+        notificationAudienceFor(audience: null, type: 'booking_accepted'),
+        NotificationAudience.client,
+      );
+      expect(
+        notificationAudienceFor(audience: null, type: 'new_message'),
+        NotificationAudience.both,
+      );
     });
   });
 }
