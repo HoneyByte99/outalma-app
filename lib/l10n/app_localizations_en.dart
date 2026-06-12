@@ -1403,6 +1403,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'You have blocked this user. Unblock to chat again.';
 
   @override
+  String get blockedUsersTitle => 'Blocked accounts';
+
+  @override
+  String get blockedUsersEmpty => 'You haven\'t blocked anyone.';
+
+  @override
+  String get blockedUsersEmptyHint =>
+      'You can block someone from a conversation.';
+
+  @override
+  String get blockedUserUnknown => 'User';
+
+  @override
   String get bookingModeText => 'Text';
 
   @override

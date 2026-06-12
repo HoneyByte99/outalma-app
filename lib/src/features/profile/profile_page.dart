@@ -86,6 +86,8 @@ class ProfilePage extends ConsumerWidget {
             const SizedBox(height: 12),
             const _LegalLinksSection(),
             const SizedBox(height: 12),
+            const _BlockedAccountsTile(),
+            const SizedBox(height: 12),
             const _ExportDataTile(),
             const SizedBox(height: 28),
 
@@ -912,6 +914,47 @@ class _LegalLinksSection extends StatelessWidget {
             '/legal/terms',
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blocked accounts — entry point to the management screen
+// ---------------------------------------------------------------------------
+
+class _BlockedAccountsTile extends StatelessWidget {
+  const _BlockedAccountsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      decoration: BoxDecoration(
+        color: oc.cardSurface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        border: Border.all(color: oc.border),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        onTap: () => context.push(AppRoutes.blockedUsers),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Icon(Icons.block_outlined, size: 24, color: oc.icons),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  l10n.blockedUsersTitle,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 20, color: oc.icons),
+            ],
+          ),
+        ),
       ),
     );
   }

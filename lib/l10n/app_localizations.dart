@@ -2708,6 +2708,30 @@ abstract class AppLocalizations {
   /// **'You have blocked this user. Unblock to chat again.'**
   String get chatBlockedBanner;
 
+  /// No description provided for @blockedUsersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked accounts'**
+  String get blockedUsersTitle;
+
+  /// No description provided for @blockedUsersEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t blocked anyone.'**
+  String get blockedUsersEmpty;
+
+  /// No description provided for @blockedUsersEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can block someone from a conversation.'**
+  String get blockedUsersEmptyHint;
+
+  /// No description provided for @blockedUserUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get blockedUserUnknown;
+
   /// No description provided for @bookingModeText.
   ///
   /// In en, this message translates to:

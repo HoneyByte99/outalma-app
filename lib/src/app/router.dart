@@ -28,6 +28,7 @@ import '../features/provider/provider_onboarding_page.dart';
 import '../features/provider/public_provider_profile_page.dart';
 import '../features/provider/service_form_page.dart';
 import '../features/notifications/notifications_page.dart';
+import '../features/profile/blocked_users_page.dart';
 import '../features/report/report_page.dart';
 import '../features/review/review_form_page.dart';
 import '../features/service/service_detail_page.dart';
@@ -63,6 +64,7 @@ abstract final class AppRoutes {
 
   // Parameterised helpers
   static const notifications = '/notifications';
+  static const blockedUsers = '/blocked-users';
   static const chatsList = '/chats';
 
   static const profile = '/profile';
@@ -434,6 +436,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.notifications,
         name: 'notifications',
         builder: (_, __) => const NotificationsPage(),
+      ),
+
+      // ---- Blocked accounts management ----
+      GoRoute(
+        path: AppRoutes.blockedUsers,
+        name: 'blocked-users',
+        builder: (_, __) => const BlockedUsersPage(),
       ),
     ],
   );

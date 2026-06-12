@@ -1418,6 +1418,19 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vous avez bloqué cet utilisateur. Débloquez-le pour échanger à nouveau.';
 
   @override
+  String get blockedUsersTitle => 'Comptes bloqués';
+
+  @override
+  String get blockedUsersEmpty => 'Vous n\'avez bloqué personne.';
+
+  @override
+  String get blockedUsersEmptyHint =>
+      'Vous pouvez bloquer quelqu\'un depuis une conversation.';
+
+  @override
+  String get blockedUserUnknown => 'Utilisateur';
+
+  @override
   String get bookingModeText => 'Texte';
 
   @override

@@ -6,6 +6,7 @@ import '../../application/auth/auth_state.dart';
 import '../../application/user/user_providers.dart';
 import '../../data/repositories/firestore_chat_repository.dart';
 import '../../domain/enums/active_mode.dart';
+import '../../domain/models/app_user.dart';
 import '../../domain/models/chat.dart';
 import '../../domain/models/chat_message.dart';
 import '../../domain/repositories/chat_repository.dart';
@@ -101,6 +102,24 @@ final blockedUserIdsProvider = StreamProvider.autoDispose<Set<String>>((ref) {
       .collection('blockedUsers')
       .snapshots()
       .map((qs) => qs.docs.map((d) => d.id).toSet());
+});
+
+/// Resolves the blocked user ids to their profiles for the "blocked accounts"
+/// management screen. Re-runs whenever the blocked set changes (e.g. after an
+/// unblock), so the list updates live.
+final blockedUsersProvider = FutureProvider.autoDispose<List<AppUser>>((
+  ref,
+) async {
+  final ids = ref.watch(blockedUserIdsProvider).valueOrNull ?? <String>{};
+  if (ids.isEmpty) return const [];
+  final repo = ref.watch(userRepositoryProvider);
+  final users = await Future.wait(ids.map(repo.getById));
+  final resolved = users.whereType<AppUser>().toList();
+  resolved.sort(
+    (a, b) =>
+        a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
+  );
+  return resolved;
 });
 
 /// Blocks/unblocks another user (writes under the caller's own subcollection).
