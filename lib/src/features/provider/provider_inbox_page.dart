@@ -291,38 +291,33 @@ class _InboxCard extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            // Chat shortcut whenever a chat exists. A chatId is only set once a
-            // booking has been accepted, and the chat stays readable as history
-            // afterwards (done, or cancelled-after-accept) — so this covers
-            // active missions AND revisiting a completed mission's conversation.
-            if (booking.chatId != null) ...[
-              const SizedBox(height: 8),
-              const Divider(height: 1),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => context.push(AppRoutes.chat(booking.chatId!)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        size: 16,
+            // Explicit "More details" CTA → opens the booking detail (where the
+            // chat, contact and review actions live). Clearer than a chat-only
+            // shortcut and gives text-readers a labelled action even though the
+            // whole card is also tappable.
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () =>
+                  context.push(AppRoutes.providerBookingDetail(booking.id)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.read_more_rounded, size: 18, color: oc.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      l10n.inboxMoreDetails,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: oc.primary,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l10n.inboxOpenChat,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),

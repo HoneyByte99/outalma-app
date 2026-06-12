@@ -16,6 +16,7 @@ class Service {
     required this.updatedAt,
     this.description,
     this.serviceZones = const [],
+    this.status,
   });
 
   final String id;
@@ -31,6 +32,11 @@ class Service {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// Server-managed moderation status: null (never reviewed), 'pending_review',
+  /// 'approved', or 'rejected'. Set exclusively by the moderation Cloud
+  /// Functions — the client reads it but never writes it.
+  final String? status;
+
   Service copyWith({
     String? providerId,
     CategoryId? categoryId,
@@ -43,6 +49,7 @@ class Service {
     List<ServiceZone>? serviceZones,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? status,
   }) {
     return Service(
       id: id,
@@ -57,6 +64,7 @@ class Service {
       serviceZones: serviceZones ?? this.serviceZones,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      status: status ?? this.status,
     );
   }
 }

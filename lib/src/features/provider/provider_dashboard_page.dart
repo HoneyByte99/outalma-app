@@ -443,7 +443,7 @@ class _ServiceTile extends ConsumerWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _PublishedBadge(published: service.published),
+            _ServiceStatusBadge(service: service),
             const SizedBox(width: AppSpacing.xs),
             Icon(Icons.chevron_right_rounded, color: oc.icons, size: 20),
           ],
@@ -497,35 +497,58 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-class _PublishedBadge extends StatelessWidget {
-  const _PublishedBadge({required this.published});
+/// Effective service state for the provider: combines the moderation [status]
+/// (server-managed) with the [published] flag. Icon + colour so the state reads
+/// without relying on text alone.
+class _ServiceStatusBadge extends StatelessWidget {
+  const _ServiceStatusBadge({required this.service});
 
-  final bool published;
+  final Service service;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final label = published ? l10n.published : l10n.notPublished;
-    final color = published ? oc.success : oc.secondaryText;
-    final bg = published
-        ? oc.success.withValues(alpha: 0.12)
-        : oc.border.withValues(alpha: 0.6);
+
+    final (label, color, icon) = switch (service.status) {
+      'rejected' => (l10n.serviceStatusRejected, oc.error, Icons.block_rounded),
+      'pending_review' => (
+        l10n.serviceStatusPending,
+        oc.warning,
+        Icons.hourglass_top_rounded,
+      ),
+      _ =>
+        service.published
+            ? (l10n.published, oc.success, Icons.check_circle_rounded)
+            : (
+                l10n.notPublished,
+                oc.secondaryText,
+                Icons.visibility_off_rounded,
+              ),
+    };
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.s,
         vertical: 3,
       ),
       decoration: BoxDecoration(
-        color: bg,
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

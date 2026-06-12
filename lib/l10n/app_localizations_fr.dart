@@ -475,6 +475,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notPublished => 'Non publié';
 
   @override
+  String get serviceStatusPending => 'En attente de validation';
+
+  @override
+  String get serviceStatusRejected => 'Refusé';
+
+  @override
   String get ratingNew => 'Nouveau';
 
   @override
@@ -908,6 +914,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get inboxOpenChat => 'Ouvrir le chat';
+
+  @override
+  String get inboxMoreDetails => 'Plus de détails';
 
   @override
   String get reviewTitle => 'Laisser un avis';

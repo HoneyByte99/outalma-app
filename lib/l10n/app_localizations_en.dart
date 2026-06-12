@@ -467,6 +467,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notPublished => 'Unpublished';
 
   @override
+  String get serviceStatusPending => 'Pending review';
+
+  @override
+  String get serviceStatusRejected => 'Rejected';
+
+  @override
   String get ratingNew => 'New';
 
   @override
@@ -898,6 +904,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inboxOpenChat => 'Open chat';
+
+  @override
+  String get inboxMoreDetails => 'More details';
 
   @override
   String get reviewTitle => 'Leave a review';

@@ -182,6 +182,8 @@
   "serviceCreate": "Create a service",
   "published": "Published",
   "notPublished": "Unpublished",
+  "serviceStatusPending": "Pending review",
+  "serviceStatusRejected": "Rejected",
   "ratingNew": "New",
   "tooltipProviderProfile": "My provider profile",
 
@@ -365,6 +367,7 @@
   "inboxEmptyCompletedSubtitle": "Finished, declined or cancelled missions appear here.",
   "inboxLoadError": "Could not load data.",
   "inboxOpenChat": "Open chat",
+  "inboxMoreDetails": "More details",
 
   "reviewTitle": "Leave a review",
   "reviewEvaluateProvider": "Rate the provider",

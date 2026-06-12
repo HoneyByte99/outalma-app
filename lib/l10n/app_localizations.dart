@@ -956,6 +956,18 @@ abstract class AppLocalizations {
   /// **'Unpublished'**
   String get notPublished;
 
+  /// No description provided for @serviceStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get serviceStatusPending;
+
+  /// No description provided for @serviceStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get serviceStatusRejected;
+
   /// No description provided for @ratingNew.
   ///
   /// In en, this message translates to:
@@ -1759,6 +1771,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open chat'**
   String get inboxOpenChat;
+
+  /// No description provided for @inboxMoreDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'More details'**
+  String get inboxMoreDetails;
 
   /// No description provided for @reviewTitle.
   ///

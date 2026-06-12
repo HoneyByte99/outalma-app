@@ -62,8 +62,20 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
         : FirebaseFirestore.instance.collection('services').doc().id;
   }
 
+  // Captured so we can clear our snackbars on dispose (the messenger is an
+  // ancestor that outlives this page) — otherwise the photo-removed "undo"
+  // snackbar lingers onto the next screen after pop/back.
+  ScaffoldMessengerState? _messenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.of(context);
+  }
+
   @override
   void dispose() {
+    _messenger?.clearSnackBars();
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();

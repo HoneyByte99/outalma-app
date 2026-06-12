@@ -259,6 +259,45 @@ void main() {
     });
   });
 
+  group('Service serialization — moderation status (read-only)', () {
+    test('reads the server-set status field', () async {
+      final ts = Timestamp.fromDate(DateTime(2024, 1, 1).toUtc());
+      await fakeDb.collection('services').doc('svc_pending').set({
+        'providerId': 'p1',
+        'categoryId': 'menage',
+        'status': 'pending_review',
+        'createdAt': ts,
+        'updatedAt': ts,
+      });
+      final col = FirestoreCollections.services(fakeDb);
+      final result = (await col.doc('svc_pending').get()).data()!;
+      expect(result.status, 'pending_review');
+    });
+
+    test('status is null when absent', () async {
+      final ts = Timestamp.fromDate(DateTime(2024, 1, 1).toUtc());
+      await fakeDb.collection('services').doc('svc_plain').set({
+        'providerId': 'p1',
+        'categoryId': 'menage',
+        'createdAt': ts,
+        'updatedAt': ts,
+      });
+      final col = FirestoreCollections.services(fakeDb);
+      final result = (await col.doc('svc_plain').get()).data()!;
+      expect(result.status, isNull);
+    });
+
+    test('converter never writes status (server-managed)', () async {
+      final col = FirestoreCollections.services(fakeDb);
+      // Even with a status on the in-memory object, a client write must not
+      // persist it — moderation status is server-authoritative.
+      await col.doc('svc_x').set(_makeService(id: 'svc_x').copyWith());
+      final raw = (await fakeDb.collection('services').doc('svc_x').get())
+          .data()!;
+      expect(raw.containsKey('status'), isFalse);
+    });
+  });
+
   group('Service serialization — categoryId', () {
     test('all CategoryId values roundtrip correctly', () async {
       final ts = Timestamp.fromDate(DateTime(2024, 1, 1).toUtc());

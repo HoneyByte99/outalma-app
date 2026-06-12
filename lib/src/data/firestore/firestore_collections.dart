@@ -213,6 +213,7 @@ class FirestoreCollections {
       price: (data['price'] as num?)?.toInt() ?? 0,
       published: (data['published'] as bool?) ?? false,
       serviceZones: _serviceZonesFromFirestore(data),
+      status: data['status'] as String?,
       createdAt: dateTimeFromFirestore(data['createdAt']),
       updatedAt: dateTimeFromFirestore(data['updatedAt']),
     );

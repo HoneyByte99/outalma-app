@@ -182,6 +182,8 @@
   "serviceCreate": "Créer un service",
   "published": "Publié",
   "notPublished": "Non publié",
+  "serviceStatusPending": "En attente de validation",
+  "serviceStatusRejected": "Refusé",
   "ratingNew": "Nouveau",
   "tooltipProviderProfile": "Mon profil prestataire",
 
@@ -365,6 +367,7 @@
   "inboxEmptyCompletedSubtitle": "Les missions terminées, refusées ou annulées apparaissent ici.",
   "inboxLoadError": "Impossible de charger les données.",
   "inboxOpenChat": "Ouvrir le chat",
+  "inboxMoreDetails": "Plus de détails",
 
   "reviewTitle": "Laisser un avis",
   "reviewEvaluateProvider": "Évaluez le prestataire",
