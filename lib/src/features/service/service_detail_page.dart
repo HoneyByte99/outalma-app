@@ -190,19 +190,27 @@ class _ServiceDetailContent extends ConsumerWidget {
                       Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              size: 16,
-                              color: oc.secondaryText,
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Icon(
+                                Icons.location_on_outlined,
+                                size: 16,
+                                color: oc.secondaryText,
+                              ),
                             ),
                             const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              zone.radiusKm > 0
-                                  ? '${zone.label}, ${zone.radiusKm} km'
-                                  : zone.label,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: oc.secondaryText),
+                            Expanded(
+                              child: Text(
+                                zone.radiusKm > 0
+                                    ? '${zone.label}, ${zone.radiusKm} km'
+                                    : zone.label,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: oc.secondaryText),
+                              ),
                             ),
                           ],
                         ),

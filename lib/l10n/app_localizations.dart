@@ -602,6 +602,12 @@ abstract class AppLocalizations {
   /// **'Service areas'**
   String get serviceZonesLabel;
 
+  /// No description provided for @serviceViewOnMap.
+  ///
+  /// In en, this message translates to:
+  /// **'View on map'**
+  String get serviceViewOnMap;
+
   /// No description provided for @reportDetailsLabel.
   ///
   /// In en, this message translates to:

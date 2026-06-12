@@ -59,6 +59,30 @@ Future<void> openDirections(
   await launchUrl(universal, mode: LaunchMode.externalApplication);
 }
 
+/// Opens an external maps app *showing* a location (not directions). Used for
+/// a service's intervention zone, which the client views rather than travels
+/// to. On iOS we open Apple Plans directly via its web scheme (always handled
+/// by the Maps app); elsewhere the Google Maps universal "search" URL, which
+/// the OS routes to Google Maps or the browser.
+Future<void> openLocation(
+  BuildContext context, {
+  required double lat,
+  required double lng,
+  String? label,
+}) async {
+  final Uri uri;
+  if (!kIsWeb && Platform.isIOS) {
+    uri = Uri.parse(
+      'https://maps.apple.com/?ll=$lat,$lng&q=${Uri.encodeComponent(label?.isNotEmpty == true ? label! : '$lat,$lng')}',
+    );
+  } else {
+    uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
+  }
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
+}
+
 class _MapsOption {
   const _MapsOption({
     required this.label,

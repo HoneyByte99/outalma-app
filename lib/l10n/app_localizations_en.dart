@@ -272,6 +272,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serviceZonesLabel => 'Service areas';
 
   @override
+  String get serviceViewOnMap => 'View on map';
+
+  @override
   String get reportDetailsLabel => 'Details (optional)';
 
   @override

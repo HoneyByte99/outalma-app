@@ -105,6 +105,7 @@
   "modeBadgeTapToSwitch": "Tap to switch mode",
   "verifiedBadgeLabel": "Verified",
   "serviceZonesLabel": "Service areas",
+  "serviceViewOnMap": "View on map",
   "reportDetailsLabel": "Details (optional)",
   "reportDetailsHint": "Add information that will help our moderation team…",
   "dashboardStatsUpcomingWeek": "Upcoming this week",
