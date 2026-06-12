@@ -14,6 +14,22 @@
 # One-time setup per clone:
 #   git config core.hooksPath .githooks
 
+# ── 0. Secret scan — ALL staged files, runs even with OUTALMA_SKIP_GATE ──────
+# Scans only the ADDED lines of the staged diff, so legacy occurrences in the
+# tree never block. Override requires the explicit git escape: --no-verify.
+secrets=$(git diff --cached -U0 --diff-filter=ACMR -- . ':(exclude).githooks' \
+  | grep '^+' | grep -v '^+++' \
+  | grep -nE 'AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|ya29\.[A-Za-z0-9_-]{20,}|"private_key" *:' \
+  || true)
+if [ -n "$secrets" ]; then
+  printf '%s\n' "$secrets" | head -5
+  echo ""
+  echo "Commit blocked: staged diff appears to contain a secret or API key."
+  echo "Move it to a gitignored config / environment variable. If this is a"
+  echo "false positive, bypass once with:  git commit --no-verify"
+  exit 1
+fi
+
 staged_dart=$(git diff --cached --name-only --diff-filter=ACMR -- '*.dart')
 [ -z "$staged_dart" ] && exit 0
 

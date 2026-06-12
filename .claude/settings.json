@@ -21,6 +21,13 @@
           {
             "type": "command",
             "if": "Bash(git commit*)",
+            "command": "jq -n --arg f \"$(git -C \"$CLAUDE_PROJECT_DIR\" diff --cached --name-only)\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:(\"STAGED FILES about to be committed:\\n\" + (if $f == \"\" then \"(none)\" else $f end) + \"\\nA concurrent session shares this git index. If any staged file is NOT part of your change, do not commit the whole index — use explicit pathspecs: git commit -m ... -- <your-paths>\")}}' || true",
+            "timeout": 10,
+            "statusMessage": "Staged files manifest"
+          },
+          {
+            "type": "command",
+            "if": "Bash(git commit*)",
             "command": "jq -n --rawfile c \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-checklist.md\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:(\"Pre-commit checklist (.claude/hooks/pre-commit-checklist.md):\\n\" + $c)}}' || true",
             "timeout": 10,
             "statusMessage": "Pre-commit checklist"
