@@ -380,12 +380,14 @@ class _ClientSummary extends ConsumerWidget {
     final oc = context.oc;
     final client = ref.watch(userByIdProvider(clientId)).valueOrNull;
 
+    // Inert info block (no client profile page by design). Uses a borderless
+    // background fill — deliberately unlike the bordered, tappable _ProviderLink
+    // card the client sees — so the provider does not read it as a button.
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: oc.cardSurface,
+        color: oc.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: oc.border),
       ),
       child: Row(
         children: [

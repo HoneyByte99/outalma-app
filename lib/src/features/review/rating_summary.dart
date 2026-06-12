@@ -22,34 +22,50 @@ class RatingSummary extends ConsumerWidget {
     if (stats == null) return const SizedBox.shrink();
 
     if (stats.count == 0) {
-      return Text(
-        l10n.ratingNew,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: oc.secondaryText,
-          fontWeight: FontWeight.w500,
+      // No reviews yet — keep a star shape (outlined) so non-readers still
+      // recognise this as a rating slot, paired with the localized label.
+      return Semantics(
+        label: l10n.ratingNew,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_border_rounded, size: 15, color: oc.secondaryText),
+            const SizedBox(width: 3),
+            Text(
+              l10n.ratingNew,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: oc.secondaryText,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.star_rounded, size: 15, color: oc.star),
-        const SizedBox(width: 3),
-        Text(
-          stats.average.toStringAsFixed(1),
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          l10n.reviewsCount(stats.count),
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
-        ),
-      ],
+    return Semantics(
+      label:
+          '${stats.average.toStringAsFixed(1)} ${l10n.reviewsCount(stats.count)}',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.star_rounded, size: 15, color: oc.star),
+          const SizedBox(width: 3),
+          Text(
+            stats.average.toStringAsFixed(1),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            l10n.reviewsCount(stats.count),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+          ),
+        ],
+      ),
     );
   }
 }

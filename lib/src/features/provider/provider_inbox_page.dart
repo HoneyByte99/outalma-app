@@ -67,9 +67,18 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               tabs: [
-                Tab(text: l10n.inboxTabRequests),
-                Tab(text: l10n.inboxTabActive),
-                Tab(text: l10n.inboxTabCompleted),
+                Tab(
+                  icon: const Icon(Icons.inbox_outlined, size: 18),
+                  text: l10n.inboxTabRequests,
+                ),
+                Tab(
+                  icon: const Icon(Icons.hourglass_empty_outlined, size: 18),
+                  text: l10n.inboxTabActive,
+                ),
+                Tab(
+                  icon: const Icon(Icons.history_rounded, size: 18),
+                  text: l10n.inboxTabCompleted,
+                ),
               ],
             ),
           ),
@@ -286,27 +295,30 @@ class _InboxCard extends ConsumerWidget {
             if (booking.chatId != null &&
                 (booking.status == BookingStatus.accepted ||
                     booking.status == BookingStatus.inProgress)) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               const Divider(height: 1),
-              const SizedBox(height: 12),
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => context.push(AppRoutes.chat(booking.chatId!)),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.chat_bubble_outline_rounded,
-                      size: 16,
-                      color: oc.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      l10n.inboxOpenChat,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 16,
                         color: oc.primary,
-                        fontWeight: FontWeight.w500,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      Text(
+                        l10n.inboxOpenChat,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
