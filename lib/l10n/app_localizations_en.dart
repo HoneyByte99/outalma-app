@@ -1435,6 +1435,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountExportData => 'Export my data';
 
   @override
+  String get accountRequestExport => 'Request a data export';
+
+  @override
+  String get exportRequestTitle => 'Request a data export';
+
+  @override
+  String get exportRequestBody =>
+      'We\'ll prepare your data and email it to you. Confirm the address below.';
+
+  @override
+  String get exportRequestEmail => 'Email address';
+
+  @override
+  String get exportRequestSend => 'Send request';
+
+  @override
+  String get exportRequestSent =>
+      'Request sent. You\'ll receive your data by email.';
+
+  @override
   String get accountDeleteTitle => 'Delete my account';
 
   @override

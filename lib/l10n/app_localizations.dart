@@ -2768,6 +2768,42 @@ abstract class AppLocalizations {
   /// **'Export my data'**
   String get accountExportData;
 
+  /// No description provided for @accountRequestExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a data export'**
+  String get accountRequestExport;
+
+  /// No description provided for @exportRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a data export'**
+  String get exportRequestTitle;
+
+  /// No description provided for @exportRequestBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll prepare your data and email it to you. Confirm the address below.'**
+  String get exportRequestBody;
+
+  /// No description provided for @exportRequestEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email address'**
+  String get exportRequestEmail;
+
+  /// No description provided for @exportRequestSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get exportRequestSend;
+
+  /// No description provided for @exportRequestSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Request sent. You\'ll receive your data by email.'**
+  String get exportRequestSent;
+
   /// No description provided for @accountDeleteTitle.
   ///
   /// In en, this message translates to:

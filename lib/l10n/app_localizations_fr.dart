@@ -1451,6 +1451,26 @@ class AppLocalizationsFr extends AppLocalizations {
   String get accountExportData => 'Exporter mes données';
 
   @override
+  String get accountRequestExport => 'Demander une exportation de mes données';
+
+  @override
+  String get exportRequestTitle => 'Demander une exportation';
+
+  @override
+  String get exportRequestBody =>
+      'Nous préparerons vos données et vous les enverrons par email. Confirmez l\'adresse ci-dessous.';
+
+  @override
+  String get exportRequestEmail => 'Adresse email';
+
+  @override
+  String get exportRequestSend => 'Envoyer la demande';
+
+  @override
+  String get exportRequestSent =>
+      'Demande envoyée. Vous recevrez vos données par email.';
+
+  @override
   String get accountDeleteTitle => 'Supprimer mon compte';
 
   @override

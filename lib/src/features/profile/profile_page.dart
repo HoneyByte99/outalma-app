@@ -1,16 +1,14 @@
-import 'dart:convert';
-
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../shared/mode_badge.dart';
 import '../../app/router.dart';
+import '../../data/services/callable_function_client.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/locale/locale_provider.dart';
@@ -974,35 +972,77 @@ class _ExportDataTile extends ConsumerStatefulWidget {
 class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
   bool _loading = false;
 
-  Future<void> _export() async {
+  /// RGPD: file a data-export REQUEST. The export isn't returned to the device;
+  /// it surfaces on the admin dashboard and an admin emails it. The user can
+  /// confirm or type the destination email (e.g. when signed in by phone).
+  Future<void> _requestExport() async {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final messenger = ScaffoldMessenger.of(context);
+    final authState = ref.read(authNotifierProvider).valueOrNull;
+    final currentEmail = authState is AuthAuthenticated
+        ? authState.user.email
+        : '';
+    final controller = TextEditingController(text: currentEmail);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.exportRequestTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.exportRequestBody),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(labelText: l10n.exportRequestEmail),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.bookingBack),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.exportRequestSend),
+          ),
+        ],
+      ),
+    );
+
+    final email = controller.text.trim();
+    controller.dispose();
+    if (confirmed != true) return;
+
     setState(() => _loading = true);
     try {
-      final data = await ref.read(authNotifierProvider.notifier).exportMyData();
-      final json = const JsonEncoder.withIndent('  ').convert(data);
-      // Try the native share sheet; if it fails (share_plus can throw on some
-      // iOS setups), fall back to copying the JSON to the clipboard so the
-      // export still succeeds. Either way the user gets their data.
-      try {
-        await Share.share(json, subject: l10n.accountExportData);
-      } catch (_) {
-        await Clipboard.setData(ClipboardData(text: json));
-        if (mounted) {
-          messenger.showSnackBar(SnackBar(content: Text(l10n.chatCopied)));
-        }
-      }
-    } catch (e) {
-      // Surface the real error (not a generic message) so any remaining failure
-      // is diagnosable from the field.
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('${l10n.errorGeneral} ($e)'),
-          backgroundColor: oc.error,
-          duration: const Duration(seconds: 8),
-        ),
+      await const CallableFunctionClient().call(
+        'requestDataExport',
+        data: {'email': email},
       );
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.exportRequestSent)));
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? l10n.errorGeneral),
+            backgroundColor: oc.error,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.errorGeneral), backgroundColor: oc.error),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1020,16 +1060,16 @@ class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-        onTap: _loading ? null : _export,
+        onTap: _loading ? null : _requestExport,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
             children: [
-              Icon(Icons.download_outlined, size: 20, color: oc.icons),
+              Icon(Icons.mail_outline_rounded, size: 20, color: oc.icons),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  l10n.accountExportData,
+                  l10n.accountRequestExport,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
