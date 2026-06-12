@@ -31,16 +31,39 @@ the **Firestore rules + Cloud Functions changes are not yet deployed** — run
   fields on update (create vs update split); `_bookingToFirestore` now serializes
   `cancelReason`/`cancelledBy`.
 
+### Round 2 — field-testing feedback (2026-06-12, also pending deploy)
+
+- **Reservation safety (server).** `createBooking` now rejects an address outside
+  the service's intervention zones (haversine), and rejects a slot overlapping
+  (±60 min) an existing non-terminal booking. Services rule whitelists `categoryId`
+  to the 7 catalogue categories (also closes the old #16).
+- **Working hours + free slots.** `ProviderProfile.workingHourStart/End` (default
+  8–18); the client booking step offers only free slots (working hours − blocked −
+  booked − past) as chips instead of a free time picker. No more 4am requests.
+- **Lazy onboarding.** Dashboard shows a non-blocking "complete your profile" nudge
+  when bio/serviceArea are missing (instead of a blocking "activate" on a missing
+  doc) — fixes "I can accept missions but the app says activate your profile".
+- **Service cards.** Moderation `status` is read into the model and shown as an
+  icon+colour badge (pending/rejected/online/offline). Inbox CTA "Open chat" →
+  "More details". Lingering photo-removed snackbar fixed (cleared on dispose).
+- **Chat images** bounded to 1024×1024 @ q80 on every platform.
+- **Trust.** MarketplaceDisclaimer at booking, service detail and onboarding.
+- **a11y.** Icon-first category chips.
+- **RGPD.** Self-service export replaced by a `requestDataExport` request
+  (`data_export_requests` collection, admin-fulfilled by email).
+
 ## Still open
 
 - **#12 (P2, minor) Cancellation UX.** At `requested` the provider terminates via
   *reject* and the client via *cancel* (both terminal — adequate). After acceptance,
   cancel for either role is an app-bar icon rather than a primary button. Acceptable
   for MVP; revisit if users miss it.
-- **#16 (P3) `categoryId` not validated server-side.** A client could write a service
-  with an arbitrary `categoryId`; Dart falls back to `menage` on unknown values (no
-  crash, data-quality only). Left as-is for MVP — a hard-coded enum check in rules is
-  brittle; revisit if a typed category registry lands.
+- **Wolof locale (P2).** App is FR/EN only. Icon-first affordances were added for
+  low-literacy users, but a `wo` locale needs real translation content from a Wolof
+  speaker (not machine output) — left for a dedicated translation pass.
+- **Admin export fulfilment (P2).** `requestDataExport` files the request;
+  compiling + emailing the export from the admin dashboard (and the email provider
+  wiring) is still to be built on the admin side.
 
 ## Verified healthy (no need to re-audit)
 
