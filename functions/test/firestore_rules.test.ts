@@ -299,6 +299,42 @@ describe('reviews block gating', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Services publish gate — a service goes live only with an active provider
+// profile (E1). Drafts are always allowed.
+// ---------------------------------------------------------------------------
+describe('services publish gate', () => {
+  function svc(db: Firestore, published: boolean) {
+    return setDoc(doc(db, 'services/s1'), {
+      providerId: 'alice',
+      published,
+      title: 'x',
+    });
+  }
+
+  test('draft is allowed without any provider profile', async () => {
+    await assertSucceeds(svc(asUser('alice'), false));
+  });
+
+  test('publish is blocked without a provider profile', async () => {
+    await assertFails(svc(asUser('alice'), true));
+  });
+
+  test('publish is blocked when the provider profile is suspended', async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'providers/alice'), { active: true, suspended: true })
+    );
+    await assertFails(svc(asUser('alice'), true));
+  });
+
+  test('publish is allowed with an active, non-suspended profile', async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'providers/alice'), { active: true, suspended: false })
+    );
+    await assertSucceeds(svc(asUser('alice'), true));
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Core invariants — users PII guard, notifications, default deny
 // ---------------------------------------------------------------------------
 describe('core access invariants', () => {

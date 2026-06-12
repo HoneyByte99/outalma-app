@@ -105,15 +105,29 @@ service cloud.firestore {
     match /services/{serviceId} {
       allow read: if true;
 
+      // A service may go live (published == true) only when the owner has an
+      // active, non-suspended provider profile — i.e. provider onboarding is
+      // complete. Drafts (published false/omitted) are always allowed, so a
+      // service can be built before onboarding, just not published. (E1)
+      function publishAllowed() {
+        return request.resource.data.published != true
+          || (exists(/databases/$(database)/documents/providers/$(request.auth.uid))
+              && get(/databases/$(database)/documents/providers/$(request.auth.uid)).data.active == true
+              && get(/databases/$(database)/documents/providers/$(request.auth.uid)).data.suspended != true);
+      }
+
       // Create by owner provider
       allow create: if isAdmin()
-        || (signedIn() && request.resource.data.providerId == request.auth.uid);
+        || (signedIn()
+            && request.resource.data.providerId == request.auth.uid
+            && publishAllowed());
 
       // Update by owner; providerId immutable
       allow update: if isAdmin()
         || (signedIn()
             && resource.data.providerId == request.auth.uid
-            && request.resource.data.providerId == resource.data.providerId);
+            && request.resource.data.providerId == resource.data.providerId
+            && publishAllowed());
 
       allow delete: if isAdmin()
         || (signedIn() && resource.data.providerId == request.auth.uid);
