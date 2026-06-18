@@ -12,7 +12,7 @@ from firebase_admin import credentials, firestore
 from datetime import datetime, timezone, timedelta
 
 # --- Init Firebase ---
-SA_PATH = "/Users/amathba/clawd/projects/outalma/outalma-app/scripts/service-account.json"
+SA_PATH = "/Users/amathba/WORKSPACE/outalma/app/scripts/service-account.json"
 cred = credentials.Certificate(SA_PATH)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
