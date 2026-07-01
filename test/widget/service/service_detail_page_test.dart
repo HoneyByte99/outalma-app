@@ -12,6 +12,7 @@ import 'package:outalma_app/src/application/auth/auth_providers.dart';
 import 'package:outalma_app/src/application/auth/auth_state.dart';
 import 'package:outalma_app/src/application/review/review_providers.dart';
 import 'package:outalma_app/src/application/service/service_providers.dart';
+import 'package:outalma_app/src/application/user/public_profile_providers.dart';
 import 'package:outalma_app/src/application/user/user_providers.dart';
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
 import 'package:outalma_app/src/domain/enums/category_id.dart';
@@ -45,7 +46,7 @@ Widget _wrap({Service? service}) => ProviderScope(
     serviceDetailProvider(
       'svc_test',
     ).overrideWith((_) => Stream.value(service ?? _fakeService)),
-    userByIdProvider('prov_1').overrideWith((_) => const Stream.empty()),
+    publicProfileByIdProvider('prov_1').overrideWith((_) => Stream.value(null)),
     reviewsForUserProvider('prov_1').overrideWith((_) => Stream.value([])),
   ],
   child: MaterialApp(

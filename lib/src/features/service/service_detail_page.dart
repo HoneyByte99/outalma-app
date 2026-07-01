@@ -10,7 +10,7 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
-import '../../application/user/user_providers.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../../core/utils/format_utils.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/enums/price_type.dart';
@@ -400,12 +400,14 @@ class _ProviderRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
+    // Guest-safe: provider name/avatar from the public projection, never the
+    // PII users doc (which a signed-out visitor cannot read).
+    final user = ref.watch(publicProfileByIdProvider(providerId)).valueOrNull;
     final providerProfile = ref
         .watch(providerProfileByIdProvider(providerId))
         .valueOrNull;
     final isVerified =
-        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
+        providerProfile != null && (user?.phoneVerified ?? false);
 
     return Semantics(
       label: '${user?.displayName ?? ''} - ${l10n.serviceViewProfile}',
