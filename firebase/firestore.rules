@@ -98,6 +98,17 @@ service cloud.firestore {
       allow delete: if isAdmin() || isSelf(uid);
     }
 
+    // ---------- PUBLIC PROFILES (PII-free mirror of users, world-readable) ----------
+    // Holds ONLY { displayName, photoPath } so guests can see provider names,
+    // avatars and reviewer names without unlocking the users collection (which
+    // carries email + phoneE164). Written exclusively by the mirrorPublicProfile
+    // / backfillPublicProfiles Cloud Functions (Admin SDK bypasses rules); any
+    // client write is denied so the projection can never be poisoned.
+    match /public_profiles/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ---------- SERVICE TYPES (reference collection) ----------
     match /service_types/{typeId} {
       allow read: if true;

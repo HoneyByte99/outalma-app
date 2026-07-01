@@ -100,6 +100,14 @@ export {
   verifyPhoneOtpAndSignUp,
 } from './auth_phone';
 
+// ---------------------------------------------------------------------------
+// Public profile projection (PII-free mirror of users, for guest browsing)
+// ---------------------------------------------------------------------------
+export {
+  mirrorPublicProfile,
+  backfillPublicProfiles,
+} from './public_profiles';
+
 // NOTE: legacy `sendOtpTwilio` / `verifyOtpTwilio` callables (file
 // `otp_twilio.ts`) are intentionally NOT exported. They share the canonical
 // pipeline's surface area but lack the hardening done in `auth_phone.ts`
