@@ -13,10 +13,11 @@ import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import '../shared/app_logo.dart';
 import '../shared/phone_field.dart';
 
 // ---------------------------------------------------------------------------
-// Auth mode enum — shared between sign-in and sign-up
+// Auth mode enum - shared between sign-in and sign-up
 // ---------------------------------------------------------------------------
 
 enum _AuthMode { mail, phone }
@@ -54,7 +55,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // Email sign-in — password
+  // Email sign-in - password
   // ---------------------------------------------------------------------------
 
   Future<void> _signInEmail() async {
@@ -115,7 +116,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // Phone sign-in — OTP flow (Twilio Verify backend)
+  // Phone sign-in - OTP flow (Twilio Verify backend)
   // ---------------------------------------------------------------------------
 
   /// Step 1: validate the phone, ask Twilio for an OTP, transition to step 2.
@@ -168,7 +169,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
           .read(authNotifierProvider.notifier)
           .phoneSignInWithOtp(phone, code);
       if (!result.signedIn) {
-        // Account not yet created — send the user to sign-up.
+        // Account not yet created - send the user to sign-up.
         if (!mounted) return;
         _showError(l10n.phoneOtpNoAccount);
         context.go(AppRoutes.signUp);
@@ -335,14 +336,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   ),
                   const SizedBox(height: 12),
                 ] else if (_phoneStep == _PhoneStep.enterPhone) ...[
-                  // Step 1 — phone number
+                  // Step 1 - phone number
                   PhoneField(
                     initialValue: _phoneE164,
                     onChanged: (v) => setState(() => _phoneE164 = v),
                   ),
                   const SizedBox(height: 28),
                 ] else ...[
-                  // Step 2 — OTP code
+                  // Step 2 - OTP code
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
@@ -550,12 +551,12 @@ class _AuthModeToggle extends StatelessWidget {
 class _AuthLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Image.asset('assets/images/logo_icon_cropped.png', height: 160);
+    return const AppLogo(height: 160);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Theme toggle button — cycles system → light → dark
+// Theme toggle button - cycles system → light → dark
 // ---------------------------------------------------------------------------
 
 class _ThemeToggleButton extends ConsumerWidget {

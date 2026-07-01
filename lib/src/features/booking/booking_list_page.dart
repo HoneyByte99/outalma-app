@@ -98,6 +98,16 @@ class _BookingTab extends ConsumerWidget {
         ? ref.watch(providerBookingHistoryProvider)
         : ref.watch(customerBookingsProvider);
 
+    Future<void> onRefresh() async {
+      if (isProvider) {
+        ref.invalidate(providerBookingHistoryProvider);
+        await ref.read(providerBookingHistoryProvider.future);
+      } else {
+        ref.invalidate(customerBookingsProvider);
+        await ref.read(customerBookingsProvider.future);
+      }
+    }
+
     return bookingsAsync.when(
       loading: () => const _BookingListLoading(),
       error: (_, __) => _BookingListError(
@@ -113,20 +123,33 @@ class _BookingTab extends ConsumerWidget {
         }).toList();
 
         if (filtered.isEmpty) {
-          return _BookingListEmpty(isActive: isActive);
+          return RefreshIndicator(
+            onRefresh: onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [_BookingListEmpty(isActive: isActive)],
+            ),
+          );
         }
 
         // Active tab: calendar + list. Done tab: simple list.
         if (isActive) {
-          return _ActiveBookingsWithCalendar(bookings: filtered);
+          return _ActiveBookingsWithCalendar(
+            bookings: filtered,
+            onRefresh: onRefresh,
+          );
         }
 
         filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          itemCount: filtered.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, i) => _BookingCard(booking: filtered[i]),
+        return RefreshIndicator(
+          onRefresh: onRefresh,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            itemCount: filtered.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, i) => _BookingCard(booking: filtered[i]),
+          ),
         );
       },
     );
@@ -138,8 +161,12 @@ class _BookingTab extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _ActiveBookingsWithCalendar extends StatefulWidget {
-  const _ActiveBookingsWithCalendar({required this.bookings});
+  const _ActiveBookingsWithCalendar({
+    required this.bookings,
+    required this.onRefresh,
+  });
   final List<Booking> bookings;
+  final Future<void> Function() onRefresh;
 
   @override
   State<_ActiveBookingsWithCalendar> createState() =>
@@ -175,159 +202,164 @@ class _ActiveBookingsWithCalendarState
       return aDate.compareTo(bDate);
     });
 
-    return CustomScrollView(
-      slivers: [
-        // Mini calendar
-        SliverToBoxAdapter(
-          child: TableCalendar<Booking>(
-            locale: locale,
-            calendarFormat: CalendarFormat.twoWeeks,
-            availableCalendarFormats: const {
-              CalendarFormat.twoWeeks: '2 sem.',
-              CalendarFormat.month: 'Mois',
-            },
-            firstDay: DateTime.now().subtract(const Duration(days: 30)),
-            lastDay: DateTime.now().add(const Duration(days: 365)),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            onDaySelected: (selected, focused) {
-              setState(() {
-                // Tap same day again → deselect
-                if (isSameDay(_selectedDay, selected)) {
-                  _selectedDay = null;
-                } else {
-                  _selectedDay = selected;
-                }
-                _focusedDay = focused;
-              });
-            },
-            onPageChanged: (focused) => setState(() => _focusedDay = focused),
-            eventLoader: (day) => widget.bookings
-                .where(
-                  (b) =>
-                      b.scheduledAt != null && isSameDay(b.scheduledAt!, day),
-                )
-                .toList(),
-            calendarStyle: CalendarStyle(
-              todayDecoration: BoxDecoration(
-                color: oc.primary.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // Mini calendar
+          SliverToBoxAdapter(
+            child: TableCalendar<Booking>(
+              locale: locale,
+              calendarFormat: CalendarFormat.twoWeeks,
+              availableCalendarFormats: const {
+                CalendarFormat.twoWeeks: '2 sem.',
+                CalendarFormat.month: 'Mois',
+              },
+              firstDay: DateTime.now().subtract(const Duration(days: 30)),
+              lastDay: DateTime.now().add(const Duration(days: 365)),
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              onDaySelected: (selected, focused) {
+                setState(() {
+                  // Tap same day again → deselect
+                  if (isSameDay(_selectedDay, selected)) {
+                    _selectedDay = null;
+                  } else {
+                    _selectedDay = selected;
+                  }
+                  _focusedDay = focused;
+                });
+              },
+              onPageChanged: (focused) => setState(() => _focusedDay = focused),
+              eventLoader: (day) => widget.bookings
+                  .where(
+                    (b) =>
+                        b.scheduledAt != null && isSameDay(b.scheduledAt!, day),
+                  )
+                  .toList(),
+              calendarStyle: CalendarStyle(
+                todayDecoration: BoxDecoration(
+                  color: oc.primary.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                todayTextStyle: TextStyle(color: oc.primary),
+                selectedDecoration: BoxDecoration(
+                  color: oc.primary,
+                  shape: BoxShape.circle,
+                ),
+                markerDecoration: BoxDecoration(
+                  color: oc.success,
+                  shape: BoxShape.circle,
+                ),
+                markerSize: 6,
+                markersMaxCount: 3,
               ),
-              todayTextStyle: TextStyle(color: oc.primary),
-              selectedDecoration: BoxDecoration(
-                color: oc.primary,
-                shape: BoxShape.circle,
+              headerStyle: HeaderStyle(
+                formatButtonVisible: true,
+                titleCentered: true,
+                formatButtonDecoration: BoxDecoration(
+                  border: Border.all(color: oc.border),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                titleTextStyle: Theme.of(context).textTheme.titleSmall!,
               ),
-              markerDecoration: BoxDecoration(
-                color: oc.success,
-                shape: BoxShape.circle,
-              ),
-              markerSize: 6,
-              markersMaxCount: 3,
-            ),
-            headerStyle: HeaderStyle(
-              formatButtonVisible: true,
-              titleCentered: true,
-              formatButtonDecoration: BoxDecoration(
-                border: Border.all(color: oc.border),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              titleTextStyle: Theme.of(context).textTheme.titleSmall!,
             ),
           ),
-        ),
 
-        // Selected day chip
-        if (_selectedDay != null)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
-                children: [
-                  // The whole chip clears the date filter — a large tap target
-                  // without inflating the compact pill height.
-                  GestureDetector(
-                    onTap: () => setState(() => _selectedDay = null),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: oc.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 14,
-                            color: oc.primary,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            DateFormat(
-                              'EEE d MMM',
-                              locale,
-                            ).format(_selectedDay!),
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: oc.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: oc.primary.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.close,
-                              size: 12,
+          // Selected day chip
+          if (_selectedDay != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  children: [
+                    // The whole chip clears the date filter - a large tap target
+                    // without inflating the compact pill height.
+                    GestureDetector(
+                      onTap: () => setState(() => _selectedDay = null),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: oc.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              size: 14,
                               color: oc.primary,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Text(
+                              DateFormat(
+                                'EEE d MMM',
+                                locale,
+                              ).format(_selectedDay!),
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(
+                                    color: oc.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: oc.primary.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.close,
+                                size: 12,
+                                color: oc.primary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-        // Booking list
-        if (displayed.isEmpty)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Center(
-                child: Text(
-                  _selectedDay != null
-                      ? l10n.bookingNoDateToday
-                      : l10n.bookingNoUpcoming,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
+                  ],
                 ),
               ),
             ),
-          )
-        else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            sliver: SliverList.separated(
-              itemCount: displayed.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => _BookingCard(booking: displayed[i]),
+
+          // Booking list
+          if (displayed.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Center(
+                  child: Text(
+                    _selectedDay != null
+                        ? l10n.bookingNoDateToday
+                        : l10n.bookingNoUpcoming,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              sliver: SliverList.separated(
+                itemCount: displayed.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, i) =>
+                    _BookingCard(booking: displayed[i]),
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -489,7 +521,7 @@ class _StatusChip extends StatelessWidget {
       case BookingStatus.cancelled:
         return (l10n.statusCancelled, oc.secondaryText);
       case BookingStatus.unknown:
-        return ('—', oc.secondaryText);
+        return ('-', oc.secondaryText);
     }
   }
 }

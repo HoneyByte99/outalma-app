@@ -56,7 +56,7 @@ void main() {
       expect(result, '1 000 F CFA');
     });
 
-    test('formats 50 cents — rounds to 0 decimal digits, no comma', () {
+    test('formats 50 cents - rounds to 0 decimal digits, no comma', () {
       // 50 cents = 0.5 units; fr_FR currency with 0 decimal digits rounds
       final result = formatPriceFromCents(50);
       expect(result, contains('F CFA'));
@@ -97,6 +97,33 @@ void main() {
       final result = formatPriceFromCents(-100);
       expect(result, contains('F CFA'));
       expect(result, contains('1'));
+    });
+  });
+
+  group('formatDistanceKm', () {
+    test('sub-kilometre distances render in metres', () {
+      expect(formatDistanceKm(0.4), '400 m');
+      expect(formatDistanceKm(0.05), '50 m');
+    });
+
+    test('distances under 10 km keep one decimal with a French comma', () {
+      expect(formatDistanceKm(1.2), '1,2 km');
+      expect(formatDistanceKm(9.94), '9,9 km');
+    });
+
+    test('distances of 10 km and above are rounded to whole kilometres', () {
+      expect(formatDistanceKm(12.7), '13 km');
+      expect(formatDistanceKm(10.0), '10 km');
+    });
+
+    test('exactly 1 km crosses into the km branch', () {
+      expect(formatDistanceKm(1.0), '1,0 km');
+    });
+
+    test('never emits a plain dot as decimal separator', () {
+      for (final km in [1.5, 2.25, 7.7]) {
+        expect(formatDistanceKm(km), isNot(contains('.')));
+      }
     });
   });
 }

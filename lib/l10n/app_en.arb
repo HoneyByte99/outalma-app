@@ -599,6 +599,7 @@
   "legalReadPrivacy": "Read the privacy policy",
   "legalTermsTitle": "Terms of use",
   "legalPrivacyTitle": "Privacy policy",
+  "legalDocumentUnavailable": "Document unavailable.",
   "introSkip": "Skip",
   "authTabEmail": "Email",
   "authTabPhone": "Phone",

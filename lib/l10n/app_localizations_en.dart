@@ -1481,6 +1481,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get legalPrivacyTitle => 'Privacy policy';
 
   @override
+  String get legalDocumentUnavailable => 'Document unavailable.';
+
+  @override
   String get introSkip => 'Skip';
 
   @override

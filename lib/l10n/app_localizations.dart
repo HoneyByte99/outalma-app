@@ -2846,6 +2846,12 @@ abstract class AppLocalizations {
   /// **'Privacy policy'**
   String get legalPrivacyTitle;
 
+  /// No description provided for @legalDocumentUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Document unavailable.'**
+  String get legalDocumentUnavailable;
+
   /// No description provided for @introSkip.
   ///
   /// In en, this message translates to:

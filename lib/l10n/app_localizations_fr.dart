@@ -1499,6 +1499,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get legalPrivacyTitle => 'Politique de confidentialité';
 
   @override
+  String get legalDocumentUnavailable => 'Document indisponible.';
+
+  @override
   String get introSkip => 'Passer';
 
   @override

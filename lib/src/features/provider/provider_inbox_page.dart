@@ -64,7 +64,7 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
             ],
             bottom: TabBar(
               controller: _tabController,
-              // Fill the full width — 3 fixed tabs share the bar evenly.
+              // Fill the full width - 3 fixed tabs share the bar evenly.
               tabs: [
                 Tab(
                   icon: const Icon(Icons.inbox_outlined, size: 18),
@@ -102,21 +102,36 @@ class _RequestsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final inboxAsync = ref.watch(providerInboxProvider);
 
+    Future<void> onRefresh() async {
+      ref.invalidate(providerInboxProvider);
+      await ref.read(providerInboxProvider.future);
+    }
+
     return inboxAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) =>
           _ErrorState(onRetry: () => ref.invalidate(providerInboxProvider)),
       data: (bookings) {
         if (bookings.isEmpty) {
-          return const _EmptyState(kind: _InboxEmptyKind.requests);
+          return RefreshIndicator(
+            onRefresh: onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [_EmptyState(kind: _InboxEmptyKind.requests)],
+            ),
+          );
         }
         final sorted = [...bookings]
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          itemCount: sorted.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, i) => _InboxCard(booking: sorted[i]),
+        return RefreshIndicator(
+          onRefresh: onRefresh,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            itemCount: sorted.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, i) => _InboxCard(booking: sorted[i]),
+          ),
         );
       },
     );
@@ -134,6 +149,11 @@ class _ActiveTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeAsync = ref.watch(providerActiveBookingsProvider);
 
+    Future<void> onRefresh() async {
+      ref.invalidate(providerActiveBookingsProvider);
+      await ref.read(providerActiveBookingsProvider.future);
+    }
+
     return activeAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) => _ErrorState(
@@ -141,15 +161,25 @@ class _ActiveTab extends ConsumerWidget {
       ),
       data: (bookings) {
         if (bookings.isEmpty) {
-          return const _EmptyState(kind: _InboxEmptyKind.active);
+          return RefreshIndicator(
+            onRefresh: onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [_EmptyState(kind: _InboxEmptyKind.active)],
+            ),
+          );
         }
         final sorted = [...bookings]
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          itemCount: sorted.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, i) => _InboxCard(booking: sorted[i]),
+        return RefreshIndicator(
+          onRefresh: onRefresh,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            itemCount: sorted.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, i) => _InboxCard(booking: sorted[i]),
+          ),
         );
       },
     );
@@ -168,6 +198,11 @@ class _CompletedTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final completedAsync = ref.watch(providerCompletedBookingsProvider);
 
+    Future<void> onRefresh() async {
+      ref.invalidate(providerCompletedBookingsProvider);
+      await ref.read(providerCompletedBookingsProvider.future);
+    }
+
     return completedAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) => _ErrorState(
@@ -175,16 +210,26 @@ class _CompletedTab extends ConsumerWidget {
       ),
       data: (bookings) {
         if (bookings.isEmpty) {
-          return const _EmptyState(kind: _InboxEmptyKind.completed);
+          return RefreshIndicator(
+            onRefresh: onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [_EmptyState(kind: _InboxEmptyKind.completed)],
+            ),
+          );
         }
         // Most recent activity first (completed/cancelled at the top).
         final sorted = [...bookings]
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          itemCount: sorted.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, i) => _InboxCard(booking: sorted[i]),
+        return RefreshIndicator(
+          onRefresh: onRefresh,
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            itemCount: sorted.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, i) => _InboxCard(booking: sorted[i]),
+          ),
         );
       },
     );
@@ -344,7 +389,7 @@ class _StatusChip extends StatelessWidget {
       BookingStatus.done => (l10n.statusDone, oc.success),
       BookingStatus.rejected => (l10n.statusRejected, oc.secondaryText),
       BookingStatus.cancelled => (l10n.statusCancelled, oc.secondaryText),
-      BookingStatus.unknown => ('—', oc.secondaryText),
+      BookingStatus.unknown => ('-', oc.secondaryText),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../application/onboarding/onboarding_provider.dart';
+import '../shared/app_logo.dart';
 import '../shared/marketplace_disclaimer.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
@@ -41,7 +42,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   // "Skip" jumps to the last slide (where the terms checkbox + Get Started
-  // live) instead of trying to finish — finishing requires terms acceptance,
+  // live) instead of trying to finish - finishing requires terms acceptance,
   // which is only shown on the last slide.
   void _skipToEnd() {
     _controller.animateToPage(
@@ -330,7 +331,7 @@ class _Slide extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Logo at top of every slide
-          Image.asset('assets/images/logo_icon_cropped.png', height: 72),
+          const AppLogo(height: 72),
           const SizedBox(height: 40),
           Container(
             width: 96,
