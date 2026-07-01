@@ -41,7 +41,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  group('ThemeModeNotifier — default state', () {
+  group('ThemeModeNotifier - default state', () {
     test('initial state is ThemeMode.system when no prefs stored', () async {
       final container = _makeContainer();
       addTearDown(container.dispose);
@@ -63,7 +63,7 @@ void main() {
     );
   });
 
-  group('ThemeModeNotifier — setThemeMode', () {
+  group('ThemeModeNotifier - setThemeMode', () {
     test('setThemeMode(light) updates state to ThemeMode.light', () async {
       final container = _makeContainer();
       addTearDown(container.dispose);
@@ -101,7 +101,7 @@ void main() {
     });
   });
 
-  group('ThemeModeNotifier — persistence', () {
+  group('ThemeModeNotifier - persistence', () {
     test('persisted light value is restored on container rebuild', () async {
       final c1 = _makeContainer();
       await c1.read(themeModeProvider.notifier).setThemeMode(ThemeMode.light);

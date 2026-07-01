@@ -8,11 +8,11 @@
 //     layer (no guard exists there); the hasReviewedProvider stream is tested
 //     separately via a fake repository.
 //
-// Note: booking status validation does NOT exist inside CreateReviewUseCase —
+// Note: booking status validation does NOT exist inside CreateReviewUseCase -
 // the use case trusts the caller to gate on 'done' status. If that gate is
 // ever added to the use case, tests should be added here.
 //
-// Note: wrong-role rejection does NOT exist inside CreateReviewUseCase —
+// Note: wrong-role rejection does NOT exist inside CreateReviewUseCase -
 // ReviewerRole is an enum, so invalid values cannot be constructed.
 
 import 'package:flutter_test/flutter_test.dart';
@@ -22,7 +22,7 @@ import 'package:outalma_app/src/domain/models/review.dart';
 import 'package:outalma_app/src/domain/repositories/review_repository.dart';
 
 // ---------------------------------------------------------------------------
-// Fake repository — tracks all created reviews, not just the last one.
+// Fake repository - tracks all created reviews, not just the last one.
 // ---------------------------------------------------------------------------
 
 class _FakeReviewRepository implements ReviewRepository {
@@ -70,7 +70,7 @@ void main() {
     useCase = CreateReviewUseCase(repo);
   });
 
-  group('bilateral review pairing — client reviews provider', () {
+  group('bilateral review pairing - client reviews provider', () {
     test('stores review with ReviewerRole.client', () async {
       await useCase(
         bookingId: 'booking_1',
@@ -90,7 +90,7 @@ void main() {
     });
   });
 
-  group('bilateral review pairing — provider reviews client', () {
+  group('bilateral review pairing - provider reviews client', () {
     test('stores review with ReviewerRole.provider', () async {
       await useCase(
         bookingId: 'booking_1',
@@ -159,7 +159,7 @@ void main() {
     });
   });
 
-  group('hasReviewedProvider stream — derived from watchForBooking', () {
+  group('hasReviewedProvider stream - derived from watchForBooking', () {
     test('returns false when no reviews exist for booking', () async {
       final reviews = await repo.watchForBooking('booking_1').first;
       final hasReviewed = reviews.any((r) => r.reviewerId == 'client_uid');

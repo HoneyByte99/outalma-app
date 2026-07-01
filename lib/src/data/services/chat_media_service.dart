@@ -68,7 +68,7 @@ class ChatMediaService {
     return ref.getDownloadURL();
   }
 
-  /// Current uid — chat media is stored under it so Storage rules authorize
+  /// Current uid - chat media is stored under it so Storage rules authorize
   /// writes via isSelf(uid) (no fragile cross-service Firestore lookup).
   String _requireUid() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -93,7 +93,7 @@ class ChatMediaService {
   Future<String> _uploadFile(String chatId, XFile file, String prefix) async {
     final uid = _requireUid();
     final bytes = await file.readAsBytes();
-    // On web, file.path is a blob URL (blob:http://...) — extract extension
+    // On web, file.path is a blob URL (blob:http://...) - extract extension
     // from mimeType instead, or default to jpg for images.
     final rawExt = file.path.split('.').last.toLowerCase();
     final ext = rawExt.length > 5 || rawExt.contains('/') ? 'jpg' : rawExt;

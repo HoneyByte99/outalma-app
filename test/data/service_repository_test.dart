@@ -166,7 +166,7 @@ void main() {
       final first = await stream.first;
       expect(first?.published, false);
 
-      // Update the doc — republish
+      // Update the doc - republish
       await FirestoreCollections.services(
         fakeDb,
       ).doc('svc_live').set(_makeService(id: 'svc_live', published: true));

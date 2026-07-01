@@ -1,4 +1,4 @@
-// Pure validation/authorization helpers — the guard rails every callable relies
+// Pure validation/authorization helpers - the guard rails every callable relies
 // on. No emulator needed, but runs in the same suite.
 import {
   assertAuthenticated,

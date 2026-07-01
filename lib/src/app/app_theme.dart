@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // ---------------------------------------------------------------------------
-// Raw palette constants — used internally and as static fallbacks.
+// Raw palette constants - used internally and as static fallbacks.
 // These are light-mode values; dark-mode values live in OutalmaColors.dark.
 // ---------------------------------------------------------------------------
 
@@ -26,7 +26,7 @@ abstract final class AppColors {
   static const border = Color(0xFFCDD8DE);
   static const inputFill = Color(0xFFF4F7F9);
 
-  // Card surface — warm white in light mode, distinct from grey background
+  // Card surface - warm white in light mode, distinct from grey background
   static const cardSurface = Color(0xFFFFFFFF);
 
   // Semantic
@@ -39,7 +39,7 @@ abstract final class AppColors {
 }
 
 // ---------------------------------------------------------------------------
-// ThemeExtension — injected by both light and dark ThemeData
+// ThemeExtension - injected by both light and dark ThemeData
 // ---------------------------------------------------------------------------
 
 class OutalmaColors extends ThemeExtension<OutalmaColors> {
@@ -96,7 +96,7 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
   /// Rating star color (amber).
   final Color star;
 
-  /// Light palette — mirrors AppColors static values.
+  /// Light palette - mirrors AppColors static values.
   static const light = OutalmaColors(
     primary: Color(0xFF1B3A4B),
     primaryLight: Color(0xFF2A5570),
@@ -120,7 +120,7 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     star: Color(0xFFFBBF24),
   );
 
-  /// Dark palette — mint accent on warm-neutral surfaces.
+  /// Dark palette - mint accent on warm-neutral surfaces.
   ///
   /// Rebalanced (mai 2026) after UX review: previous palette was too saturated
   /// blue-navy, which made the app feel "tech terminal" instead of a service
@@ -556,7 +556,7 @@ abstract final class AppTheme {
         fontWeight: FontWeight.w600,
         color: oc.primaryText,
       ),
-      // Headings — page-level and section-level titles.
+      // Headings - page-level and section-level titles.
       headlineLarge: GoogleFonts.inter(
         fontSize: 30,
         fontWeight: FontWeight.w700,
@@ -574,7 +574,7 @@ abstract final class AppTheme {
         fontWeight: FontWeight.w700,
         color: oc.primaryText,
       ),
-      // Titles — card/component-level. Wider gap between Large and Medium
+      // Titles - card/component-level. Wider gap between Large and Medium
       // so a card's primary line clearly outranks its secondary line.
       titleLarge: GoogleFonts.inter(
         fontSize: 17,

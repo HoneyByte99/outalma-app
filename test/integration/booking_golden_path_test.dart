@@ -4,8 +4,8 @@
 // real repository implementations on FakeFirebaseFirestore.
 //
 // Cloud Functions (createBooking, acceptBooking, markInProgress, confirmDone)
-// are mocked because they run server-side. Everything else — repositories,
-// Firestore reads/writes, stream subscriptions — uses real code.
+// are mocked because they run server-side. Everything else - repositories,
+// Firestore reads/writes, stream subscriptions - uses real code.
 //
 // Two-user simulation:
 //   clientId  = 'client_1'
@@ -138,9 +138,9 @@ void main() {
     reviewRepo = FirestoreReviewRepository(fakeDb);
   });
 
-  group('Booking golden path — full lifecycle', () {
+  group('Booking golden path - full lifecycle', () {
     // Step 2: service with category "menage" is visible (seed a service)
-    test('Step 2 — service with category menage is browsable', () async {
+    test('Step 2 - service with category menage is browsable', () async {
       final now = DateTime.now().toUtc();
       await fakeDb.collection('services').doc(serviceId).set({
         'providerId': providerId,
@@ -182,7 +182,7 @@ void main() {
 
     // Steps 1 & 3: client creates a booking request → status: requested
     test(
-      'Step 1-3 — client creates booking request, status is requested',
+      'Step 1-3 - client creates booking request, status is requested',
       () async {
         final bookingId = await _simulateCreateBooking(
           fakeDb: fakeDb,
@@ -206,7 +206,7 @@ void main() {
 
     // Step 4: provider sees the booking in their inbox (watchForProvider)
     test(
-      'Step 4 — provider sees booking in their watchForProvider stream',
+      'Step 4 - provider sees booking in their watchForProvider stream',
       () async {
         await _simulateCreateBooking(
           fakeDb: fakeDb,
@@ -227,7 +227,7 @@ void main() {
     );
 
     // Step 5: provider accepts → status: accepted, chat created with chatId
-    test('Step 5 — provider accepts: status accepted, chatId set', () async {
+    test('Step 5 - provider accepts: status accepted, chatId set', () async {
       final bookingId = await _simulateCreateBooking(
         fakeDb: fakeDb,
         clientId: clientId,
@@ -252,7 +252,7 @@ void main() {
 
     // Step 6: chat is accessible after acceptance
     test(
-      'Step 6 — chat is accessible via watchChat after acceptance',
+      'Step 6 - chat is accessible via watchChat after acceptance',
       () async {
         final bookingId = await _simulateCreateBooking(
           fakeDb: fakeDb,
@@ -280,7 +280,7 @@ void main() {
     );
 
     // Step 7: client and provider exchange messages
-    test('Step 7 — client and provider send messages in the chat', () async {
+    test('Step 7 - client and provider send messages in the chat', () async {
       final bookingId = await _simulateCreateBooking(
         fakeDb: fakeDb,
         clientId: clientId,
@@ -324,7 +324,7 @@ void main() {
       expect(sentProviderMsg.id, isNotEmpty);
       expect(sentProviderMsg.senderId, providerId);
 
-      // Watch messages stream — should return both messages
+      // Watch messages stream - should return both messages
       final messages = await chatRepo
           .watchMessages(chatId: chatId, limit: 50)
           .first;
@@ -335,7 +335,7 @@ void main() {
 
     // Step 8: provider marks in_progress, client confirms done
     test(
-      'Step 8 — booking transitions: accepted → in_progress → done',
+      'Step 8 - booking transitions: accepted → in_progress → done',
       () async {
         final bookingId = await _simulateCreateBooking(
           fakeDb: fakeDb,
@@ -366,7 +366,7 @@ void main() {
     );
 
     // Step 9: client submits a review (5 stars)
-    test('Step 9 — client submits a 5-star review for the provider', () async {
+    test('Step 9 - client submits a 5-star review for the provider', () async {
       final bookingId = await _simulateCreateBooking(
         fakeDb: fakeDb,
         clientId: clientId,
@@ -405,7 +405,7 @@ void main() {
 
     // Step 10: review is visible in the provider's watchForUser stream
     test(
-      'Step 10 — review is visible in watchForUser stream for provider',
+      'Step 10 - review is visible in watchForUser stream for provider',
       () async {
         final bookingId = await _simulateCreateBooking(
           fakeDb: fakeDb,
@@ -442,7 +442,7 @@ void main() {
     );
 
     // Full end-to-end: single sequential test covering all 10 steps
-    test('Full golden path — all 10 steps in sequence', () async {
+    test('Full golden path - all 10 steps in sequence', () async {
       // --- Step 1: simulate client authenticated state (use clientId) ---
       // (authentication itself is handled at the app level; here we just use the uid)
 

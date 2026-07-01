@@ -4,7 +4,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 
-/// Trust signal badge — displayed next to a provider's name when their
+/// Trust signal badge - displayed next to a provider's name when their
 /// profile is "verified" (phone confirmed + provider profile completed).
 ///
 /// Sized to sit inline with a [titleLarge] heading.

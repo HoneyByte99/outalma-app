@@ -58,7 +58,7 @@ Widget _wrap({Service? service}) => ProviderScope(
 
 void main() {
   group('ServiceDetailPage', () {
-    testWidgets('smoke — renders without throwing', (tester) async {
+    testWidgets('smoke - renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       await tester.pump();

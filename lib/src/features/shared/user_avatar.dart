@@ -68,7 +68,7 @@ class UserAvatar extends StatelessWidget {
             ),
           ),
           errorWidget: (_, __, error) {
-            debugPrint('[UserAvatar] image load error for $photoPath — $error');
+            debugPrint('[UserAvatar] image load error for $photoPath - $error');
             return initialsWidget;
           },
         ),

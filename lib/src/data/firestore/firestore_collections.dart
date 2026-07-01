@@ -174,7 +174,7 @@ class FirestoreCollections {
       'displayName': user.displayName,
       'email': user.email,
       'photoPath': user.photoPath,
-      // Never write phoneE164 as null — the create rule requires the field to
+      // Never write phoneE164 as null - the create rule requires the field to
       // be absent for email-only accounts, and the update rule blocks any
       // client-side change to this field (security review C1/C2).
       if (user.phoneE164 != null) 'phoneE164': user.phoneE164,
@@ -336,7 +336,7 @@ class FirestoreCollections {
           : null,
       if (booking.audioMessageUrl != null)
         'audioMessageUrl': booking.audioMessageUrl,
-      // Cancellation metadata — set server-side by cancelBooking. Included here
+      // Cancellation metadata - set server-side by cancelBooking. Included here
       // so the typed converter round-trips a Booking fully (clients do not write
       // bookings today; this keeps the serializer aligned with the model).
       if (booking.cancelReason != null) 'cancelReason': booking.cancelReason,
@@ -433,7 +433,7 @@ class FirestoreCollections {
       bio: data['bio'] as String?,
       workingHourStart: (data['workingHourStart'] as num?)?.toInt(),
       workingHourEnd: (data['workingHourEnd'] as num?)?.toInt(),
-      // Availability defaults to true (available) when the field is missing —
+      // Availability defaults to true (available) when the field is missing -
       // a provider is hidden only if they explicitly paused.
       active: (data['active'] as bool?) ?? true,
       suspended: (data['suspended'] as bool?) ?? false,

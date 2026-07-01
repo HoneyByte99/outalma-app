@@ -9,7 +9,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 /// Calls the `logSession` Cloud Function to record a login event
 /// (IP, country, platform, device model, app version).
 ///
-/// Failures are swallowed — session logging must never block the auth flow.
+/// Failures are swallowed - session logging must never block the auth flow.
 class LogSessionService {
   const LogSessionService(this._functions);
   final FirebaseFunctions _functions;
@@ -28,7 +28,7 @@ class LogSessionService {
         'sessionId': sessionId,
       });
     } catch (e) {
-      // Intentionally silent — logging must not break the auth flow.
+      // Intentionally silent - logging must not break the auth flow.
       debugPrint('[LogSessionService] error: $e');
     }
   }

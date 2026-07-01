@@ -56,8 +56,8 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // When the user returns to the app — typically right after toggling
-    // notifications on in iOS Settings via our banner — re-run token
+    // When the user returns to the app - typically right after toggling
+    // notifications on in iOS Settings via our banner - re-run token
     // registration (so a now-granted permission finally yields a pushToken)
     // and refresh the permission status that drives the banner.
     if (state == AppLifecycleState.resumed) {
@@ -107,9 +107,9 @@ class _AppShellState extends ConsumerState<AppShell>
     // dark-mode contrast than the legacy BottomNavigationBar.
     // Non-blocking banner when OS notifications are off. iOS only shows the
     // permission prompt once, so without this a single "Don't Allow" silently
-    // kills push forever — the root cause of "others don't receive notifs".
+    // kills push forever - the root cause of "others don't receive notifs".
     final notifStatus = ref.watch(notificationPermissionProvider).valueOrNull;
-    // Only for `denied` — `notDetermined` means initialize() is about to fire
+    // Only for `denied` - `notDetermined` means initialize() is about to fire
     // the OS prompt, so a banner then would be premature and misleading.
     final showNotifBanner = notifStatus == AuthorizationStatus.denied;
 
@@ -280,7 +280,7 @@ class _NotifDisabledBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                // Pill button — the app's standard CTA shape, instantly read as
+                // Pill button - the app's standard CTA shape, instantly read as
                 // tappable even by users who don't read the label.
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -329,7 +329,7 @@ class _BadgedIcon extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Bell icon button — reusable across AppBar actions
+// Bell icon button - reusable across AppBar actions
 // ---------------------------------------------------------------------------
 
 class BellIconButton extends ConsumerWidget {

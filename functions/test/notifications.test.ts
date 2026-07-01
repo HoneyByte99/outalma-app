@@ -305,7 +305,7 @@ describe('sendBookingReminders → timezone-correct 24h reminder', () => {
     await seedUser(customer, { pushToken: 'tok-cust', country: 'FR' });
     await seedUser(provider, { pushToken: 'tok-prov', country: 'FR' });
 
-    // ~24h out, inside the 23.5–24.5h window.
+    // ~24h out, inside the 23.5-24.5h window.
     const scheduled = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await seedBooking('b1', {
       customerId: customer,

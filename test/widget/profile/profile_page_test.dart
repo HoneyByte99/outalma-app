@@ -53,7 +53,7 @@ Widget _wrap() => ProviderScope(
 
 void main() {
   group('ProfilePage', () {
-    testWidgets('smoke — renders without throwing', (tester) async {
+    testWidgets('smoke - renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       expect(find.byType(ProfilePage), findsOneWidget);
@@ -65,7 +65,7 @@ void main() {
       await tester.pump();
       // ModeBadge is shown in the AppBar actions
       expect(find.byType(ProfilePage), findsOneWidget);
-      // The page has a Scaffold — spot-check for Scaffold rendering
+      // The page has a Scaffold - spot-check for Scaffold rendering
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
@@ -73,7 +73,7 @@ void main() {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       await tester.pump();
-      // Account section contains logout — check by icon
+      // Account section contains logout - check by icon
       expect(find.byIcon(Icons.logout_outlined), findsOneWidget);
     });
   });

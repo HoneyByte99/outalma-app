@@ -46,7 +46,7 @@ Widget _wrap() => ProviderScope(
 
 void main() {
   group('ChatPage', () {
-    testWidgets('smoke — renders without throwing', (tester) async {
+    testWidgets('smoke - renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       expect(find.byType(ChatPage), findsOneWidget);

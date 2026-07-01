@@ -92,7 +92,7 @@ async function getGeoForIp(ip: string): Promise<GeoData> {
 }
 
 // ---------------------------------------------------------------------------
-// Phone authentication — production OTP flow (Twilio Verify backend)
+// Phone authentication - production OTP flow (Twilio Verify backend)
 // ---------------------------------------------------------------------------
 export {
   requestPhoneOtp,
@@ -155,7 +155,7 @@ async function sendPushToUsers(
 
   // Purge tokens FCM reports as permanently invalid (uninstalled / reinstalled
   // app, expired token). Otherwise they linger forever and every send silently
-  // fails. Delete only if the stored token still matches — never clobber a
+  // fails. Delete only if the stored token still matches - never clobber a
   // fresh token registered in the meantime.
   const stale: { uid: string; token: string }[] = [];
   result.responses.forEach((resp, i) => {
@@ -202,7 +202,7 @@ async function createNotification(
     body: string;
     bookingId?: string;
     chatId?: string;
-    // Which role this notification targets — drives the Client/Provider tabs in
+    // Which role this notification targets - drives the Client/Provider tabs in
     // the app. Always set it: the caller knows the recipient's role.
     audience?: 'client' | 'provider';
   }
@@ -253,7 +253,7 @@ export const createBooking = onCall(async (request) => {
     ? request.data.audioMessageUrl.trim()
     : null;
   // Only accept a Firebase Storage URL that lives in the caller's own
-  // booking-voice folder — prevents storing arbitrary/phishing URLs that the
+  // booking-voice folder - prevents storing arbitrary/phishing URLs that the
   // provider would later open.
   if (audioMessageUrl !== null) {
     const okHost = audioMessageUrl.startsWith('https://firebasestorage.googleapis.com/');
@@ -279,7 +279,7 @@ export const createBooking = onCall(async (request) => {
 
   await db.runTransaction(async (tx) => {
     // Validate the target service exists, is published, and belongs to the
-    // claimed provider — and that the provider is not suspended. Prevents
+    // claimed provider - and that the provider is not suspended. Prevents
     // bookings against fantom/unpublished services or suspended providers.
     const serviceSnap = await tx.get(db.collection('services').doc(serviceId));
     if (!serviceSnap.exists) {
@@ -612,7 +612,7 @@ export const onBookingStatusChange = onDocumentUpdated(
       type: string;
       title: string;
       body: string;
-      // Which role the recipients are acting as for this event — drives the
+      // Which role the recipients are acting as for this event - drives the
       // Client/Provider notification tabs.
       audience: 'client' | 'provider';
     };
@@ -1008,7 +1008,7 @@ export const setAdminClaim = onCall(async (request) => {
 // ---------------------------------------------------------------------------
 
 /// IANA timezone for a user's country. Cloud Functions run in UTC, so a bare
-/// toLocaleTimeString() prints UTC — "votre RDV à 12:00" for a 14:00 Paris
+/// toLocaleTimeString() prints UTC - "votre RDV à 12:00" for a 14:00 Paris
 /// appointment. Senegal is UTC+0 (correct by accident before this fix); France
 /// is UTC+1/+2. Defaults to Paris (primary market).
 function timeZoneForCountry(country?: string): string {
@@ -1046,7 +1046,7 @@ export const sendBookingReminders = onSchedule(
       if (!data.reminded24h && diffHours >= 23.5 && diffHours <= 24.5) {
         // Format the appointment in the customer's local timezone (both
         // participants share the same market in practice). Without timeZone the
-        // string is UTC — an hour or two off for France.
+        // string is UTC - an hour or two off for France.
         let country: string | undefined;
         if (data.customerId) {
           const cs = await db.collection('users').doc(data.customerId).get();
@@ -1146,7 +1146,7 @@ async function writeAdminLog(data: {
 }
 
 // ---------------------------------------------------------------------------
-// setModeratorClaim — admin only
+// setModeratorClaim - admin only
 // ---------------------------------------------------------------------------
 
 export const setModeratorClaim = onCall(async (request) => {
@@ -1185,7 +1185,7 @@ export const setModeratorClaim = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// setSupportClaim — admin only
+// setSupportClaim - admin only
 // ---------------------------------------------------------------------------
 
 export const setSupportClaim = onCall(async (request) => {
@@ -1222,7 +1222,7 @@ export const setSupportClaim = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// setReadonlyClaim — admin only
+// setReadonlyClaim - admin only
 // ---------------------------------------------------------------------------
 
 export const setReadonlyClaim = onCall(async (request) => {
@@ -1259,7 +1259,7 @@ export const setReadonlyClaim = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// suspendProvider — admin or moderator
+// suspendProvider - admin or moderator
 // ---------------------------------------------------------------------------
 
 export const suspendProvider = onCall(async (request) => {
@@ -1335,7 +1335,7 @@ export const suspendProvider = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// unsuspendProvider — admin only
+// unsuspendProvider - admin only
 // ---------------------------------------------------------------------------
 
 export const unsuspendProvider = onCall(async (request) => {
@@ -1368,7 +1368,7 @@ export const unsuspendProvider = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// removeService — admin or moderator
+// removeService - admin or moderator
 // ---------------------------------------------------------------------------
 
 export const removeService = onCall(async (request) => {
@@ -1397,7 +1397,7 @@ export const removeService = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// deleteMessage — admin or moderator (soft delete)
+// deleteMessage - admin or moderator (soft delete)
 // ---------------------------------------------------------------------------
 
 export const deleteMessage = onCall(async (request) => {
@@ -1433,11 +1433,11 @@ export const deleteMessage = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveReport — admin or moderator
+// resolveReport - admin or moderator
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// revokeUserSessions — admin only
+// revokeUserSessions - admin only
 // Forces token refresh on all sessions for the target user.
 // ---------------------------------------------------------------------------
 
@@ -1448,7 +1448,7 @@ export const revokeUserSessions = onCall(async (request) => {
 
   const targetUid = requireString(request.data?.uid, 'uid');
 
-  // Revoke all refresh tokens — forces re-authentication on all devices.
+  // Revoke all refresh tokens - forces re-authentication on all devices.
   await admin.auth().revokeRefreshTokens(targetUid);
 
   await writeAdminLog({
@@ -1462,7 +1462,7 @@ export const revokeUserSessions = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// logSession — called by the mobile app on every sign-in
+// logSession - called by the mobile app on every sign-in
 // ---------------------------------------------------------------------------
 
 export const logSession = onCall(async (request) => {
@@ -1577,7 +1577,7 @@ export const logSession = onCall(async (request) => {
   );
   await batch.commit();
 
-  // Anomaly detection (async, non-blocking — failures logged but don't block login)
+  // Anomaly detection (async, non-blocking - failures logged but don't block login)
   detectAnomalies(uid, eventData).catch((e) =>
     logger.warn('Anomaly detection failed', { uid, error: String(e) })
   );
@@ -1586,11 +1586,11 @@ export const logSession = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveReport — admin or moderator
+// resolveReport - admin or moderator
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Moderation queue — service pre-publication workflow
+// Moderation queue - service pre-publication workflow
 // ---------------------------------------------------------------------------
 
 export const submitServiceForReview = onCall(async (request) => {
@@ -1702,7 +1702,7 @@ export const republishService = onCall(async (request) => {
   if (service.status === 'rejected' || service.status === 'pending_review') {
     throw new HttpsError(
       'permission-denied',
-      `Service has moderation status "${service.status}" — it must go through the moderation queue before republication.`
+      `Service has moderation status "${service.status}" - it must go through the moderation queue before republication.`
     );
   }
 
@@ -1785,7 +1785,7 @@ export const rejectService = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// User bans — suspend / ban / shadow-ban
+// User bans - suspend / ban / shadow-ban
 // ---------------------------------------------------------------------------
 
 export const banUser = onCall(async (request) => {
@@ -1836,7 +1836,7 @@ export const unbanUser = onCall(async (request) => {
     liftedBy: callerUid,
   });
 
-  // Only clear isBanned — shadow-ban state is independent and must be lifted
+  // Only clear isBanned - shadow-ban state is independent and must be lifted
   // explicitly via a separate action (shadowBanUser sets it, no auto-clear here).
   await db.collection('users').doc(targetUid).update({
     isBanned: false,
@@ -1930,7 +1930,7 @@ export const suspendUser = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// Review moderation — hide / unhide / delete
+// Review moderation - hide / unhide / delete
 // ---------------------------------------------------------------------------
 
 export const hideReview = onCall(async (request) => {
@@ -2006,7 +2006,7 @@ export const deleteReview = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveReport — admin or moderator
+// resolveReport - admin or moderator
 // ---------------------------------------------------------------------------
 
 export const resolveReport = onCall(async (request) => {
@@ -2051,7 +2051,7 @@ export const resolveReport = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// Security — anomaly detection (called internally from logSession)
+// Security - anomaly detection (called internally from logSession)
 // ---------------------------------------------------------------------------
 
 async function detectAnomalies(
@@ -2174,7 +2174,7 @@ function haversineKm(
 }
 
 // ---------------------------------------------------------------------------
-// Security — resolve alert (admin only)
+// Security - resolve alert (admin only)
 // ---------------------------------------------------------------------------
 
 export const resolveSecurityAlert = onCall(async (request) => {
@@ -2215,7 +2215,7 @@ export const resolveSecurityAlert = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// Security — IP blocklist management (admin only)
+// Security - IP blocklist management (admin only)
 // ---------------------------------------------------------------------------
 
 export const addToIpBlocklist = onCall(async (request) => {
@@ -2289,7 +2289,7 @@ export const removeFromIpBlocklist = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// Security — scheduled: purge expired session data (runs daily at 3am Paris)
+// Security - scheduled: purge expired session data (runs daily at 3am Paris)
 // ---------------------------------------------------------------------------
 
 export const purgeExpiredSessionData = onSchedule(
@@ -2353,7 +2353,7 @@ export const purgeIpGeoCache = onSchedule(
 );
 
 // ---------------------------------------------------------------------------
-// Platform stats — incremental counters maintained by triggers
+// Platform stats - incremental counters maintained by triggers
 //
 // Idempotency: Firebase Gen2 triggers can be retried on failure. Without
 // deduplication, FieldValue.increment would double-count on retries.
@@ -2376,7 +2376,7 @@ async function incrementStatIdempotent(
   const dedupRef = db.doc(`processed_events/${eventId}`);
   await db.runTransaction(async (tx) => {
     const dedup = await tx.get(dedupRef);
-    if (dedup.exists) return; // already processed — Firebase retry guard
+    if (dedup.exists) return; // already processed - Firebase retry guard
     tx.set(dedupRef, {
       processedAt: admin.firestore.FieldValue.serverTimestamp(),
       type: eventType,
@@ -2434,7 +2434,7 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
   // most important notification of the marketplace: without it a provider who
   // isn't actively in the app never learns they were solicited (requests would
   // silently expire). Booking creation is a `create` with status 'requested',
-  // which onBookingStatusChange (an update trigger) never sees — so it lives
+  // which onBookingStatusChange (an update trigger) never sees - so it lives
   // here.
   const booking = event.data?.data() as { providerId?: string } | undefined;
   const providerId = booking?.providerId;
@@ -2574,7 +2574,7 @@ export const onReportCreated = onDocumentCreated(
 );
 
 // ---------------------------------------------------------------------------
-// Analytics — incremental counters for posts & events (stats/global)
+// Analytics - incremental counters for posts & events (stats/global)
 // ---------------------------------------------------------------------------
 
 const ANALYTICS_STATS_REF = db.collection('stats').doc('global');

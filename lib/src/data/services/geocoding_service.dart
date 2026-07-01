@@ -73,7 +73,7 @@ class GeocodingService {
         .toList();
   }
 
-  /// Nominatim (OpenStreetMap) free geocoding — encodes lat/lng in the placeId
+  /// Nominatim (OpenStreetMap) free geocoding - encodes lat/lng in the placeId
   /// as "nominatim:<lat>,<lng>" so no second lookup is needed.
   Future<List<PlaceSuggestion>> _nominatimSearch(String input) async {
     try {

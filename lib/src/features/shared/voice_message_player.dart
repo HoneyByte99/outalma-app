@@ -7,7 +7,7 @@ import '../../app/app_theme.dart';
 
 /// Compact, self-contained voice-message player: a play/pause button, a
 /// progress bar and a duration label. Used for the booking request's voice note
-/// (booking_detail_page) so the provider can actually listen to it — without it
+/// (booking_detail_page) so the provider can actually listen to it - without it
 /// the recorded audio is uploaded but never playable.
 class VoiceMessagePlayer extends StatefulWidget {
   const VoiceMessagePlayer({super.key, required this.url});
@@ -44,7 +44,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         });
       }
     } catch (e) {
-      debugPrint('VoiceMessagePlayer setUrl error: $e — url: ${widget.url}');
+      debugPrint('VoiceMessagePlayer setUrl error: $e - url: ${widget.url}');
       if (mounted) {
         setState(() {
           _hasError = true;
@@ -91,7 +91,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     if (_hasError) {
       return Row(
         children: [
-          // warning (not "cloud off") — readable as "something's wrong" without
+          // warning (not "cloud off") - readable as "something's wrong" without
           // any tech metaphor.
           Icon(Icons.warning_amber_rounded, color: oc.icons, size: 20),
           const SizedBox(width: 8),
@@ -105,10 +105,10 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
       );
     }
 
-    // While the URL loads, the play button does nothing — show a spinner so a
+    // While the URL loads, the play button does nothing - show a spinner so a
     // tap-and-nothing-happens on a slow connection doesn't read as "broken".
     final timeLabel = _duration <= Duration.zero
-        ? '—:—'
+        ? '-:-'
         : (_playing && _duration > _position)
         ? _fmt(_duration - _position)
         : _fmt(_duration);

@@ -3,7 +3,7 @@
 // Covered:
 //   - serviceListProvider: streams published services from the repository
 //   - serviceDetailProvider(id): streams a single service or null
-//   - No filteredServicesProvider (not present in source — adapted)
+//   - No filteredServicesProvider (not present in source - adapted)
 //   - providerServicesProvider not present; watchForProvider tested via mockRepo
 
 import 'dart:async';
@@ -228,7 +228,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // discoverableServicesProvider — blocked providers removed (coupure totale)
+  // discoverableServicesProvider - blocked providers removed (coupure totale)
   // -------------------------------------------------------------------------
 
   group('discoverableServicesProvider', () {

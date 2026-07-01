@@ -34,7 +34,7 @@ class Service {
 
   /// Server-managed moderation status: null (never reviewed), 'pending_review',
   /// 'approved', or 'rejected'. Set exclusively by the moderation Cloud
-  /// Functions — the client reads it but never writes it.
+  /// Functions - the client reads it but never writes it.
   final String? status;
 
   Service copyWith({

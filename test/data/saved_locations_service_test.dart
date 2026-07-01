@@ -93,7 +93,7 @@ void main() {
       expect(state.first.label, 'New label');
     });
 
-    test('add() enforces max 5 items — oldest drops off', () async {
+    test('add() enforces max 5 items - oldest drops off', () async {
       final container = _makeContainer();
       addTearDown(container.dispose);
       await Future<void>.delayed(Duration.zero);

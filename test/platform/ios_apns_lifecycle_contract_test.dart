@@ -2,7 +2,7 @@
 //
 // Regression guard for a real production bug: devices whose launch-time APNs
 // registration failed (no network at that instant) never got a token because
-// iOS does not retry on its own — and the first fix attempt was dead code
+// iOS does not retry on its own - and the first fix attempt was dead code
 // because it hooked AppDelegate.applicationDidBecomeActive, which UIKit never
 // calls in a UIScene-based app. Swift cannot be unit-tested from here, so
 // these tests pin the native wiring as text contracts:
@@ -34,7 +34,7 @@ void main() {
         contains('override func sceneDidBecomeActive'),
         reason:
             'Foreground APNs re-registration must hook the scene '
-            'lifecycle — AppDelegate lifecycle methods are never called '
+            'lifecycle - AppDelegate lifecycle methods are never called '
             'in a UIScene-based app.',
       );
       expect(sceneDelegate, contains('super.sceneDidBecomeActive'));
@@ -52,7 +52,7 @@ void main() {
         isNot(contains('override func applicationDidBecomeActive')),
         reason:
             'applicationDidBecomeActive is never called in a UIScene-based '
-            'app — logic placed there silently does nothing (this exact '
+            'app - logic placed there silently does nothing (this exact '
             'mistake shipped once). Use SceneDelegate.sceneDidBecomeActive.',
       );
     });
@@ -62,7 +62,7 @@ void main() {
         appDelegate,
         contains('didFailToRegisterForRemoteNotificationsWithError'),
         reason:
-            'Registration failures must be logged, not swallowed — this is '
+            'Registration failures must be logged, not swallowed - this is '
             'how we diagnose devices that never obtain an APNs token.',
       );
     });

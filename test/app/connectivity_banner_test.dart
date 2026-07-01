@@ -20,7 +20,7 @@ Widget _wrap(Widget child) => MaterialApp(
 );
 
 void main() {
-  group('ConnectivityBanner — initial state (online)', () {
+  group('ConnectivityBanner - initial state (online)', () {
     testWidgets('renders without throwing', (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -66,7 +66,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // _OfflineBanner smoke tests — test the banner widget directly
+  // _OfflineBanner smoke tests - test the banner widget directly
   // -------------------------------------------------------------------------
 
   group('Offline banner widget (direct render)', () {
@@ -122,14 +122,14 @@ void main() {
 
   test(
     'ConnectivityBanner shows banner when stream emits offline: '
-    'skipped — requires connectivity_plus platform channel',
+    'skipped - requires connectivity_plus platform channel',
     () {},
     skip: 'requires platform channel',
   );
 
   test(
     'ConnectivityBanner hides banner when stream returns to online: '
-    'skipped — requires connectivity_plus platform channel',
+    'skipped - requires connectivity_plus platform channel',
     () {},
     skip: 'requires platform channel',
   );

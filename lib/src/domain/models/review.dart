@@ -24,7 +24,7 @@ class Review {
   final int rating;
   final String? comment;
 
-  /// Service category the review concerns — captured from the booking's service
+  /// Service category the review concerns - captured from the booking's service
   /// at review time. Lets a rating be read in context (a provider may be great
   /// at one category and weak at another). Null for legacy reviews.
   final CategoryId? categoryId;

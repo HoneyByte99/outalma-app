@@ -45,7 +45,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('AppUser serialization — all fields populated', () {
+  group('AppUser serialization - all fields populated', () {
     test('roundtrip preserves all fields', () async {
       final user = _makeUser(
         photoPath: 'gs://bucket/photo.jpg',
@@ -67,7 +67,7 @@ void main() {
     });
   });
 
-  group('AppUser serialization — minimal fields (nulls)', () {
+  group('AppUser serialization - minimal fields (nulls)', () {
     test('roundtrip with null optional fields does not crash', () async {
       final user = _makeUser(); // no photoPath, phoneE164, pushToken
       final col = FirestoreCollections.users(fakeDb);
@@ -81,7 +81,7 @@ void main() {
     });
   });
 
-  group('AppUser serialization — activeMode enum', () {
+  group('AppUser serialization - activeMode enum', () {
     test('client mode roundtrips as "client" string', () async {
       final user = _makeUser(activeMode: ActiveMode.client);
       final col = FirestoreCollections.users(fakeDb);
@@ -119,7 +119,7 @@ void main() {
     });
   });
 
-  group('AppUser serialization — displayName fallback', () {
+  group('AppUser serialization - displayName fallback', () {
     test('missing displayName field returns empty string', () async {
       await fakeDb.collection('users').doc('no_name').set({
         'email': 'x@x.com',
@@ -131,7 +131,7 @@ void main() {
     });
   });
 
-  group('AppUser serialization — createdAt timestamp', () {
+  group('AppUser serialization - createdAt timestamp', () {
     test('createdAt roundtrips with millisecond precision', () async {
       final t = DateTime(2024, 6, 20, 9, 30, 0).toUtc();
       final user = _makeUser(createdAt: t);
@@ -165,7 +165,7 @@ void main() {
     });
   });
 
-  group('AppUser serialization — country default', () {
+  group('AppUser serialization - country default', () {
     test('missing country field defaults to FR', () async {
       await fakeDb.collection('users').doc('no_country').set({
         'displayName': 'Marc',

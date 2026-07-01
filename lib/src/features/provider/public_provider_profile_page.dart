@@ -196,7 +196,7 @@ class _ProfileHeader extends ConsumerWidget {
     final avgRating = reviews.isEmpty
         ? null
         : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
-    // A.8 — trust signal: a provider is "verified" once they have completed
+    // A.8 - trust signal: a provider is "verified" once they have completed
     // their onboarding (profile exists) AND have a verified phone number on
     // file (phoneE164 set, which only happens through Twilio OTP or
     // sign-up).
@@ -224,7 +224,7 @@ class _ProfileHeader extends ConsumerWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        user?.displayName ?? '—',
+                        user?.displayName ?? '-',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -334,7 +334,7 @@ class _ReviewTile extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  reviewer?.displayName ?? '—',
+                  reviewer?.displayName ?? '-',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),

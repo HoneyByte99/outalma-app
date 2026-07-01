@@ -27,7 +27,7 @@ class AppNotification {
 
   /// Which role this notification is meant for: 'client' or 'provider'. Set by
   /// the Cloud Function that knows the recipient's role for this event. Older
-  /// notifications predate the field (null) — see [notificationAudienceOf] for
+  /// notifications predate the field (null) - see [notificationAudienceOf] for
   /// the inference fallback that keeps them visible.
   final String? audience;
 

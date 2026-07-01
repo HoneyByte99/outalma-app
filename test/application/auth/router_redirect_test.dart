@@ -29,7 +29,7 @@ void main() {
     createdAt: DateTime(2024),
   );
 
-  group('Router redirect — unauthenticated', () {
+  group('Router redirect - unauthenticated', () {
     test('redirects /home to /sign-in', () {
       expect(
         _redirect(const AuthUnauthenticated(), AppRoutes.home),
@@ -46,7 +46,7 @@ void main() {
     });
   });
 
-  group('Router redirect — authenticated', () {
+  group('Router redirect - authenticated', () {
     test('redirects /sign-in to /home', () {
       expect(
         _redirect(AuthAuthenticated(authenticatedUser), AppRoutes.signIn),
@@ -69,7 +69,7 @@ void main() {
     });
   });
 
-  group('Router redirect — loading', () {
+  group('Router redirect - loading', () {
     test('returns null (stay on current location) while loading', () {
       expect(_redirect(const AuthLoading(), AppRoutes.home), isNull);
       expect(_redirect(const AuthLoading(), AppRoutes.signIn), isNull);

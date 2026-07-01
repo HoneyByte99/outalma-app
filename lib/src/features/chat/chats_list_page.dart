@@ -20,7 +20,7 @@ import '../../domain/models/chat_message.dart';
 import '../shared/user_avatar.dart';
 
 // ---------------------------------------------------------------------------
-// Combined booking-status map — avoids N+1 Firestore reads in the chat list.
+// Combined booking-status map - avoids N+1 Firestore reads in the chat list.
 // Merges the user's customer bookings and provider bookings (both already
 // subscribed upstream) into a single bookingId → BookingStatus lookup.
 // ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage>
 }
 
 // ---------------------------------------------------------------------------
-// Filtered chat list — splits by booking status
+// Filtered chat list - splits by booking status
 // ---------------------------------------------------------------------------
 
 class _ChatListFiltered extends ConsumerWidget {
@@ -124,7 +124,7 @@ class _ChatListFiltered extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Single map lookup — no per-chat Firestore subscriptions.
+    // Single map lookup - no per-chat Firestore subscriptions.
     final statusMap = ref.watch(_bookingStatusMapProvider);
     final filtered = chats.where((chat) {
       final status = statusMap[chat.bookingId];

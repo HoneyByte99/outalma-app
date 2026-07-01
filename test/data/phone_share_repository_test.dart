@@ -149,7 +149,7 @@ void main() {
     });
 
     test(
-      'uses merge semantics — second call does not remove createdAt',
+      'uses merge semantics - second call does not remove createdAt',
       () async {
         await repo.share(
           bookingId: 'booking_1',

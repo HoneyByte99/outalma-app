@@ -37,7 +37,7 @@ class NotificationService {
   }
 
   Future<void> initialize() async {
-    // FCM on Flutter Web requires a VAPID key — skip until configured.
+    // FCM on Flutter Web requires a VAPID key - skip until configured.
     if (kIsWeb) return;
 
     // 1. Listen for token refreshes FIRST. On iOS the FCM token often becomes
@@ -65,7 +65,7 @@ class NotificationService {
       // currentStatus()) prompts the user to enable it in iOS Settings; the
       // resume listener re-runs this method once they come back.
       if (kDebugMode) {
-        debugPrint('[Notif] permission $status — no token will register');
+        debugPrint('[Notif] permission $status - no token will register');
       }
       return;
     }
@@ -92,7 +92,7 @@ class NotificationService {
     }
 
     // 4. Get and save the FCM token. Guarded: getToken() can still throw if the
-    //    APNs token is not set yet — onTokenRefresh (step 1) will deliver it.
+    //    APNs token is not set yet - onTokenRefresh (step 1) will deliver it.
     try {
       final token = await _messaging.getToken();
       if (token != null) {

@@ -93,7 +93,7 @@ void main() {
     });
   });
 
-  group('activeModeForAudience — deep-link mode switch', () {
+  group('activeModeForAudience - deep-link mode switch', () {
     test('client/provider map to their mode, both leaves mode unchanged', () {
       expect(
         activeModeForAudience(NotificationAudience.client),
@@ -107,7 +107,7 @@ void main() {
     });
   });
 
-  group('notificationAudienceFor — raw fields (push payloads)', () {
+  group('notificationAudienceFor - raw fields (push payloads)', () {
     test('explicit audience wins; type infers otherwise', () {
       expect(
         notificationAudienceFor(audience: 'provider', type: 'new_message'),

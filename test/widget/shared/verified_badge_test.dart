@@ -1,10 +1,10 @@
 // Widget tests for VerifiedBadge.
 //
 // VerifiedBadge has a single `compact` boolean that controls layout:
-//   - compact: false (default) — pill container with icon + text label
-//   - compact: true            — icon-only wrapped in a Tooltip
+//   - compact: false (default) - pill container with icon + text label
+//   - compact: true            - icon-only wrapped in a Tooltip
 //
-// There is no "unverified" state — the widget is only rendered when the
+// There is no "unverified" state - the widget is only rendered when the
 // profile is verified; callers simply omit it otherwise.
 
 import 'package:flutter/material.dart';
@@ -21,7 +21,7 @@ Widget _wrap(Widget child) => MaterialApp(
 );
 
 void main() {
-  group('VerifiedBadge — full (compact: false)', () {
+  group('VerifiedBadge - full (compact: false)', () {
     testWidgets('renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap(const VerifiedBadge()));
       await tester.pump();
@@ -48,7 +48,7 @@ void main() {
     });
   });
 
-  group('VerifiedBadge — compact (compact: true)', () {
+  group('VerifiedBadge - compact (compact: true)', () {
     testWidgets('renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap(const VerifiedBadge(compact: true)));
       await tester.pump();
@@ -75,7 +75,7 @@ void main() {
     });
   });
 
-  group('VerifiedBadge — layout difference between modes', () {
+  group('VerifiedBadge - layout difference between modes', () {
     testWidgets('full mode renders text while compact mode does not', (
       tester,
     ) async {

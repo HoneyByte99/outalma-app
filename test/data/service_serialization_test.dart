@@ -1,7 +1,7 @@
 // Verifies that Service objects survive a Firestore write+read roundtrip.
 //
 // Critical cases per CLAUDE.md:
-//   - Field name is "providerId" (not "ownerId" — historical regression risk)
+//   - Field name is "providerId" (not "ownerId" - historical regression risk)
 //   - published defaults to false when field is absent
 //   - priceType enum (fixed / hourly) roundtrips correctly
 //   - serviceZones roundtrip with lat/lng/radiusKm
@@ -49,7 +49,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('Service serialization — required fields', () {
+  group('Service serialization - required fields', () {
     test('preserves all required fields through roundtrip', () async {
       final service = _makeService();
       final col = FirestoreCollections.services(fakeDb);
@@ -67,7 +67,7 @@ void main() {
     });
   });
 
-  group('Service serialization — field name contract', () {
+  group('Service serialization - field name contract', () {
     test('stores "providerId" (not "ownerId")', () async {
       final service = _makeService();
       final col = FirestoreCollections.services(fakeDb);
@@ -102,7 +102,7 @@ void main() {
     });
   });
 
-  group('Service serialization — published flag', () {
+  group('Service serialization - published flag', () {
     test('published: true roundtrips correctly', () async {
       final service = _makeService(published: true);
       final col = FirestoreCollections.services(fakeDb);
@@ -135,7 +135,7 @@ void main() {
     });
   });
 
-  group('Service serialization — priceType enum', () {
+  group('Service serialization - priceType enum', () {
     test('all PriceType values roundtrip correctly', () async {
       final ts = Timestamp.fromDate(DateTime(2024, 1, 1).toUtc());
       final col = FirestoreCollections.services(fakeDb);
@@ -169,7 +169,7 @@ void main() {
     });
   });
 
-  group('Service serialization — serviceZones', () {
+  group('Service serialization - serviceZones', () {
     test('serviceZones roundtrip with all fields', () async {
       final zones = [
         const ServiceZone(
@@ -231,7 +231,7 @@ void main() {
     );
   });
 
-  group('Service serialization — photos', () {
+  group('Service serialization - photos', () {
     test('photos list roundtrips correctly', () async {
       final service = _makeService(
         photos: [
@@ -259,7 +259,7 @@ void main() {
     });
   });
 
-  group('Service serialization — moderation status (read-only)', () {
+  group('Service serialization - moderation status (read-only)', () {
     test('reads the server-set status field', () async {
       final ts = Timestamp.fromDate(DateTime(2024, 1, 1).toUtc());
       await fakeDb.collection('services').doc('svc_pending').set({
@@ -290,7 +290,7 @@ void main() {
     test('converter never writes status (server-managed)', () async {
       final col = FirestoreCollections.services(fakeDb);
       // Even with a status on the in-memory object, a client write must not
-      // persist it — moderation status is server-authoritative.
+      // persist it - moderation status is server-authoritative.
       await col.doc('svc_x').set(_makeService(id: 'svc_x').copyWith());
       final raw = (await fakeDb.collection('services').doc('svc_x').get())
           .data()!;
@@ -298,7 +298,7 @@ void main() {
     });
   });
 
-  group('Service serialization — categoryId', () {
+  group('Service serialization - categoryId', () {
     test('all CategoryId values roundtrip correctly', () async {
       final ts = Timestamp.fromDate(DateTime(2024, 1, 1).toUtc());
       final col = FirestoreCollections.services(fakeDb);

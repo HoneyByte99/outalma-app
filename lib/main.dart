@@ -48,7 +48,7 @@ Future<void> main() async {
       final crashlytics = FirebaseCrashlytics.instance;
       // Disable Crashlytics collection in debug builds. On the x86_64 (Rosetta)
       // iOS simulator, Crashlytics' on-demand stack unwinding segfaults the
-      // process whenever an error is recorded — so recordError() itself crashes
+      // process whenever an error is recorded - so recordError() itself crashes
       // the app. Off in debug keeps the simulator usable; stays on in release.
       await crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
 

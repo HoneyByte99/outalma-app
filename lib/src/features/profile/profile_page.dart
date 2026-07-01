@@ -89,7 +89,7 @@ class ProfilePage extends ConsumerWidget {
             const _ExportDataTile(),
             const SizedBox(height: 28),
 
-            // Account actions at the bottom — sign out, then the destructive
+            // Account actions at the bottom - sign out, then the destructive
             // delete account last.
             _SectionLabel(label: l10n.profileAccount),
             const SizedBox(height: 12),
@@ -119,7 +119,7 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
   bool _uploading = false;
 
   Future<void> _pickAvatar() async {
-    // Read current user at call time — don't depend on widget prop
+    // Read current user at call time - don't depend on widget prop
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
@@ -156,7 +156,7 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    // Watch directly — always fresh, no prop-timing race condition
+    // Watch directly - always fresh, no prop-timing race condition
     final authAsync = ref.watch(authNotifierProvider);
     final user = authAsync.valueOrNull is AuthAuthenticated
         ? (authAsync.valueOrNull as AuthAuthenticated).user
@@ -341,7 +341,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Email — read-only
+            // Email - read-only
             _ReadOnlyField(
               label: l10n.fieldEmail,
               value: widget.user.email,
@@ -363,11 +363,11 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
             ),
             const SizedBox(height: 14),
 
-            // Phone — read-only. Changing the phone requires re-verification
+            // Phone - read-only. Changing the phone requires re-verification
             // via OTP and will be handled by a dedicated flow.
             _ReadOnlyField(
               label: l10n.fieldPhone,
-              value: _phone == null || _phone!.isEmpty ? '—' : _phone!,
+              value: _phone == null || _phone!.isEmpty ? '-' : _phone!,
               icon: Icons.phone_outlined,
             ),
             const SizedBox(height: 20),
@@ -862,7 +862,7 @@ class _AccountSection extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Legal links (privacy + terms) — must stay reachable after sign-up
+// Legal links (privacy + terms) - must stay reachable after sign-up
 // ---------------------------------------------------------------------------
 
 class _LegalLinksSection extends StatelessWidget {
@@ -918,7 +918,7 @@ class _LegalLinksSection extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Blocked accounts — entry point to the management screen
+// Blocked accounts - entry point to the management screen
 // ---------------------------------------------------------------------------
 
 class _BlockedAccountsTile extends StatelessWidget {
@@ -1447,7 +1447,7 @@ class _ReviewTile extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  reviewer?.displayName ?? '—',
+                  reviewer?.displayName ?? '-',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),

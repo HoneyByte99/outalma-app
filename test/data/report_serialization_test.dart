@@ -44,7 +44,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('Report serialization — all fields', () {
+  group('Report serialization - all fields', () {
     test('roundtrip preserves all fields', () async {
       final report = _makeReport(
         details: 'Il a été grossier lors de la prestation.',
@@ -63,7 +63,7 @@ void main() {
     });
   });
 
-  group('Report serialization — targetType values', () {
+  group('Report serialization - targetType values', () {
     test('targetType "user" roundtrips correctly', () async {
       final report = _makeReport(id: 'report_user', targetType: 'user');
       final col = FirestoreCollections.reports(fakeDb);
@@ -97,7 +97,7 @@ void main() {
     });
   });
 
-  group('Report serialization — reason field', () {
+  group('Report serialization - reason field', () {
     test('reason is preserved verbatim', () async {
       final report = _makeReport(reason: 'Fraude suspectée');
       final col = FirestoreCollections.reports(fakeDb);
@@ -107,7 +107,7 @@ void main() {
     });
   });
 
-  group('Report serialization — details null / non-null', () {
+  group('Report serialization - details null / non-null', () {
     test('null details roundtrips as null', () async {
       final report = _makeReport(details: null);
       final col = FirestoreCollections.reports(fakeDb);
@@ -128,7 +128,7 @@ void main() {
     });
   });
 
-  group('Report serialization — status values', () {
+  group('Report serialization - status values', () {
     test('status "open" roundtrips correctly', () async {
       final report = _makeReport(status: 'open');
       final col = FirestoreCollections.reports(fakeDb);
@@ -154,7 +154,7 @@ void main() {
     });
   });
 
-  group('Report serialization — createdAt timestamp', () {
+  group('Report serialization - createdAt timestamp', () {
     test('createdAt roundtrips with millisecond precision', () async {
       final t = DateTime(2024, 7, 10, 16, 0, 0).toUtc();
       final report = _makeReport(createdAt: t);
@@ -176,7 +176,7 @@ void main() {
     });
   });
 
-  group('Report serialization — safe defaults for missing fields', () {
+  group('Report serialization - safe defaults for missing fields', () {
     test('missing fields do not crash and use safe defaults', () async {
       await fakeDb.collection('reports').doc('minimal').set({
         'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),

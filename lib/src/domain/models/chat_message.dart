@@ -30,10 +30,10 @@ class ChatMessage {
   /// UIDs of participants who have read this message.
   final List<String> readBy;
 
-  /// Soft-deleted by its sender — rendered as "message deleted".
+  /// Soft-deleted by its sender - rendered as "message deleted".
   final bool deleted;
 
-  /// Edited by its sender — rendered with an "(edited)" marker.
+  /// Edited by its sender - rendered with an "(edited)" marker.
   final bool edited;
 
   /// Reply/quote: id + snapshot of the message this one replies to.

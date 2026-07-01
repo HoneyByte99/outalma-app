@@ -1,5 +1,5 @@
 // Contract test: the EN and FR ARB files must declare exactly the same
-// translation keys. Outalma ships in France and Senegal — a key present in
+// translation keys. Outalma ships in France and Senegal - a key present in
 // one locale only means a missing/broken string for every user of the other.
 import 'dart:convert';
 import 'dart:io';
@@ -19,12 +19,12 @@ void main() {
     expect(
       fr.difference(en),
       isEmpty,
-      reason: 'Keys present only in app_fr.arb — add them to app_en.arb.',
+      reason: 'Keys present only in app_fr.arb - add them to app_en.arb.',
     );
     expect(
       en.difference(fr),
       isEmpty,
-      reason: 'Keys present only in app_en.arb — add them to app_fr.arb.',
+      reason: 'Keys present only in app_en.arb - add them to app_fr.arb.',
     );
   });
 }

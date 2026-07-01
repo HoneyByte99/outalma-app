@@ -20,7 +20,7 @@ import 'package:outalma_app/src/domain/enums/active_mode.dart';
 import 'package:outalma_app/src/domain/models/app_user.dart';
 
 // ---------------------------------------------------------------------------
-// Test double — mirrors the authenticated redirect branch in router.dart
+// Test double - mirrors the authenticated redirect branch in router.dart
 // ---------------------------------------------------------------------------
 
 /// Returns the redirect destination that RouterNotifier would produce for an
@@ -83,7 +83,7 @@ AppUser _makeUser({ActiveMode activeMode = ActiveMode.client}) {
 
 void main() {
   // -------------------------------------------------------------------------
-  // Provider mode — client tabs should redirect to /provider
+  // Provider mode - client tabs should redirect to /provider
   // -------------------------------------------------------------------------
 
   group('provider mode + client tabs → /provider', () {
@@ -116,7 +116,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // Client mode — provider tabs should redirect to /home
+  // Client mode - provider tabs should redirect to /home
   // -------------------------------------------------------------------------
 
   group('client mode + provider tabs → /home', () {
@@ -147,7 +147,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // Client mode — provider-only routes should redirect to /home
+  // Client mode - provider-only routes should redirect to /home
   // -------------------------------------------------------------------------
 
   group('client mode + provider-only routes → /home', () {
@@ -187,7 +187,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // Shared tabs — no redirect regardless of mode
+  // Shared tabs - no redirect regardless of mode
   // -------------------------------------------------------------------------
 
   group('shared tabs → no redirect regardless of mode', () {
@@ -221,7 +221,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // Deep-link routes — no redirect regardless of mode
+  // Deep-link routes - no redirect regardless of mode
   // -------------------------------------------------------------------------
 
   group('deep-link routes → no redirect', () {
@@ -281,7 +281,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // Provider mode — provider tabs allowed (no redirect)
+  // Provider mode - provider tabs allowed (no redirect)
   // -------------------------------------------------------------------------
 
   group('provider mode + provider tabs → no redirect', () {
@@ -301,7 +301,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // AuthState integration — unauthenticated and loading pass-through
+  // AuthState integration - unauthenticated and loading pass-through
   // -------------------------------------------------------------------------
 
   group('AuthState wiring sanity', () {

@@ -16,7 +16,7 @@ type Auth = { uid: string; token?: Record<string, unknown> };
 // request.rawRequest.headers['x-forwarded-for'] and
 // request.rawRequest.socket?.remoteAddress to derive the client IP.
 // Defaulting to a loopback address keeps `ip` null, so no external geolocation
-// fetch, blocklist check, or anomaly detection side-effect is triggered — the
+// fetch, blocklist check, or anomaly detection side-effect is triggered - the
 // happy path stays fully deterministic and offline.
 function rawRequest(forwardedFor?: string, remoteAddress = '127.0.0.1') {
   return {

@@ -55,7 +55,7 @@ abstract final class AppRoutes {
   static String serviceDetail(String serviceId) => '/service/$serviceId';
   static String bookingDetail(String bookingId) => '/bookings/$bookingId';
 
-  /// Deep-link path for notifications — resolves outside the shell to avoid
+  /// Deep-link path for notifications - resolves outside the shell to avoid
   /// duplicate-key conflict with the shell-nested /bookings/:bookingId route.
   static String bookingDeepLink(String bookingId) => '/booking/$bookingId';
   static String serviceEdit(String serviceId) =>
@@ -71,7 +71,7 @@ abstract final class AppRoutes {
   static const profile = '/profile';
   static const myReviews = '/my-reviews';
 
-  // Legal documents — served in-app from bundled assets (no remote link).
+  // Legal documents - served in-app from bundled assets (no remote link).
   static const legalTerms = '/legal/terms';
   static const legalPrivacy = '/legal/privacy';
 
@@ -84,7 +84,7 @@ abstract final class AppRoutes {
 }
 
 // ---------------------------------------------------------------------------
-// RouterNotifier — bridges Riverpod auth state to GoRouter refreshListenable
+// RouterNotifier - bridges Riverpod auth state to GoRouter refreshListenable
 // ---------------------------------------------------------------------------
 
 class RouterNotifier extends ChangeNotifier {
@@ -109,14 +109,14 @@ class RouterNotifier extends ChangeNotifier {
         final loc = state.matchedLocation;
         // Legal documents are always accessible (before auth, during onboarding).
         if (loc.startsWith('/legal')) return null;
-        // OTP lab is debug-only — block in release builds.
+        // OTP lab is debug-only - block in release builds.
         if (kDebugMode && loc == AppRoutes.otpLab) return null;
         if (!kDebugMode && loc == AppRoutes.otpLab) return AppRoutes.signIn;
         final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
         final isOnboardingRoute = loc == AppRoutes.onboarding;
 
         // First launch: the onboarding screen (which carries the CGU consent
-        // gate) must be shown BEFORE anything else — including sign-in — so
+        // gate) must be shown BEFORE anything else - including sign-in - so
         // consent is collected at app opening, not after authentication.
         final onboardingDone = _ref.read(onboardingDoneProvider);
         if (!onboardingDone) {
@@ -237,14 +237,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'sign-up',
         builder: (_, __) => const SignUpPage(),
       ),
-      // ---- OTP Lab (debug only — stripped from release builds) ----
+      // ---- OTP Lab (debug only - stripped from release builds) ----
       if (kDebugMode)
         GoRoute(
           path: AppRoutes.otpLab,
           name: 'otp-lab',
           builder: (_, __) => const OtpLabPage(),
         ),
-      // ---- Provider onboarding (outside shell — full screen) ----
+      // ---- Provider onboarding (outside shell - full screen) ----
       GoRoute(
         path: AppRoutes.providerOnboarding,
         name: 'provider-onboarding',
@@ -258,14 +258,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ProviderCalendarPage(),
       ),
 
-      // ---- Service form — new (outside shell) ----
+      // ---- Service form - new (outside shell) ----
       GoRoute(
         path: AppRoutes.serviceNew,
         name: 'service-new',
         builder: (_, __) => const ServiceFormPage(),
       ),
 
-      // ---- Service form — edit (outside shell) ----
+      // ---- Service form - edit (outside shell) ----
       GoRoute(
         path: '/provider/services/:serviceId/edit',
         name: 'service-edit',
@@ -282,7 +282,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
-          // Branch 0 — Client: Home
+          // Branch 0 - Client: Home
           StatefulShellBranch(
             navigatorKey: _shellNavigatorHomeKey,
             routes: [
@@ -294,7 +294,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 1 — Client: Bookings
+          // Branch 1 - Client: Bookings
           StatefulShellBranch(
             navigatorKey: _shellNavigatorBookingsKey,
             routes: [
@@ -315,7 +315,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 2 — Provider: Dashboard
+          // Branch 2 - Provider: Dashboard
           StatefulShellBranch(
             navigatorKey: _shellNavigatorProviderKey,
             routes: [
@@ -327,7 +327,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 3 — Provider: Inbox
+          // Branch 3 - Provider: Inbox
           StatefulShellBranch(
             navigatorKey: _shellNavigatorInboxKey,
             routes: [
@@ -348,7 +348,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 4 — Chats (shared between client and provider modes)
+          // Branch 4 - Chats (shared between client and provider modes)
           StatefulShellBranch(
             navigatorKey: _shellNavigatorChatsKey,
             routes: [
@@ -360,7 +360,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 5 — Profile & Settings (shared between client and provider)
+          // Branch 5 - Profile & Settings (shared between client and provider)
           StatefulShellBranch(
             navigatorKey: _shellNavigatorProfileKey,
             routes: [
@@ -374,7 +374,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // ---- Service detail (outside shell — full-screen) ----
+      // ---- Service detail (outside shell - full-screen) ----
       GoRoute(
         path: '/service/:serviceId',
         name: 'service-detail',
@@ -459,7 +459,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 
 // ---------------------------------------------------------------------------
-// Service edit loader — fetches service before showing form
+// Service edit loader - fetches service before showing form
 // ---------------------------------------------------------------------------
 
 class _ServiceEditLoader extends ConsumerWidget {

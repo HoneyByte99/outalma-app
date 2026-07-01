@@ -51,7 +51,7 @@ class FirestoreProviderRepository implements ProviderRepository {
 
   @override
   Future<void> setActive(String uid, bool active) async {
-    // Targeted single-field write — the diff touches only `active`, which the
+    // Targeted single-field write - the diff touches only `active`, which the
     // Firestore `providers` update rule permits the owner (but not `suspended`).
     await FirestoreCollections.providers(
       _db,

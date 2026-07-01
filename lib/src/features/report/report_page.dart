@@ -170,7 +170,7 @@ class _ReportPageState extends ConsumerState<ReportPage> {
 
             const SizedBox(height: 16),
 
-            // Optional details — only shown once a reason is selected to
+            // Optional details - only shown once a reason is selected to
             // avoid cluttering the screen during the initial choice.
             if (_selectedReason != null) ...[
               Text(

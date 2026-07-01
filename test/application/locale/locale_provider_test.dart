@@ -7,7 +7,7 @@
 //   - setLocale(null) resets state to null
 //   - Switch fr → en updates state correctly
 //   - Persisted locale is restored after container rebuild
-//   - setLocale(null) removes persisted value — next container starts null
+//   - setLocale(null) removes persisted value - next container starts null
 //   - setLocale updates Intl.defaultLocale
 
 import 'dart:ui';
@@ -44,7 +44,7 @@ void main() {
     Intl.defaultLocale = null;
   });
 
-  group('LocaleNotifier — default state', () {
+  group('LocaleNotifier - default state', () {
     test('initial state is null (follow device locale)', () async {
       final container = _makeContainer();
       addTearDown(container.dispose);
@@ -65,7 +65,7 @@ void main() {
     );
   });
 
-  group('LocaleNotifier — setLocale', () {
+  group('LocaleNotifier - setLocale', () {
     test('setLocale(fr) updates state to Locale("fr")', () async {
       final container = _makeContainer();
       addTearDown(container.dispose);
@@ -115,7 +115,7 @@ void main() {
     });
   });
 
-  group('LocaleNotifier — Intl side-effect', () {
+  group('LocaleNotifier - Intl side-effect', () {
     test('setLocale updates Intl.defaultLocale', () async {
       final container = _makeContainer();
       addTearDown(container.dispose);
@@ -140,7 +140,7 @@ void main() {
     });
   });
 
-  group('LocaleNotifier — persistence', () {
+  group('LocaleNotifier - persistence', () {
     test('persisted fr locale is restored on container rebuild', () async {
       final c1 = _makeContainer();
       await c1.read(localeProvider.notifier).setLocale(const Locale('fr'));
@@ -154,7 +154,7 @@ void main() {
     });
 
     test(
-      'setLocale(null) removes persisted value — next container starts null',
+      'setLocale(null) removes persisted value - next container starts null',
       () async {
         final c1 = _makeContainer();
         await c1.read(localeProvider.notifier).setLocale(const Locale('fr'));

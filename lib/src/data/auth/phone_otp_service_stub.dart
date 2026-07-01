@@ -16,7 +16,7 @@ Future<String?> platformSendOtp(FirebaseAuth auth, String phone) async {
     phoneNumber: phone,
     timeout: const Duration(seconds: 60),
     verificationCompleted: (credential) async {
-      // Android auto-retrieval — sign in immediately, no OTP screen needed.
+      // Android auto-retrieval - sign in immediately, no OTP screen needed.
       try {
         await auth.signInWithCredential(credential);
       } catch (_) {}

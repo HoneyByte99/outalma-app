@@ -41,7 +41,7 @@ class Booking {
   final DateTime? doneAt;
   final String? audioMessageUrl;
 
-  /// Set when the booking was cancelled — who cancelled and why.
+  /// Set when the booking was cancelled - who cancelled and why.
   final String? cancelReason;
   final String? cancelledBy;
 

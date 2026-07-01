@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 /// Storage path: /public/services/{serviceId}/{uid}/photo_{timestamp}.jpg
 /// The uploader uid is in the path so Storage rules authorise via isSelf(uid)
 /// WITHOUT a cross-service firestore.get (those silently fail from Storage in
-/// this project — same constraint as chat media). This also works during the
+/// this project - same constraint as chat media). This also works during the
 /// new-service flow, before the Firestore service doc exists.
 /// Each upload uses a unique filename so existing photos are preserved
 /// (services support multiple photos).

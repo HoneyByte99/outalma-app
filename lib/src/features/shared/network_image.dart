@@ -51,7 +51,7 @@ class AppNetworkImage extends StatelessWidget {
           placeholder ??
           _DefaultLoadingPlaceholder(width: width, height: height),
       errorWidget: (_, __, error) {
-        debugPrint('[AppNetworkImage] load failed: $url — $error');
+        debugPrint('[AppNetworkImage] load failed: $url - $error');
         return errorWidget ??
             _DefaultErrorPlaceholder(width: width, height: height);
       },

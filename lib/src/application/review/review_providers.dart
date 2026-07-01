@@ -18,7 +18,7 @@ final reviewsForUserProvider = StreamProvider.autoDispose
       return ref.watch(reviewRepositoryProvider).watchForUser(userId);
     });
 
-/// Watches all reviews for a given booking (at most 2 — one per role).
+/// Watches all reviews for a given booking (at most 2 - one per role).
 final reviewsForBookingProvider = StreamProvider.autoDispose
     .family<List<Review>, String>((ref, bookingId) {
       return ref.watch(reviewRepositoryProvider).watchForBooking(bookingId);

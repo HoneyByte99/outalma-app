@@ -6,13 +6,13 @@ class ServiceZone {
     required this.radiusKm,
   });
 
-  /// Display label — what the user typed ("Paris 11e", "Lyon").
+  /// Display label - what the user typed ("Paris 11e", "Lyon").
   final String label;
 
   final double latitude;
   final double longitude;
 
-  /// Intervention radius in whole kilometers (1–200).
+  /// Intervention radius in whole kilometers (1-200).
   final int radiusKm;
 
   @override

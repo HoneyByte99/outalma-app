@@ -3,7 +3,7 @@
 // Covered:
 //   - log(): completes without throwing when the Cloud Function call succeeds
 //   - log(): swallows FirebaseFunctionsException (UNAVAILABLE) and does not
-//     rethrow — session logging must never block the auth flow
+//     rethrow - session logging must never block the auth flow
 //   - log(): swallows any unexpected exception
 
 import 'package:cloud_functions/cloud_functions.dart';
@@ -53,7 +53,7 @@ void main() {
       },
     );
 
-    test('swallows FirebaseFunctionsException with UNAVAILABLE code — '
+    test('swallows FirebaseFunctionsException with UNAVAILABLE code - '
         'does not rethrow', () async {
       when(() => mockCallable.call<void>(any())).thenThrow(
         FirebaseFunctionsException(message: 'UNAVAILABLE', code: 'unavailable'),
@@ -71,7 +71,7 @@ void main() {
       await expectLater(service.log(), completes);
     });
 
-    test('swallows generic exceptions — does not rethrow', () async {
+    test('swallows generic exceptions - does not rethrow', () async {
       when(
         () => mockCallable.call<void>(any()),
       ).thenThrow(Exception('network error'));

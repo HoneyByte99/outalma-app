@@ -61,7 +61,7 @@ http.Response _reverseGeocodeResponse() {
 void main() {
   group('GeocodingService.autocomplete', () {
     test('returns empty list for empty input without HTTP', () async {
-      // No client injected — any real HTTP call would throw.
+      // No client injected - any real HTTP call would throw.
       final service = GeocodingService(apiKey: 'key');
       final result = await service.autocomplete('');
       expect(result, isEmpty);

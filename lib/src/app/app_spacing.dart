@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 ///
 /// Use these constants everywhere instead of arbitrary numbers. They form a
 /// musical scale (4 → 8 → 12 → 16 → 20 → 24 → 32) that keeps layouts
-/// breathing consistently. Anything below 4 should be 0 — there is no halfway.
+/// breathing consistently. Anything below 4 should be 0 - there is no halfway.
 ///
 /// Naming follows Material 3 conventions:
 /// - `xs` = 4 (tight inline gaps, chip padding)
@@ -29,7 +29,7 @@ abstract final class AppSpacing {
   static const EdgeInsets cardCompact = EdgeInsets.all(m);
   static const EdgeInsets section = EdgeInsets.symmetric(vertical: xl);
 
-  // Touch targets — minimum tappable height (Material 48dp; ≥ iOS HIG 44pt).
+  // Touch targets - minimum tappable height (Material 48dp; ≥ iOS HIG 44pt).
   static const double minTouchTarget = 48;
 
   // Border radius scale.

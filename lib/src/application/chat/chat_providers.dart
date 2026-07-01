@@ -42,7 +42,7 @@ final chatMessagesProvider = StreamProvider.autoDispose
           .watchMessages(chatId: chatId, limit: limit);
     });
 
-/// Stable UID — avoids transient null during auth re-evaluation.
+/// Stable UID - avoids transient null during auth re-evaluation.
 final _stableChatUidProvider = Provider<String?>((ref) {
   final auth = ref.watch(authNotifierProvider).valueOrNull;
   if (auth is AuthAuthenticated) return auth.user.id;
@@ -153,5 +153,5 @@ final totalUnreadMessagesCountProvider = Provider<int>((ref) {
   // per chat requires per-chat message subscriptions which is expensive.
   // For now: count of chats that have lastMessageAt set (proxy for activity).
   // A proper per-chat unread count would require watching each chat's messages.
-  return 0; // placeholder — badge driven by notifications instead
+  return 0; // placeholder - badge driven by notifications instead
 });

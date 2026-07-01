@@ -50,7 +50,7 @@ describe('onServiceCreated → provider auto-provision', () => {
     } as never);
 
     const provider = await getProvider('p1');
-    // Existing fields preserved — the trigger must not clobber onboarding data.
+    // Existing fields preserved - the trigger must not clobber onboarding data.
     expect(provider?.bio).toBe('Experienced plumber');
     expect(provider?.suspended).toBe(true);
   });

@@ -8,7 +8,7 @@ import '../shared/user_avatar.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// Lists the accounts the user has blocked, with a one-tap unblock. This is the
-/// canonical place to undo a block — blocked chats are hidden from the chat
+/// canonical place to undo a block - blocked chats are hidden from the chat
 /// list, so the in-chat toggle alone would strand the user.
 class BlockedUsersPage extends ConsumerWidget {
   const BlockedUsersPage({super.key});
