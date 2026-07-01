@@ -189,11 +189,11 @@ void main() {
     test(
       'does NOT overwrite phoneE164 when upsert is called with null phone',
       () async {
-        // First write — user has a phone number.
+        // First write - user has a phone number.
         final userWithPhone = _makeUser(id: 'uid-4', phoneE164: '+33600000000');
         await repo.upsert(userWithPhone);
 
-        // Second write — serializer guard omits phoneE164 when it is null.
+        // Second write - serializer guard omits phoneE164 when it is null.
         // We pass a user whose phoneE164 is null (e.g. email-only update path).
         final userWithoutPhone = AppUser(
           id: 'uid-4',

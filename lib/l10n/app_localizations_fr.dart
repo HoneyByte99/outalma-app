@@ -1499,6 +1499,25 @@ class AppLocalizationsFr extends AppLocalizations {
   String get legalPrivacyTitle => 'Politique de confidentialité';
 
   @override
+  String get legalDocumentUnavailable => 'Document indisponible.';
+
+  @override
+  String get bookingRequiresLogin => 'Connectez-vous pour réserver ce service.';
+
+  @override
+  String get providerModeRequiresLogin =>
+      'Connectez-vous pour proposer vos services.';
+
+  @override
+  String get homeGuestGreeting => 'Trouvez le bon prestataire';
+
+  @override
+  String get guestLockedTabLogin => 'Connectez-vous pour accéder à cet espace.';
+
+  @override
+  String get authPromptKeepBrowsing => 'Continuer à explorer';
+
+  @override
   String get introSkip => 'Passer';
 
   @override

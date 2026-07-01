@@ -10,7 +10,7 @@ enum BookingStatus {
 
   /// Sentinel for an unrecognised status string (TS↔Dart drift, corrupt data).
   /// Treated as a terminal, read-only state so the UI never offers actions on
-  /// a booking it cannot reason about — instead of the previous silent fallback
+  /// a booking it cannot reason about - instead of the previous silent fallback
   /// to `requested`, which could re-offer accept/cancel on a closed booking.
   unknown;
 
@@ -55,7 +55,7 @@ enum BookingStatus {
   ///   done / rejected / cancelled → (none)
   ///
   /// A booking may be cancelled (by either participant, with a reason) while it
-  /// is still active — requested, accepted or in_progress.
+  /// is still active - requested, accepted or in_progress.
   ///
   /// Note: server-side Cloud Functions are the authoritative enforcers.
   /// This method is a client-side guard to prevent offering invalid actions

@@ -1,4 +1,4 @@
-// 🔬 OTP Lab — internal test screen for benchmarking OTP providers.
+// 🔬 OTP Lab - internal test screen for benchmarking OTP providers.
 //
 // Not part of the production user flow. Accessible at /otp-lab from the
 // sign-in screen via a small debug link.
@@ -7,7 +7,7 @@
 //   - Provider used
 //   - Phone number (E.164)
 //   - send_at timestamp
-//   - received_at timestamp (manual — user taps "Marquer reçu" when SMS arrives)
+//   - received_at timestamp (manual - user taps "Marquer reçu" when SMS arrives)
 //   - verify_at timestamp
 //   - success / error
 //
@@ -111,7 +111,7 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
           }
           final vId = await platformSendOtp(auth, phone);
           if (vId == null) {
-            // Android auto-verification — already signed in.
+            // Android auto-verification - already signed in.
             attempt.autoVerified = true;
             attempt.verifiedAt = DateTime.now();
             // Sign out immediately so the lab stays usable.
@@ -173,7 +173,7 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
           c.code = code;
           final newUser = result.data['newUser'] == true;
           if (newUser) {
-            _toast('✅ OTP Twilio vérifié — newUser (aucun compte Outalma lié)');
+            _toast('✅ OTP Twilio vérifié - newUser (aucun compte Outalma lié)');
           } else {
             // Sign in with the Firebase custom token, then sign out so the
             // lab stays usable.
@@ -249,7 +249,7 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Mode debug — sur le simulateur iOS, Firebase Phone Auth '
+                      'Mode debug - sur le simulateur iOS, Firebase Phone Auth '
                       'exige un numéro de test configuré dans la Firebase '
                       'Console (Authentication → Sign-in method → Phone → '
                       'Phone numbers for testing). Sinon, tester sur appareil '

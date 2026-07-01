@@ -39,7 +39,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('BlockedSlot serialization — all fields', () {
+  group('BlockedSlot serialization - all fields', () {
     test('roundtrip preserves all fields with endDate and reason', () async {
       final slot = _makeSlot(
         endDate: DateTime(2024, 9, 10, 18, 0).toUtc(),
@@ -63,7 +63,7 @@ void main() {
     });
   });
 
-  group('BlockedSlot serialization — date as Timestamp', () {
+  group('BlockedSlot serialization - date as Timestamp', () {
     test('date is stored as Firestore Timestamp', () async {
       final slot = _makeSlot();
       final col = FirestoreCollections.blockedSlots(fakeDb, testUid);
@@ -91,7 +91,7 @@ void main() {
     });
   });
 
-  group('BlockedSlot serialization — endDate null / non-null', () {
+  group('BlockedSlot serialization - endDate null / non-null', () {
     test('null endDate (full-day block) roundtrips as null', () async {
       final slot = _makeSlot(endDate: null);
       final col = FirestoreCollections.blockedSlots(fakeDb, testUid);
@@ -135,7 +135,7 @@ void main() {
     });
   });
 
-  group('BlockedSlot serialization — isFullDay computed getter', () {
+  group('BlockedSlot serialization - isFullDay computed getter', () {
     test('isFullDay is true when endDate is null', () async {
       final slot = _makeSlot(endDate: null);
       final col = FirestoreCollections.blockedSlots(fakeDb, testUid);
@@ -156,7 +156,7 @@ void main() {
     });
   });
 
-  group('BlockedSlot serialization — reason null / non-null', () {
+  group('BlockedSlot serialization - reason null / non-null', () {
     test('null reason roundtrips as null', () async {
       final slot = _makeSlot(reason: null);
       final col = FirestoreCollections.blockedSlots(fakeDb, testUid);
@@ -174,7 +174,7 @@ void main() {
     });
   });
 
-  group('BlockedSlot serialization — safe defaults for missing fields', () {
+  group('BlockedSlot serialization - safe defaults for missing fields', () {
     test('missing fields do not crash and use safe defaults', () async {
       await fakeDb
           .collection('providers')

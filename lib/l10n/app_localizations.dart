@@ -2846,6 +2846,42 @@ abstract class AppLocalizations {
   /// **'Privacy policy'**
   String get legalPrivacyTitle;
 
+  /// No description provided for @legalDocumentUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Document unavailable.'**
+  String get legalDocumentUnavailable;
+
+  /// No description provided for @bookingRequiresLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to book this service.'**
+  String get bookingRequiresLogin;
+
+  /// No description provided for @providerModeRequiresLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to offer your services.'**
+  String get providerModeRequiresLogin;
+
+  /// No description provided for @homeGuestGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the right provider'**
+  String get homeGuestGreeting;
+
+  /// No description provided for @guestLockedTabLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to access this area.'**
+  String get guestLockedTabLogin;
+
+  /// No description provided for @authPromptKeepBrowsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep browsing'**
+  String get authPromptKeepBrowsing;
+
   /// No description provided for @introSkip.
   ///
   /// In en, this message translates to:

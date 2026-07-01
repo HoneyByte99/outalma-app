@@ -124,23 +124,36 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                 onSelect: (m) => setState(() => _tab = m),
               ),
               Expanded(
-                child: list.isEmpty
-                    ? _EmptyNotifications()
-                    : ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: list.length,
-                        separatorBuilder: (_, __) =>
-                            const Divider(height: 1, indent: 72, endIndent: 16),
-                        itemBuilder: (context, i) {
-                          final notif = list[i];
-                          return _NotificationTile(
-                            notification: notif,
-                            uid: uid,
-                            db: db,
-                            onTap: () => _handleTap(context, notif, uid, ref),
-                          );
-                        },
-                      ),
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(notificationsProvider);
+                    await ref.read(notificationsProvider.future);
+                  },
+                  child: list.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [_EmptyNotifications()],
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: list.length,
+                          separatorBuilder: (_, __) => const Divider(
+                            height: 1,
+                            indent: 72,
+                            endIndent: 16,
+                          ),
+                          itemBuilder: (context, i) {
+                            final notif = list[i];
+                            return _NotificationTile(
+                              notification: notif,
+                              uid: uid,
+                              db: db,
+                              onTap: () => _handleTap(context, notif, uid, ref),
+                            );
+                          },
+                        ),
+                ),
               ),
             ],
           );

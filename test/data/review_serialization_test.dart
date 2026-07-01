@@ -44,7 +44,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('Review serialization — all fields', () {
+  group('Review serialization - all fields', () {
     test('roundtrip preserves all fields', () async {
       final review = _makeReview(
         comment: 'Excellent travail, très professionnel.',
@@ -63,7 +63,7 @@ void main() {
     });
   });
 
-  group('Review serialization — null comment', () {
+  group('Review serialization - null comment', () {
     test('null comment roundtrips as null', () async {
       final review = _makeReview(comment: null);
       final col = FirestoreCollections.reviews(fakeDb);
@@ -73,7 +73,7 @@ void main() {
     });
   });
 
-  group('Review serialization — rating boundaries', () {
+  group('Review serialization - rating boundaries', () {
     test('rating 1 (minimum) roundtrips correctly', () async {
       final review = _makeReview(rating: 1);
       final col = FirestoreCollections.reviews(fakeDb);
@@ -91,7 +91,7 @@ void main() {
     });
   });
 
-  group('Review serialization — reviewerRole enum', () {
+  group('Review serialization - reviewerRole enum', () {
     test('client role stored as "client" string', () async {
       final review = _makeReview(reviewerRole: ReviewerRole.client);
       final col = FirestoreCollections.reviews(fakeDb);
@@ -133,7 +133,7 @@ void main() {
     });
   });
 
-  group('Review serialization — createdAt timestamp', () {
+  group('Review serialization - createdAt timestamp', () {
     test('createdAt roundtrips with millisecond precision', () async {
       final t = DateTime(2024, 5, 1, 8, 0, 0).toUtc();
       final review = _makeReview(createdAt: t);
@@ -155,7 +155,7 @@ void main() {
     });
   });
 
-  group('Review serialization — safe defaults for missing fields', () {
+  group('Review serialization - safe defaults for missing fields', () {
     test('missing fields do not crash and use safe defaults', () async {
       await fakeDb.collection('reviews').doc('minimal').set({
         'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
@@ -173,7 +173,7 @@ void main() {
     });
   });
 
-  group('Review serialization — service category', () {
+  group('Review serialization - service category', () {
     test('categoryId round-trips', () async {
       final review = Review(
         id: 'r_cat',

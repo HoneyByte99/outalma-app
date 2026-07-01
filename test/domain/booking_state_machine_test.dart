@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/src/domain/enums/booking_status.dart';
 
 void main() {
-  group('BookingStatus.canTransitionTo — valid transitions', () {
+  group('BookingStatus.canTransitionTo - valid transitions', () {
     test('requested → accepted', () {
       expect(
         BookingStatus.requested.canTransitionTo(BookingStatus.accepted),
@@ -61,7 +61,7 @@ void main() {
     });
   });
 
-  group('BookingStatus.canTransitionTo — invalid transitions', () {
+  group('BookingStatus.canTransitionTo - invalid transitions', () {
     test('requested → inProgress (must go through accepted)', () {
       expect(
         BookingStatus.requested.canTransitionTo(BookingStatus.inProgress),
@@ -120,7 +120,7 @@ void main() {
   });
 
   group(
-    'BookingStatus.canTransitionTo — terminal states allow no transitions',
+    'BookingStatus.canTransitionTo - terminal states allow no transitions',
     () {
       const terminals = [
         BookingStatus.done,

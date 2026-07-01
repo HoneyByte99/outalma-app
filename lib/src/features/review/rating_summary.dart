@@ -22,7 +22,7 @@ class RatingSummary extends ConsumerWidget {
     if (stats == null) return const SizedBox.shrink();
 
     if (stats.count == 0) {
-      // No reviews yet — keep a star shape (outlined) so non-readers still
+      // No reviews yet - keep a star shape (outlined) so non-readers still
       // recognise this as a rating slot, paired with the localized label.
       return Semantics(
         label: l10n.ratingNew,

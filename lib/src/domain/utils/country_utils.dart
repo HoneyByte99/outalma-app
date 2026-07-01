@@ -1,7 +1,7 @@
 /// Utilities for converting ISO 3166-1 alpha-2 country codes into
 /// flag emojis and human-readable names.
 ///
-/// Flag emojis are generated via Unicode regional-indicator arithmetic —
+/// Flag emojis are generated via Unicode regional-indicator arithmetic -
 /// no external package required.
 abstract final class CountryUtils {
   /// Returns the flag emoji for a 2-letter country code (e.g. 'FR' → '🇫🇷').

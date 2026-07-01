@@ -18,7 +18,7 @@ class ProviderProfile {
   final String? bio;
 
   /// Daily working-hours window [start, end) in 24h local hours. Null when the
-  /// provider hasn't configured it — callers fall back to the k* defaults.
+  /// provider hasn't configured it - callers fall back to the k* defaults.
   /// Clients can offer bookings only on hourly slots inside this window.
   final int? workingHourStart;
   final int? workingHourEnd;

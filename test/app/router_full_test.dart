@@ -1,4 +1,4 @@
-// Extended router redirect tests — P2.4 app layer coverage.
+// Extended router redirect tests - P2.4 app layer coverage.
 //
 // Complements router_redirect_test.dart and router_redirect_extended_test.dart.
 // Uses the same pure-function test-double pattern (no GoRouter / Firebase
@@ -17,14 +17,14 @@ import 'package:outalma_app/src/domain/enums/active_mode.dart';
 import 'package:outalma_app/src/domain/models/app_user.dart';
 
 // ---------------------------------------------------------------------------
-// Test double — mirrors RouterNotifier.redirect as a pure function
+// Test double - mirrors RouterNotifier.redirect as a pure function
 // ---------------------------------------------------------------------------
 
 /// Mirrors the complete redirect logic in RouterNotifier.redirect.
 ///
-/// [authAsync]  – the current auth state (wraps AsyncValue semantics manually)
-/// [mode]       – the active mode to use when [authAsync] is authenticated
-/// [loc]        – the matched router location being evaluated
+/// [authAsync]  - the current auth state (wraps AsyncValue semantics manually)
+/// [mode]       - the active mode to use when [authAsync] is authenticated
+/// [loc]        - the matched router location being evaluated
 String? _redirect({
   required _AuthScenario authAsync,
   ActiveMode mode = ActiveMode.client,
@@ -37,7 +37,10 @@ String? _redirect({
       return AppRoutes.signIn;
     case _AuthScenario.unauthenticated:
       final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
-      return isAuthRoute ? null : AppRoutes.signIn;
+      // Guests may browse the public allowlist; everything else -> sign-in.
+      // Delegates to the real helper so this double cannot drift.
+      if (isAuthRoute || RouterNotifier.isGuestAllowed(loc)) return null;
+      return AppRoutes.signIn;
     case _AuthScenario.authenticated:
       final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
       if (isAuthRoute) return AppRoutes.home;
@@ -152,13 +155,37 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('unauthenticated user + protected routes → /sign-in', () {
-    test('/home → /sign-in', () {
+    test('/home is allowed for guests (no redirect)', () {
       expect(
         _redirect(
           authAsync: _AuthScenario.unauthenticated,
           loc: AppRoutes.home,
         ),
-        equals(AppRoutes.signIn),
+        isNull,
+      );
+    });
+
+    test('public service / profile / reviews allowed for guests', () {
+      expect(
+        _redirect(
+          authAsync: _AuthScenario.unauthenticated,
+          loc: AppRoutes.serviceDetail('s1'),
+        ),
+        isNull,
+      );
+      expect(
+        _redirect(
+          authAsync: _AuthScenario.unauthenticated,
+          loc: AppRoutes.providerProfile('p1'),
+        ),
+        isNull,
+      );
+      expect(
+        _redirect(
+          authAsync: _AuthScenario.unauthenticated,
+          loc: AppRoutes.userReviews('u1'),
+        ),
+        isNull,
       );
     });
 
@@ -244,7 +271,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // 3. Unknown / 404-like paths — no redirect
+  // 3. Unknown / 404-like paths - no redirect
   //    GoRouter handles unknown routes itself; RouterNotifier returns null.
   // -------------------------------------------------------------------------
 
@@ -325,7 +352,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // 6. Authenticated in provider mode — provider-only routes are allowed
+  // 6. Authenticated in provider mode - provider-only routes are allowed
   // -------------------------------------------------------------------------
 
   group(

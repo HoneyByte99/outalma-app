@@ -1,7 +1,7 @@
 // Harness widget tests for ReviewFormPage.
 //
 // ReviewFormPage uses ref.read(authNotifierProvider) inside a stream data
-// callback — the async AuthNotifier may not have resolved yet when the
+// callback - the async AuthNotifier may not have resolved yet when the
 // booking stream emits. Tests verify smoke render and stable scaffold.
 // Full form-element assertions are covered by the integration golden-path test.
 
@@ -61,7 +61,7 @@ Widget _wrap() => ProviderScope(
 
 void main() {
   group('ReviewFormPage', () {
-    testWidgets('smoke — renders without throwing', (tester) async {
+    testWidgets('smoke - renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pumpAndSettle();
       expect(find.byType(ReviewFormPage), findsOneWidget);

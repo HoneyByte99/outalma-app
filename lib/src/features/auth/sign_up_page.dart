@@ -11,6 +11,8 @@ import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import 'auth_prompt.dart';
+import '../shared/app_logo.dart';
 import '../shared/phone_field.dart';
 
 // ---------------------------------------------------------------------------
@@ -75,7 +77,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // Email sign-up — password + one-time verification email
+  // Email sign-up - password + one-time verification email
   // ---------------------------------------------------------------------------
 
   Future<void> _signUpEmail() async {
@@ -119,7 +121,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // Phone sign-up — OTP flow (Twilio Verify backend)
+  // Phone sign-up - OTP flow (Twilio Verify backend)
   // ---------------------------------------------------------------------------
 
   /// Step 1: validate name + phone, request an OTP, transition to step 2.
@@ -249,12 +251,13 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
-          // Explicit back button — context.go() to /sign-in replaces the stack
+          // Explicit back button - context.go() to /sign-in replaces the stack
           // so the default Material back arrow wouldn't be shown.
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: l10n.signUpSignIn,
-            onPressed: () => context.go(AppRoutes.signIn),
+            onPressed: () =>
+                context.go(authRouteWithRedirect(context, AppRoutes.signIn)),
           ),
           actions: const [_ThemeToggleButton(), SizedBox(width: 8)],
         ),
@@ -406,7 +409,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     ),
                   ),
                 ] else if (_phoneStep == _PhoneStep.enterDetails) ...[
-                  // Step 1 — name + phone
+                  // Step 1 - name + phone
                   TextField(
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
@@ -425,7 +428,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     onChanged: (v) => setState(() => _phoneE164 = v),
                   ),
                 ] else ...[
-                  // Step 2 — OTP code
+                  // Step 2 - OTP code
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
@@ -563,7 +566,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                           fontWeight: FontWeight.w600,
                         ),
                         recognizer: TapGestureRecognizer()
-                          ..onTap = () => context.go(AppRoutes.signIn),
+                          ..onTap = () => context.go(
+                            authRouteWithRedirect(context, AppRoutes.signIn),
+                          ),
                       ),
                     ],
                   ),
@@ -669,12 +674,12 @@ class _AuthModeToggle extends StatelessWidget {
 class _AuthLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Image.asset('assets/images/logo_icon_cropped.png', height: 160);
+    return const AppLogo(height: 160);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Theme toggle button — cycles system → light → dark
+// Theme toggle button - cycles system → light → dark
 // ---------------------------------------------------------------------------
 
 class _ThemeToggleButton extends ConsumerWidget {

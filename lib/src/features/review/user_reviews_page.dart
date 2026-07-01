@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/app_theme.dart';
 import '../../application/review/review_providers.dart';
-import '../../application/user/user_providers.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../../domain/models/review.dart';
 import '../shared/category_icon.dart';
 import '../shared/user_avatar.dart';
@@ -22,7 +22,7 @@ class UserReviewsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final user = ref.watch(userByIdProvider(userId)).valueOrNull;
+    final user = ref.watch(publicProfileByIdProvider(userId)).valueOrNull;
     final reviewsAsync = ref.watch(reviewsForUserProvider(userId));
 
     return Scaffold(
@@ -51,7 +51,7 @@ class UserReviewsPage extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user?.displayName ?? '—',
+                          user?.displayName ?? '-',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
@@ -93,7 +93,9 @@ class _ReviewTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
-    final reviewer = ref.watch(userByIdProvider(review.reviewerId)).valueOrNull;
+    final reviewer = ref
+        .watch(publicProfileByIdProvider(review.reviewerId))
+        .valueOrNull;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -109,7 +111,7 @@ class _ReviewTile extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  reviewer?.displayName ?? '—',
+                  reviewer?.displayName ?? '-',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),

@@ -127,7 +127,7 @@ class _DetailContent extends ConsumerWidget {
     final authState = ref.watch(authNotifierProvider).valueOrNull;
     final uid = authState is AuthAuthenticated ? authState.user.id : null;
 
-    // Bottom bar logic — mutually exclusive based on role + status.
+    // Bottom bar logic - mutually exclusive based on role + status.
     Widget? bottomBar;
     if (uid == booking.providerId) {
       if (booking.status == BookingStatus.requested) {
@@ -302,7 +302,7 @@ class _DetailContent extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Provider link — tappable card opening the public provider profile
+// Provider link - tappable card opening the public provider profile
 // ---------------------------------------------------------------------------
 
 class _ProviderLink extends ConsumerWidget {
@@ -339,7 +339,7 @@ class _ProviderLink extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    provider?.displayName ?? '—',
+                    provider?.displayName ?? '-',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -365,7 +365,7 @@ class _ProviderLink extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Client summary — read-only trust card shown to the provider. There is no
+// Client summary - read-only trust card shown to the provider. There is no
 // public client profile (by design), so this card is intentionally not tappable.
 // ---------------------------------------------------------------------------
 
@@ -380,7 +380,7 @@ class _ClientSummary extends ConsumerWidget {
     final oc = context.oc;
     final client = ref.watch(userByIdProvider(clientId)).valueOrNull;
 
-    // Tappable trust card — opens the client's reviews so the provider can
+    // Tappable trust card - opens the client's reviews so the provider can
     // judge them (e.g. before accepting a request).
     return Material(
       color: oc.cardSurface,
@@ -407,7 +407,7 @@ class _ClientSummary extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      client?.displayName ?? '—',
+                      client?.displayName ?? '-',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -658,7 +658,7 @@ class _ChatButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Review section — shows form button if not yet reviewed, else confirmation
+// Review section - shows form button if not yet reviewed, else confirmation
 // ---------------------------------------------------------------------------
 
 class _ReviewSection extends ConsumerWidget {

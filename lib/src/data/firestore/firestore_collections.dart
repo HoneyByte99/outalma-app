@@ -14,6 +14,7 @@ import '../../domain/models/chat_message.dart';
 import '../../domain/models/app_notification.dart';
 import '../../domain/models/phone_share.dart';
 import '../../domain/models/provider_profile.dart';
+import '../../domain/models/public_profile.dart';
 import '../../domain/models/report.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
@@ -82,6 +83,19 @@ class FirestoreCollections {
         .withConverter<ProviderProfile>(
           fromFirestore: (snap, _) => _providerFromFirestore(snap),
           toFirestore: (profile, _) => _providerToFirestore(profile),
+        );
+  }
+
+  static CollectionReference<PublicProfile> publicProfiles(
+    FirebaseFirestore db,
+  ) {
+    return db
+        .collection('public_profiles')
+        .withConverter<PublicProfile>(
+          fromFirestore: (snap, _) => _publicProfileFromFirestore(snap),
+          // Client never writes this collection (server-authoritative); the
+          // converter still needs a toFirestore, so provide a faithful one.
+          toFirestore: (p, _) => _publicProfileToFirestore(p),
         );
   }
 
@@ -174,7 +188,7 @@ class FirestoreCollections {
       'displayName': user.displayName,
       'email': user.email,
       'photoPath': user.photoPath,
-      // Never write phoneE164 as null — the create rule requires the field to
+      // Never write phoneE164 as null - the create rule requires the field to
       // be absent for email-only accounts, and the update rule blocks any
       // client-side change to this field (security review C1/C2).
       if (user.phoneE164 != null) 'phoneE164': user.phoneE164,
@@ -336,7 +350,7 @@ class FirestoreCollections {
           : null,
       if (booking.audioMessageUrl != null)
         'audioMessageUrl': booking.audioMessageUrl,
-      // Cancellation metadata — set server-side by cancelBooking. Included here
+      // Cancellation metadata - set server-side by cancelBooking. Included here
       // so the typed converter round-trips a Booking fully (clients do not write
       // bookings today; this keeps the serializer aligned with the model).
       if (booking.cancelReason != null) 'cancelReason': booking.cancelReason,
@@ -433,7 +447,7 @@ class FirestoreCollections {
       bio: data['bio'] as String?,
       workingHourStart: (data['workingHourStart'] as num?)?.toInt(),
       workingHourEnd: (data['workingHourEnd'] as num?)?.toInt(),
-      // Availability defaults to true (available) when the field is missing —
+      // Availability defaults to true (available) when the field is missing -
       // a provider is hidden only if they explicitly paused.
       active: (data['active'] as bool?) ?? true,
       suspended: (data['suspended'] as bool?) ?? false,
@@ -450,6 +464,30 @@ class FirestoreCollections {
       'active': profile.active,
       'suspended': profile.suspended,
       'createdAt': dateTimeToFirestore(profile.createdAt),
+    };
+  }
+
+  // ---- PublicProfile ----
+
+  static PublicProfile _publicProfileFromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> snap,
+  ) {
+    final data = snap.data() ?? const <String, dynamic>{};
+    return PublicProfile(
+      id: snap.id,
+      displayName: (data['displayName'] as String?) ?? '',
+      photoPath: data['photoPath'] as String?,
+      country: data['country'] as String?,
+      phoneVerified: (data['phoneVerified'] as bool?) ?? false,
+    );
+  }
+
+  static Map<String, Object?> _publicProfileToFirestore(PublicProfile p) {
+    return {
+      'displayName': p.displayName,
+      if (p.photoPath != null) 'photoPath': p.photoPath,
+      if (p.country != null) 'country': p.country,
+      'phoneVerified': p.phoneVerified,
     };
   }
 

@@ -24,7 +24,7 @@ final providerRepositoryProvider = Provider<ProviderRepository>((ref) {
   return FirestoreProviderRepository(ref.watch(firestoreProvider));
 });
 
-/// Current user's provider profile — null if they haven't activated yet.
+/// Current user's provider profile - null if they haven't activated yet.
 final currentProviderProfileProvider = StreamProvider<ProviderProfile?>((ref) {
   final uid = ref.watch(_stableUidProvider);
   if (uid == null) return const Stream.empty();
@@ -38,7 +38,7 @@ final pausedProviderIdsProvider = StreamProvider<Set<String>>((ref) {
   return ref.watch(providerRepositoryProvider).watchPausedProviderIds();
 });
 
-/// Any provider's profile by uid — used by public provider profile pages,
+/// Any provider's profile by uid - used by public provider profile pages,
 /// service cards, and trust signals.
 final providerProfileByIdProvider = StreamProvider.autoDispose
     .family<ProviderProfile?, String>((ref, uid) {
@@ -105,7 +105,7 @@ final providerCompletedBookingsProvider = StreamProvider<List<Booking>>((ref) {
       );
 });
 
-/// Published services for any given provider uid — used on public profile pages.
+/// Published services for any given provider uid - used on public profile pages.
 final publicProviderServicesProvider = StreamProvider.autoDispose
     .family<List<Service>, String>((ref, uid) {
       return ref
@@ -183,7 +183,7 @@ final providerBlockedSlotsProvider = StreamProvider<List<BlockedSlot>>((ref) {
   return ref.watch(providerRepositoryProvider).watchBlockedSlots(uid);
 });
 
-/// Blocked slots for any provider — used by clients to check availability.
+/// Blocked slots for any provider - used by clients to check availability.
 final blockedSlotsForProviderProvider = StreamProvider.autoDispose
     .family<List<BlockedSlot>, String>((ref, uid) {
       return ref.watch(providerRepositoryProvider).watchBlockedSlots(uid);

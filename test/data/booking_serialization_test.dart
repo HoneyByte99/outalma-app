@@ -50,7 +50,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('Booking serialization — required fields', () {
+  group('Booking serialization - required fields', () {
     test('preserves all required fields through roundtrip', () async {
       final booking = _makeBooking();
       final col = FirestoreCollections.bookings(fakeDb);
@@ -89,7 +89,7 @@ void main() {
     });
   });
 
-  group('Booking serialization — inProgress / in_progress alignment', () {
+  group('Booking serialization - inProgress / in_progress alignment', () {
     test('inProgress is stored as "in_progress" string in Firestore', () async {
       final booking = _makeBooking(status: BookingStatus.inProgress);
       await FirestoreCollections.bookings(fakeDb).doc(booking.id).set(booking);
@@ -122,7 +122,7 @@ void main() {
     );
   });
 
-  group('Booking serialization — chatId lifecycle', () {
+  group('Booking serialization - chatId lifecycle', () {
     test('chatId is null before acceptance', () async {
       final booking = _makeBooking(
         status: BookingStatus.requested,
@@ -147,7 +147,7 @@ void main() {
     });
   });
 
-  group('Booking serialization — cancellation metadata', () {
+  group('Booking serialization - cancellation metadata', () {
     test('cancelReason/cancelledBy round-trip through the converter', () async {
       final booking = Booking(
         id: 'b_cancel',
@@ -179,7 +179,7 @@ void main() {
     });
   });
 
-  group('Booking serialization — timestamp fields', () {
+  group('Booking serialization - timestamp fields', () {
     test('all timestamp fields roundtrip with millisecond precision', () async {
       final t = DateTime(2024, 3, 10, 14, 30, 0).toUtc();
       final booking = _makeBooking(
@@ -231,7 +231,7 @@ void main() {
   });
 
   group(
-    'Booking serialization — safe defaults for incomplete Firestore docs',
+    'Booking serialization - safe defaults for incomplete Firestore docs',
     () {
       test('missing fields do not crash and use safe defaults', () async {
         // Minimal doc as might be written by a buggy client or old schema version

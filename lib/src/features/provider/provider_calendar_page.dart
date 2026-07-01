@@ -180,7 +180,7 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
             ),
           ),
 
-          // Day selection chip — tap X to clear and show all upcoming
+          // Day selection chip - tap X to clear and show all upcoming
           if (_selectedDay != null)
             SliverToBoxAdapter(
               child: Padding(
@@ -241,7 +241,7 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
               ),
             ),
 
-          // Day detail OR upcoming bookings — not both
+          // Day detail OR upcoming bookings - not both
           if (_selectedDay != null)
             _DayDetailSliver(
               day: _selectedDay!,
@@ -312,7 +312,7 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
 }
 
 // ---------------------------------------------------------------------------
-// Day detail — shows bookings + blocked slots for selected day
+// Day detail - shows bookings + blocked slots for selected day
 // ---------------------------------------------------------------------------
 
 class _DayDetailSliver extends ConsumerWidget {
@@ -409,7 +409,7 @@ class _DayDetailSliver extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Upcoming bookings — shown when no day is selected
+// Upcoming bookings - shown when no day is selected
 // ---------------------------------------------------------------------------
 
 class _UpcomingBookingsSliver extends StatelessWidget {
@@ -576,7 +576,7 @@ class _BookingTile extends ConsumerWidget {
     final timeFmt = DateFormat('HH:mm', locale);
     final timeStr = booking.scheduledAt != null
         ? timeFmt.format(booking.scheduledAt!)
-        : '—';
+        : '-';
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.bookingDeepLink(booking.id)),
@@ -772,7 +772,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
             ),
             const SizedBox(height: 20),
 
-            // Date navigation — no showDatePicker (crashes on web)
+            // Date navigation - no showDatePicker (crashes on web)
             Text(
               l10n.bookingStep2PickDate,
               style: Theme.of(context).textTheme.labelMedium,
@@ -960,7 +960,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
   }
 }
 
-/// Simple hour selector — no showTimePicker overlay (crashes on web).
+/// Simple hour selector - no showTimePicker overlay (crashes on web).
 class _HourSelector extends StatelessWidget {
   const _HourSelector({
     required this.label,

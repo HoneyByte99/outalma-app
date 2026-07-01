@@ -7,7 +7,7 @@ const _kOnboardingDoneKey = 'onboarding_done';
 /// Overridden at startup via [ProviderScope] after reading SharedPreferences.
 final onboardingDoneProvider = StateProvider<bool>((_) => false);
 
-/// Marks onboarding as complete — persists to SharedPreferences and updates
+/// Marks onboarding as complete - persists to SharedPreferences and updates
 /// the provider so the router redirects away from /onboarding.
 Future<void> completeOnboarding(Ref ref) async {
   final prefs = await SharedPreferences.getInstance();

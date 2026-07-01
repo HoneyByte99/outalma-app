@@ -37,7 +37,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('ProviderProfile serialization — all fields', () {
+  group('ProviderProfile serialization - all fields', () {
     test('roundtrip preserves all fields', () async {
       final profile = _makeProfile();
       final col = FirestoreCollections.providers(fakeDb);
@@ -51,7 +51,7 @@ void main() {
     });
   });
 
-  group('ProviderProfile serialization — null optional fields', () {
+  group('ProviderProfile serialization - null optional fields', () {
     test('null bio roundtrips as null', () async {
       final profile = _makeProfile(bio: null);
       final col = FirestoreCollections.providers(fakeDb);
@@ -61,7 +61,7 @@ void main() {
     });
   });
 
-  group('ProviderProfile serialization — active/suspended flags', () {
+  group('ProviderProfile serialization - active/suspended flags', () {
     test('active=false suspended=false roundtrips correctly', () async {
       final profile = _makeProfile(active: false, suspended: false);
       final col = FirestoreCollections.providers(fakeDb);
@@ -85,7 +85,7 @@ void main() {
     });
   });
 
-  group('ProviderProfile serialization — createdAt timestamp', () {
+  group('ProviderProfile serialization - createdAt timestamp', () {
     test('createdAt roundtrips with millisecond precision', () async {
       final t = DateTime(2024, 6, 1, 9, 30, 0).toUtc();
       final profile = _makeProfile(createdAt: t);
@@ -107,7 +107,7 @@ void main() {
     });
   });
 
-  group('ProviderProfile serialization — safe defaults for missing fields', () {
+  group('ProviderProfile serialization - safe defaults for missing fields', () {
     test('missing fields do not crash and use safe defaults', () async {
       await fakeDb.collection('providers').doc('minimal').set({
         'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
@@ -127,7 +127,7 @@ void main() {
           .doc('empty')
           .set(<String, dynamic>{});
       final col = FirestoreCollections.providers(fakeDb);
-      // Should not throw — createdAt will fall back to epoch via dateTimeFromFirestore
+      // Should not throw - createdAt will fall back to epoch via dateTimeFromFirestore
       expect(
         () async => (await col.doc('empty').get()).data()!,
         returnsNormally,
@@ -135,7 +135,7 @@ void main() {
     });
   });
 
-  group('ProviderProfile — working hours', () {
+  group('ProviderProfile - working hours', () {
     test('round-trips workingHourStart/End', () async {
       final profile = ProviderProfile(
         uid: 'p1',

@@ -1481,6 +1481,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get legalPrivacyTitle => 'Privacy policy';
 
   @override
+  String get legalDocumentUnavailable => 'Document unavailable.';
+
+  @override
+  String get bookingRequiresLogin => 'Sign in to book this service.';
+
+  @override
+  String get providerModeRequiresLogin => 'Sign in to offer your services.';
+
+  @override
+  String get homeGuestGreeting => 'Find the right provider';
+
+  @override
+  String get guestLockedTabLogin => 'Sign in to access this area.';
+
+  @override
+  String get authPromptKeepBrowsing => 'Keep browsing';
+
+  @override
   String get introSkip => 'Skip';
 
   @override

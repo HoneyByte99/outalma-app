@@ -48,7 +48,7 @@ Widget _wrap() => ProviderScope(
 
 void main() {
   group('ProviderInboxPage', () {
-    testWidgets('smoke — renders without throwing', (tester) async {
+    testWidgets('smoke - renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       expect(find.byType(ProviderInboxPage), findsOneWidget);
@@ -65,8 +65,19 @@ void main() {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       await tester.pump();
-      // Empty state shows an icon — verify the page rendered at minimum
+      // Empty state shows an icon - verify the page rendered at minimum
       expect(find.byType(TabBarView), findsOneWidget);
+    });
+
+    testWidgets('requests tab is pull-to-refreshable even when empty', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pump();
+      await tester.pump();
+      // The empty state is wrapped in a RefreshIndicator so a provider can
+      // always pull to retry, not only when a list already has content.
+      expect(find.byType(RefreshIndicator), findsWidgets);
     });
   });
 }

@@ -30,7 +30,7 @@ async function createAuthUser(
   try {
     await admin.auth().deleteUser(uid);
   } catch {
-    // didn't exist — fine
+    // didn't exist - fine
   }
   await admin.auth().createUser({ uid, email: `${uid}@test.dev` });
   if (claims) await admin.auth().setCustomUserClaims(uid, claims);

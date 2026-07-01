@@ -153,7 +153,7 @@ class _ProviderOnboardingPageState
                 ),
                 const SizedBox(height: 24),
 
-                // Working hours — drives the slots the client can book.
+                // Working hours - drives the slots the client can book.
                 Text(
                   l10n.onboardingHours,
                   style: Theme.of(context).textTheme.titleSmall,

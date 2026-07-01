@@ -55,7 +55,7 @@ void main() {
       );
       // pump() without settling ensures we're in the loading state.
       await tester.pump();
-      // The default placeholder is a plain Container — verify at least one
+      // The default placeholder is a plain Container - verify at least one
       // Container with a non-null color is present in the sub-tree.
       final containers = tester.widgetList<Container>(find.byType(Container));
       final hasColoredContainer = containers.any((c) => c.color != null);

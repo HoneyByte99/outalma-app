@@ -10,12 +10,14 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
-import '../../application/user/user_providers.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../../core/utils/format_utils.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/enums/price_type.dart';
 import '../../domain/models/service.dart';
+import '../auth/auth_prompt.dart';
 import '../booking/booking_request_sheet.dart';
+import '../shared/app_logo.dart';
 import '../shared/network_image.dart';
 import '../shared/marketplace_disclaimer.dart';
 import '../shared/verified_badge.dart';
@@ -23,9 +25,17 @@ import 'service_zones_map.dart';
 import '../shared/user_avatar.dart';
 
 class ServiceDetailPage extends ConsumerWidget {
-  const ServiceDetailPage({super.key, required this.serviceId});
+  const ServiceDetailPage({
+    super.key,
+    required this.serviceId,
+    this.autoOpenBooking = false,
+  });
 
   final String serviceId;
+
+  /// When true (set via `?book=1` after a guest logs in to book), the booking
+  /// sheet reopens automatically once the service has loaded.
+  final bool autoOpenBooking;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,7 +48,10 @@ class ServiceDetailPage extends ConsumerWidget {
       ),
       data: (service) {
         if (service == null) return const _ServiceDetailError();
-        return _ServiceDetailContent(service: service);
+        return _ServiceDetailContent(
+          service: service,
+          autoOpenBooking: autoOpenBooking,
+        );
       },
     );
   }
@@ -49,9 +62,13 @@ class ServiceDetailPage extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _ServiceDetailContent extends ConsumerWidget {
-  const _ServiceDetailContent({required this.service});
+  const _ServiceDetailContent({
+    required this.service,
+    this.autoOpenBooking = false,
+  });
 
   final Service service;
+  final bool autoOpenBooking;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -226,26 +243,23 @@ class _ServiceDetailContent extends ConsumerWidget {
       // ---- Sticky bottom bar ----
       bottomNavigationBar: isOwner
           ? _EditBottomBar(serviceId: service.id)
-          : _BookingBottomBar(service: service),
+          : _BookingBottomBar(
+              service: service,
+              autoOpenBooking: autoOpenBooking,
+            ),
     );
   }
 
   Widget _heroFallback(OutalmaColors oc) {
     return ColoredBox(
       color: oc.border,
-      child: Center(
-        child: Image.asset(
-          'assets/images/logo_icon_cropped.png',
-          height: 100,
-          fit: BoxFit.contain,
-        ),
-      ),
+      child: const Center(child: AppLogo(height: 100)),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Hero gallery — swipeable photo carousel with page indicators
+// Hero gallery - swipeable photo carousel with page indicators
 // ---------------------------------------------------------------------------
 
 class _HeroGallery extends StatefulWidget {
@@ -259,7 +273,7 @@ class _HeroGallery extends StatefulWidget {
 }
 
 class _HeroGalleryState extends State<_HeroGallery> {
-  // viewportFraction < 1 lets the next photo peek in from the right — the
+  // viewportFraction < 1 lets the next photo peek in from the right - the
   // primary visual cue that the hero is swipeable (no text needed).
   final _controller = PageController(viewportFraction: 0.92);
   int _current = 0;
@@ -274,10 +288,10 @@ class _HeroGalleryState extends State<_HeroGallery> {
   Widget build(BuildContext context) {
     final photos = widget.photos;
 
-    // Empty state — no photos uploaded.
+    // Empty state - no photos uploaded.
     if (photos.isEmpty) return widget.fallback;
 
-    // Single photo — no carousel chrome needed.
+    // Single photo - no carousel chrome needed.
     if (photos.length == 1) {
       return AppNetworkImage(
         url: photos.first,
@@ -308,7 +322,7 @@ class _HeroGalleryState extends State<_HeroGallery> {
             ),
           ),
         ),
-        // Page indicator dots — anchored to the bottom of the hero.
+        // Page indicator dots - anchored to the bottom of the hero.
         Positioned(
           left: 0,
           right: 0,
@@ -405,15 +419,17 @@ class _ProviderRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
+    // Guest-safe: provider name/avatar from the public projection, never the
+    // PII users doc (which a signed-out visitor cannot read).
+    final user = ref.watch(publicProfileByIdProvider(providerId)).valueOrNull;
     final providerProfile = ref
         .watch(providerProfileByIdProvider(providerId))
         .valueOrNull;
     final isVerified =
-        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
+        providerProfile != null && (user?.phoneVerified ?? false);
 
     return Semantics(
-      label: '${user?.displayName ?? ''} — ${l10n.serviceViewProfile}',
+      label: '${user?.displayName ?? ''} - ${l10n.serviceViewProfile}',
       button: true,
       child: InkWell(
         onTap: () => context.push(AppRoutes.providerProfile(providerId)),
@@ -447,7 +463,7 @@ class _ProviderRow extends ConsumerWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            user?.displayName ?? '—',
+                            user?.displayName ?? '-',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: oc.primaryText,
@@ -559,10 +575,34 @@ class _ExpandableTextState extends State<_ExpandableText> {
 // Sticky booking bottom bar
 // ---------------------------------------------------------------------------
 
-class _BookingBottomBar extends StatelessWidget {
-  const _BookingBottomBar({required this.service});
+class _BookingBottomBar extends ConsumerStatefulWidget {
+  const _BookingBottomBar({
+    required this.service,
+    this.autoOpenBooking = false,
+  });
 
   final Service service;
+  final bool autoOpenBooking;
+
+  @override
+  ConsumerState<_BookingBottomBar> createState() => _BookingBottomBarState();
+}
+
+class _BookingBottomBarState extends ConsumerState<_BookingBottomBar> {
+  @override
+  void initState() {
+    super.initState();
+    // Return-to-intention: the guest logged in to book and came back with
+    // ?book=1. The bar is only built once the service has loaded, so opening
+    // here (after the first frame) reliably has everything it needs.
+    if (widget.autoOpenBooking) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final authState = ref.read(authNotifierProvider).valueOrNull;
+        if (authState is AuthAuthenticated) _openBookingSheet(context);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -586,12 +626,32 @@ class _BookingBottomBar extends StatelessWidget {
           const MarketplaceDisclaimer(dense: true),
           const SizedBox(height: AppSpacing.m),
           ElevatedButton(
-            onPressed: () => _openBookingSheet(context),
+            onPressed: () => _onBook(context),
             child: Text(l10n.serviceBook),
           ),
         ],
       ),
     );
+  }
+
+  /// Booking is login-gated: a guest gets the auth prompt sheet with a return
+  /// path that reopens this booking after sign-in; an authed user books now.
+  void _onBook(BuildContext context) {
+    final service = widget.service;
+    final authState = ref.read(authNotifierProvider).valueOrNull;
+    if (authState is! AuthAuthenticated) {
+      final redirect = Uri(
+        path: AppRoutes.serviceDetail(service.id),
+        queryParameters: {'book': '1'},
+      ).toString();
+      showAuthPrompt(
+        context,
+        reason: AppLocalizations.of(context)!.bookingRequiresLogin,
+        redirect: redirect,
+      );
+      return;
+    }
+    _openBookingSheet(context);
   }
 
   void _openBookingSheet(BuildContext context) {
@@ -600,9 +660,9 @@ class _BookingBottomBar extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => BookingRequestSheet(
-        serviceId: service.id,
-        providerId: service.providerId,
-        serviceTitle: service.title,
+        serviceId: widget.service.id,
+        providerId: widget.service.providerId,
+        serviceTitle: widget.service.title,
       ),
     );
   }
@@ -643,7 +703,7 @@ class _EditBottomBar extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Loading state — animated shimmer skeleton
+// Loading state - animated shimmer skeleton
 // ---------------------------------------------------------------------------
 
 class _ServiceDetailLoading extends StatefulWidget {

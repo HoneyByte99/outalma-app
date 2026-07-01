@@ -103,7 +103,7 @@ class _ServiceZonesMapState extends State<ServiceZonesMap> {
                 ),
                 markers: markers,
                 circles: circles,
-                // Tapping the map opens it in the device's maps app — the
+                // Tapping the map opens it in the device's maps app - the
                 // embedded tiles don't render on the iOS Simulator, and a real
                 // map is more useful than a static preview anyway.
                 onTap: (_) => openInMaps(),
@@ -138,7 +138,7 @@ class _ServiceZonesMapState extends State<ServiceZonesMap> {
               ),
             ),
             // Discoverable affordance: a real map is one tap away even when the
-            // embedded tiles are grey (iOS Simulator) — the whole map is also
+            // embedded tiles are grey (iOS Simulator) - the whole map is also
             // tappable.
             Positioned(
               top: 8,

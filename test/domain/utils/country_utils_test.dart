@@ -19,7 +19,7 @@ void main() {
 
       // flag() falls back only when the input length != 2 or contains non-alpha
       // chars. Any two-letter alpha string (e.g. 'XX') produces a regional
-      // indicator pair — the fallback is not about whether the country exists.
+      // indicator pair - the fallback is not about whether the country exists.
       test('returns fallback globe for empty string', () {
         expect(CountryUtils.flag(''), '🌍');
       });
@@ -67,7 +67,7 @@ void main() {
 
       test('fallback name for unknown two-letter code', () {
         // flag('XX') produces a regional-indicator pair (not the globe) because
-        // 'X' is a valid alpha char — only name() falls back to the uppercased code.
+        // 'X' is a valid alpha char - only name() falls back to the uppercased code.
         expect(CountryUtils.flagAndName('XX'), '${CountryUtils.flag('XX')} XX');
       });
     });

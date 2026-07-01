@@ -22,7 +22,7 @@ final customerBookingsProvider = StreamProvider<List<Booking>>((ref) {
       .watchForCustomer(authState.user.id);
 });
 
-/// Single booking by id — used for detail page.
+/// Single booking by id - used for detail page.
 final bookingDetailProvider = StreamProvider.autoDispose
     .family<Booking?, String>((ref, bookingId) {
       return ref.watch(bookingRepositoryProvider).watchById(bookingId);
@@ -40,7 +40,7 @@ final clientActiveBookingsCountProvider = Provider<int>((ref) {
       .length;
 });
 
-/// Injectable use case — features layer must consume this, never instantiate
+/// Injectable use case - features layer must consume this, never instantiate
 /// CreateBookingUseCase directly.
 final createBookingUseCaseProvider = Provider<CreateBookingUseCase>(
   (_) => const CreateBookingUseCase(),

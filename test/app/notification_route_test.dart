@@ -1,4 +1,4 @@
-// Unit tests for notificationRouteForData — the rule that maps a push
+// Unit tests for notificationRouteForData - the rule that maps a push
 // notification's FCM data payload to an in-app deep-link route.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/src/app/notification_route.dart';

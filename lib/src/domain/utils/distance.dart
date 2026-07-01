@@ -37,3 +37,18 @@ double _deg2rad(double deg) => deg * (math.pi / 180);
   }
   return (zone: best!, km: bestKm);
 }
+
+/// Like [closestZoneKm] but ignores unset placeholder zones sitting at the
+/// null island (0,0): those mean "no coordinate captured yet", not a real
+/// location, and would otherwise register as an absurd ~5000 km match.
+/// Returns null when no geolocated zone remains.
+({ServiceZone zone, double km})? closestRealZoneKm(
+  List<ServiceZone> zones,
+  double targetLat,
+  double targetLng,
+) {
+  final real = zones
+      .where((z) => !(z.latitude == 0 && z.longitude == 0))
+      .toList();
+  return closestZoneKm(real, targetLat, targetLng);
+}

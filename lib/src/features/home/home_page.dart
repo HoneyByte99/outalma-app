@@ -13,6 +13,7 @@ import '../../application/auth/auth_state.dart';
 import '../../application/home/location_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../core/utils/format_utils.dart';
 import '../../data/services/geocoding_service.dart';
@@ -32,7 +33,7 @@ import '../shared/user_avatar.dart';
 import '../../../l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
-// Filter state — local to this page subtree
+// Filter state - local to this page subtree
 // ---------------------------------------------------------------------------
 
 final _selectedCategoryProvider = StateProvider<CategoryId?>((ref) => null);
@@ -63,23 +64,25 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final authAsync = ref.watch(authNotifierProvider);
-
-    final displayName = authAsync.valueOrNull is AuthAuthenticated
-        ? (authAsync.valueOrNull as AuthAuthenticated).user.displayName
-        : '';
+    final authState = ref.watch(authNotifierProvider).valueOrNull;
+    final isAuthenticated = authState is AuthAuthenticated;
+    final displayName = isAuthenticated ? authState.user.displayName : '';
 
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
         titleSpacing: 0,
         title: const _LocationPill(),
-        actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
+        // A guest has no mode to toggle and no notifications: offer a clear
+        // sign-in entry point instead of the client/provider badge + bell.
+        actions: isAuthenticated
+            ? const [ModeBadge(), BellIconButton(), SizedBox(width: 4)]
+            : const [_GuestSignInAction(), SizedBox(width: 4)],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting — compact single line
+          // Greeting - compact single line
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.l,
@@ -88,9 +91,11 @@ class HomePage extends ConsumerWidget {
               AppSpacing.s,
             ),
             child: Text(
-              displayName.isNotEmpty
-                  ? l10n.homeGreeting(displayName)
-                  : l10n.homeGreetingNoName,
+              isAuthenticated
+                  ? (displayName.isNotEmpty
+                        ? l10n.homeGreeting(displayName)
+                        : l10n.homeGreetingNoName)
+                  : l10n.homeGuestGreeting,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -100,7 +105,7 @@ class HomePage extends ConsumerWidget {
           ),
           // Non-blocking email verification nudge (email accounts only).
           const EmailVerificationBanner(),
-          // Search bar — replaces static subtitle
+          // Search bar - replaces static subtitle
           const _SearchBar(),
           // Category chips
           const _CategoryChipsRow(),
@@ -114,7 +119,33 @@ class HomePage extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Location pill — compact AppBar location indicator
+// Guest sign-in action - shown in the AppBar instead of the mode badge + bell
+// ---------------------------------------------------------------------------
+
+class _GuestSignInAction extends StatelessWidget {
+  const _GuestSignInAction();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextButton.icon(
+        onPressed: () => context.push(AppRoutes.signIn),
+        icon: const Icon(Icons.login_rounded, size: 18),
+        label: Text(l10n.signInButton),
+        style: TextButton.styleFrom(
+          foregroundColor: oc.primary,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Location pill - compact AppBar location indicator
 // ---------------------------------------------------------------------------
 
 class _LocationPill extends ConsumerWidget {
@@ -190,7 +221,7 @@ class _LocationPill extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Location bottom sheet — search + radius + favorites
+// Location bottom sheet - search + radius + favorites
 // ---------------------------------------------------------------------------
 
 class _LocationSheet extends ConsumerStatefulWidget {
@@ -999,30 +1030,37 @@ class _ServiceGrid extends ConsumerWidget {
                   final currentLimit = ref.read(serviceListPageSizeProvider);
                   if (services.length >= currentLimit) {
                     // Only request more if we've actually got the previous
-                    // page filled — otherwise we're at the true end.
+                    // page filled - otherwise we're at the true end.
                     ref.read(serviceListPageSizeProvider.notifier).state =
                         currentLimit + 30;
                   }
                 }
                 return false;
               },
-              child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.l,
-                  AppSpacing.s,
-                  AppSpacing.l,
-                  AppSpacing.xxl,
-                ),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  crossAxisSpacing: spacing,
-                  mainAxisSpacing: spacing,
-                  childAspectRatio: ratio,
-                ),
-                itemCount: filtered.length,
-                itemBuilder: (context, i) {
-                  return _ServiceCard(service: filtered[i]);
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(serviceListProvider);
+                  await ref.read(serviceListProvider.future);
                 },
+                child: GridView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.l,
+                    AppSpacing.s,
+                    AppSpacing.l,
+                    AppSpacing.xxl,
+                  ),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: spacing,
+                    mainAxisSpacing: spacing,
+                    childAspectRatio: ratio,
+                  ),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, i) {
+                    return _ServiceCard(service: filtered[i]);
+                  },
+                ),
               ),
             );
           },
@@ -1044,8 +1082,11 @@ class _ServiceCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    // Guest-safe: resolve the provider's name/avatar from the public projection
+    // (never the PII-bearing users doc), so cards render for unauthenticated
+    // visitors too.
     final providerUser = ref
-        .watch(userByIdProvider(service.providerId))
+        .watch(publicProfileByIdProvider(service.providerId))
         .valueOrNull;
     final reviews =
         ref.watch(reviewsForUserProvider(service.providerId)).valueOrNull ?? [];
@@ -1053,6 +1094,7 @@ class _ServiceCard extends ConsumerWidget {
     final priceLabel = service.priceType == PriceType.hourly
         ? '$formattedPrice/h'
         : formattedPrice;
+    final distanceLabel = _distanceLabel(ref.watch(locationFilterProvider));
 
     return Semantics(
       label: service.title,
@@ -1076,7 +1118,7 @@ class _ServiceCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image — takes all remaining space
+              // Image - takes all remaining space
               Expanded(
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
@@ -1120,7 +1162,7 @@ class _ServiceCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              // Info — intrinsic height, never overflows
+              // Info - intrinsic height, never overflows
               // Info block \u2014 hierarchy A.4: title dominant, price+rating
               // secondary on one row, provider name as discreet tertiary.
               Padding(
@@ -1142,8 +1184,29 @@ class _ServiceCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.xs),
+                    // Strong line: distance (shown when a location filter is
+                    // active) then price as the dominant value.
                     Row(
                       children: [
+                        if (distanceLabel != null) ...[
+                          Icon(
+                            Icons.place_outlined,
+                            size: 13,
+                            color: oc.secondaryText,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            distanceLabel,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: oc.secondaryText,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(width: AppSpacing.s),
+                        ],
                         Expanded(
                           child: Text(
                             priceLabel,
@@ -1156,10 +1219,10 @@ class _ServiceCard extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        _RatingRow(reviews: reviews),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xs),
+                    // Tertiary line: provider identity then rating.
                     Row(
                       children: [
                         UserAvatar(
@@ -1179,6 +1242,8 @@ class _ServiceCard extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: AppSpacing.xs),
+                        _RatingRow(reviews: reviews),
                       ],
                     ),
                   ],
@@ -1189,6 +1254,19 @@ class _ServiceCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Distance from the active location filter to the service's nearest zone,
+  /// formatted for display. Returns null when no filter is set or the service
+  /// has no geolocated zone, so the card simply omits the distance.
+  String? _distanceLabel(LocationFilter? filter) {
+    if (filter == null) return null;
+    final closest = closestRealZoneKm(
+      service.serviceZones,
+      filter.lat,
+      filter.lng,
+    );
+    return closest == null ? null : formatDistanceKm(closest.km);
   }
 
   Widget _iconPlaceholder(OutalmaColors oc) {
@@ -1206,7 +1284,7 @@ class _ServiceCard extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Rating row — stars + average or "Nouveau" badge
+// Rating row - stars + average or "Nouveau" badge
 // ---------------------------------------------------------------------------
 
 class _RatingRow extends StatelessWidget {
@@ -1227,10 +1305,9 @@ class _RatingRow extends StatelessWidget {
           const SizedBox(width: 3),
           Text(
             l10n.ratingNew,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: oc.secondaryText,
               fontStyle: FontStyle.italic,
-              fontSize: 11,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -1248,10 +1325,9 @@ class _RatingRow extends StatelessWidget {
         const SizedBox(width: 2),
         Text(
           '${avg.toStringAsFixed(1)} (${reviews.length})',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
             color: oc.secondaryText,
             fontWeight: FontWeight.w500,
-            fontSize: 11,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

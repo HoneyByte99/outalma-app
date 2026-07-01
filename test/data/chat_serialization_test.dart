@@ -40,7 +40,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('Chat serialization — all fields populated', () {
+  group('Chat serialization - all fields populated', () {
     test('roundtrip preserves all fields', () async {
       final t = DateTime(2024, 2, 20, 14, 0).toUtc();
       final lastMsg = DateTime(2024, 2, 20, 15, 30).toUtc();
@@ -62,7 +62,7 @@ void main() {
     });
   });
 
-  group('Chat serialization — participantIds list', () {
+  group('Chat serialization - participantIds list', () {
     test('participantIds list with two entries roundtrips correctly', () async {
       final chat = _makeChat(participantIds: ['uid_client', 'uid_provider']);
       final col = FirestoreCollections.chats(fakeDb);
@@ -83,7 +83,7 @@ void main() {
     });
   });
 
-  group('Chat serialization — lastMessageAt timestamp', () {
+  group('Chat serialization - lastMessageAt timestamp', () {
     test('lastMessageAt is null when not set', () async {
       final chat = _makeChat(lastMessageAt: null);
       final col = FirestoreCollections.chats(fakeDb);
@@ -116,7 +116,7 @@ void main() {
     });
   });
 
-  group('Chat serialization — createdAt timestamp', () {
+  group('Chat serialization - createdAt timestamp', () {
     test('createdAt roundtrips with millisecond precision', () async {
       final t = DateTime(2024, 2, 20, 14, 0).toUtc();
       final chat = _makeChat(createdAt: t);
@@ -137,7 +137,7 @@ void main() {
     });
   });
 
-  group('Chat serialization — legacy / missing fields', () {
+  group('Chat serialization - legacy / missing fields', () {
     test('missing customerId and providerId default to empty string', () async {
       // Simulates a legacy document written before acceptBooking set these fields
       await fakeDb.collection('chats').doc('legacy_chat').set({

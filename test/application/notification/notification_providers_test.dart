@@ -113,7 +113,7 @@ void main() {
       addTearDown(container.dispose);
 
       await container.read(authNotifierProvider.future);
-      // Stream.empty() means the AsyncValue stays in loading — no data.
+      // Stream.empty() means the AsyncValue stays in loading - no data.
       final value = container.read(notificationsProvider);
       expect(value.hasValue, isFalse);
     });

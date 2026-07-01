@@ -91,7 +91,7 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
     unawaited(ref.read(routerProvider).push(route));
   }
 
-  /// Listens for incoming Universal / App Links — primarily Firebase email
+  /// Listens for incoming Universal / App Links - primarily Firebase email
   /// verification links. When one arrives, applies the action code via
   /// AuthNotifier.
   Future<void> _initAppLinks() async {
@@ -183,7 +183,7 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       builder: (context, child) => GestureDetector(
-        // Tap anywhere outside a focused field to dismiss the keyboard — applies
+        // Tap anywhere outside a focused field to dismiss the keyboard - applies
         // app-wide. Translucent so taps still reach buttons/fields underneath.
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),

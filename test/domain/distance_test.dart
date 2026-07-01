@@ -47,11 +47,46 @@ void main() {
         radiusKm: 10,
       );
 
-      // Target near Lyon — should pick Lyon.
+      // Target near Lyon - should pick Lyon.
       final result = closestZoneKm([paris, lyon, marseille], 45.76, 4.84);
       expect(result, isNotNull);
       expect(result!.zone.label, 'Lyon');
       expect(result.km, lessThan(5));
+    });
+  });
+
+  group('closestRealZoneKm', () {
+    const paris = ServiceZone(
+      label: 'Paris',
+      latitude: 48.8566,
+      longitude: 2.3522,
+      radiusKm: 10,
+    );
+    const unset = ServiceZone(
+      label: 'Unset',
+      latitude: 0,
+      longitude: 0,
+      radiusKm: 10,
+    );
+
+    test('ignores unset (0,0) placeholder zones', () {
+      final result = closestRealZoneKm([unset, paris], 48.8566, 2.3522);
+      expect(result, isNotNull);
+      expect(result!.zone.label, 'Paris');
+      expect(result.km, closeTo(0, 1));
+    });
+
+    test('returns null when every zone is unset', () {
+      expect(closestRealZoneKm(const [unset], 48.85, 2.35), isNull);
+    });
+
+    test('returns null when zones list is empty', () {
+      expect(closestRealZoneKm(const [], 48.85, 2.35), isNull);
+    });
+
+    test('does not let a null-island target match an unset zone', () {
+      // A target at (0,0) is 0 km from the unset zone; we must still skip it.
+      expect(closestRealZoneKm(const [unset], 0, 0), isNull);
     });
   });
 }

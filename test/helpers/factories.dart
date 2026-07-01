@@ -4,7 +4,7 @@
 // makeTestChat(), makeTestReview() builders with sensible defaults
 // and named parameters to override specific fields.
 //
-// This file contains NO tests — import it from test files.
+// This file contains NO tests - import it from test files.
 
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
 import 'package:outalma_app/src/domain/enums/booking_status.dart';

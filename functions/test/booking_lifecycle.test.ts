@@ -1,4 +1,4 @@
-// Booking state machine — server-authoritative transitions (the core the whole
+// Booking state machine - server-authoritative transitions (the core the whole
 // product trusts). Runs against the Firestore emulator via `npm test`.
 import functionsTest from 'firebase-functions-test';
 

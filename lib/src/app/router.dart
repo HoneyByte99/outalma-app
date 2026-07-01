@@ -55,7 +55,7 @@ abstract final class AppRoutes {
   static String serviceDetail(String serviceId) => '/service/$serviceId';
   static String bookingDetail(String bookingId) => '/bookings/$bookingId';
 
-  /// Deep-link path for notifications — resolves outside the shell to avoid
+  /// Deep-link path for notifications - resolves outside the shell to avoid
   /// duplicate-key conflict with the shell-nested /bookings/:bookingId route.
   static String bookingDeepLink(String bookingId) => '/booking/$bookingId';
   static String serviceEdit(String serviceId) =>
@@ -71,7 +71,7 @@ abstract final class AppRoutes {
   static const profile = '/profile';
   static const myReviews = '/my-reviews';
 
-  // Legal documents — served in-app from bundled assets (no remote link).
+  // Legal documents - served in-app from bundled assets (no remote link).
   static const legalTerms = '/legal/terms';
   static const legalPrivacy = '/legal/privacy';
 
@@ -84,7 +84,7 @@ abstract final class AppRoutes {
 }
 
 // ---------------------------------------------------------------------------
-// RouterNotifier — bridges Riverpod auth state to GoRouter refreshListenable
+// RouterNotifier - bridges Riverpod auth state to GoRouter refreshListenable
 // ---------------------------------------------------------------------------
 
 class RouterNotifier extends ChangeNotifier {
@@ -109,30 +109,43 @@ class RouterNotifier extends ChangeNotifier {
         final loc = state.matchedLocation;
         // Legal documents are always accessible (before auth, during onboarding).
         if (loc.startsWith('/legal')) return null;
-        // OTP lab is debug-only — block in release builds.
+        // OTP lab is debug-only - block in release builds.
         if (kDebugMode && loc == AppRoutes.otpLab) return null;
         if (!kDebugMode && loc == AppRoutes.otpLab) return AppRoutes.signIn;
         final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
         final isOnboardingRoute = loc == AppRoutes.onboarding;
 
         // First launch: the onboarding screen (which carries the CGU consent
-        // gate) must be shown BEFORE anything else — including sign-in — so
+        // gate) must be shown BEFORE anything else - including sign-in - so
         // consent is collected at app opening, not after authentication.
         final onboardingDone = _ref.read(onboardingDoneProvider);
         if (!onboardingDone) {
           return isOnboardingRoute ? null : AppRoutes.onboarding;
         }
 
-        // ---- Unauthenticated ----
+        // ---- Unauthenticated (guest browsing) ----
+        // Guests may explore a limited public surface without an account:
+        // the home discovery grid, a service detail, a public provider
+        // profile, and a user's reviews. Everything else (bookings, chats,
+        // profile, provider tools, and the act of booking or switching to
+        // provider mode) is gated behind sign-in at its entry point.
         if (authState is AuthUnauthenticated) {
-          if (isOnboardingRoute) return AppRoutes.signIn; // already consented
-          return isAuthRoute ? null : AppRoutes.signIn;
+          if (isAuthRoute) return null;
+          // Consent already collected: leaving onboarding lands on public home.
+          if (isOnboardingRoute) return AppRoutes.home;
+          if (isGuestAllowed(loc)) return null;
+          return AppRoutes.signIn;
         }
 
         // ---- Authenticated ----
         if (authState is AuthAuthenticated) {
           if (isOnboardingRoute) return AppRoutes.home;
-          if (isAuthRoute) return AppRoutes.home;
+          if (isAuthRoute) {
+            // Return-to-intention: a gated action sent the guest here with a
+            // ?redirect=<internal path> (which may carry its own intent, e.g.
+            // /service/:id?book=1). Resume there instead of dumping on /home.
+            return postAuthTarget(state.uri) ?? AppRoutes.home;
+          }
 
           // When switching modes, redirect to the right home tab.
           // Uses startsWith to catch sub-routes (e.g. /bookings/:id,
@@ -167,6 +180,27 @@ class RouterNotifier extends ChangeNotifier {
         return null;
       },
     );
+  }
+
+  /// Routes a signed-out guest is allowed to view. Kept in sync with the
+  /// public-read Firestore rules (services, providers, public_profiles,
+  /// reviews); `/legal` is handled earlier in [redirect].
+  @visibleForTesting
+  static bool isGuestAllowed(String loc) {
+    return loc == AppRoutes.home ||
+        loc.startsWith('/service/') ||
+        loc.startsWith('/provider-profile/') ||
+        loc.startsWith('/reviews/');
+  }
+
+  /// Return-to-intention target after signing in from an auth route.
+  /// Reads `?redirect=<internal path>` and only honours in-app paths (leading
+  /// slash) to avoid an open-redirect. Returns null when there is none.
+  @visibleForTesting
+  static String? postAuthTarget(Uri uri) {
+    final target = uri.queryParameters['redirect'];
+    if (target != null && target.startsWith('/')) return target;
+    return null;
   }
 }
 
@@ -237,14 +271,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'sign-up',
         builder: (_, __) => const SignUpPage(),
       ),
-      // ---- OTP Lab (debug only — stripped from release builds) ----
+      // ---- OTP Lab (debug only - stripped from release builds) ----
       if (kDebugMode)
         GoRoute(
           path: AppRoutes.otpLab,
           name: 'otp-lab',
           builder: (_, __) => const OtpLabPage(),
         ),
-      // ---- Provider onboarding (outside shell — full screen) ----
+      // ---- Provider onboarding (outside shell - full screen) ----
       GoRoute(
         path: AppRoutes.providerOnboarding,
         name: 'provider-onboarding',
@@ -258,14 +292,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ProviderCalendarPage(),
       ),
 
-      // ---- Service form — new (outside shell) ----
+      // ---- Service form - new (outside shell) ----
       GoRoute(
         path: AppRoutes.serviceNew,
         name: 'service-new',
         builder: (_, __) => const ServiceFormPage(),
       ),
 
-      // ---- Service form — edit (outside shell) ----
+      // ---- Service form - edit (outside shell) ----
       GoRoute(
         path: '/provider/services/:serviceId/edit',
         name: 'service-edit',
@@ -282,7 +316,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
-          // Branch 0 — Client: Home
+          // Branch 0 - Client: Home
           StatefulShellBranch(
             navigatorKey: _shellNavigatorHomeKey,
             routes: [
@@ -294,7 +328,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 1 — Client: Bookings
+          // Branch 1 - Client: Bookings
           StatefulShellBranch(
             navigatorKey: _shellNavigatorBookingsKey,
             routes: [
@@ -315,7 +349,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 2 — Provider: Dashboard
+          // Branch 2 - Provider: Dashboard
           StatefulShellBranch(
             navigatorKey: _shellNavigatorProviderKey,
             routes: [
@@ -327,7 +361,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 3 — Provider: Inbox
+          // Branch 3 - Provider: Inbox
           StatefulShellBranch(
             navigatorKey: _shellNavigatorInboxKey,
             routes: [
@@ -348,7 +382,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 4 — Chats (shared between client and provider modes)
+          // Branch 4 - Chats (shared between client and provider modes)
           StatefulShellBranch(
             navigatorKey: _shellNavigatorChatsKey,
             routes: [
@@ -360,7 +394,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 5 — Profile & Settings (shared between client and provider)
+          // Branch 5 - Profile & Settings (shared between client and provider)
           StatefulShellBranch(
             navigatorKey: _shellNavigatorProfileKey,
             routes: [
@@ -374,12 +408,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // ---- Service detail (outside shell — full-screen) ----
+      // ---- Service detail (outside shell - full-screen) ----
       GoRoute(
         path: '/service/:serviceId',
         name: 'service-detail',
-        builder: (_, state) =>
-            ServiceDetailPage(serviceId: state.pathParameters['serviceId']!),
+        builder: (_, state) => ServiceDetailPage(
+          serviceId: state.pathParameters['serviceId']!,
+          // Return-to-intention: after a guest logs in to book, we come back
+          // here with ?book=1 to reopen the booking sheet automatically.
+          autoOpenBooking: state.uri.queryParameters['book'] == '1',
+        ),
       ),
 
       // ---- Booking detail deep-link (notifications, external links) ----
@@ -459,7 +497,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 
 // ---------------------------------------------------------------------------
-// Service edit loader — fetches service before showing form
+// Service edit loader - fetches service before showing form
 // ---------------------------------------------------------------------------
 
 class _ServiceEditLoader extends ConsumerWidget {

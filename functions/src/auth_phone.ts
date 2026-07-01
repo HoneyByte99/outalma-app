@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Phone authentication via OTP — production flow
+// Phone authentication via OTP - production flow
 // ---------------------------------------------------------------------------
 //
 // Three callable functions form the canonical phone-auth pipeline:
@@ -170,7 +170,7 @@ async function twilioCheckVerification(
 }
 
 // ---------------------------------------------------------------------------
-// User lookup helpers — Firebase Auth is the source of truth for phone↔uid
+// User lookup helpers - Firebase Auth is the source of truth for phone↔uid
 // mapping. We DELIBERATELY do not look up via Firestore mirror, because the
 // users collection allows client-side updates and could be poisoned to redirect
 // sign-ins to an attacker-owned uid (cf. security review C1 / C2).
@@ -273,7 +273,7 @@ export const verifyPhoneOtpAndSignUp = onCall(
 
     // Create Firebase Auth user with phoneNumber as the primary identifier.
     // No fake email, no deterministic password. Firebase Auth enforces phone
-    // uniqueness natively — if a concurrent request beat us to it, createUser
+    // uniqueness natively - if a concurrent request beat us to it, createUser
     // throws `auth/phone-number-already-exists` which we rethrow as a clean
     // already-exists error (H3 from security review).
     let created;
@@ -304,7 +304,7 @@ export const verifyPhoneOtpAndSignUp = onCall(
       country,
       activeMode: 'client',
       createdAt: admin.firestore.Timestamp.now(),
-      // Consent proof (RGPD) — the sign-up screen gates submission on acceptance.
+      // Consent proof (RGPD) - the sign-up screen gates submission on acceptance.
       termsAcceptedAt: admin.firestore.Timestamp.now(),
     });
 

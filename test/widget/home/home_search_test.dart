@@ -37,8 +37,8 @@ Widget _wrap({List<Service> services = const []}) => ProviderScope(
 );
 
 void main() {
-  group('HomePage — search', () {
-    testWidgets('smoke — renders without throwing', (tester) async {
+  group('HomePage - search', () {
+    testWidgets('smoke - renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       expect(find.byType(HomePage), findsOneWidget);

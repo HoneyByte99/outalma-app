@@ -45,7 +45,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('ChatMessage serialization — text type', () {
+  group('ChatMessage serialization - text type', () {
     test('text message roundtrips with text field populated', () async {
       final msg = _makeMessage(
         type: MessageType.text,
@@ -86,7 +86,7 @@ void main() {
     });
   });
 
-  group('ChatMessage serialization — image type', () {
+  group('ChatMessage serialization - image type', () {
     test('image message roundtrips with mediaUrl populated', () async {
       final msg = _makeMessage(
         id: 'msg_img',
@@ -129,7 +129,7 @@ void main() {
     });
   });
 
-  group('ChatMessage serialization — voice type', () {
+  group('ChatMessage serialization - voice type', () {
     test('voice message roundtrips with mediaUrl populated', () async {
       final msg = _makeMessage(
         id: 'msg_voice',
@@ -171,7 +171,7 @@ void main() {
     });
   });
 
-  group('ChatMessage serialization — MessageType enum fallback', () {
+  group('ChatMessage serialization - MessageType enum fallback', () {
     test('unknown type string falls back to text', () async {
       await fakeDb
           .collection('chats')
@@ -193,7 +193,7 @@ void main() {
     });
   });
 
-  group('ChatMessage serialization — createdAt timestamp', () {
+  group('ChatMessage serialization - createdAt timestamp', () {
     test('createdAt roundtrips with millisecond precision', () async {
       final t = DateTime(2024, 6, 15, 7, 45, 0).toUtc();
       final msg = _makeMessage(createdAt: t, text: 'hello');
@@ -227,7 +227,7 @@ void main() {
     });
   });
 
-  group('ChatMessage serialization — readBy list', () {
+  group('ChatMessage serialization - readBy list', () {
     test('empty readBy list roundtrips as empty', () async {
       final msg = _makeMessage(id: 'msg_unread', readBy: []);
       final col = FirestoreCollections.chatMessages(
@@ -257,7 +257,7 @@ void main() {
     });
   });
 
-  group('ChatMessage serialization — null fields', () {
+  group('ChatMessage serialization - null fields', () {
     test('text and mediaUrl both null roundtrip as null', () async {
       final msg = _makeMessage(
         id: 'msg_nulls',

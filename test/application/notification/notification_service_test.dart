@@ -1,4 +1,4 @@
-// Tests for NotificationService.initialize() — the client-side FCM token
+// Tests for NotificationService.initialize() - the client-side FCM token
 // registration logic. FirebaseMessaging is mocked (mocktail); Firestore is a
 // fake. Platform is forced to Android so the iOS APNS poll loop is skipped
 // (that 6s wait is native timing, not logic we can unit-test here).
@@ -105,7 +105,7 @@ void main() {
     await service().initialize();
 
     expect(await savedToken(), isNull);
-    // onTokenRefresh still wired up — a later token is still captured.
+    // onTokenRefresh still wired up - a later token is still captured.
     tokenRefresh.add('tok-recovered');
     await Future<void>.delayed(Duration.zero);
     expect(await savedToken(), 'tok-recovered');

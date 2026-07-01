@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 
 /// Identifies which legal document to display.
@@ -19,7 +20,7 @@ enum LegalDoc {
 /// In-app viewer for legal documents (CGU / privacy policy).
 ///
 /// Loads the Markdown source from a bundled asset and renders it with a
-/// lightweight renderer — no remote link, works fully offline.
+/// lightweight renderer - no remote link, works fully offline.
 class LegalPage extends StatelessWidget {
   const LegalPage({super.key, required this.doc, required this.title});
 
@@ -29,6 +30,7 @@ class LegalPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
@@ -56,13 +58,13 @@ class LegalPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Document indisponible.',
+                      l10n.legalDocumentUnavailable,
                       style: TextStyle(color: oc.secondaryText),
                     ),
                     const SizedBox(height: 12),
                     TextButton(
                       onPressed: () => Navigator.of(context).maybePop(),
-                      child: const Text('Retour'),
+                      child: Text(l10n.back),
                     ),
                   ],
                 ),
@@ -75,7 +77,7 @@ class LegalPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Visual cue at the top of the document (shield = privacy,
-                // handshake = terms) — helps low-literacy users orient.
+                // handshake = terms) - helps low-literacy users orient.
                 Center(
                   child: Container(
                     margin: const EdgeInsets.only(top: 4, bottom: 8),

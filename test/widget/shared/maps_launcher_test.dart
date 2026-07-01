@@ -16,7 +16,7 @@ import 'package:outalma_app/src/app/app_theme.dart';
 
 void main() {
   // -------------------------------------------------------------------------
-  // URL structure unit tests (pure Dart — no platform channel needed)
+  // URL structure unit tests (pure Dart - no platform channel needed)
   // -------------------------------------------------------------------------
 
   group('Google Maps universal URL structure', () {
@@ -190,18 +190,18 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // openDirections() invocation — skipped (requires platform channel)
+  // openDirections() invocation - skipped (requires platform channel)
   // -------------------------------------------------------------------------
 
   test(
-    'openDirections: skipped — requires platform channel',
+    'openDirections: skipped - requires platform channel',
     () {},
     skip: 'requires platform channel',
   );
 }
 
 // ---------------------------------------------------------------------------
-// Local helper — mirrors _MapsOption without importing the private class
+// Local helper - mirrors _MapsOption without importing the private class
 // ---------------------------------------------------------------------------
 
 class _FakeMapOption {

@@ -4,8 +4,8 @@
 // (accessed only when a date is chosen). For a smoke render at step 0 (message),
 // no provider overrides are required beyond a stub for createBookingUseCase.
 //
-// NOTE: record / audio plugin calls happen only on user interaction — not on
-// initial render — so they do not crash the smoke test.
+// NOTE: record / audio plugin calls happen only on user interaction - not on
+// initial render - so they do not crash the smoke test.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,7 +21,7 @@ class _MockCreateBookingUseCase extends Mock implements CreateBookingUseCase {}
 
 void main() {
   group('BookingRequestSheet', () {
-    testWidgets('smoke — sheet renders without throwing', (tester) async {
+    testWidgets('smoke - sheet renders without throwing', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [

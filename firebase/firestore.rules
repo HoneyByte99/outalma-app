@@ -48,12 +48,12 @@ service cloud.firestore {
       // path wildcard to the authenticated user's uid.
       function isUserUpdateSafe() {
         // Use .get() with a sentinel default for phoneE164 because dot-notation on an
-        // absent field does not compare equal to null in Firestore rules — only .get()
+        // absent field does not compare equal to null in Firestore rules - only .get()
         // guarantees a safe fallback that makes null==null evaluate to true.
         return request.resource.data.get('phoneE164', '__absent__') == resource.data.get('phoneE164', '__absent__')
           && request.resource.data.email == resource.data.email;
       }
-      // Email-only accounts must not carry a phoneE164 field on create — phone
+      // Email-only accounts must not carry a phoneE164 field on create - phone
       // numbers are written exclusively by Cloud Functions (admin SDK, bypasses
       // these rules). The path-level isSelf(uid) guard already ensures the user
       // can only write their own document.
@@ -66,7 +66,7 @@ service cloud.firestore {
       allow update: if isAdmin() || (isSelf(uid) && isUserUpdateSafe());
       allow delete: if isAdmin();
 
-      // Users a person has blocked — private to that person.
+      // Users a person has blocked - private to that person.
       match /blockedUsers/{blockedUid} {
         allow read, write: if isSelf(uid);
       }
@@ -82,7 +82,7 @@ service cloud.firestore {
       // `suspended:false` and undo moderation. Those keys are set exclusively by
       // suspendProvider/unsuspendProvider (Admin SDK) and read back as a gate in
       // createBooking. (Security review S2.) `active` is intentionally NOT in
-      // this list — it is the owner-controlled pause switch, also gated server-
+      // this list - it is the owner-controlled pause switch, also gated server-
       // side in createBooking.
       allow update: if isAdmin()
         || (isSelf(uid)
@@ -98,6 +98,17 @@ service cloud.firestore {
       allow delete: if isAdmin() || isSelf(uid);
     }
 
+    // ---------- PUBLIC PROFILES (PII-free mirror of users, world-readable) ----------
+    // Holds ONLY { displayName, photoPath } so guests can see provider names,
+    // avatars and reviewer names without unlocking the users collection (which
+    // carries email + phoneE164). Written exclusively by the mirrorPublicProfile
+    // / backfillPublicProfiles Cloud Functions (Admin SDK bypasses rules); any
+    // client write is denied so the projection can never be poisoned.
+    match /public_profiles/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ---------- SERVICE TYPES (reference collection) ----------
     match /service_types/{typeId} {
       allow read: if true;
@@ -108,7 +119,7 @@ service cloud.firestore {
     match /services/{serviceId} {
       allow read: if true;
 
-      // Providers are active by default — publishing is NOT gated on onboarding.
+      // Providers are active by default - publishing is NOT gated on onboarding.
       // The only block is moderation: a suspended provider cannot publish. No
       // provider doc yet → allowed (active by default). (E1, relaxed.)
       function publishAllowed() {
@@ -117,7 +128,7 @@ service cloud.firestore {
           || get(/databases/$(database)/documents/providers/$(request.auth.uid)).data.suspended != true;
       }
 
-      // categoryId must be one of the fixed catalogue categories — no
+      // categoryId must be one of the fixed catalogue categories - no
       // off-catalogue services, regardless of client or direct API write.
       function validCategory() {
         return request.resource.data.categoryId in [
@@ -146,7 +157,7 @@ service cloud.firestore {
     }
 
     // ---------- BOOKINGS (private) ----------
-    // Note: isBookingParticipant() is NOT used here — it calls get() on the
+    // Note: isBookingParticipant() is NOT used here - it calls get() on the
     // booking document itself (circular reference), which Firestore denies for
     // both get and list. Use resource.data directly instead.
     match /bookings/{bookingId} {
@@ -165,7 +176,7 @@ service cloud.firestore {
       allow create: if false;
 
       // Update: bookings are mutated EXCLUSIVELY by Cloud Functions (accept,
-      // reject, cancel, markInProgress, confirmDone — Admin SDK bypasses rules).
+      // reject, cancel, markInProgress, confirmDone - Admin SDK bypasses rules).
       // The client never writes a booking document (the repository only reads),
       // so any client update is denied. This closes the previous hole where a
       // participant could forge server-authoritative fields (chatId, doneAt,
@@ -240,7 +251,7 @@ service cloud.firestore {
           || (isParticipantViaChat()
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
               && request.auth.uid in request.resource.data.readBy)
-          // A participant may add/update emoji reactions — but ONLY their own
+          // A participant may add/update emoji reactions - but ONLY their own
           // entry in the reactions map (keyed by uid). Previously any
           // participant could overwrite/delete the OTHER party's reaction.
           // (Security review S4.)
@@ -256,7 +267,7 @@ service cloud.firestore {
           // Sender edits their own message text within 15 minutes of sending:
           // only text + edited may change, edited flips to true. Edits are also
           // blocked once the booking is done (conversation read-only) or when
-          // the pair is blocked — same gate as create. (Security review S4.)
+          // the pair is blocked - same gate as create. (Security review S4.)
           || (resource.data.senderId == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited'])
               && request.resource.data.edited == true
@@ -271,7 +282,7 @@ service cloud.firestore {
       // ---------- TYPING INDICATORS ----------
       // Each user writes their own doc (uid == auth.uid).
       // Read is open to any chat participant.
-      // Abuse risk: negligible — one tiny doc per participant, no data exposed.
+      // Abuse risk: negligible - one tiny doc per participant, no data exposed.
       match /typing/{uid} {
         function isParticipantViaChatForTyping() {
           return signedIn()
@@ -315,7 +326,11 @@ service cloud.firestore {
     // Reviews are only allowed after a booking reaches "done" status.
     // Reviewer must be a participant of the referenced booking.
     match /reviews/{reviewId} {
-      allow read: if signedIn();
+      // Public read: ratings and comments are marketplace trust signals shown
+      // to guests on service cards and public provider profiles. Reviews carry
+      // no PII (reviewer identity is resolved via public_profiles); the
+      // reviewerId/revieweeId are opaque uids. Writes stay tightly gated below.
+      allow read: if true;
 
       // Create-only (no non-admin update) + deterministic doc id
       // "{bookingId}_{reviewerId}" guarantees one review per (booking, reviewer):
@@ -353,7 +368,7 @@ service cloud.firestore {
 
     // ---------- DATA EXPORT REQUESTS (RGPD portability) ----------
     // Created exclusively by the requestDataExport Cloud Function (Admin SDK).
-    // The doc holds the destination email (PII) — readable only by the owner
+    // The doc holds the destination email (PII) - readable only by the owner
     // and support+, who fulfil it from the admin dashboard.
     match /data_export_requests/{reqId} {
       allow read: if isMinSupport()
@@ -447,7 +462,7 @@ service cloud.firestore {
       allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
     }
 
-    // ---------- PROCESSED EVENTS (trigger dedup — CF only via Admin SDK) ----------
+    // ---------- PROCESSED EVENTS (trigger dedup - CF only via Admin SDK) ----------
     // Used by stat-increment triggers to prevent double-counting on Firebase retries.
     // Should be purged after 7 days via a Firestore TTL policy on the `processedAt` field.
     match /processed_events/{eventId} {

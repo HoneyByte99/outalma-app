@@ -4,7 +4,7 @@ import '../../app/app_theme.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// Reusable trust/safety notice: Outalma only connects clients and independent
-/// providers — any agreement and payment happens directly between the two
+/// providers - any agreement and payment happens directly between the two
 /// parties, outside the app and at their own risk. Shown at booking time, on
 /// the service detail, and in onboarding/CGU.
 class MarketplaceDisclaimer extends StatelessWidget {

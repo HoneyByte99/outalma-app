@@ -1,4 +1,4 @@
-// Firestore security-rules tests — run the REAL production rules
+// Firestore security-rules tests - run the REAL production rules
 // (firebase/firestore.rules) against the emulator via @firebase/rules-unit-testing.
 // Locks the security fixes S2/S3/S4 and the core access invariants.
 import {
@@ -61,7 +61,7 @@ const asAdmin = () => asUser('boss', { admin: true });
 const anon = () => env.unauthenticatedContext().firestore() as unknown as Firestore;
 
 // ---------------------------------------------------------------------------
-// S2 — providers: owner cannot self-clear moderation fields
+// S2 - providers: owner cannot self-clear moderation fields
 // ---------------------------------------------------------------------------
 describe('S2 providers moderation fields', () => {
   beforeEach(async () => {
@@ -83,7 +83,7 @@ describe('S2 providers moderation fields', () => {
   });
 
   test('owner CAN flip their own availability (active)', async () => {
-    // `active` is the owner-controlled Disponible/En pause switch — not a
+    // `active` is the owner-controlled Disponible/En pause switch - not a
     // moderation field, so self-writes are allowed.
     await assertSucceeds(
       updateDoc(doc(asUser('p1'), 'providers/p1'), { active: false })
@@ -98,7 +98,7 @@ describe('S2 providers moderation fields', () => {
 });
 
 // ---------------------------------------------------------------------------
-// S3 — bookings are server-authoritative; no client update
+// S3 - bookings are server-authoritative; no client update
 // ---------------------------------------------------------------------------
 describe('S3 bookings update is admin-only', () => {
   beforeEach(async () => {
@@ -150,7 +150,7 @@ describe('S3 bookings update is admin-only', () => {
 });
 
 // ---------------------------------------------------------------------------
-// S4 — chat reactions own-key only; edit locked after booking done
+// S4 - chat reactions own-key only; edit locked after booking done
 // ---------------------------------------------------------------------------
 describe('S4 chat message integrity', () => {
   async function seedChat(opts: { bookingId?: string; bookingStatus?: string }) {
@@ -221,7 +221,7 @@ describe('S4 chat message integrity', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Message create gating — blocked pair cannot message
+// Message create gating - blocked pair cannot message
 // ---------------------------------------------------------------------------
 describe('message create gating', () => {
   beforeEach(async () => {
@@ -264,7 +264,7 @@ describe('message create gating', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Reviews create gating — bilateral after done, but never between a blocked
+// Reviews create gating - bilateral after done, but never between a blocked
 // pair (coupure totale).
 // ---------------------------------------------------------------------------
 describe('reviews block gating', () => {
@@ -307,7 +307,7 @@ describe('reviews block gating', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Services publish gate — a service goes live only with an active provider
+// Services publish gate - a service goes live only with an active provider
 // profile (E1). Drafts are always allowed.
 // ---------------------------------------------------------------------------
 describe('services publish gate', () => {
@@ -366,7 +366,7 @@ describe('services publish gate', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Data export requests — owner + support read; client cannot self-create
+// Data export requests - owner + support read; client cannot self-create
 // ---------------------------------------------------------------------------
 describe('data export requests', () => {
   beforeEach(async () => {
@@ -405,7 +405,7 @@ describe('data export requests', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Core invariants — users PII guard, notifications, default deny
+// Core invariants - users PII guard, notifications, default deny
 // ---------------------------------------------------------------------------
 describe('core access invariants', () => {
   test('user create cannot include phoneE164 (server-only)', async () => {
@@ -468,5 +468,75 @@ describe('core access invariants', () => {
 
   test('default-deny: unknown collection is not readable', async () => {
     await assertFails(getDoc(doc(asUser('alice'), 'secret_stuff/x')));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Guest browsing (Lot 2/3): public_profiles is world-readable + server-only,
+// while users (PII) stays locked. Also pins the existing public reads that the
+// guest discovery flow relies on.
+// ---------------------------------------------------------------------------
+describe('guest browsing surface', () => {
+  beforeEach(async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'public_profiles/p1'), {
+        displayName: 'Awa Ndiaye',
+        photoPath: 'avatars/p1.jpg',
+      });
+      await setDoc(doc(db, 'users/p1'), {
+        displayName: 'Awa Ndiaye',
+        email: 'awa@example.com',
+        phoneE164: '+221770000000',
+      });
+      await setDoc(doc(db, 'providers/p1'), { uid: 'p1', suspended: false });
+      await setDoc(doc(db, 'services/s1'), {
+        providerId: 'p1',
+        published: true,
+      });
+      await setDoc(doc(db, 'service_types/menage'), { label: 'Menage' });
+      await setDoc(doc(db, 'reviews/b1_c1'), {
+        bookingId: 'b1',
+        reviewerId: 'c1',
+        revieweeId: 'p1',
+        rating: 5,
+      });
+    });
+  });
+
+  test('guest CAN read a public_profile', async () => {
+    await assertSucceeds(getDoc(doc(anon(), 'public_profiles/p1')));
+  });
+
+  test('guest CANNOT write a public_profile (server-authoritative)', async () => {
+    await assertFails(
+      setDoc(doc(anon(), 'public_profiles/p2'), { displayName: 'Hacker' })
+    );
+  });
+
+  test('signed-in user CANNOT write a public_profile either', async () => {
+    await assertFails(
+      setDoc(doc(asUser('p1'), 'public_profiles/p1'), {
+        displayName: 'Self-edited',
+      })
+    );
+    await assertFails(
+      updateDoc(doc(asUser('p1'), 'public_profiles/p1'), {
+        photoPath: 'avatars/evil.jpg',
+      })
+    );
+  });
+
+  test('guest still CANNOT read users (PII stays locked)', async () => {
+    await assertFails(getDoc(doc(anon(), 'users/p1')));
+  });
+
+  test('guest CAN read providers, services and service_types', async () => {
+    await assertSucceeds(getDoc(doc(anon(), 'providers/p1')));
+    await assertSucceeds(getDoc(doc(anon(), 'services/s1')));
+    await assertSucceeds(getDoc(doc(anon(), 'service_types/menage')));
+  });
+
+  test('guest CAN read reviews (trust signal, no PII)', async () => {
+    await assertSucceeds(getDoc(doc(anon(), 'reviews/b1_c1')));
   });
 });

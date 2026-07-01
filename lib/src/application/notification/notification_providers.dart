@@ -33,7 +33,7 @@ final notificationsProvider = StreamProvider<List<AppNotification>>((ref) {
       .map((qs) => qs.docs.map((d) => d.data()).toList());
 });
 
-/// Derived count of unread notifications — drives the bell badge.
+/// Derived count of unread notifications - drives the bell badge.
 final unreadNotificationsCountProvider = Provider<int>((ref) {
   final list = ref.watch(notificationsProvider).valueOrNull ?? [];
   return list.where((n) => !n.read).length;

@@ -1,4 +1,4 @@
-// Widget tests for UserAvatar — covers initials logic and radius sizing.
+// Widget tests for UserAvatar - covers initials logic and radius sizing.
 // Only tests the photoPath: null path (no network mocking needed).
 
 import 'package:flutter/material.dart';

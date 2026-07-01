@@ -1,6 +1,6 @@
 // Application-layer tests for chat messaging.
 //
-// The chat layer has no use-case classes — the ChatRepository is called
+// The chat layer has no use-case classes - the ChatRepository is called
 // directly from providers. These tests verify the ChatRepository contract
 // methods (sendMessage, setTyping, watchOtherTyping) using a mock repository
 // via mocktail, ensuring application expectations are met without depending

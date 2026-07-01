@@ -54,7 +54,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Timer? _recordingTimer;
   // Id of the newest message we last auto-scrolled to. Tracking the id (not a
   // count) means prepending older messages via pagination never triggers a
-  // jump to the bottom — only a genuinely new latest message does.
+  // jump to the bottom - only a genuinely new latest message does.
   String? _lastBottomMsgId;
   Timer? _typingCooldown;
 
@@ -101,7 +101,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final db = ref.read(firestoreProvider);
     for (final n in notifs) {
       if (!n.read && n.chatId == widget.chatId) {
-        // ignore: unawaited_futures — best-effort, fire and forget
+        // ignore: unawaited_futures - best-effort, fire and forget
         markNotificationRead(db: db, uid: authState.user.id, notifId: n.id);
       }
     }
@@ -219,7 +219,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
-  // Pending image preview — WhatsApp-style: preview + caption before send
+  // Pending image preview - WhatsApp-style: preview + caption before send
   String? _pendingImageUrl;
 
   // Message the composer is currently replying to (quote shown above input).
@@ -591,7 +591,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         );
       }
     } catch (e, st) {
-      // Was silently swallowed before — log the real cause for diagnosis.
+      // Was silently swallowed before - log the real cause for diagnosis.
       debugPrint('[Voice] recorder.start failed: $e\n$st');
       // Roll back the optimistic countdown if recording never actually started.
       _recordingTimer?.cancel();
@@ -643,7 +643,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     try {
       final media = ref.read(chatMediaServiceProvider);
       // path is a blob URL on web (fetch via http) or a filesystem path on
-      // native (read directly — http.get cannot resolve file paths).
+      // native (read directly - http.get cannot resolve file paths).
       final Uint8List bytes = kIsWeb
           ? (await http.get(Uri.parse(path))).bodyBytes
           : await File(path).readAsBytes();
@@ -710,12 +710,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final isMissionDone = booking?.status == BookingStatus.done;
 
     // The other participant is the provider when their uid matches the chat's
-    // providerId — only then is their public profile reachable on tap.
+    // providerId - only then is their public profile reachable on tap.
     final otherIsProvider =
         otherUid != null && otherUid.isNotEmpty && chat?.providerId == otherUid;
 
     // Mark messages read whenever the set of unread messages from the other
-    // party changes — keyed on the newest unread message id rather than the
+    // party changes - keyed on the newest unread message id rather than the
     // raw count, so edits/deletes and pagination don't miss (or spam) the
     // write. Idempotent: markMessagesRead only writes for genuinely unread docs.
     ref.listen<AsyncValue<List<ChatMessage>>>(
@@ -823,7 +823,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   return _EmptyChat();
                 }
                 // Auto-scroll only when the newest message changes (a real new
-                // message or first load) — never when older messages are
+                // message or first load) - never when older messages are
                 // prepended via pagination, and not on plain rebuilds.
                 final newestId = messages.last.id;
                 if (newestId != _lastBottomMsgId) {
@@ -836,7 +836,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 // When the loaded window is full there are probably older
                 // messages on the server: show a header to fetch one more page.
                 // Compare against the RAW fetched count, not the blocked-filtered
-                // list — otherwise filtering even one message makes
+                // list - otherwise filtering even one message makes
                 // `messages.length` never reach the limit and the "load older"
                 // header vanishes permanently, trapping the user. (Bug C1.)
                 final currentLimit = ref.watch(
@@ -904,7 +904,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               message: l10n.chatMissionEndedBanner,
               icon: Icons.lock_outline_rounded,
             )
-          // Voice message uploading — show progress instead of the composer.
+          // Voice message uploading - show progress instead of the composer.
           else if (_uploadingVoice)
             _SendingBar(message: l10n.chatVoiceSending)
           // Image preview overlay (WhatsApp-style)
@@ -1304,7 +1304,7 @@ class _MessageBubble extends ConsumerWidget {
       bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
     );
 
-    // System messages — centered
+    // System messages - centered
     if (message.type == MessageType.system) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1343,7 +1343,7 @@ class _MessageBubble extends ConsumerWidget {
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
         children: [
-          // Sender avatar — only for received messages
+          // Sender avatar - only for received messages
           if (!isMe) ...[
             UserAvatar(
               displayName: sender?.displayName ?? '',
@@ -1588,7 +1588,7 @@ class _MessageBubble extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Full-screen image viewer (B.6) — black background, pinch-to-zoom, close
+// Full-screen image viewer (B.6) - black background, pinch-to-zoom, close
 // button, tap-to-dismiss.
 // ---------------------------------------------------------------------------
 
@@ -1655,7 +1655,7 @@ class _VoicePlayerState extends State<_VoicePlayer> {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<PlayerState>? _playerStateSub;
 
-  // Pseudo-random waveform bars seeded by URL hash — stable across rebuilds
+  // Pseudo-random waveform bars seeded by URL hash - stable across rebuilds
   static const int _barCount = 22;
   late final List<double> _bars;
 
@@ -1672,7 +1672,7 @@ class _VoicePlayerState extends State<_VoicePlayer> {
       final dur = await _player.setUrl(widget.url);
       if (dur != null && mounted) setState(() => _duration = dur);
     } catch (e) {
-      debugPrint('VoicePlayer setUrl error: $e — url: ${widget.url}');
+      debugPrint('VoicePlayer setUrl error: $e - url: ${widget.url}');
       if (mounted) setState(() => _hasError = true);
       return;
     }
@@ -1771,7 +1771,7 @@ class _VoicePlayerState extends State<_VoicePlayer> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Tappable waveform — tap to seek
+                // Tappable waveform - tap to seek
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final waveWidth = constraints.maxWidth;
@@ -1843,7 +1843,7 @@ class _VoicePlayerState extends State<_VoicePlayer> {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Image preview bar — WhatsApp-style caption before sending
+// Image preview bar - WhatsApp-style caption before sending
 // ---------------------------------------------------------------------------
 
 class _ImagePreviewBar extends StatelessWidget {
@@ -1984,7 +1984,7 @@ class _ImagePreviewBar extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Input bar — WhatsApp-style layout
+// Input bar - WhatsApp-style layout
 // ---------------------------------------------------------------------------
 
 class _InputBar extends StatefulWidget {
@@ -2023,7 +2023,7 @@ class _InputBarState extends State<_InputBar> {
 
   // WhatsApp-style press-and-hold voice recording state.
   bool _held = false; // finger down, recording (not yet locked)
-  bool _locked = false; // slid up to lock — hands-free recording
+  bool _locked = false; // slid up to lock - hands-free recording
   bool _willCancel = false; // slid left far enough to cancel on release
   double _dragDx = 0;
   double _dragDy = 0;
@@ -2138,7 +2138,7 @@ class _InputBarState extends State<_InputBar> {
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    // Locked (hands-free) recording — explicit cancel / send controls.
+    // Locked (hands-free) recording - explicit cancel / send controls.
     if (_locked) {
       return Container(
         padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),

@@ -38,7 +38,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('PhoneShare serialization — all fields', () {
+  group('PhoneShare serialization - all fields', () {
     test('roundtrip preserves all fields', () async {
       final ps = _makePhoneShare();
       final col = FirestoreCollections.phoneShares(
@@ -53,7 +53,7 @@ void main() {
     });
   });
 
-  group('PhoneShare serialization — bookingId reference', () {
+  group('PhoneShare serialization - bookingId reference', () {
     test('documents from different bookings are isolated', () async {
       final ps1 = _makePhoneShare(uid: 'user_1', phone: '+33611111111');
       final ps2 = _makePhoneShare(uid: 'user_2', phone: '+33622222222');
@@ -82,7 +82,7 @@ void main() {
     });
   });
 
-  group('PhoneShare serialization — uid as document ID', () {
+  group('PhoneShare serialization - uid as document ID', () {
     test('uid is taken from document ID (snap.id)', () async {
       final ps = _makePhoneShare(uid: 'provider_uid_42');
       final col = FirestoreCollections.phoneShares(
@@ -95,7 +95,7 @@ void main() {
     });
   });
 
-  group('PhoneShare serialization — phone numbers', () {
+  group('PhoneShare serialization - phone numbers', () {
     test('French E.164 number roundtrips correctly', () async {
       final ps = _makePhoneShare(phone: '+33698765432');
       final col = FirestoreCollections.phoneShares(
@@ -119,7 +119,7 @@ void main() {
     });
   });
 
-  group('PhoneShare serialization — createdAt timestamp', () {
+  group('PhoneShare serialization - createdAt timestamp', () {
     test('createdAt roundtrips with millisecond precision', () async {
       final t = DateTime(2024, 8, 1, 12, 0, 0).toUtc();
       final ps = _makePhoneShare(createdAt: t);
@@ -153,7 +153,7 @@ void main() {
     });
   });
 
-  group('PhoneShare serialization — safe defaults for missing fields', () {
+  group('PhoneShare serialization - safe defaults for missing fields', () {
     test('missing fields do not crash and use safe defaults', () async {
       await fakeDb
           .collection('bookings')
