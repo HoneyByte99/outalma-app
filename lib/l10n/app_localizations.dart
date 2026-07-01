@@ -2864,6 +2864,18 @@ abstract class AppLocalizations {
   /// **'Sign in to offer your services.'**
   String get providerModeRequiresLogin;
 
+  /// No description provided for @homeGuestGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the right provider'**
+  String get homeGuestGreeting;
+
+  /// No description provided for @guestLockedTabLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to access this area.'**
+  String get guestLockedTabLogin;
+
   /// No description provided for @introSkip.
   ///
   /// In en, this message translates to:

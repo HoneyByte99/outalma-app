@@ -1509,6 +1509,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'Connectez-vous pour proposer vos services.';
 
   @override
+  String get homeGuestGreeting => 'Trouvez le bon prestataire';
+
+  @override
+  String get guestLockedTabLogin => 'Connectez-vous pour accéder à cet espace.';
+
+  @override
   String get introSkip => 'Passer';
 
   @override

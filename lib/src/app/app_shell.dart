@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../application/auth/auth_providers.dart';
+import '../application/auth/auth_state.dart';
 import '../application/booking/booking_providers.dart';
 import '../application/notification/notification_providers.dart';
 import '../application/provider/provider_providers.dart';
@@ -13,6 +14,7 @@ import '../domain/enums/active_mode.dart';
 import '../features/shared/open_settings.dart';
 import '../../l10n/app_localizations.dart';
 import 'app_theme.dart';
+import 'router.dart';
 
 /// Shell scaffold with mode-aware bottom navigation.
 ///
@@ -73,6 +75,8 @@ class _AppShellState extends ConsumerState<AppShell>
 
     final l10n = AppLocalizations.of(context)!;
     final isProvider = ref.watch(activeModeProvider) == ActiveMode.provider;
+    final isGuest =
+        ref.watch(authNotifierProvider).valueOrNull is! AuthAuthenticated;
     final branches = isProvider
         ? AppShell._providerBranches
         : AppShell._clientBranches;
@@ -83,6 +87,15 @@ class _AppShellState extends ConsumerState<AppShell>
 
     void onTap(int logicalIndex) {
       HapticFeedback.selectionClick();
+      // A guest may only use Home (logical 0); the other tabs are login-gated.
+      // Prompt to sign in rather than silently bouncing off the redirect.
+      if (isGuest && logicalIndex != 0) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.guestLockedTabLogin)));
+        context.push(AppRoutes.signIn);
+        return;
+      }
       final branchIndex = branches[logicalIndex];
       shell.goBranch(
         branchIndex,

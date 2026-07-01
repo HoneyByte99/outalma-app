@@ -602,6 +602,8 @@
   "legalDocumentUnavailable": "Document unavailable.",
   "bookingRequiresLogin": "Sign in to book this service.",
   "providerModeRequiresLogin": "Sign in to offer your services.",
+  "homeGuestGreeting": "Find the right provider",
+  "guestLockedTabLogin": "Sign in to access this area.",
   "introSkip": "Skip",
   "authTabEmail": "Email",
   "authTabPhone": "Phone",

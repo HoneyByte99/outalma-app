@@ -64,18 +64,20 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final authAsync = ref.watch(authNotifierProvider);
-
-    final displayName = authAsync.valueOrNull is AuthAuthenticated
-        ? (authAsync.valueOrNull as AuthAuthenticated).user.displayName
-        : '';
+    final authState = ref.watch(authNotifierProvider).valueOrNull;
+    final isAuthenticated = authState is AuthAuthenticated;
+    final displayName = isAuthenticated ? authState.user.displayName : '';
 
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
         titleSpacing: 0,
         title: const _LocationPill(),
-        actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
+        // A guest has no mode to toggle and no notifications: offer a clear
+        // sign-in entry point instead of the client/provider badge + bell.
+        actions: isAuthenticated
+            ? const [ModeBadge(), BellIconButton(), SizedBox(width: 4)]
+            : const [_GuestSignInAction(), SizedBox(width: 4)],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,9 +91,11 @@ class HomePage extends ConsumerWidget {
               AppSpacing.s,
             ),
             child: Text(
-              displayName.isNotEmpty
-                  ? l10n.homeGreeting(displayName)
-                  : l10n.homeGreetingNoName,
+              isAuthenticated
+                  ? (displayName.isNotEmpty
+                        ? l10n.homeGreeting(displayName)
+                        : l10n.homeGreetingNoName)
+                  : l10n.homeGuestGreeting,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -109,6 +113,32 @@ class HomePage extends ConsumerWidget {
           // Service grid
           const Expanded(child: _ServiceGrid()),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Guest sign-in action - shown in the AppBar instead of the mode badge + bell
+// ---------------------------------------------------------------------------
+
+class _GuestSignInAction extends StatelessWidget {
+  const _GuestSignInAction();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextButton.icon(
+        onPressed: () => context.push(AppRoutes.signIn),
+        icon: const Icon(Icons.login_rounded, size: 18),
+        label: Text(l10n.signInButton),
+        style: TextButton.styleFrom(
+          foregroundColor: oc.primary,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }

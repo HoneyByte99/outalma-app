@@ -1490,6 +1490,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerModeRequiresLogin => 'Sign in to offer your services.';
 
   @override
+  String get homeGuestGreeting => 'Find the right provider';
+
+  @override
+  String get guestLockedTabLogin => 'Sign in to access this area.';
+
+  @override
   String get introSkip => 'Skip';
 
   @override
