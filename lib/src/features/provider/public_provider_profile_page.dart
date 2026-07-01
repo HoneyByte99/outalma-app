@@ -9,7 +9,7 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/review/review_providers.dart';
-import '../../application/user/user_providers.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../../core/utils/format_utils.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
@@ -26,22 +26,22 @@ class PublicProviderProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final userAsync = ref.watch(userByIdProvider(providerId));
+    final profileAsync = ref.watch(publicProfileByIdProvider(providerId));
     final reviewsAsync = ref.watch(reviewsForUserProvider(providerId));
     final servicesAsync = ref.watch(publicProviderServicesProvider(providerId));
 
-    // The page hinges on the USER document. The providers/{uid} doc is optional
-    // (it only adds bio / serviceArea / verified badge). While the user doc is
-    // still loading we show a spinner; if it resolves to null the provider does
-    // not exist and we show a graceful unavailable state.
-    if (userAsync.isLoading && !userAsync.hasValue) {
+    // The page hinges on the PUBLIC profile projection (guest-readable, no PII).
+    // The providers/{uid} doc is optional (it only adds bio / verified badge).
+    // While the projection is still loading we show a spinner; if it resolves to
+    // null the provider does not exist and we show a graceful unavailable state.
+    if (profileAsync.isLoading && !profileAsync.hasValue) {
       return Scaffold(
         backgroundColor: oc.background,
         appBar: AppBar(backgroundColor: oc.surface),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-    if (userAsync.valueOrNull == null) {
+    if (profileAsync.valueOrNull == null) {
       return Scaffold(
         backgroundColor: oc.background,
         appBar: AppBar(backgroundColor: oc.surface),
@@ -188,7 +188,7 @@ class _ProfileHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
-    final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
+    final user = ref.watch(publicProfileByIdProvider(providerId)).valueOrNull;
     final providerProfile = ref
         .watch(providerProfileByIdProvider(providerId))
         .valueOrNull;
@@ -198,10 +198,10 @@ class _ProfileHeader extends ConsumerWidget {
         : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
     // A.8 - trust signal: a provider is "verified" once they have completed
     // their onboarding (profile exists) AND have a verified phone number on
-    // file (phoneE164 set, which only happens through Twilio OTP or
-    // sign-up).
+    // file. phoneVerified is mirrored (as a boolean) into the public projection
+    // by the mirrorPublicProfile Cloud Function, so no PII is read here.
     final isVerified =
-        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
+        providerProfile != null && (user?.phoneVerified ?? false);
 
     return Container(
       color: oc.cardSurface,
@@ -263,7 +263,7 @@ class _ProfileHeader extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                 ],
-                if (user?.country != null && user!.country.isNotEmpty)
+                if (user?.country != null && user!.country!.isNotEmpty)
                   Row(
                     children: [
                       Icon(
@@ -273,7 +273,7 @@ class _ProfileHeader extends ConsumerWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        CountryUtils.flagAndName(user.country),
+                        CountryUtils.flagAndName(user.country!),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: oc.secondaryText,
                         ),
@@ -311,7 +311,9 @@ class _ReviewTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
-    final reviewer = ref.watch(userByIdProvider(review.reviewerId)).valueOrNull;
+    final reviewer = ref
+        .watch(publicProfileByIdProvider(review.reviewerId))
+        .valueOrNull;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

@@ -27,22 +27,35 @@ const db = () => admin.firestore();
 export interface PublicProfile {
   displayName: string;
   photoPath?: string;
+  country?: string;
+  // Derived signal for the "verified" trust badge. We expose the BOOLEAN only,
+  // never the phone number itself, so no PII crosses into the public doc.
+  phoneVerified: boolean;
 }
 
 /// Projects a `users/{uid}` document down to the PII-free public fields.
 ///
-/// ONLY `displayName` and (when present) `photoPath` survive; `email` and
-/// `phoneE164` are deliberately dropped so they can never reach the public
-/// collection. Returns null when the source document is absent (user deleted).
+/// Emits displayName, (optional) photoPath, (optional) country and a
+/// phoneVerified boolean. `email` and `phoneE164` are deliberately dropped so
+/// they can never reach the public collection - phoneVerified is only whether a
+/// number exists, not the number. Returns null when the source document is
+/// absent (user deleted).
 export function projectPublicProfile(
   user: Record<string, unknown> | undefined
 ): PublicProfile | null {
   if (!user) return null;
   const displayName =
     typeof user.displayName === 'string' ? user.displayName : '';
-  const profile: PublicProfile = { displayName };
+  const profile: PublicProfile = {
+    displayName,
+    phoneVerified:
+      typeof user.phoneE164 === 'string' && user.phoneE164.length > 0,
+  };
   if (typeof user.photoPath === 'string' && user.photoPath.length > 0) {
     profile.photoPath = user.photoPath;
+  }
+  if (typeof user.country === 'string' && user.country.length > 0) {
+    profile.country = user.country;
   }
   return profile;
 }
@@ -56,7 +69,9 @@ export function projectionsEqual(
   if (a === null || b === null) return a === b;
   return (
     a.displayName === b.displayName &&
-    (a.photoPath ?? null) === (b.photoPath ?? null)
+    (a.photoPath ?? null) === (b.photoPath ?? null) &&
+    (a.country ?? null) === (b.country ?? null) &&
+    a.phoneVerified === b.phoneVerified
   );
 }
 

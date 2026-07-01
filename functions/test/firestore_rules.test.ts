@@ -494,6 +494,12 @@ describe('guest browsing surface', () => {
         published: true,
       });
       await setDoc(doc(db, 'service_types/menage'), { label: 'Menage' });
+      await setDoc(doc(db, 'reviews/b1_c1'), {
+        bookingId: 'b1',
+        reviewerId: 'c1',
+        revieweeId: 'p1',
+        rating: 5,
+      });
     });
   });
 
@@ -528,5 +534,9 @@ describe('guest browsing surface', () => {
     await assertSucceeds(getDoc(doc(anon(), 'providers/p1')));
     await assertSucceeds(getDoc(doc(anon(), 'services/s1')));
     await assertSucceeds(getDoc(doc(anon(), 'service_types/menage')));
+  });
+
+  test('guest CAN read reviews (trust signal, no PII)', async () => {
+    await assertSucceeds(getDoc(doc(anon(), 'reviews/b1_c1')));
   });
 });

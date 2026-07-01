@@ -326,7 +326,11 @@ service cloud.firestore {
     // Reviews are only allowed after a booking reaches "done" status.
     // Reviewer must be a participant of the referenced booking.
     match /reviews/{reviewId} {
-      allow read: if signedIn();
+      // Public read: ratings and comments are marketplace trust signals shown
+      // to guests on service cards and public provider profiles. Reviews carry
+      // no PII (reviewer identity is resolved via public_profiles); the
+      // reviewerId/revieweeId are opaque uids. Writes stay tightly gated below.
+      allow read: if true;
 
       // Create-only (no non-admin update) + deterministic doc id
       // "{bookingId}_{reviewerId}" guarantees one review per (booking, reviewer):

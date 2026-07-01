@@ -19,8 +19,10 @@ import 'package:outalma_app/src/application/auth/auth_state.dart';
 import 'package:outalma_app/src/application/home/location_providers.dart';
 import 'package:outalma_app/src/application/review/review_providers.dart';
 import 'package:outalma_app/src/application/service/service_providers.dart';
+import 'package:outalma_app/src/application/user/public_profile_providers.dart';
 import 'package:outalma_app/src/application/user/user_providers.dart';
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
+import 'package:outalma_app/src/domain/models/public_profile.dart';
 import 'package:outalma_app/src/domain/models/service_zone.dart';
 import 'package:outalma_app/src/features/home/home_page.dart';
 
@@ -48,8 +50,10 @@ Widget _wrap({LocationFilter? filter}) {
       authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
       activeModeProvider.overrideWith((_) => ActiveMode.client),
       serviceListProvider.overrideWith((_) => Stream.value([service])),
-      userByIdProvider.overrideWith(
-        (ref, uid) => Stream.value(makeTestUser(displayName: 'Awa')),
+      publicProfileByIdProvider.overrideWith(
+        (ref, uid) => Stream.value(
+          const PublicProfile(id: 'provider-001', displayName: 'Awa'),
+        ),
       ),
       reviewsForUserProvider.overrideWith((ref, id) => Stream.value(const [])),
       locationFilterProvider.overrideWith((_) => filter),

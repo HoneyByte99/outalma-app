@@ -13,6 +13,7 @@ import '../../application/auth/auth_state.dart';
 import '../../application/home/location_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../core/utils/format_utils.dart';
 import '../../data/services/geocoding_service.dart';
@@ -1051,8 +1052,11 @@ class _ServiceCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    // Guest-safe: resolve the provider's name/avatar from the public projection
+    // (never the PII-bearing users doc), so cards render for unauthenticated
+    // visitors too.
     final providerUser = ref
-        .watch(userByIdProvider(service.providerId))
+        .watch(publicProfileByIdProvider(service.providerId))
         .valueOrNull;
     final reviews =
         ref.watch(reviewsForUserProvider(service.providerId)).valueOrNull ?? [];
