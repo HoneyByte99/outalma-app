@@ -11,6 +11,7 @@ import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import 'auth_prompt.dart';
 import '../shared/app_logo.dart';
 import '../shared/phone_field.dart';
 
@@ -255,7 +256,8 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: l10n.signUpSignIn,
-            onPressed: () => context.go(AppRoutes.signIn),
+            onPressed: () =>
+                context.go(authRouteWithRedirect(context, AppRoutes.signIn)),
           ),
           actions: const [_ThemeToggleButton(), SizedBox(width: 8)],
         ),
@@ -564,7 +566,9 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                           fontWeight: FontWeight.w600,
                         ),
                         recognizer: TapGestureRecognizer()
-                          ..onTap = () => context.go(AppRoutes.signIn),
+                          ..onTap = () => context.go(
+                            authRouteWithRedirect(context, AppRoutes.signIn),
+                          ),
                       ),
                     ],
                   ),

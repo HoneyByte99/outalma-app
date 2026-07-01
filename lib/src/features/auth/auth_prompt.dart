@@ -6,6 +6,15 @@ import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 
+/// Carries the current `?redirect=` return path onto another auth route, so
+/// switching between sign-in and sign-up (or the phone new-account hop) does
+/// not drop the return-to-intention target.
+String authRouteWithRedirect(BuildContext context, String base) {
+  final redirect = GoRouterState.of(context).uri.queryParameters['redirect'];
+  if (redirect == null || redirect.isEmpty) return base;
+  return Uri(path: base, queryParameters: {'redirect': redirect}).toString();
+}
+
 /// Bottom sheet shown when a guest triggers a login-gated action.
 ///
 /// Keeps the current screen behind it (context preserved) and, after auth,

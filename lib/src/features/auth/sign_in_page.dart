@@ -13,6 +13,7 @@ import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import 'auth_prompt.dart';
 import '../shared/app_logo.dart';
 import '../shared/phone_field.dart';
 
@@ -169,10 +170,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
           .read(authNotifierProvider.notifier)
           .phoneSignInWithOtp(phone, code);
       if (!result.signedIn) {
-        // Account not yet created - send the user to sign-up.
+        // Account not yet created - send the user to sign-up, preserving any
+        // return-to-intention target.
         if (!mounted) return;
         _showError(l10n.phoneOtpNoAccount);
-        context.go(AppRoutes.signUp);
+        context.go(authRouteWithRedirect(context, AppRoutes.signUp));
       }
       // signedIn = true → authStateChanges handles redirect to /home.
     } on InvalidOtpException {
@@ -428,7 +430,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                           fontWeight: FontWeight.w600,
                         ),
                         recognizer: TapGestureRecognizer()
-                          ..onTap = () => context.go(AppRoutes.signUp),
+                          ..onTap = () => context.go(
+                            authRouteWithRedirect(context, AppRoutes.signUp),
+                          ),
                       ),
                     ],
                   ),
