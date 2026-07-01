@@ -2852,6 +2852,18 @@ abstract class AppLocalizations {
   /// **'Document unavailable.'**
   String get legalDocumentUnavailable;
 
+  /// No description provided for @bookingRequiresLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to book this service.'**
+  String get bookingRequiresLogin;
+
+  /// No description provided for @providerModeRequiresLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to offer your services.'**
+  String get providerModeRequiresLogin;
+
   /// No description provided for @introSkip.
   ///
   /// In en, this message translates to:

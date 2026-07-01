@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
+import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
+import '../../application/auth/auth_state.dart';
 import '../../application/user/user_providers.dart';
 import '../../domain/enums/active_mode.dart';
 
@@ -86,6 +91,16 @@ class _ModeBadgeState extends ConsumerState<ModeBadge> {
 
   Future<void> _toggle(bool isClient, AppLocalizations l10n) async {
     if (_switching) return;
+    // Switching to provider mode is a login-gated action. A guest (never
+    // authenticated, always in client mode) is nudged to sign in instead.
+    final authState = ref.read(authNotifierProvider).valueOrNull;
+    if (authState is! AuthAuthenticated) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.providerModeRequiresLogin)));
+      unawaited(context.push(AppRoutes.signIn));
+      return;
+    }
     setState(() => _switching = true);
     await HapticFeedback.selectionClick();
     final newMode = isClient ? ActiveMode.provider : ActiveMode.client;

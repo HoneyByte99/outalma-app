@@ -123,10 +123,18 @@ class RouterNotifier extends ChangeNotifier {
           return isOnboardingRoute ? null : AppRoutes.onboarding;
         }
 
-        // ---- Unauthenticated ----
+        // ---- Unauthenticated (guest browsing) ----
+        // Guests may explore a limited public surface without an account:
+        // the home discovery grid, a service detail, a public provider
+        // profile, and a user's reviews. Everything else (bookings, chats,
+        // profile, provider tools, and the act of booking or switching to
+        // provider mode) is gated behind sign-in at its entry point.
         if (authState is AuthUnauthenticated) {
-          if (isOnboardingRoute) return AppRoutes.signIn; // already consented
-          return isAuthRoute ? null : AppRoutes.signIn;
+          if (isAuthRoute) return null;
+          // Consent already collected: leaving onboarding lands on public home.
+          if (isOnboardingRoute) return AppRoutes.home;
+          if (isGuestAllowed(loc)) return null;
+          return AppRoutes.signIn;
         }
 
         // ---- Authenticated ----
@@ -167,6 +175,17 @@ class RouterNotifier extends ChangeNotifier {
         return null;
       },
     );
+  }
+
+  /// Routes a signed-out guest is allowed to view. Kept in sync with the
+  /// public-read Firestore rules (services, providers, public_profiles,
+  /// reviews); `/legal` is handled earlier in [redirect].
+  @visibleForTesting
+  static bool isGuestAllowed(String loc) {
+    return loc == AppRoutes.home ||
+        loc.startsWith('/service/') ||
+        loc.startsWith('/provider-profile/') ||
+        loc.startsWith('/reviews/');
   }
 }
 

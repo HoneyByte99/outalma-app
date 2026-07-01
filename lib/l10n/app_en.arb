@@ -600,6 +600,8 @@
   "legalTermsTitle": "Terms of use",
   "legalPrivacyTitle": "Privacy policy",
   "legalDocumentUnavailable": "Document unavailable.",
+  "bookingRequiresLogin": "Sign in to book this service.",
+  "providerModeRequiresLogin": "Sign in to offer your services.",
   "introSkip": "Skip",
   "authTabEmail": "Email",
   "authTabPhone": "Phone",

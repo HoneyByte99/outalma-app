@@ -554,13 +554,13 @@ class _ExpandableTextState extends State<_ExpandableText> {
 // Sticky booking bottom bar
 // ---------------------------------------------------------------------------
 
-class _BookingBottomBar extends StatelessWidget {
+class _BookingBottomBar extends ConsumerWidget {
   const _BookingBottomBar({required this.service});
 
   final Service service;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
@@ -581,12 +581,27 @@ class _BookingBottomBar extends StatelessWidget {
           const MarketplaceDisclaimer(dense: true),
           const SizedBox(height: AppSpacing.m),
           ElevatedButton(
-            onPressed: () => _openBookingSheet(context),
+            onPressed: () => _onBook(context, ref),
             child: Text(l10n.serviceBook),
           ),
         ],
       ),
     );
+  }
+
+  /// Booking is a login-gated action: a guest is nudged to sign in (with a
+  /// return path back to this service) instead of opening the request sheet.
+  void _onBook(BuildContext context, WidgetRef ref) {
+    final authState = ref.read(authNotifierProvider).valueOrNull;
+    if (authState is! AuthAuthenticated) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.bookingRequiresLogin)));
+      context.push(AppRoutes.signIn);
+      return;
+    }
+    _openBookingSheet(context);
   }
 
   void _openBookingSheet(BuildContext context) {

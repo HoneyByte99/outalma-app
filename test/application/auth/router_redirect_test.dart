@@ -14,7 +14,12 @@ String? _redirect(AuthState authState, String location) {
 
   return switch (authState) {
     AuthLoading() => null,
-    AuthUnauthenticated() => isAuthRoute ? null : AppRoutes.signIn,
+    // Guests may browse the public allowlist (delegates to the real helper so
+    // this double cannot drift from RouterNotifier); everything else -> sign-in.
+    AuthUnauthenticated() =>
+      isAuthRoute || RouterNotifier.isGuestAllowed(location)
+          ? null
+          : AppRoutes.signIn,
     AuthAuthenticated() => isAuthRoute ? AppRoutes.home : null,
   };
 }
@@ -29,10 +34,21 @@ void main() {
     createdAt: DateTime(2024),
   );
 
-  group('Router redirect - unauthenticated', () {
-    test('redirects /home to /sign-in', () {
+  group('Router redirect - unauthenticated (guest)', () {
+    test('allows /home for guest browsing', () {
+      expect(_redirect(const AuthUnauthenticated(), AppRoutes.home), isNull);
+    });
+
+    test('allows a public service detail for a guest', () {
       expect(
-        _redirect(const AuthUnauthenticated(), AppRoutes.home),
+        _redirect(const AuthUnauthenticated(), AppRoutes.serviceDetail('s1')),
+        isNull,
+      );
+    });
+
+    test('redirects a protected route (/bookings) to /sign-in', () {
+      expect(
+        _redirect(const AuthUnauthenticated(), AppRoutes.bookings),
         equals(AppRoutes.signIn),
       );
     });

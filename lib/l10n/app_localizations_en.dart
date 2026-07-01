@@ -1484,6 +1484,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get legalDocumentUnavailable => 'Document unavailable.';
 
   @override
+  String get bookingRequiresLogin => 'Sign in to book this service.';
+
+  @override
+  String get providerModeRequiresLogin => 'Sign in to offer your services.';
+
+  @override
   String get introSkip => 'Skip';
 
   @override

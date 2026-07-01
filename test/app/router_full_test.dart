@@ -37,7 +37,10 @@ String? _redirect({
       return AppRoutes.signIn;
     case _AuthScenario.unauthenticated:
       final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
-      return isAuthRoute ? null : AppRoutes.signIn;
+      // Guests may browse the public allowlist; everything else -> sign-in.
+      // Delegates to the real helper so this double cannot drift.
+      if (isAuthRoute || RouterNotifier.isGuestAllowed(loc)) return null;
+      return AppRoutes.signIn;
     case _AuthScenario.authenticated:
       final isAuthRoute = loc == AppRoutes.signIn || loc == AppRoutes.signUp;
       if (isAuthRoute) return AppRoutes.home;
@@ -152,13 +155,37 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('unauthenticated user + protected routes → /sign-in', () {
-    test('/home → /sign-in', () {
+    test('/home is allowed for guests (no redirect)', () {
       expect(
         _redirect(
           authAsync: _AuthScenario.unauthenticated,
           loc: AppRoutes.home,
         ),
-        equals(AppRoutes.signIn),
+        isNull,
+      );
+    });
+
+    test('public service / profile / reviews allowed for guests', () {
+      expect(
+        _redirect(
+          authAsync: _AuthScenario.unauthenticated,
+          loc: AppRoutes.serviceDetail('s1'),
+        ),
+        isNull,
+      );
+      expect(
+        _redirect(
+          authAsync: _AuthScenario.unauthenticated,
+          loc: AppRoutes.providerProfile('p1'),
+        ),
+        isNull,
+      );
+      expect(
+        _redirect(
+          authAsync: _AuthScenario.unauthenticated,
+          loc: AppRoutes.userReviews('u1'),
+        ),
+        isNull,
       );
     });
 
