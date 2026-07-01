@@ -1,5 +1,36 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:http/http.dart' as http;
+
+/// Bounds every image fetch so a hanging request (dead CDN, stalled connection
+/// on a weak network) falls back to the error placeholder instead of spinning
+/// forever - important for the low-connectivity users this app targets.
+class _TimeoutHttpClient extends http.BaseClient {
+  _TimeoutHttpClient(this._inner, this._timeout);
+
+  final http.Client _inner;
+  final Duration _timeout;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      _inner.send(request).timeout(_timeout);
+}
+
+/// Dedicated image cache with a request timeout (the default CacheManager has
+/// none). 20s is generous for slow networks yet bounds the infinite spinner.
+final BaseCacheManager _imageCacheManager = CacheManager(
+  Config(
+    'outalmaImageCache',
+    stalePeriod: const Duration(days: 7),
+    fileService: HttpFileService(
+      httpClient: _TimeoutHttpClient(
+        http.Client(),
+        const Duration(seconds: 20),
+      ),
+    ),
+  ),
+);
 
 /// A robust network image widget with persistent disk + memory caching.
 /// Handles loading, errors, and iOS compatibility gracefully.
@@ -40,6 +71,7 @@ class AppNetworkImage extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget image = CachedNetworkImage(
       imageUrl: url,
+      cacheManager: _imageCacheManager,
       fit: fit,
       width: width,
       height: height,

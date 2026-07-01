@@ -1,5 +1,5 @@
 name: outalma_app
-description: "Outalma — service marketplace MVP"
+description: "Outalma - service marketplace MVP"
 publish_to: 'none'
 
 version: 1.0.0+24
@@ -23,6 +23,7 @@ dependencies:
   firebase_crashlytics: ^4.1.0
   image_picker: ^1.1.2
   cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1
   connectivity_plus: ^6.1.0
   flutter_native_splash: ^2.4.3
 
