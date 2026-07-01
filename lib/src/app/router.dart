@@ -140,7 +140,12 @@ class RouterNotifier extends ChangeNotifier {
         // ---- Authenticated ----
         if (authState is AuthAuthenticated) {
           if (isOnboardingRoute) return AppRoutes.home;
-          if (isAuthRoute) return AppRoutes.home;
+          if (isAuthRoute) {
+            // Return-to-intention: a gated action sent the guest here with a
+            // ?redirect=<internal path> (which may carry its own intent, e.g.
+            // /service/:id?book=1). Resume there instead of dumping on /home.
+            return postAuthTarget(state.uri) ?? AppRoutes.home;
+          }
 
           // When switching modes, redirect to the right home tab.
           // Uses startsWith to catch sub-routes (e.g. /bookings/:id,
@@ -186,6 +191,16 @@ class RouterNotifier extends ChangeNotifier {
         loc.startsWith('/service/') ||
         loc.startsWith('/provider-profile/') ||
         loc.startsWith('/reviews/');
+  }
+
+  /// Return-to-intention target after signing in from an auth route.
+  /// Reads `?redirect=<internal path>` and only honours in-app paths (leading
+  /// slash) to avoid an open-redirect. Returns null when there is none.
+  @visibleForTesting
+  static String? postAuthTarget(Uri uri) {
+    final target = uri.queryParameters['redirect'];
+    if (target != null && target.startsWith('/')) return target;
+    return null;
   }
 }
 
@@ -397,8 +412,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/service/:serviceId',
         name: 'service-detail',
-        builder: (_, state) =>
-            ServiceDetailPage(serviceId: state.pathParameters['serviceId']!),
+        builder: (_, state) => ServiceDetailPage(
+          serviceId: state.pathParameters['serviceId']!,
+          // Return-to-intention: after a guest logs in to book, we come back
+          // here with ?book=1 to reopen the booking sheet automatically.
+          autoOpenBooking: state.uri.queryParameters['book'] == '1',
+        ),
       ),
 
       // ---- Booking detail deep-link (notifications, external links) ----

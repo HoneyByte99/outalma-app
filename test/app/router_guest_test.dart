@@ -59,4 +59,32 @@ void main() {
       },
     );
   });
+
+  group('RouterNotifier.postAuthTarget (return-to-intention)', () {
+    test('returns the internal redirect path, preserving its intent query', () {
+      expect(
+        RouterNotifier.postAuthTarget(Uri.parse('/sign-in?redirect=/home')),
+        '/home',
+      );
+      expect(
+        RouterNotifier.postAuthTarget(
+          Uri.parse('/sign-in?redirect=/service/abc%3Fbook%3D1'),
+        ),
+        '/service/abc?book=1',
+      );
+    });
+
+    test('returns null when there is no redirect', () {
+      expect(RouterNotifier.postAuthTarget(Uri.parse('/sign-in')), isNull);
+    });
+
+    test('ignores non-internal (open-redirect) targets', () {
+      expect(
+        RouterNotifier.postAuthTarget(
+          Uri.parse('/sign-in?redirect=https://evil.example.com'),
+        ),
+        isNull,
+      );
+    });
+  });
 }

@@ -84,7 +84,9 @@ void main() {
       reviewsForUserProvider('prov_1').overrideWith((_) => Stream.value([])),
     ]);
 
-    testWidgets('tapping Book nudges the guest to sign in', (tester) async {
+    testWidgets('tapping Book opens the auth prompt, not the booking sheet', (
+      tester,
+    ) async {
       await tester.pumpWidget(build());
       await tester.pump();
       await tester.pump();
@@ -92,13 +94,16 @@ void main() {
       await tester.tap(
         find.widgetWithText(ElevatedButton, 'Request this service'),
       );
-      await tester.pump(); // snackbar + navigation
-      await tester.pump();
+      await tester.pumpAndSettle(); // auth prompt sheet slides up
 
+      // The auth prompt (reason + sign-in action) shows; booking sheet does not.
       expect(find.text('Sign in to book this service.'), findsOneWidget);
-      expect(find.text(_signInMarker), findsOneWidget);
-      // The booking request sheet must NOT have opened.
       expect(find.byType(BookingRequestSheet), findsNothing);
+
+      // Choosing "Sign in" routes to sign-in (with the return path).
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Sign in'));
+      await tester.pumpAndSettle();
+      expect(find.text(_signInMarker), findsOneWidget);
     });
   });
 
@@ -116,17 +121,17 @@ void main() {
       ],
     );
 
-    testWidgets('tapping the mode badge nudges the guest to sign in', (
-      tester,
-    ) async {
+    testWidgets('tapping the mode badge opens the auth prompt', (tester) async {
       await tester.pumpWidget(build());
       await tester.pump();
 
       await tester.tap(find.byType(ModeBadge));
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.text('Sign in to offer your services.'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Sign in'));
+      await tester.pumpAndSettle();
       expect(find.text(_signInMarker), findsOneWidget);
     });
   });

@@ -2876,6 +2876,12 @@ abstract class AppLocalizations {
   /// **'Sign in to access this area.'**
   String get guestLockedTabLogin;
 
+  /// No description provided for @authPromptKeepBrowsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep browsing'**
+  String get authPromptKeepBrowsing;
+
   /// No description provided for @introSkip.
   ///
   /// In en, this message translates to:

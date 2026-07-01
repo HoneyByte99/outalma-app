@@ -1496,6 +1496,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guestLockedTabLogin => 'Sign in to access this area.';
 
   @override
+  String get authPromptKeepBrowsing => 'Keep browsing';
+
+  @override
   String get introSkip => 'Skip';
 
   @override

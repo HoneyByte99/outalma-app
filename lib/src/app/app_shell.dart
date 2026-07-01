@@ -11,6 +11,7 @@ import '../application/notification/notification_providers.dart';
 import '../application/provider/provider_providers.dart';
 import '../application/user/user_providers.dart';
 import '../domain/enums/active_mode.dart';
+import '../features/auth/auth_prompt.dart';
 import '../features/shared/open_settings.dart';
 import '../../l10n/app_localizations.dart';
 import 'app_theme.dart';
@@ -88,12 +89,13 @@ class _AppShellState extends ConsumerState<AppShell>
     void onTap(int logicalIndex) {
       HapticFeedback.selectionClick();
       // A guest may only use Home (logical 0); the other tabs are login-gated.
-      // Prompt to sign in rather than silently bouncing off the redirect.
+      // Offer the auth prompt, returning to Home after sign-in.
       if (isGuest && logicalIndex != 0) {
-        ScaffoldMessenger.of(
+        showAuthPrompt(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.guestLockedTabLogin)));
-        context.push(AppRoutes.signIn);
+          reason: l10n.guestLockedTabLogin,
+          redirect: AppRoutes.home,
+        );
         return;
       }
       final branchIndex = branches[logicalIndex];

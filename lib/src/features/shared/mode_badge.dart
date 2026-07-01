@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,11 +6,11 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
-import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/user/user_providers.dart';
 import '../../domain/enums/active_mode.dart';
+import '../auth/auth_prompt.dart';
 
 /// Persistent indicator of the user's active mode (client/provider).
 ///
@@ -95,10 +93,11 @@ class _ModeBadgeState extends ConsumerState<ModeBadge> {
     // authenticated, always in client mode) is nudged to sign in instead.
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) {
-      ScaffoldMessenger.of(
+      await showAuthPrompt(
         context,
-      ).showSnackBar(SnackBar(content: Text(l10n.providerModeRequiresLogin)));
-      unawaited(context.push(AppRoutes.signIn));
+        reason: l10n.providerModeRequiresLogin,
+        redirect: GoRouterState.of(context).uri.toString(),
+      );
       return;
     }
     setState(() => _switching = true);

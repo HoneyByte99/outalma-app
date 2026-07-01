@@ -604,6 +604,7 @@
   "providerModeRequiresLogin": "Sign in to offer your services.",
   "homeGuestGreeting": "Find the right provider",
   "guestLockedTabLogin": "Sign in to access this area.",
+  "authPromptKeepBrowsing": "Keep browsing",
   "introSkip": "Skip",
   "authTabEmail": "Email",
   "authTabPhone": "Phone",

@@ -1515,6 +1515,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get guestLockedTabLogin => 'Connectez-vous pour accéder à cet espace.';
 
   @override
+  String get authPromptKeepBrowsing => 'Continuer à explorer';
+
+  @override
   String get introSkip => 'Passer';
 
   @override

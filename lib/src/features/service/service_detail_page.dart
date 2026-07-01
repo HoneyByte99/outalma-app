@@ -15,6 +15,7 @@ import '../../core/utils/format_utils.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/enums/price_type.dart';
 import '../../domain/models/service.dart';
+import '../auth/auth_prompt.dart';
 import '../booking/booking_request_sheet.dart';
 import '../shared/app_logo.dart';
 import '../shared/network_image.dart';
@@ -24,9 +25,17 @@ import 'service_zones_map.dart';
 import '../shared/user_avatar.dart';
 
 class ServiceDetailPage extends ConsumerWidget {
-  const ServiceDetailPage({super.key, required this.serviceId});
+  const ServiceDetailPage({
+    super.key,
+    required this.serviceId,
+    this.autoOpenBooking = false,
+  });
 
   final String serviceId;
+
+  /// When true (set via `?book=1` after a guest logs in to book), the booking
+  /// sheet reopens automatically once the service has loaded.
+  final bool autoOpenBooking;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,7 +48,10 @@ class ServiceDetailPage extends ConsumerWidget {
       ),
       data: (service) {
         if (service == null) return const _ServiceDetailError();
-        return _ServiceDetailContent(service: service);
+        return _ServiceDetailContent(
+          service: service,
+          autoOpenBooking: autoOpenBooking,
+        );
       },
     );
   }
@@ -50,9 +62,13 @@ class ServiceDetailPage extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _ServiceDetailContent extends ConsumerWidget {
-  const _ServiceDetailContent({required this.service});
+  const _ServiceDetailContent({
+    required this.service,
+    this.autoOpenBooking = false,
+  });
 
   final Service service;
+  final bool autoOpenBooking;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -227,7 +243,10 @@ class _ServiceDetailContent extends ConsumerWidget {
       // ---- Sticky bottom bar ----
       bottomNavigationBar: isOwner
           ? _EditBottomBar(serviceId: service.id)
-          : _BookingBottomBar(service: service),
+          : _BookingBottomBar(
+              service: service,
+              autoOpenBooking: autoOpenBooking,
+            ),
     );
   }
 
@@ -556,13 +575,37 @@ class _ExpandableTextState extends State<_ExpandableText> {
 // Sticky booking bottom bar
 // ---------------------------------------------------------------------------
 
-class _BookingBottomBar extends ConsumerWidget {
-  const _BookingBottomBar({required this.service});
+class _BookingBottomBar extends ConsumerStatefulWidget {
+  const _BookingBottomBar({
+    required this.service,
+    this.autoOpenBooking = false,
+  });
 
   final Service service;
+  final bool autoOpenBooking;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_BookingBottomBar> createState() => _BookingBottomBarState();
+}
+
+class _BookingBottomBarState extends ConsumerState<_BookingBottomBar> {
+  @override
+  void initState() {
+    super.initState();
+    // Return-to-intention: the guest logged in to book and came back with
+    // ?book=1. The bar is only built once the service has loaded, so opening
+    // here (after the first frame) reliably has everything it needs.
+    if (widget.autoOpenBooking) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final authState = ref.read(authNotifierProvider).valueOrNull;
+        if (authState is AuthAuthenticated) _openBookingSheet(context);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
@@ -583,7 +626,7 @@ class _BookingBottomBar extends ConsumerWidget {
           const MarketplaceDisclaimer(dense: true),
           const SizedBox(height: AppSpacing.m),
           ElevatedButton(
-            onPressed: () => _onBook(context, ref),
+            onPressed: () => _onBook(context),
             child: Text(l10n.serviceBook),
           ),
         ],
@@ -591,16 +634,21 @@ class _BookingBottomBar extends ConsumerWidget {
     );
   }
 
-  /// Booking is a login-gated action: a guest is nudged to sign in (with a
-  /// return path back to this service) instead of opening the request sheet.
-  void _onBook(BuildContext context, WidgetRef ref) {
+  /// Booking is login-gated: a guest gets the auth prompt sheet with a return
+  /// path that reopens this booking after sign-in; an authed user books now.
+  void _onBook(BuildContext context) {
+    final service = widget.service;
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) {
-      final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(
+      final redirect = Uri(
+        path: AppRoutes.serviceDetail(service.id),
+        queryParameters: {'book': '1'},
+      ).toString();
+      showAuthPrompt(
         context,
-      ).showSnackBar(SnackBar(content: Text(l10n.bookingRequiresLogin)));
-      context.push(AppRoutes.signIn);
+        reason: AppLocalizations.of(context)!.bookingRequiresLogin,
+        redirect: redirect,
+      );
       return;
     }
     _openBookingSheet(context);
@@ -612,9 +660,9 @@ class _BookingBottomBar extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => BookingRequestSheet(
-        serviceId: service.id,
-        providerId: service.providerId,
-        serviceTitle: service.title,
+        serviceId: widget.service.id,
+        providerId: widget.service.providerId,
+        serviceTitle: widget.service.title,
       ),
     );
   }
