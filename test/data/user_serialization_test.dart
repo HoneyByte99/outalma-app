@@ -176,4 +176,40 @@ void main() {
       expect(result.country, 'FR');
     });
   });
+
+  group('AppUser serialization - server-side consent (read-only)', () {
+    test('reads the consent.termsVersion written server-side', () async {
+      await fakeDb.collection('users').doc('with_consent').set({
+        'displayName': 'Aissatou',
+        'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
+        'consent': {
+          'termsVersion': '2026-06-07',
+          'acceptedAt': Timestamp.fromDate(DateTime(2026, 6, 7).toUtc()),
+        },
+      });
+      final col = FirestoreCollections.users(fakeDb);
+      final result = (await col.doc('with_consent').get()).data()!;
+      expect(result.consent, isNotNull);
+      expect(result.consent!.termsVersion, '2026-06-07');
+      expect(result.consent!.acceptedAt, isNotNull);
+    });
+
+    test('consent is null when the field is absent (zombie account)', () async {
+      await fakeDb.collection('users').doc('no_consent').set({
+        'displayName': 'Moussa',
+        'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
+      });
+      final col = FirestoreCollections.users(fakeDb);
+      final result = (await col.doc('no_consent').get()).data()!;
+      expect(result.consent, isNull);
+    });
+
+    test('client never writes consent back (server-authoritative)', () async {
+      final user = _makeUser();
+      final col = FirestoreCollections.users(fakeDb);
+      await col.doc(user.id).set(user);
+      final raw = (await fakeDb.collection('users').doc(user.id).get()).data()!;
+      expect(raw.containsKey('consent'), isFalse);
+    });
+  });
 }

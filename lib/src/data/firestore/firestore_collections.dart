@@ -180,6 +180,20 @@ class FirestoreCollections {
       termsAcceptedAt: data['termsAcceptedAt'] != null
           ? dateTimeFromFirestore(data['termsAcceptedAt'])
           : null,
+      consent: _consentFromFirestore(data['consent']),
+    );
+  }
+
+  /// Reads the server-authoritative `consent` map (written by Cloud Functions).
+  /// Returns null when absent - the router treats that as "no valid consent".
+  static UserConsent? _consentFromFirestore(Object? raw) {
+    if (raw is! Map) return null;
+    final version = raw['termsVersion'];
+    return UserConsent(
+      termsVersion: version is String ? version : null,
+      acceptedAt: raw['acceptedAt'] != null
+          ? dateTimeFromFirestore(raw['acceptedAt'])
+          : null,
     );
   }
 

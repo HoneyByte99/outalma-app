@@ -355,6 +355,51 @@ describe('cancelBooking', () => {
   });
 });
 
+describe('rescheduleBooking', () => {
+  const future = () => Date.now() + 14 * 24 * 3600 * 1000;
+
+  it('lets the provider reschedule an accepted booking and persists the new date', async () => {
+    await seedBooking('b1', { customerId: customer, providerId: provider, status: 'accepted' });
+    const when = future();
+    const res = (await call(
+      fns.rescheduleBooking,
+      { bookingId: 'b1', newScheduledAt: when },
+      { uid: provider }
+    )) as { bookingId: string; newScheduledAt: number; rescheduleCount: number };
+    expect(res.newScheduledAt).toBe(when);
+    expect(res.rescheduleCount).toBe(1);
+    const booking = await getBooking('b1');
+    // scheduledAt is stored as a Firestore Timestamp built from the same millis.
+    expect(booking?.scheduledAt?.toMillis()).toBe(when);
+    expect(booking?.rescheduleCount).toBe(1);
+    expect(booking?.rescheduledAt).toBeTruthy();
+  });
+
+  it('forbids the customer from rescheduling', async () => {
+    await seedBooking('b1', { customerId: customer, providerId: provider, status: 'accepted' });
+    await expectReject(
+      call(fns.rescheduleBooking, { bookingId: 'b1', newScheduledAt: future() }, { uid: customer }),
+      'permission-denied'
+    );
+  });
+
+  it('forbids a non-participant (stranger) from rescheduling', async () => {
+    await seedBooking('b1', { customerId: customer, providerId: provider, status: 'accepted' });
+    await expectReject(
+      call(fns.rescheduleBooking, { bookingId: 'b1', newScheduledAt: future() }, { uid: stranger }),
+      'permission-denied'
+    );
+  });
+
+  it('refuses to reschedule a booking that is not accepted (in_progress)', async () => {
+    await seedBooking('b1', { customerId: customer, providerId: provider, status: 'in_progress' });
+    await expectReject(
+      call(fns.rescheduleBooking, { bookingId: 'b1', newScheduledAt: future() }, { uid: provider }),
+      'failed-precondition'
+    );
+  });
+});
+
 describe('markInProgress', () => {
   it('lets the provider move an accepted booking to in_progress', async () => {
     await seedBooking('b1', { customerId: customer, providerId: provider, status: 'accepted' });

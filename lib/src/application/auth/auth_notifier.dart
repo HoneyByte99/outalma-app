@@ -376,6 +376,19 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       await _functions.call('finalizeEmailSignUp');
     } catch (e) {
       debugPrint('[AuthNotifier] consent write failed, rolling back: $e');
+      // Hardened rollback (defense in depth): drop the Firestore user doc too,
+      // best-effort. If Auth.delete() also fails (e.g. double network cut), we
+      // must not leave a consent-less `users/{uid}` doc behind that would let a
+      // zombie account persist. The router's consent gate is the second net.
+      try {
+        await ref
+            .read(firestoreProvider)
+            .collection('users')
+            .doc(user.uid)
+            .delete();
+      } catch (docError) {
+        debugPrint('[AuthNotifier] rollback doc delete failed: $docError');
+      }
       try {
         await user.delete();
       } catch (deleteError) {
@@ -427,6 +440,19 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         androidMinimumVersion: '21',
       ),
     );
+  }
+
+  /// Recovery path for a "zombie" account whose server-side consent record is
+  /// missing (the sign-up consent Cloud Function AND the local rollback both
+  /// failed). Retries the server-authoritative consent write, then refreshes
+  /// the auth state so the router re-evaluates the consent-presence gate.
+  ///
+  /// Throws (propagating the Cloud Function error) when the write still fails,
+  /// so the recovery UI can surface a retry.
+  Future<void> retryConsentFinalization() async {
+    await _functions.call('finalizeEmailSignUp');
+    final auth = ref.read(firebaseAuthProvider);
+    state = AsyncData(await _resolveState(auth.currentUser));
   }
 
   /// Applies the verification oobCode embedded in a Universal Link the user

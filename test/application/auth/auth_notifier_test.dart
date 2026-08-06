@@ -615,6 +615,86 @@ void main() {
       verify(() => fbUser.delete()).called(1);
     });
 
+    test('signUpWithEmailPassword hardened rollback deletes the Firestore doc '
+        'even when Auth.delete() also fails (double failure)', () async {
+      final fbUser = makeFirebaseUser();
+      // Auth.delete() fails too - the classic Senegal double network cut.
+      when(() => fbUser.delete()).thenThrow(Exception('delete network cut'));
+      final cred = _MockCredential();
+      when(() => cred.user).thenReturn(fbUser);
+      when(
+        () => auth.createUserWithEmailAndPassword(
+          email: any(named: 'email'),
+          password: any(named: 'password'),
+        ),
+      ).thenAnswer((_) async => cred);
+      when(() => repo.getById('uid_1')).thenAnswer((_) async => null);
+      when(
+        () => client.call('finalizeEmailSignUp', data: any(named: 'data')),
+      ).thenThrow(
+        FirebaseFunctionsException(code: 'unavailable', message: 'offline'),
+      );
+
+      // Simulate the user doc having been written before the consent step.
+      await fakeDb.collection('users').doc('uid_1').set({'displayName': 'x'});
+
+      final (c, _) = await buildWith(null);
+      await expectLater(
+        c
+            .read(authNotifierProvider.notifier)
+            .signUpWithEmailPassword(
+              displayName: 'Alice',
+              email: 'alice@test.com',
+              password: 'secret123',
+            ),
+        throwsA(isA<FirebaseFunctionsException>()),
+      );
+
+      // Auth.delete() was attempted (and failed)...
+      verify(() => fbUser.delete()).called(1);
+      // ...but the hardened rollback still removed the Firestore doc, so no
+      // consent-less zombie doc is left behind.
+      final doc = await fakeDb.collection('users').doc('uid_1').get();
+      expect(doc.exists, isFalse);
+    });
+
+    // ---- consent recovery (retryConsentFinalization) ---------------------
+
+    test(
+      'retryConsentFinalization re-calls the CF and refreshes state',
+      () async {
+        final fbUser = makeFirebaseUser();
+        when(() => auth.currentUser).thenReturn(fbUser);
+        when(
+          () => repo.getById('uid_1'),
+        ).thenAnswer((_) async => _makeUser(id: 'uid_1'));
+        final (c, _) = await buildWith(null);
+
+        await c.read(authNotifierProvider.notifier).retryConsentFinalization();
+
+        verify(
+          () => client.call('finalizeEmailSignUp', data: any(named: 'data')),
+        ).called(1);
+        expect(
+          c.read(authNotifierProvider).valueOrNull,
+          isA<AuthAuthenticated>(),
+        );
+      },
+    );
+
+    test('retryConsentFinalization rethrows when the CF still fails', () async {
+      when(
+        () => client.call('finalizeEmailSignUp', data: any(named: 'data')),
+      ).thenThrow(
+        FirebaseFunctionsException(code: 'unavailable', message: 'offline'),
+      );
+      final (c, _) = await buildWith(null);
+      await expectLater(
+        c.read(authNotifierProvider.notifier).retryConsentFinalization(),
+        throwsA(isA<FirebaseFunctionsException>()),
+      );
+    });
+
     test(
       'signUpWithEmailPassword throws when credential has no user',
       () async {

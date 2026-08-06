@@ -10,6 +10,8 @@ import '../application/onboarding/onboarding_provider.dart';
 import '../application/service/service_providers.dart';
 import '../application/user/user_providers.dart';
 import '../domain/enums/active_mode.dart';
+import '../domain/models/app_user.dart';
+import '../features/auth/finalize_sign_up_page.dart';
 import '../features/auth/otp_lab/otp_lab_page.dart';
 import '../features/auth/sign_in_page.dart';
 import '../features/auth/sign_up_page.dart';
@@ -43,6 +45,7 @@ abstract final class AppRoutes {
   static const onboarding = '/onboarding';
   static const signIn = '/sign-in';
   static const signUp = '/sign-up';
+  static const finalizeSignUp = '/finalize-signup';
   static const otpLab = '/otp-lab';
   static const home = '/home';
   static const bookings = '/bookings';
@@ -139,6 +142,18 @@ class RouterNotifier extends ChangeNotifier {
 
         // ---- Authenticated ----
         if (authState is AuthAuthenticated) {
+          // Consent-presence gate (defense in depth, CDP Senegal loi 2008-12
+          // art. 11 / RGPD). A signed-in account with no server-side consent
+          // proof is a "zombie" (the sign-up consent CF and its rollback both
+          // failed). Keep it out of the app and route it to the recovery flow
+          // until consent is (re)persisted server-side.
+          final isFinalizeRoute = loc == AppRoutes.finalizeSignUp;
+          if (needsConsentFinalization(authState.user)) {
+            return isFinalizeRoute ? null : AppRoutes.finalizeSignUp;
+          }
+          // Consent present: never sit on the recovery flow.
+          if (isFinalizeRoute) return AppRoutes.home;
+
           if (isOnboardingRoute) return AppRoutes.home;
           if (isAuthRoute) {
             // Return-to-intention: a gated action sent the guest here with a
@@ -180,6 +195,14 @@ class RouterNotifier extends ChangeNotifier {
         return null;
       },
     );
+  }
+
+  /// True when a signed-in account has no server-authoritative consent proof
+  /// and must be sent to the finalize-sign-up recovery flow instead of into the
+  /// app. Extracted as a pure, testable predicate (mirrors [isGuestAllowed]).
+  @visibleForTesting
+  static bool needsConsentFinalization(AppUser user) {
+    return user.consent?.termsVersion == null;
   }
 
   /// Routes a signed-out guest is allowed to view. Kept in sync with the
@@ -270,6 +293,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.signUp,
         name: 'sign-up',
         builder: (_, __) => const SignUpPage(),
+      ),
+      // ---- Consent recovery (zombie account with no server-side consent) ----
+      GoRoute(
+        path: AppRoutes.finalizeSignUp,
+        name: 'finalize-signup',
+        builder: (_, __) => const FinalizeSignUpPage(),
       ),
       // ---- OTP Lab (debug only - stripped from release builds) ----
       if (kDebugMode)
