@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../domain/models/chat.dart';
 import '../../domain/models/chat_message.dart';
@@ -6,9 +7,23 @@ import '../../domain/repositories/chat_repository.dart';
 import '../firestore/firestore_collections.dart';
 
 class FirestoreChatRepository implements ChatRepository {
-  const FirestoreChatRepository(this._db);
+  FirestoreChatRepository(
+    this._db, {
+    Future<void> Function(String chatId, String messageId)? deleteMessageFn,
+  }) : _deleteMessageFn = deleteMessageFn ?? _callDeleteOwnMessage;
+
+  static Future<void> _callDeleteOwnMessage(
+    String chatId,
+    String messageId,
+  ) async {
+    final callable = FirebaseFunctions.instance.httpsCallable(
+      'deleteOwnMessage',
+    );
+    await callable.call<void>({'chatId': chatId, 'messageId': messageId});
+  }
 
   final FirebaseFirestore _db;
+  final Future<void> Function(String chatId, String messageId) _deleteMessageFn;
 
   @override
   Stream<Chat?> watchChat(String chatId) {
@@ -72,12 +87,7 @@ class FirestoreChatRepository implements ChatRepository {
   Future<void> softDeleteMessage({
     required String chatId,
     required String messageId,
-  }) async {
-    await FirestoreCollections.chatMessages(
-      db: _db,
-      chatId: chatId,
-    ).doc(messageId).update({'deleted': true});
-  }
+  }) => _deleteMessageFn(chatId, messageId);
 
   @override
   Future<void> editMessage({

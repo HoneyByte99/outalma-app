@@ -1545,6 +1545,39 @@ export const deleteMessage = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
+// deleteOwnMessage - sender deletes their own message (soft delete)
+// ---------------------------------------------------------------------------
+
+export const deleteOwnMessage = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+
+  const chatId = requireString(request.data?.chatId, 'chatId');
+  const messageId = requireString(request.data?.messageId, 'messageId');
+
+  const messageRef = db.collection('chats').doc(chatId).collection('messages').doc(messageId);
+  const messageSnap = await messageRef.get();
+  if (!messageSnap.exists) {
+    throw new HttpsError('not-found', 'Message not found.');
+  }
+
+  const message = messageSnap.data() as { senderId?: string };
+  if (message.senderId !== callerUid) {
+    throw new HttpsError('permission-denied', 'You can only delete your own messages.');
+  }
+
+  await messageRef.update({
+    deleted: true,
+    text: admin.firestore.FieldValue.delete(),
+    mediaUrl: admin.firestore.FieldValue.delete(),
+    deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+    deletedBy: callerUid,
+  });
+
+  return { chatId, messageId, deleted: true };
+});
+
+// ---------------------------------------------------------------------------
 // resolveReport - admin or moderator
 // ---------------------------------------------------------------------------
 

@@ -1,9 +1,14 @@
 // Tests for FirestoreChatRepository using FakeFirebaseFirestore.
 //
 // Covered:
+//   - watchChat(chatId): streams a single chat doc (null when absent)
 //   - watchForUser(uid): returns chats containing uid in participantIds
 //   - watchMessages(chatId): streams messages ordered by createdAt
 //   - sendMessage(): writes to messages subcollection and returns with id
+//   - softDeleteMessage(): calls injected delete fn with correct args
+//   - editMessage(): updates text and sets edited=true
+//   - setReaction(): sets or removes a per-user emoji reaction
+//   - markMessagesRead(): batch-updates readBy for unread messages from others
 //   - setTyping(): writes to typing subcollection
 //   - watchOtherTyping(): returns null when no other typers, DateTime when someone is typing
 
@@ -46,6 +51,7 @@ ChatMessage _makeMessage({
   String senderId = 'user_A',
   DateTime? createdAt,
   String? text = 'Hello',
+  List<String> readBy = const [],
 }) {
   return ChatMessage(
     id: id,
@@ -54,6 +60,7 @@ ChatMessage _makeMessage({
     type: MessageType.text,
     createdAt: createdAt ?? DateTime(2024, 6, 1, 10).toUtc(),
     text: text,
+    readBy: readBy,
   );
 }
 
@@ -253,6 +260,247 @@ void main() {
       final saved = snap.docs.first.data();
       expect(saved.senderId, 'user_B');
       expect(saved.text, 'Salut!');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // watchChat
+  // -------------------------------------------------------------------------
+
+  group('watchChat', () {
+    test('returns null when chat does not exist', () async {
+      final result = await repo.watchChat('no_such_chat').first;
+      expect(result, isNull);
+    });
+
+    test('returns Chat when the document exists', () async {
+      final chat = _makeChat(id: 'chat_x');
+      await _writeChat(fakeDb, chat);
+
+      final result = await repo.watchChat('chat_x').first;
+      expect(result, isNotNull);
+      expect(result!.id, 'chat_x');
+      expect(result.bookingId, chat.bookingId);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // softDeleteMessage
+  // -------------------------------------------------------------------------
+
+  group('softDeleteMessage', () {
+    test(
+      'calls the injected delete fn with correct chatId and messageId',
+      () async {
+        final calls = <(String, String)>[];
+        final testRepo = FirestoreChatRepository(
+          fakeDb,
+          deleteMessageFn: (chatId, messageId) async {
+            calls.add((chatId, messageId));
+          },
+        );
+
+        await testRepo.softDeleteMessage(chatId: 'chat_1', messageId: 'msg_42');
+
+        expect(calls.length, 1);
+        expect(calls.first.$1, 'chat_1');
+        expect(calls.first.$2, 'msg_42');
+      },
+    );
+
+    test('propagates errors thrown by the delete fn', () async {
+      final testRepo = FirestoreChatRepository(
+        fakeDb,
+        deleteMessageFn: (_, __) async => throw Exception('network failure'),
+      );
+
+      await expectLater(
+        testRepo.softDeleteMessage(chatId: 'chat_1', messageId: 'msg_1'),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // editMessage
+  // -------------------------------------------------------------------------
+
+  group('editMessage', () {
+    test('updates text and sets edited=true', () async {
+      await _writeMessage(
+        fakeDb,
+        _makeMessage(id: 'msg_1', chatId: 'chat_1', text: 'original'),
+      );
+
+      await repo.editMessage(
+        chatId: 'chat_1',
+        messageId: 'msg_1',
+        newText: 'updated text',
+      );
+
+      final snap = await FirestoreCollections.chatMessages(
+        db: fakeDb,
+        chatId: 'chat_1',
+      ).doc('msg_1').get();
+      final msg = snap.data()!;
+      expect(msg.text, 'updated text');
+      expect(msg.edited, true);
+    });
+
+    test('completes without error', () async {
+      await _writeMessage(fakeDb, _makeMessage(id: 'msg_2', chatId: 'chat_1'));
+
+      await expectLater(
+        repo.editMessage(
+          chatId: 'chat_1',
+          messageId: 'msg_2',
+          newText: 'new text',
+        ),
+        completes,
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // setReaction
+  // -------------------------------------------------------------------------
+
+  group('setReaction', () {
+    test('sets an emoji reaction for a uid', () async {
+      await _writeMessage(fakeDb, _makeMessage(id: 'msg_1', chatId: 'chat_1'));
+
+      await repo.setReaction(
+        chatId: 'chat_1',
+        messageId: 'msg_1',
+        uid: 'user_A',
+        emoji: '👍',
+      );
+
+      final snap = await FirestoreCollections.chatMessages(
+        db: fakeDb,
+        chatId: 'chat_1',
+      ).doc('msg_1').get();
+      expect(snap.data()!.reactions['user_A'], '👍');
+    });
+
+    test('removes the reaction when emoji is null', () async {
+      await _writeMessage(fakeDb, _makeMessage(id: 'msg_1', chatId: 'chat_1'));
+      await repo.setReaction(
+        chatId: 'chat_1',
+        messageId: 'msg_1',
+        uid: 'user_A',
+        emoji: '❤️',
+      );
+
+      await repo.setReaction(
+        chatId: 'chat_1',
+        messageId: 'msg_1',
+        uid: 'user_A',
+        emoji: null,
+      );
+
+      final snap = await FirestoreCollections.chatMessages(
+        db: fakeDb,
+        chatId: 'chat_1',
+      ).doc('msg_1').get();
+      expect(snap.data()!.reactions.containsKey('user_A'), false);
+    });
+
+    test('multiple uids can each have their own reaction', () async {
+      await _writeMessage(fakeDb, _makeMessage(id: 'msg_1', chatId: 'chat_1'));
+
+      await repo.setReaction(
+        chatId: 'chat_1',
+        messageId: 'msg_1',
+        uid: 'user_A',
+        emoji: '👍',
+      );
+      await repo.setReaction(
+        chatId: 'chat_1',
+        messageId: 'msg_1',
+        uid: 'user_B',
+        emoji: '😂',
+      );
+
+      final snap = await FirestoreCollections.chatMessages(
+        db: fakeDb,
+        chatId: 'chat_1',
+      ).doc('msg_1').get();
+      expect(snap.data()!.reactions['user_A'], '👍');
+      expect(snap.data()!.reactions['user_B'], '😂');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // markMessagesRead
+  // -------------------------------------------------------------------------
+
+  group('markMessagesRead', () {
+    test('adds uid to readBy for messages sent by others', () async {
+      await _writeMessage(
+        fakeDb,
+        _makeMessage(id: 'msg_1', chatId: 'chat_1', senderId: 'user_B'),
+      );
+
+      await repo.markMessagesRead(chatId: 'chat_1', uid: 'user_A');
+
+      final snap = await FirestoreCollections.chatMessages(
+        db: fakeDb,
+        chatId: 'chat_1',
+      ).doc('msg_1').get();
+      expect(snap.data()!.readBy, contains('user_A'));
+    });
+
+    test('does not update messages sent by uid', () async {
+      await _writeMessage(
+        fakeDb,
+        _makeMessage(id: 'msg_own', chatId: 'chat_1', senderId: 'user_A'),
+      );
+
+      await repo.markMessagesRead(chatId: 'chat_1', uid: 'user_A');
+
+      final snap = await FirestoreCollections.chatMessages(
+        db: fakeDb,
+        chatId: 'chat_1',
+      ).doc('msg_own').get();
+      expect(snap.data()!.readBy, isNot(contains('user_A')));
+    });
+
+    test('does not add uid twice if already in readBy', () async {
+      await _writeMessage(
+        fakeDb,
+        _makeMessage(
+          id: 'msg_1',
+          chatId: 'chat_1',
+          senderId: 'user_B',
+          readBy: ['user_A'],
+        ),
+      );
+
+      await repo.markMessagesRead(chatId: 'chat_1', uid: 'user_A');
+
+      final snap = await FirestoreCollections.chatMessages(
+        db: fakeDb,
+        chatId: 'chat_1',
+      ).doc('msg_1').get();
+      expect(snap.data()!.readBy.where((id) => id == 'user_A').length, 1);
+    });
+
+    test('no-op (no commit) when all messages are already read', () async {
+      await _writeMessage(
+        fakeDb,
+        _makeMessage(
+          id: 'msg_1',
+          chatId: 'chat_1',
+          senderId: 'user_B',
+          readBy: ['user_A'],
+        ),
+      );
+
+      await expectLater(
+        repo.markMessagesRead(chatId: 'chat_1', uid: 'user_A'),
+        completes,
+      );
     });
   });
 
