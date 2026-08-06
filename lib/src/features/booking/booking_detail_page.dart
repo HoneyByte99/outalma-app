@@ -133,11 +133,13 @@ class _DetailContent extends ConsumerWidget {
       if (booking.status == BookingStatus.requested) {
         bottomBar = _ProviderActionBar(booking: booking);
       } else if (booking.status == BookingStatus.accepted) {
-        bottomBar = _MarkInProgressBar(booking: booking);
+        bottomBar = _ProviderAcceptedBar(booking: booking);
       }
     } else if (uid == booking.customerId) {
       if (booking.status == BookingStatus.requested) {
         bottomBar = _CancelBookingBar(booking: booking);
+      } else if (booking.status == BookingStatus.accepted) {
+        bottomBar = _CancelAcceptedBar(booking: booking);
       } else if (booking.status == BookingStatus.inProgress) {
         bottomBar = _ConfirmDoneBar(booking: booking);
       }
@@ -727,39 +729,61 @@ class _StatusTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final events = _buildEvents(l10n);
+    final locale = Localizations.localeOf(context).toString();
+    final events = _buildEvents(l10n, locale);
 
     return Column(
       children: events.asMap().entries.map((entry) {
         final isLast = entry.key == events.length - 1;
-        final (label, date, isActive) = entry.value;
+        final (label, date, isActive, subtitle) = entry.value;
         return _TimelineRow(
           label: label,
           date: date,
           isActive: isActive,
           showLine: !isLast,
+          subtitle: subtitle,
         );
       }).toList(),
     );
   }
 
-  List<(String, DateTime?, bool)> _buildEvents(AppLocalizations l10n) {
+  List<(String, DateTime?, bool, String?)> _buildEvents(
+    AppLocalizations l10n,
+    String locale,
+  ) {
     return [
-      (l10n.timelineRequestSent, booking.createdAt, true),
+      (l10n.timelineRequestSent, booking.createdAt, true, null),
       if (booking.acceptedAt != null)
-        (l10n.timelineAccepted, booking.acceptedAt, true),
+        (l10n.timelineAccepted, booking.acceptedAt, true, null),
+      if (booking.rescheduledAt != null && booking.rescheduledTo != null)
+        (
+          l10n.bookingReschedule,
+          booking.rescheduledAt,
+          true,
+          l10n.bookingRescheduledAtLabel(
+            _formatSchedule(booking.rescheduledTo!, locale),
+          ),
+        ),
       if (booking.rejectedAt != null)
-        (l10n.timelineRejected, booking.rejectedAt, true),
+        (
+          l10n.timelineRejected,
+          booking.rejectedAt,
+          true,
+          booking.rejectionReason != null
+              ? l10n.bookingRejectionReasonLabel(booking.rejectionReason!)
+              : null,
+        ),
       if (booking.startedAt != null)
-        (l10n.timelineInProgress, booking.startedAt, true),
+        (l10n.timelineInProgress, booking.startedAt, true, null),
       if (booking.cancelledAt != null)
-        (l10n.timelineCancelled, booking.cancelledAt, true),
-      if (booking.doneAt != null) (l10n.timelineDone, booking.doneAt, true),
-      // Future milestone
+        (l10n.timelineCancelled, booking.cancelledAt, true, null),
+      if (booking.doneAt != null)
+        (l10n.timelineDone, booking.doneAt, true, null),
+      // Future milestones
       if (booking.status == BookingStatus.requested)
-        (l10n.timelinePendingResponse, null, false),
+        (l10n.timelinePendingResponse, null, false, null),
       if (booking.status == BookingStatus.accepted)
-        (l10n.timelineUpcoming, null, false),
+        (l10n.timelineUpcoming, null, false, null),
     ];
   }
 }
@@ -770,12 +794,14 @@ class _TimelineRow extends StatelessWidget {
     required this.date,
     required this.isActive,
     required this.showLine,
+    this.subtitle,
   });
 
   final String label;
   final DateTime? date;
   final bool isActive;
   final bool showLine;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -837,6 +863,16 @@ class _TimelineRow extends StatelessWidget {
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                    ),
+                  ],
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: oc.secondaryText,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ],
                 ],
@@ -1030,22 +1066,62 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
   }
 
   Future<void> _reject() async {
-    final rejectedMsg = AppLocalizations.of(context)!.bookingRejected;
-    final rejectErrMsg = AppLocalizations.of(context)!.bookingRejectError;
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.bookingRejectTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.bookingRejectContent),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              maxLength: 500,
+              decoration: InputDecoration(
+                hintText: l10n.bookingRejectReasonHint,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.bookingBack),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.bookingReject, style: TextStyle(color: oc.error)),
+          ),
+        ],
+      ),
+    );
+    final reason = reasonController.text;
+    reasonController.dispose();
+    if (confirmed != true || !mounted) return;
+
     setState(() => _loadingReject = true);
     try {
-      await ref.read(rejectBookingUseCaseProvider).call(widget.booking.id);
+      await ref
+          .read(rejectBookingUseCaseProvider)
+          .call(widget.booking.id, reason: reason);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(rejectedMsg)));
+        ).showSnackBar(SnackBar(content: Text(l10n.bookingRejected)));
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message ?? rejectErrMsg),
-            backgroundColor: context.oc.error,
+            content: Text(e.message ?? l10n.bookingRejectError),
+            backgroundColor: oc.error,
           ),
         );
       }
@@ -1053,8 +1129,8 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(rejectErrMsg),
-            backgroundColor: context.oc.error,
+            content: Text(l10n.bookingRejectError),
+            backgroundColor: oc.error,
           ),
         );
       }
@@ -1120,36 +1196,36 @@ class _ProviderActionBarState extends ConsumerState<_ProviderActionBar> {
 }
 
 // ---------------------------------------------------------------------------
-// Provider: mark in progress bar
+// Provider: accepted bar - Start / Reschedule / Cancel
 // ---------------------------------------------------------------------------
 
-class _MarkInProgressBar extends ConsumerStatefulWidget {
-  const _MarkInProgressBar({required this.booking});
+class _ProviderAcceptedBar extends ConsumerStatefulWidget {
+  const _ProviderAcceptedBar({required this.booking});
   final Booking booking;
 
   @override
-  ConsumerState<_MarkInProgressBar> createState() => _MarkInProgressBarState();
+  ConsumerState<_ProviderAcceptedBar> createState() =>
+      _ProviderAcceptedBarState();
 }
 
-class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
-  bool _loading = false;
+class _ProviderAcceptedBarState extends ConsumerState<_ProviderAcceptedBar> {
+  bool _loadingStart = false;
 
   Future<void> _markInProgress() async {
-    final startedMsg = AppLocalizations.of(context)!.bookingServiceStarted;
-    final startErrMsg = AppLocalizations.of(context)!.bookingStartError;
-    setState(() => _loading = true);
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _loadingStart = true);
     try {
       await ref.read(markInProgressUseCaseProvider).call(widget.booking.id);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(startedMsg)));
+        ).showSnackBar(SnackBar(content: Text(l10n.bookingServiceStarted)));
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message ?? startErrMsg),
+            content: Text(e.message ?? l10n.bookingStartError),
             backgroundColor: context.oc.error,
           ),
         );
@@ -1158,14 +1234,25 @@ class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(startErrMsg),
+            content: Text(l10n.bookingStartError),
             backgroundColor: context.oc.error,
           ),
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _loadingStart = false);
     }
+  }
+
+  void _openReschedule() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _RescheduleSheet(booking: widget.booking),
+    );
   }
 
   @override
@@ -1173,24 +1260,57 @@ class _MarkInProgressBarState extends ConsumerState<_MarkInProgressBar> {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Container(
       padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + bottomPadding),
       decoration: BoxDecoration(
         color: oc.cardSurface,
         border: Border(top: BorderSide(color: oc.border)),
       ),
-      child: ElevatedButton(
-        onPressed: _loading ? null : _markInProgress,
-        child: _loading
-            ? SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: oc.cardSurface,
-                ),
-              )
-            : Text(l10n.bookingStartService),
+      child: Row(
+        children: [
+          // Cancel icon button
+          OutlinedButton(
+            onPressed: _loadingStart
+                ? null
+                : () => _confirmCancelBooking(context, ref, widget.booking),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: oc.error,
+              side: BorderSide(color: oc.error),
+              minimumSize: const Size(48, 48),
+              padding: EdgeInsets.zero,
+            ),
+            child: const Icon(Icons.cancel_outlined, size: 20),
+          ),
+          const SizedBox(width: 8),
+          // Reschedule
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _loadingStart ? null : _openReschedule,
+              icon: const Icon(Icons.schedule_rounded, size: 18),
+              label: Text(l10n.bookingReschedule),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Start service
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _loadingStart ? null : _markInProgress,
+              style: ElevatedButton.styleFrom(minimumSize: const Size(0, 48)),
+              child: _loadingStart
+                  ? SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: oc.cardSurface,
+                      ),
+                    )
+                  : Text(l10n.bookingStartService),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1334,6 +1454,192 @@ class _CancelBookingBarState extends ConsumerState<_CancelBookingBar> {
                 )
               : Text(l10n.bookingCancelButton),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Client: cancel bar shown when booking is accepted (after provider accepted)
+// ---------------------------------------------------------------------------
+
+class _CancelAcceptedBar extends StatelessWidget {
+  const _CancelAcceptedBar({required this.booking});
+
+  final Booking booking;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    return Consumer(
+      builder: (context, ref, _) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+          child: OutlinedButton(
+            onPressed: () => _confirmCancelBooking(context, ref, booking),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: oc.error,
+              side: BorderSide(color: oc.error),
+            ),
+            child: Text(l10n.bookingCancelAfterAcceptButton),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Provider: reschedule bottom sheet
+// ---------------------------------------------------------------------------
+
+class _RescheduleSheet extends ConsumerStatefulWidget {
+  const _RescheduleSheet({required this.booking});
+
+  final Booking booking;
+
+  @override
+  ConsumerState<_RescheduleSheet> createState() => _RescheduleSheetState();
+}
+
+class _RescheduleSheetState extends ConsumerState<_RescheduleSheet> {
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+  bool _loading = false;
+
+  DateTime get _combined {
+    final d = _selectedDate!;
+    final t = _selectedTime!;
+    return DateTime(d.year, d.month, d.day, t.hour, t.minute);
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (picked != null) setState(() => _selectedDate = picked);
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? const TimeOfDay(hour: 10, minute: 0),
+    );
+    if (picked != null) setState(() => _selectedTime = picked);
+  }
+
+  Future<void> _confirm() async {
+    if (_selectedDate == null || _selectedTime == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    setState(() => _loading = true);
+    try {
+      await ref
+          .read(rescheduleBookingUseCaseProvider)
+          .call(widget.booking.id, _combined);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.bookingRescheduleSuccess)));
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? l10n.bookingRescheduleError),
+            backgroundColor: oc.error,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.bookingRescheduleError),
+            backgroundColor: oc.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final locale = Localizations.localeOf(context).toString();
+    final bottomInset =
+        MediaQuery.of(context).viewInsets.bottom +
+        MediaQuery.of(context).padding.bottom;
+    final canConfirm =
+        _selectedDate != null && _selectedTime != null && !_loading;
+
+    final dateLabel = _selectedDate != null
+        ? DateFormat('EEE d MMMM yyyy', locale).format(_selectedDate!)
+        : l10n.bookingReschedulePickDate;
+    final timeLabel = _selectedTime != null
+        ? _selectedTime!.format(context)
+        : l10n.bookingReschedulePickTime;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.bookingRescheduleTitle,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 20),
+          OutlinedButton.icon(
+            onPressed: _loading ? null : _pickDate,
+            icon: const Icon(Icons.calendar_today_outlined, size: 18),
+            label: Text(dateLabel),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+              alignment: Alignment.centerLeft,
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _loading ? null : _pickTime,
+            icon: const Icon(Icons.access_time_outlined, size: 18),
+            label: Text(timeLabel),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+              alignment: Alignment.centerLeft,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: canConfirm ? _confirm : null,
+              style: ElevatedButton.styleFrom(minimumSize: const Size(0, 48)),
+              child: _loading
+                  ? SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: oc.cardSurface,
+                      ),
+                    )
+                  : Text(l10n.bookingRescheduleConfirm),
+            ),
+          ),
+        ],
       ),
     );
   }

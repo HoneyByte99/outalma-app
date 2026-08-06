@@ -16,13 +16,17 @@ class AcceptBookingUseCase {
 }
 
 /// Calls the server-authoritative `rejectBooking` Cloud Function.
+/// An optional [reason] is stored as `rejectionReason` and shown to the customer.
 class RejectBookingUseCase {
   const RejectBookingUseCase();
 
-  Future<void> call(String bookingId) async {
+  Future<void> call(String bookingId, {String? reason}) async {
     await const CallableFunctionClient().call(
       'rejectBooking',
-      data: {'bookingId': bookingId},
+      data: {
+        'bookingId': bookingId,
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
     );
   }
 }
@@ -70,6 +74,23 @@ class CancelBookingUseCase {
   }
 }
 
+/// Calls the server-authoritative `rescheduleBooking` Cloud Function.
+/// Provider-only. Booking must be in `accepted` status.
+/// [newScheduledAt] is the new appointment date/time.
+class RescheduleBookingUseCase {
+  const RescheduleBookingUseCase();
+
+  Future<void> call(String bookingId, DateTime newScheduledAt) async {
+    await const CallableFunctionClient().call(
+      'rescheduleBooking',
+      data: {
+        'bookingId': bookingId,
+        'newScheduledAt': newScheduledAt.millisecondsSinceEpoch,
+      },
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
@@ -92,4 +113,8 @@ final confirmDoneUseCaseProvider = Provider<ConfirmDoneUseCase>(
 
 final cancelBookingUseCaseProvider = Provider<CancelBookingUseCase>(
   (_) => const CancelBookingUseCase(),
+);
+
+final rescheduleBookingUseCaseProvider = Provider<RescheduleBookingUseCase>(
+  (_) => const RescheduleBookingUseCase(),
 );

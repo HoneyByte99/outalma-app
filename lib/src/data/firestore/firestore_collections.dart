@@ -316,6 +316,14 @@ class FirestoreCollections {
       audioMessageUrl: data['audioMessageUrl'] as String?,
       cancelReason: data['cancelReason'] as String?,
       cancelledBy: data['cancelledBy'] as String?,
+      rejectionReason: data['rejectionReason'] as String?,
+      rescheduledAt: data['rescheduledAt'] != null
+          ? dateTimeFromFirestore(data['rescheduledAt'])
+          : null,
+      rescheduledTo: data['rescheduledTo'] != null
+          ? dateTimeFromFirestore(data['rescheduledTo'])
+          : null,
+      rescheduleCount: (data['rescheduleCount'] as num?)?.toInt(),
     );
   }
 
@@ -355,6 +363,14 @@ class FirestoreCollections {
       // bookings today; this keeps the serializer aligned with the model).
       if (booking.cancelReason != null) 'cancelReason': booking.cancelReason,
       if (booking.cancelledBy != null) 'cancelledBy': booking.cancelledBy,
+      if (booking.rejectionReason != null)
+        'rejectionReason': booking.rejectionReason,
+      if (booking.rescheduledAt != null)
+        'rescheduledAt': dateTimeToFirestore(booking.rescheduledAt!),
+      if (booking.rescheduledTo != null)
+        'rescheduledTo': dateTimeToFirestore(booking.rescheduledTo!),
+      if (booking.rescheduleCount != null)
+        'rescheduleCount': booking.rescheduleCount,
     };
   }
 

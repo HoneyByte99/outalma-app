@@ -21,6 +21,10 @@ class Booking {
     this.audioMessageUrl,
     this.cancelReason,
     this.cancelledBy,
+    this.rejectionReason,
+    this.rescheduledAt,
+    this.rescheduledTo,
+    this.rescheduleCount,
   });
 
   final String id;
@@ -45,6 +49,15 @@ class Booking {
   final String? cancelReason;
   final String? cancelledBy;
 
+  /// Set by the provider when rejecting - optional reason shown to the customer.
+  final String? rejectionReason;
+
+  /// Reschedule tracking: timestamp of the last reschedule, the new date/time,
+  /// and how many times this booking has been rescheduled.
+  final DateTime? rescheduledAt;
+  final DateTime? rescheduledTo;
+  final int? rescheduleCount;
+
   Booking copyWith({
     String? customerId,
     String? providerId,
@@ -64,6 +77,10 @@ class Booking {
     String? audioMessageUrl,
     String? cancelReason,
     String? cancelledBy,
+    String? rejectionReason,
+    DateTime? rescheduledAt,
+    DateTime? rescheduledTo,
+    int? rescheduleCount,
   }) {
     return Booking(
       id: id,
@@ -85,6 +102,10 @@ class Booking {
       audioMessageUrl: audioMessageUrl ?? this.audioMessageUrl,
       cancelReason: cancelReason ?? this.cancelReason,
       cancelledBy: cancelledBy ?? this.cancelledBy,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
+      rescheduledAt: rescheduledAt ?? this.rescheduledAt,
+      rescheduledTo: rescheduledTo ?? this.rescheduledTo,
+      rescheduleCount: rescheduleCount ?? this.rescheduleCount,
     );
   }
 }
