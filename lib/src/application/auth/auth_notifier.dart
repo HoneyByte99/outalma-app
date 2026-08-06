@@ -7,9 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/services/callable_function_client.dart';
+import '../../data/services/callable_function_client_provider.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_user.dart';
-import '../../features/legal/legal_terms.dart';
 import 'auth_providers.dart';
 import 'auth_state.dart';
 
@@ -56,6 +56,11 @@ class PhoneSignInResult {
 class AuthNotifier extends AsyncNotifier<AuthState> {
   // ignore: cancel_subscriptions - cancelled via ref.onDispose(_authSub.cancel) below.
   late StreamSubscription<User?> _authSub;
+
+  /// Server-authoritative Cloud Function client (injected via provider so tests
+  /// can substitute a fake).
+  CallableFunctionClient get _functions =>
+      ref.read(callableFunctionClientProvider);
 
   @override
   Future<AuthState> build() async {
@@ -150,13 +155,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   /// server-authoritative Cloud Function, then signs out locally.
   /// Required by App Store 5.1.1(v) and Google Play.
   Future<void> deleteAccount() async {
-    await const CallableFunctionClient().call('deleteMyAccount');
+    await _functions.call('deleteMyAccount');
     await ref.read(firebaseAuthProvider).signOut();
   }
 
   /// Returns the caller's personal data (RGPD portability) as a JSON-able map.
   Future<Map<String, dynamic>> exportMyData() async {
-    return const CallableFunctionClient().call('exportMyData');
+    return _functions.call('exportMyData');
   }
 
   // ---------------------------------------------------------------------------
@@ -171,7 +176,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     String phoneE164, {
     String channel = 'sms',
   }) async {
-    await const CallableFunctionClient().call(
+    await _functions.call(
       'requestPhoneOtp',
       data: {'phone': phoneE164, 'channel': channel},
     );
@@ -188,7 +193,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     String code,
   ) async {
     try {
-      final result = await const CallableFunctionClient().call(
+      final result = await _functions.call(
         'verifyPhoneOtpAndSignIn',
         data: {'phone': phoneE164, 'code': code},
       );
@@ -223,7 +228,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String termsVersion,
   }) async {
     try {
-      final result = await const CallableFunctionClient().call(
+      final result = await _functions.call(
         'verifyPhoneOtpAndSignUp',
         data: {
           'phone': phoneE164,
@@ -356,21 +361,27 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       ),
     );
 
-    // Persist a server-authoritative consent record. Email accounts have no
-    // dedicated sign-up Cloud Function, so we write the consent alongside the
-    // profile with a server timestamp and the accepted terms version (RGPD /
-    // CDP Senegal loi 2008-12: proof of what was accepted and when). Merge so
-    // the profile fields written just above are preserved; the Firestore update
-    // rule keeps email/phoneE164 unchanged, which a merge write satisfies.
+    // Persist a server-authoritative consent record (RGPD / CDP Senegal loi
+    // 2008-12: proof of what was accepted and when). Email accounts write it
+    // through the `finalizeEmailSignUp` Cloud Function, mirroring the phone
+    // flow: the server stamps the terms version (not the client) and the
+    // acceptance timestamp with the server clock, and the Admin SDK bypasses
+    // the Firestore rule that forbids clients from writing `consent`.
+    //
+    // FAIL-CLOSED: a legally valid account must not exist without a persisted
+    // consent proof. If the consent write fails, roll back the freshly created
+    // Firebase Auth account and surface the error so the UI can ask the user to
+    // retry, rather than leaving an account with no server-side consent record.
     try {
-      await ref.read(firestoreProvider).collection('users').doc(user.uid).set({
-        'consent': {
-          'termsVersion': kTermsVersion,
-          'acceptedAt': FieldValue.serverTimestamp(),
-        },
-      }, SetOptions(merge: true));
+      await _functions.call('finalizeEmailSignUp');
     } catch (e) {
-      debugPrint('[AuthNotifier] consent write failed: $e');
+      debugPrint('[AuthNotifier] consent write failed, rolling back: $e');
+      try {
+        await user.delete();
+      } catch (deleteError) {
+        debugPrint('[AuthNotifier] rollback delete failed: $deleteError');
+      }
+      rethrow;
     }
 
     // Send the verification mail. Failures here do NOT abort sign-up - the

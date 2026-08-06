@@ -429,6 +429,26 @@ describe('core access invariants', () => {
     );
   });
 
+  test('user create cannot include consent (server-only)', async () => {
+    await assertFails(
+      setDoc(doc(asUser('alice'), 'users/alice'), {
+        displayName: 'Alice',
+        consent: { termsVersion: '1999-01-01' },
+      })
+    );
+  });
+
+  test('user cannot write/forge consent on update (server-only)', async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'users/alice'), { displayName: 'A', email: 'a@x.dev' })
+    );
+    await assertFails(
+      updateDoc(doc(asUser('alice'), 'users/alice'), {
+        consent: { termsVersion: '1999-01-01' },
+      })
+    );
+  });
+
   test('notifications: owner reads own, cannot create, can only flip read', async () => {
     await seed((db) =>
       setDoc(doc(db, 'notifications/alice/items/n1'), {

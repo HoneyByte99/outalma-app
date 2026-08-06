@@ -5,23 +5,24 @@ import '../../data/services/callable_function_client.dart';
 /// Calls the server-authoritative `acceptBooking` Cloud Function.
 /// Creates the chat document and sets chatId on the booking.
 class AcceptBookingUseCase {
-  const AcceptBookingUseCase();
+  const AcceptBookingUseCase([this._client = const CallableFunctionClient()]);
+
+  final CallableFunctionClient _client;
 
   Future<void> call(String bookingId) async {
-    await const CallableFunctionClient().call(
-      'acceptBooking',
-      data: {'bookingId': bookingId},
-    );
+    await _client.call('acceptBooking', data: {'bookingId': bookingId});
   }
 }
 
 /// Calls the server-authoritative `rejectBooking` Cloud Function.
 /// An optional [reason] is stored as `rejectionReason` and shown to the customer.
 class RejectBookingUseCase {
-  const RejectBookingUseCase();
+  const RejectBookingUseCase([this._client = const CallableFunctionClient()]);
+
+  final CallableFunctionClient _client;
 
   Future<void> call(String bookingId, {String? reason}) async {
-    await const CallableFunctionClient().call(
+    await _client.call(
       'rejectBooking',
       data: {
         'bookingId': bookingId,
@@ -34,26 +35,24 @@ class RejectBookingUseCase {
 /// Calls the server-authoritative `markInProgress` Cloud Function.
 /// Provider-only. Booking must be in `accepted` status.
 class MarkInProgressUseCase {
-  const MarkInProgressUseCase();
+  const MarkInProgressUseCase([this._client = const CallableFunctionClient()]);
+
+  final CallableFunctionClient _client;
 
   Future<void> call(String bookingId) async {
-    await const CallableFunctionClient().call(
-      'markInProgress',
-      data: {'bookingId': bookingId},
-    );
+    await _client.call('markInProgress', data: {'bookingId': bookingId});
   }
 }
 
 /// Calls the server-authoritative `confirmDone` Cloud Function.
 /// Client-only. Booking must be in `in_progress` status.
 class ConfirmDoneUseCase {
-  const ConfirmDoneUseCase();
+  const ConfirmDoneUseCase([this._client = const CallableFunctionClient()]);
+
+  final CallableFunctionClient _client;
 
   Future<void> call(String bookingId) async {
-    await const CallableFunctionClient().call(
-      'confirmDone',
-      data: {'bookingId': bookingId},
-    );
+    await _client.call('confirmDone', data: {'bookingId': bookingId});
   }
 }
 
@@ -61,10 +60,12 @@ class ConfirmDoneUseCase {
 /// Valid while the booking is requested, accepted or in_progress (either
 /// participant may cancel; an optional [reason] is recorded).
 class CancelBookingUseCase {
-  const CancelBookingUseCase();
+  const CancelBookingUseCase([this._client = const CallableFunctionClient()]);
+
+  final CallableFunctionClient _client;
 
   Future<void> call(String bookingId, {String? reason}) async {
-    await const CallableFunctionClient().call(
+    await _client.call(
       'cancelBooking',
       data: {
         'bookingId': bookingId,
@@ -78,10 +79,14 @@ class CancelBookingUseCase {
 /// Provider-only. Booking must be in `accepted` status.
 /// [newScheduledAt] is the new appointment date/time.
 class RescheduleBookingUseCase {
-  const RescheduleBookingUseCase();
+  const RescheduleBookingUseCase([
+    this._client = const CallableFunctionClient(),
+  ]);
+
+  final CallableFunctionClient _client;
 
   Future<void> call(String bookingId, DateTime newScheduledAt) async {
-    await const CallableFunctionClient().call(
+    await _client.call(
       'rescheduleBooking',
       data: {
         'bookingId': bookingId,

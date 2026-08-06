@@ -98,6 +98,7 @@ export {
   requestPhoneOtp,
   verifyPhoneOtpAndSignIn,
   verifyPhoneOtpAndSignUp,
+  finalizeEmailSignUp,
 } from './auth_phone';
 
 // ---------------------------------------------------------------------------

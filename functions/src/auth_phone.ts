@@ -342,3 +342,51 @@ export const verifyPhoneOtpAndSignUp = onCall(
     return { customToken, uid };
   }
 );
+
+// ---------------------------------------------------------------------------
+// Email sign-up consent finalization (server-authoritative)
+// ---------------------------------------------------------------------------
+//
+// Email accounts are created client-side via Firebase Auth
+// (createUserWithEmailAndPassword), so there is no dedicated sign-up Cloud
+// Function like the phone flow. This callable records the consent proof
+// server-side once the account exists, mirroring the phone signup:
+//
+//   - The terms version is the SERVER constant TERMS_VERSION, never a value
+//     supplied by the client (the client cannot forge which terms were
+//     accepted). This closes the "client-controlled termsVersion" gap that the
+//     Firestore rules could not enforce.
+//   - `acceptedAt` is stamped with the server clock.
+//   - The write uses the Admin SDK, which bypasses Firestore rules (clients are
+//     forbidden from writing the `consent` field, see firestore.rules).
+//
+// It throws on failure so the client can fail-closed (roll back the account):
+// a legally valid account must not exist without a persisted consent record.
+export const finalizeEmailSignUp = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError(
+        'unauthenticated',
+        'You must be signed in to finalize sign-up'
+      );
+    }
+
+    await db().collection('users').doc(uid).set(
+      {
+        // Consent proof (RGPD / CDP Senegal loi 2008-12): server-authoritative
+        // record of which terms revision the user accepted and when. The
+        // version is fixed server-side, not taken from the client.
+        termsAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+        consent: {
+          termsVersion: TERMS_VERSION,
+          acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      },
+      { merge: true }
+    );
+
+    return { termsVersion: TERMS_VERSION, uid };
+  }
+);
