@@ -94,6 +94,26 @@ function assertCountry(value: unknown): string {
   return v;
 }
 
+// Version of the published Terms of Service + Privacy Policy. Kept in sync with
+// the client constant `kTermsVersion` in `lib/src/features/legal/legal_terms.dart`.
+const TERMS_VERSION = '2026-06-07';
+
+// The client sends the version of the terms the user actually accepted on the
+// sign-up screen. Validate it is a short, single-line string; fall back to the
+// server's current version for older clients that predate this parameter.
+function assertTermsVersion(value: unknown): string {
+  if (value === undefined || value === null) return TERMS_VERSION;
+  if (typeof value !== 'string') {
+    throw new HttpsError('invalid-argument', 'termsVersion must be a string');
+  }
+  const cleaned = value.trim();
+  if (!cleaned) return TERMS_VERSION;
+  if (cleaned.length > 40 || /[\r\n]/.test(cleaned)) {
+    throw new HttpsError('invalid-argument', 'termsVersion is malformed');
+  }
+  return cleaned;
+}
+
 // ---------------------------------------------------------------------------
 // Twilio Verify HTTP helpers
 // ---------------------------------------------------------------------------
@@ -258,6 +278,7 @@ export const verifyPhoneOtpAndSignUp = onCall(
     const code = assertCode(request.data?.code);
     const displayName = assertDisplayName(request.data?.displayName);
     const country = assertCountry(request.data?.country);
+    const termsVersion = assertTermsVersion(request.data?.termsVersion);
 
     await twilioCheckVerification(phone, code);
 
@@ -304,8 +325,14 @@ export const verifyPhoneOtpAndSignUp = onCall(
       country,
       activeMode: 'client',
       createdAt: admin.firestore.Timestamp.now(),
-      // Consent proof (RGPD) - the sign-up screen gates submission on acceptance.
+      // Consent proof (RGPD / CDP Senegal loi 2008-12) - the sign-up screen
+      // gates submission on acceptance. Recorded server-side with the version
+      // the user accepted and a server-clock timestamp.
       termsAcceptedAt: admin.firestore.Timestamp.now(),
+      consent: {
+        termsVersion,
+        acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
     });
 
     const customToken = await auth.createCustomToken(uid, {

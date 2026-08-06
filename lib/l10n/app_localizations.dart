@@ -1520,6 +1520,84 @@ abstract class AppLocalizations {
   /// **'Request cancelled.'**
   String get bookingCancelSuccess;
 
+  /// No description provided for @bookingCancelAfterAcceptButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel booking'**
+  String get bookingCancelAfterAcceptButton;
+
+  /// No description provided for @bookingRejectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject the request?'**
+  String get bookingRejectTitle;
+
+  /// No description provided for @bookingRejectContent.
+  ///
+  /// In en, this message translates to:
+  /// **'You may explain why (optional). The client will see this reason.'**
+  String get bookingRejectContent;
+
+  /// No description provided for @bookingRejectReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (optional)'**
+  String get bookingRejectReasonHint;
+
+  /// No description provided for @bookingRejectionReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejection reason: {reason}'**
+  String bookingRejectionReasonLabel(String reason);
+
+  /// No description provided for @bookingReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule'**
+  String get bookingReschedule;
+
+  /// No description provided for @bookingRescheduleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule the booking'**
+  String get bookingRescheduleTitle;
+
+  /// No description provided for @bookingReschedulePickDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a new date'**
+  String get bookingReschedulePickDate;
+
+  /// No description provided for @bookingReschedulePickTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a new time'**
+  String get bookingReschedulePickTime;
+
+  /// No description provided for @bookingRescheduleConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm reschedule'**
+  String get bookingRescheduleConfirm;
+
+  /// No description provided for @bookingRescheduleSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking rescheduled.'**
+  String get bookingRescheduleSuccess;
+
+  /// No description provided for @bookingRescheduleError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not reschedule. Please try again.'**
+  String get bookingRescheduleError;
+
+  /// No description provided for @bookingRescheduledAtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescheduled to {date}'**
+  String bookingRescheduledAtLabel(String date);
+
   /// No description provided for @bookingConfirmDoneTitle.
   ///
   /// In en, this message translates to:
@@ -2983,6 +3061,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Request sent. You\'ll receive your data by email.'**
   String get exportRequestSent;
+
+  /// No description provided for @exportDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export my data'**
+  String get exportDataTitle;
+
+  /// No description provided for @exportDataBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll gather your personal data (profile, bookings, reviews and conversations) into a JSON file you can save or share.'**
+  String get exportDataBody;
+
+  /// No description provided for @exportDataConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get exportDataConfirm;
+
+  /// No description provided for @exportDataShareSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'My Outalma data'**
+  String get exportDataShareSubject;
 
   /// No description provided for @accountDeleteTitle.
   ///

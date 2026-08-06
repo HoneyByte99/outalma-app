@@ -63,6 +63,29 @@ describe('exportMyData', () => {
     expect(res.reviewsWritten).toHaveLength(1);
     expect(res.exportedAt).toBeTruthy();
   });
+
+  it('includes the conversations the user takes part in', async () => {
+    await seedUser('u1', { email: 'u1@test.dev' });
+    await admin
+      .firestore()
+      .collection('chats')
+      .doc('c1')
+      .set({ participantIds: ['u1', 'other'] });
+    await seedMessage('c1', 'm1', {
+      senderId: 'u1',
+      text: 'hello',
+      createdAt: admin.firestore.Timestamp.now(),
+    });
+
+    const res = (await call(fns.exportMyData, {}, { uid: 'u1' })) as {
+      conversations: Array<{ id: string; messages: Array<{ text?: string }> }>;
+    };
+    expect(res.conversations).toHaveLength(1);
+    const convo = res.conversations[0]!;
+    expect(convo.id).toBe('c1');
+    expect(convo.messages).toHaveLength(1);
+    expect(convo.messages[0]!.text).toBe('hello');
+  });
 });
 
 describe('requestDataExport', () => {

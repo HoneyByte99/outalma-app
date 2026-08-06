@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/callable_function_client.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/models/app_user.dart';
+import '../../features/legal/legal_terms.dart';
 import 'auth_providers.dart';
 import 'auth_state.dart';
 
@@ -219,6 +220,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String code,
     required String displayName,
     required String country,
+    required String termsVersion,
   }) async {
     try {
       final result = await const CallableFunctionClient().call(
@@ -228,6 +230,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           'code': code,
           'displayName': displayName,
           'country': country,
+          // Consent proof (RGPD): the version of the terms the user accepted on
+          // the sign-up screen. The Cloud Function stamps `acceptedAt` with the
+          // server clock so the record is server-authoritative.
+          'termsVersion': termsVersion,
         },
       );
 
@@ -349,6 +355,23 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         termsAcceptedAt: existing?.termsAcceptedAt ?? DateTime.now(),
       ),
     );
+
+    // Persist a server-authoritative consent record. Email accounts have no
+    // dedicated sign-up Cloud Function, so we write the consent alongside the
+    // profile with a server timestamp and the accepted terms version (RGPD /
+    // CDP Senegal loi 2008-12: proof of what was accepted and when). Merge so
+    // the profile fields written just above are preserved; the Firestore update
+    // rule keeps email/phoneE164 unchanged, which a merge write satisfies.
+    try {
+      await ref.read(firestoreProvider).collection('users').doc(user.uid).set({
+        'consent': {
+          'termsVersion': kTermsVersion,
+          'acceptedAt': FieldValue.serverTimestamp(),
+        },
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('[AuthNotifier] consent write failed: $e');
+    }
 
     // Send the verification mail. Failures here do NOT abort sign-up - the
     // user is already in. UI can offer "Resend" via [resendVerificationEmail].

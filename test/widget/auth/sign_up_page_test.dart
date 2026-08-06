@@ -58,6 +58,27 @@ void main() {
       expect(find.byType(ElevatedButton), findsOneWidget);
     });
 
+    testWidgets('CTA is disabled until the terms checkbox is ticked', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pump();
+
+      ElevatedButton cta() =>
+          tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+
+      // Consent not yet given: account creation must be blocked.
+      expect(cta().onPressed, isNull);
+
+      // Tick the terms + privacy checkbox and the CTA becomes enabled. The form
+      // scrolls, so bring the checkbox into view before tapping it.
+      await tester.ensureVisible(find.byType(Checkbox));
+      await tester.pump();
+      await tester.tap(find.byType(Checkbox));
+      await tester.pump();
+      expect(cta().onPressed, isNotNull);
+    });
+
     testWidgets('mail/phone toggle renders two tabs', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();

@@ -11,6 +11,7 @@ import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import '../legal/legal_terms.dart';
 import 'auth_prompt.dart';
 import '../shared/app_logo.dart';
 import '../shared/phone_field.dart';
@@ -180,6 +181,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
             code: code,
             displayName: name,
             country: _countryFromPhone(phone),
+            termsVersion: kTermsVersion,
           );
       // authStateChanges handles redirect.
     } on InvalidOtpException {
@@ -200,7 +202,17 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     });
   }
 
+  /// The consent checkbox is displayed (and thus required) on the mail form and
+  /// on phone step 1. It is not shown again on the OTP step, where consent has
+  /// already been captured.
+  bool get _consentRequiredNow =>
+      _mode == _AuthMode.mail || _phoneStep == _PhoneStep.enterDetails;
+
   VoidCallback? _ctaAction() {
+    // Gate account creation on prior consent: the CTA is disabled until the
+    // terms + privacy checkbox is ticked (legal/RGPD, consent must precede
+    // account creation).
+    if (_consentRequiredNow && !_termsAccepted) return null;
     if (_mode == _AuthMode.mail) return _signUpEmail;
     return _phoneStep == _PhoneStep.enterDetails
         ? _requestOtp

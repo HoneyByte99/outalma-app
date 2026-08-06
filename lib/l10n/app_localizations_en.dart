@@ -765,6 +765,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingCancelSuccess => 'Request cancelled.';
 
   @override
+  String get bookingCancelAfterAcceptButton => 'Cancel booking';
+
+  @override
+  String get bookingRejectTitle => 'Reject the request?';
+
+  @override
+  String get bookingRejectContent =>
+      'You may explain why (optional). The client will see this reason.';
+
+  @override
+  String get bookingRejectReasonHint => 'Reason (optional)';
+
+  @override
+  String bookingRejectionReasonLabel(String reason) {
+    return 'Rejection reason: $reason';
+  }
+
+  @override
+  String get bookingReschedule => 'Reschedule';
+
+  @override
+  String get bookingRescheduleTitle => 'Reschedule the booking';
+
+  @override
+  String get bookingReschedulePickDate => 'Choose a new date';
+
+  @override
+  String get bookingReschedulePickTime => 'Choose a new time';
+
+  @override
+  String get bookingRescheduleConfirm => 'Confirm reschedule';
+
+  @override
+  String get bookingRescheduleSuccess => 'Booking rescheduled.';
+
+  @override
+  String get bookingRescheduleError =>
+      'Could not reschedule. Please try again.';
+
+  @override
+  String bookingRescheduledAtLabel(String date) {
+    return 'Rescheduled to $date';
+  }
+
+  @override
   String get bookingConfirmDoneTitle => 'Confirm completion?';
 
   @override
@@ -1550,6 +1595,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get exportRequestSent =>
       'Request sent. You\'ll receive your data by email.';
+
+  @override
+  String get exportDataTitle => 'Export my data';
+
+  @override
+  String get exportDataBody =>
+      'We\'ll gather your personal data (profile, bookings, reviews and conversations) into a JSON file you can save or share.';
+
+  @override
+  String get exportDataConfirm => 'Export';
+
+  @override
+  String get exportDataShareSubject => 'My Outalma data';
 
   @override
   String get accountDeleteTitle => 'Delete my account';

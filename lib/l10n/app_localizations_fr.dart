@@ -775,6 +775,50 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bookingCancelSuccess => 'Demande annulée.';
 
   @override
+  String get bookingCancelAfterAcceptButton => 'Annuler la réservation';
+
+  @override
+  String get bookingRejectTitle => 'Refuser la demande ?';
+
+  @override
+  String get bookingRejectContent =>
+      'Vous pouvez expliquer pourquoi (facultatif). Le client verra ce motif.';
+
+  @override
+  String get bookingRejectReasonHint => 'Motif (facultatif)';
+
+  @override
+  String bookingRejectionReasonLabel(String reason) {
+    return 'Motif de refus : $reason';
+  }
+
+  @override
+  String get bookingReschedule => 'Reprogrammer';
+
+  @override
+  String get bookingRescheduleTitle => 'Reprogrammer la réservation';
+
+  @override
+  String get bookingReschedulePickDate => 'Choisir une nouvelle date';
+
+  @override
+  String get bookingReschedulePickTime => 'Choisir un nouvel horaire';
+
+  @override
+  String get bookingRescheduleConfirm => 'Confirmer la reprogrammation';
+
+  @override
+  String get bookingRescheduleSuccess => 'Réservation reprogrammée.';
+
+  @override
+  String get bookingRescheduleError => 'Impossible de reprogrammer. Réessayez.';
+
+  @override
+  String bookingRescheduledAtLabel(String date) {
+    return 'Reprogrammé au $date';
+  }
+
+  @override
   String get bookingConfirmDoneTitle => 'Confirmer la fin ?';
 
   @override
@@ -1569,6 +1613,19 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get exportRequestSent =>
       'Demande envoyée. Vous recevrez vos données par email.';
+
+  @override
+  String get exportDataTitle => 'Exporter mes données';
+
+  @override
+  String get exportDataBody =>
+      'Nous allons rassembler vos données personnelles (profil, réservations, avis et conversations) dans un fichier JSON que vous pourrez enregistrer ou partager.';
+
+  @override
+  String get exportDataConfirm => 'Exporter';
+
+  @override
+  String get exportDataShareSubject => 'Mes données Outalma';
 
   @override
   String get accountDeleteTitle => 'Supprimer mon compte';

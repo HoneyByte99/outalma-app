@@ -1,14 +1,18 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../shared/mode_badge.dart';
 import '../../app/router.dart';
-import '../../data/services/callable_function_client.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/locale/locale_provider.dart';
@@ -972,36 +976,21 @@ class _ExportDataTile extends ConsumerStatefulWidget {
 class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
   bool _loading = false;
 
-  /// RGPD: file a data-export REQUEST. The export isn't returned to the device;
-  /// it surfaces on the admin dashboard and an admin emails it. The user can
-  /// confirm or type the destination email (e.g. when signed in by phone).
-  Future<void> _requestExport() async {
+  /// RGPD / CDP Senegal (loi 2008-12) right to portability: self-service export.
+  /// The `exportMyData` Cloud Function gathers the caller's profile, bookings,
+  /// reviews and chat history server-side; we serialise the bundle to JSON,
+  /// write it to a temporary file and hand it to the platform share sheet so the
+  /// user can save or send it. Nothing is exposed to public surfaces.
+  Future<void> _exportAndShare() async {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final messenger = ScaffoldMessenger.of(context);
-    final authState = ref.read(authNotifierProvider).valueOrNull;
-    final currentEmail = authState is AuthAuthenticated
-        ? authState.user.email
-        : '';
-    final controller = TextEditingController(text: currentEmail);
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.exportRequestTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.exportRequestBody),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(labelText: l10n.exportRequestEmail),
-            ),
-          ],
-        ),
+        title: Text(l10n.exportDataTitle),
+        content: Text(l10n.exportDataBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -1009,25 +998,26 @@ class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.exportRequestSend),
+            child: Text(l10n.exportDataConfirm),
           ),
         ],
       ),
     );
-
-    final email = controller.text.trim();
-    controller.dispose();
     if (confirmed != true) return;
 
     setState(() => _loading = true);
     try {
-      await const CallableFunctionClient().call(
-        'requestDataExport',
-        data: {'email': email},
-      );
-      if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.exportRequestSent)));
-      }
+      final data = await ref.read(authNotifierProvider.notifier).exportMyData();
+      final json = const JsonEncoder.withIndent('  ').convert(data);
+
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/outalma_donnees.json');
+      await file.writeAsString(json);
+
+      if (!mounted) return;
+      await Share.shareXFiles([
+        XFile(file.path, mimeType: 'application/json'),
+      ], subject: l10n.exportDataShareSubject);
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
         messenger.showSnackBar(
@@ -1060,16 +1050,16 @@ class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-        onTap: _loading ? null : _requestExport,
+        onTap: _loading ? null : _exportAndShare,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
             children: [
-              Icon(Icons.mail_outline_rounded, size: 20, color: oc.icons),
+              Icon(Icons.download_outlined, size: 20, color: oc.icons),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  l10n.accountRequestExport,
+                  l10n.accountExportData,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),

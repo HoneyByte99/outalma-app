@@ -483,6 +483,13 @@ export const rejectBooking = onCall(async (request) => {
   assertAuthenticated(uid);
 
   const bookingId = requireString(request.data?.bookingId, 'bookingId');
+  // Optional rejection reason shown to the customer (bounded).
+  const reasonRaw = typeof request.data?.reason === 'string'
+    ? (request.data.reason as string).trim()
+    : '';
+  if (reasonRaw.length > 500) {
+    throw new HttpsError('invalid-argument', 'reason is too long (max 500 chars).');
+  }
   const bookingRef = db.collection('bookings').doc(bookingId);
 
   const result = await db.runTransaction(async (tx) => {
@@ -513,11 +520,91 @@ export const rejectBooking = onCall(async (request) => {
     // IMPORTANT: do NOT create a chat on reject.
     tx.update(bookingRef, {
       status: 'rejected' as BookingStatus,
-      rejectedAt: admin.firestore.FieldValue.serverTimestamp()
+      rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
+      ...(reasonRaw ? { rejectionReason: reasonRaw } : {}),
     });
 
     return { bookingId };
   });
+
+  return result;
+});
+
+export const rescheduleBooking = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  assertAuthenticated(uid);
+
+  const bookingId = requireString(request.data?.bookingId, 'bookingId');
+
+  // newScheduledAt is epoch millis from the client.
+  const newScheduledAtMs = request.data?.newScheduledAt;
+  if (typeof newScheduledAtMs !== 'number' || !Number.isFinite(newScheduledAtMs)) {
+    throw new HttpsError('invalid-argument', 'newScheduledAt must be a finite number (epoch millis).');
+  }
+  const newScheduledAt = new Date(newScheduledAtMs);
+  if (newScheduledAt.getTime() <= Date.now()) {
+    throw new HttpsError('invalid-argument', 'newScheduledAt must be in the future.');
+  }
+
+  const bookingRef = db.collection('bookings').doc(bookingId);
+
+  const result = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(bookingRef);
+    if (!snap.exists) throw new HttpsError('not-found', 'Booking not found.');
+
+    const booking = snap.data() as {
+      customerId?: string;
+      providerId?: string;
+      status?: BookingStatus;
+      rescheduleCount?: number;
+    };
+
+    if (!booking.providerId || !booking.customerId) {
+      throw new HttpsError('failed-precondition', 'Booking is missing required fields.');
+    }
+
+    if (booking.status !== 'accepted') {
+      throw new HttpsError(
+        'failed-precondition',
+        `Booking can only be rescheduled when accepted (status=${booking.status ?? 'unknown'}).`
+      );
+    }
+
+    const isAdmin = request.auth?.token?.admin === true;
+    if (!isAdmin && booking.providerId !== uid) {
+      throw new HttpsError('permission-denied', 'Only the provider can reschedule this booking.');
+    }
+
+    const newCount = (booking.rescheduleCount ?? 0) + 1;
+    tx.update(bookingRef, {
+      scheduledAt: admin.firestore.Timestamp.fromMillis(newScheduledAtMs),
+      rescheduledAt: admin.firestore.FieldValue.serverTimestamp(),
+      rescheduledTo: admin.firestore.Timestamp.fromMillis(newScheduledAtMs),
+      rescheduleCount: newCount,
+    });
+
+    return { bookingId, newScheduledAt: newScheduledAtMs, rescheduleCount: newCount };
+  });
+
+  // Notify the customer about the reschedule.
+  if (result) {
+    const snap = await bookingRef.get();
+    const booking = snap.data() as { customerId?: string } | undefined;
+    if (booking?.customerId) {
+      await sendPushToUsers(
+        [booking.customerId],
+        { title: 'Réservation reprogrammée', body: 'Votre prestataire a modifié la date de votre réservation.' },
+        { type: 'booking_rescheduled', bookingId }
+      );
+      await createNotification(booking.customerId, {
+        type: 'booking_rescheduled',
+        title: 'Réservation reprogrammée',
+        body: 'Votre prestataire a modifié la date de votre réservation.',
+        bookingId,
+        audience: 'client',
+      });
+    }
+  }
 
   return result;
 });
@@ -914,7 +1001,7 @@ export const exportMyData = onCall(async (request) => {
   const uid = request.auth?.uid;
   assertAuthenticated(uid);
 
-  const [user, provider, services, bkCustomer, bkProvider, revWritten, revReceived] =
+  const [user, provider, services, bkCustomer, bkProvider, revWritten, revReceived, chats] =
     await Promise.all([
       db.collection('users').doc(uid).get(),
       db.collection('providers').doc(uid).get(),
@@ -923,12 +1010,27 @@ export const exportMyData = onCall(async (request) => {
       db.collection('bookings').where('providerId', '==', uid).get(),
       db.collection('reviews').where('reviewerId', '==', uid).get(),
       db.collection('reviews').where('revieweeId', '==', uid).get(),
+      db.collection('chats').where('participantIds', 'array-contains', uid).get(),
     ]);
 
   const one = (s: admin.firestore.DocumentSnapshot) =>
     s.exists ? { id: s.id, ...s.data() } : null;
   const many = (q: admin.firestore.QuerySnapshot) =>
     q.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  // Messages live under chats/{chatId}/messages. Gather every message from each
+  // conversation the user takes part in so the export carries their chat history
+  // (RGPD right to portability).
+  const conversations = await Promise.all(
+    chats.docs.map(async (c) => {
+      const msgs = await c.ref.collection('messages').orderBy('createdAt').get();
+      return {
+        id: c.id,
+        ...c.data(),
+        messages: msgs.docs.map((m) => ({ id: m.id, ...m.data() })),
+      };
+    })
+  );
 
   return {
     exportedAt: new Date().toISOString(),
@@ -939,6 +1041,7 @@ export const exportMyData = onCall(async (request) => {
     bookingsAsProvider: many(bkProvider),
     reviewsWritten: many(revWritten),
     reviewsReceived: many(revReceived),
+    conversations,
   };
 });
 

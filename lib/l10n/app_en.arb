@@ -313,6 +313,29 @@
   "bookingCancelReasonHint": "Reason (optional)",
   "bookingCancelError": "Could not cancel. Please try again.",
   "bookingCancelSuccess": "Request cancelled.",
+  "bookingCancelAfterAcceptButton": "Cancel booking",
+  "bookingRejectTitle": "Reject the request?",
+  "bookingRejectContent": "You may explain why (optional). The client will see this reason.",
+  "bookingRejectReasonHint": "Reason (optional)",
+  "bookingRejectionReasonLabel": "Rejection reason: {reason}",
+  "@bookingRejectionReasonLabel": {
+    "placeholders": {
+      "reason": { "type": "String" }
+    }
+  },
+  "bookingReschedule": "Reschedule",
+  "bookingRescheduleTitle": "Reschedule the booking",
+  "bookingReschedulePickDate": "Choose a new date",
+  "bookingReschedulePickTime": "Choose a new time",
+  "bookingRescheduleConfirm": "Confirm reschedule",
+  "bookingRescheduleSuccess": "Booking rescheduled.",
+  "bookingRescheduleError": "Could not reschedule. Please try again.",
+  "bookingRescheduledAtLabel": "Rescheduled to {date}",
+  "@bookingRescheduledAtLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
   "bookingConfirmDoneTitle": "Confirm completion?",
   "bookingConfirmDoneContent": "By confirming, the service will be marked as completed. You can then leave a review.",
   "bookingConfirmDoneButton": "Confirm service completion",
@@ -622,6 +645,10 @@
   "exportRequestEmail": "Email address",
   "exportRequestSend": "Send request",
   "exportRequestSent": "Request sent. You'll receive your data by email.",
+  "exportDataTitle": "Export my data",
+  "exportDataBody": "We'll gather your personal data (profile, bookings, reviews and conversations) into a JSON file you can save or share.",
+  "exportDataConfirm": "Export",
+  "exportDataShareSubject": "My Outalma data",
   "accountDeleteTitle": "Delete my account",
   "accountDeleteWarning": "This action is permanent and irreversible. Your profile, services and personal information will be deleted.",
   "accountDeleteConfirm": "Delete permanently",

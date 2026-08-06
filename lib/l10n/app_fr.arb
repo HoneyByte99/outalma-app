@@ -313,6 +313,29 @@
   "bookingCancelReasonHint": "Motif (facultatif)",
   "bookingCancelError": "Impossible d'annuler. Réessayez.",
   "bookingCancelSuccess": "Demande annulée.",
+  "bookingCancelAfterAcceptButton": "Annuler la réservation",
+  "bookingRejectTitle": "Refuser la demande ?",
+  "bookingRejectContent": "Vous pouvez expliquer pourquoi (facultatif). Le client verra ce motif.",
+  "bookingRejectReasonHint": "Motif (facultatif)",
+  "bookingRejectionReasonLabel": "Motif de refus : {reason}",
+  "@bookingRejectionReasonLabel": {
+    "placeholders": {
+      "reason": { "type": "String" }
+    }
+  },
+  "bookingReschedule": "Reprogrammer",
+  "bookingRescheduleTitle": "Reprogrammer la réservation",
+  "bookingReschedulePickDate": "Choisir une nouvelle date",
+  "bookingReschedulePickTime": "Choisir un nouvel horaire",
+  "bookingRescheduleConfirm": "Confirmer la reprogrammation",
+  "bookingRescheduleSuccess": "Réservation reprogrammée.",
+  "bookingRescheduleError": "Impossible de reprogrammer. Réessayez.",
+  "bookingRescheduledAtLabel": "Reprogrammé au {date}",
+  "@bookingRescheduledAtLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
   "bookingConfirmDoneTitle": "Confirmer la fin ?",
   "bookingConfirmDoneContent": "En confirmant, le service sera marqué comme terminé. Vous pourrez ensuite laisser un avis.",
   "bookingConfirmDoneButton": "Confirmer la fin du service",
@@ -622,6 +645,10 @@
   "exportRequestEmail": "Adresse email",
   "exportRequestSend": "Envoyer la demande",
   "exportRequestSent": "Demande envoyée. Vous recevrez vos données par email.",
+  "exportDataTitle": "Exporter mes données",
+  "exportDataBody": "Nous allons rassembler vos données personnelles (profil, réservations, avis et conversations) dans un fichier JSON que vous pourrez enregistrer ou partager.",
+  "exportDataConfirm": "Exporter",
+  "exportDataShareSubject": "Mes données Outalma",
   "accountDeleteTitle": "Supprimer mon compte",
   "accountDeleteWarning": "Cette action est définitive et irréversible. Votre profil, vos services et vos informations personnelles seront supprimés.",
   "accountDeleteConfirm": "Supprimer définitivement",
