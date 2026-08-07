@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:audio_session/audio_session.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -400,7 +401,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           .read(chatRepositoryProvider)
           .softDeleteMessage(chatId: widget.chatId, messageId: msg.id);
       if (_replyingTo?.id == msg.id) setState(() => _replyingTo = null);
-    } catch (_) {
+    } catch (e, stack) {
+      unawaited(
+        FirebaseCrashlytics.instance.recordError(e, stack, fatal: false),
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

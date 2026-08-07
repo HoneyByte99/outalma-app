@@ -266,11 +266,6 @@ service cloud.firestore {
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
               && request.resource.data.reactions.diff(resource.data.get('reactions', {}))
                   .affectedKeys().hasOnly([request.auth.uid]))
-          // Sender soft-deletes their own message: only the `deleted` flag may
-          // change, and it can only flip to true.
-          || (resource.data.senderId == request.auth.uid
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted'])
-              && request.resource.data.deleted == true)
           // Sender edits their own message text within 15 minutes of sending:
           // only text + edited may change, edited flips to true. Edits are also
           // blocked once the booking is done (conversation read-only) or when

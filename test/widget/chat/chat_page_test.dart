@@ -279,5 +279,30 @@ void main() {
 
       expect(repo.deletedMessageIds, contains('msg_42'));
     });
+
+    testWidgets('long press on deleted message does NOT show bottom sheet', (
+      tester,
+    ) async {
+      // The GestureDetector sets onLongPress to null when message.deleted == true,
+      // so the bottom sheet must never appear regardless of the gesture.
+      final msg = _makeMessage(
+        senderId: 'user_1',
+        text: 'original',
+        deleted: true,
+      );
+      await tester.pumpWidget(_wrap(messages: [msg]));
+      await tester.pump();
+      await tester.pump();
+
+      // The displayed text is the deleted placeholder, not the original.
+      expect(find.text('Message deleted'), findsOneWidget);
+
+      await tester.longPress(find.text('Message deleted'));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Neither Delete nor Report should appear.
+      expect(find.text('Delete'), findsNothing);
+      expect(find.text('Report this message'), findsNothing);
+    });
   });
 }
