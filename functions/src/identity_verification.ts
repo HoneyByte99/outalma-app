@@ -1,0 +1,432 @@
+// ---------------------------------------------------------------------------
+// Identity verification: submission
+// ---------------------------------------------------------------------------
+//
+// Server-authoritative throughout. The client uploads three images under a
+// prefix scoped by its own uid, then calls submit with nothing but the batch
+// id. It never sends a path, never sends a field value, and never sends a
+// verdict: everything stored here is read from the objects by this file.
+
+import * as admin from 'firebase-admin';
+import { createHash } from 'crypto';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
+import { assertAuthenticated } from './common';
+import {
+  buildObjectPaths,
+  extractionFromLines,
+  FAILED_EXTRACTION,
+  isValidBatchId,
+  type ExtractionOutcome,
+  type TextExtractor,
+} from './identity_extraction';
+
+const db = () => admin.firestore();
+
+export const VERIFICATIONS = 'identity_verifications';
+export const INTERNAL_SUB = 'identity_internal';
+export const INTERNAL_DOC = 'review';
+export const STATES = 'identity_verification_states';
+
+/// Rate limit. Exported so tests can reason about the window without waiting a
+/// day, and so no other file re-invents the numbers.
+export const SUBMIT_MAX_PER_WINDOW = 3;
+export const SUBMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/// Beyond this many rejected files, a new one is flagged for priority review.
+/// It is never refused for that reason: the rate limit is the only thing that
+/// refuses (decision O1).
+export const PRIORITY_AFTER_ATTEMPTS = 3;
+
+/// An extraction still marked pending after this long is treated as dead and
+/// normalised to failed when a reviewer decides.
+export const EXTRACTION_STALE_MS = 15 * 60 * 1000;
+
+export interface IdentityFileMetadata {
+  generation: string;
+  md5Hash: string;
+}
+
+/// Deterministic, caller-scoped document id.
+///
+/// The batch id is chosen by the client and carries no guaranteed entropy, so
+/// it must never be an access key on its own: keying files by batch id alone
+/// would let anyone who guesses another provider's value receive that
+/// provider's file, names and card number included. Hashing the authenticated
+/// uid into the id makes the collision impossible instead of unlikely.
+export function verificationDocId(uid: string, batchId: string): string {
+  return createHash('sha256').update(`${uid}:${batchId}`).digest('hex');
+}
+
+// ---------------------------------------------------------------------------
+// Text extraction wiring
+// ---------------------------------------------------------------------------
+
+let visionClient: { textDetection: (uri: string) => Promise<unknown[]> } | null =
+  null;
+
+/// Production extractor: Cloud Vision, European endpoint. The users are in
+/// France and Senegal, there is no Senegalese GCP region, and the data
+/// protection file has to state where the images are processed, so the choice
+/// is explicit rather than left to a default.
+export const cloudVisionExtractor: TextExtractor = {
+  async detect(gcsUri: string): Promise<string[]> {
+    if (!visionClient) {
+      const vision = await import('@google-cloud/vision');
+      visionClient = new vision.ImageAnnotatorClient({
+        apiEndpoint: 'eu-vision.googleapis.com',
+      }) as unknown as typeof visionClient;
+    }
+    const [result] = (await visionClient!.textDetection(gcsUri)) as [
+      { fullTextAnnotation?: { text?: string } | null },
+    ];
+    const text = result?.fullTextAnnotation?.text ?? '';
+    return text.split('\n');
+  },
+};
+
+let activeExtractor: TextExtractor = cloudVisionExtractor;
+
+/// Swaps the extractor. The only supported use is a test double that counts its
+/// calls: "exactly one extraction per file" and "no extraction beyond the rate
+/// limit" are claims about a billed API, and an unobservable claim is not a
+/// tested one.
+export function setTextExtractor(extractor: TextExtractor): void {
+  activeExtractor = extractor;
+}
+
+export function resetTextExtractor(): void {
+  activeExtractor = cloudVisionExtractor;
+}
+
+// ---------------------------------------------------------------------------
+// submitIdentityVerification
+// ---------------------------------------------------------------------------
+
+export const submitIdentityVerification = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  assertAuthenticated(uid);
+
+  const batchId: unknown = request.data?.batchId;
+  if (!isValidBatchId(batchId)) {
+    // Length plus allowlist, never an anchored regex: `$` matches before a
+    // trailing newline in JavaScript and an object name may contain one.
+    throw new HttpsError(
+      'invalid-argument',
+      "Le champ 'batchId' est invalide."
+    );
+  }
+
+  const docId = verificationDocId(uid, batchId);
+  const paths = buildObjectPaths(uid, batchId);
+
+  // Read the object fingerprints BEFORE the transaction. Network calls inside a
+  // Firestore transaction would be repeated on contention. Reading early is
+  // safe precisely because the objects are immutable once created.
+  const fingerprints = await readFingerprints(paths);
+
+  const created = await db().runTransaction(async (tx) => {
+    const verifRef = db().collection(VERIFICATIONS).doc(docId);
+    const stateRef = db().collection(STATES).doc(uid);
+
+    const [verifSnap, stateSnap] = await Promise.all([
+      tx.get(verifRef),
+      tx.get(stateRef),
+    ]);
+
+    // Idempotence, scoped by construction: this id can only be the caller's.
+    if (verifSnap.exists) {
+      return { alreadySubmitted: true, verificationId: docId };
+    }
+
+    const state = await reconcileState(tx, stateSnap.data() ?? {});
+
+    if (state.pendingId) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Un dossier est deja en cours de verification.'
+      );
+    }
+    if (state.verified) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Votre identite est deja verifiee.'
+      );
+    }
+
+    const now = Date.now();
+    const recent = state.submitTimestamps.filter(
+      (ms) => now - ms < SUBMIT_WINDOW_MS
+    );
+    if (recent.length >= SUBMIT_MAX_PER_WINDOW) {
+      // Refused BEFORE any extraction call, which is the whole point: an
+      // uncapped callable in front of a billed API is a denial of service
+      // against ourselves.
+      throw new HttpsError(
+        'resource-exhausted',
+        'Trop de depots recents. Reessayez plus tard.'
+      );
+    }
+
+    const attempt = state.rejectedCount + 1;
+
+    tx.set(verifRef, {
+      providerId: uid,
+      batchId,
+      status: 'pending',
+      attempt,
+      priority: attempt > PRIORITY_AFTER_ATTEMPTS,
+      extractionStatus: 'pending',
+      cniNumber: null,
+      cniNom: null,
+      cniPrenom: null,
+      cniDateNaissance: null,
+      cniDateExpiration: null,
+      cniSexe: null,
+      mrzValid: false,
+      rejectionReason: null,
+      submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+      reviewedAt: null,
+    });
+
+    tx.set(verifRef.collection(INTERNAL_SUB).doc(INTERNAL_DOC), {
+      // Duplicated from the parent: a collectionGroup duplicate search only
+      // yields the subcollection document, and re-reading every parent to know
+      // who owns it would cost one read per result.
+      providerId: uid,
+      rectoPath: paths.recto,
+      versoPath: paths.verso,
+      selfiePath: paths.selfie,
+      rectoGeneration: fingerprints.recto.generation,
+      rectoMd5: fingerprints.recto.md5Hash,
+      versoGeneration: fingerprints.verso.generation,
+      versoMd5: fingerprints.verso.md5Hash,
+      selfieGeneration: fingerprints.selfie.generation,
+      selfieMd5: fingerprints.selfie.md5Hash,
+      cniNumberKey: null,
+      doublonPotentiel: false,
+      doublonReferenceId: null,
+      mrzRaw: null,
+      reviewedBy: null,
+    });
+
+    tx.set(
+      stateRef,
+      {
+        pendingId: docId,
+        approvedId: state.approvedId,
+        verified: state.verified,
+        rejectedCount: state.rejectedCount,
+        submitTimestamps: [...recent, now],
+      },
+      { merge: true }
+    );
+
+    return { alreadySubmitted: false, verificationId: docId };
+  });
+
+  if (created.alreadySubmitted) {
+    // A replay, not a new submission: no second file, no second extraction, no
+    // second notification. The marker lets a client tell the two apart.
+    return created;
+  }
+
+  await runExtraction(docId, uid, paths.recto);
+
+  logger.info('Identity verification submitted', {
+    uid,
+    verificationId: docId,
+  });
+  return created;
+});
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+interface GuardState {
+  pendingId: string | null;
+  approvedId: string | null;
+  verified: boolean;
+  rejectedCount: number;
+  submitTimestamps: number[];
+}
+
+/// Reads the guard document and repairs it against the files it points at.
+///
+/// The guard is a denormalisation, so it can drift: a file deleted by hand (a
+/// data protection request handled manually, a console cleanup) would otherwise
+/// leave `pendingId` or `verified` pointing at nothing. The provider would then
+/// be refused forever, and revoke could not help either since it requires an
+/// approved file to exist. Reconciling here is the only way out.
+async function reconcileState(
+  tx: admin.firestore.Transaction,
+  raw: Record<string, unknown>
+): Promise<GuardState> {
+  const state: GuardState = {
+    pendingId: (raw.pendingId as string | null) ?? null,
+    approvedId: (raw.approvedId as string | null) ?? null,
+    verified: raw.verified === true,
+    rejectedCount:
+      typeof raw.rejectedCount === 'number' ? raw.rejectedCount : 0,
+    submitTimestamps: Array.isArray(raw.submitTimestamps)
+      ? (raw.submitTimestamps as number[]).filter(
+          (v) => typeof v === 'number'
+        )
+      : [],
+  };
+
+  if (state.pendingId) {
+    const snap = await tx.get(
+      db().collection(VERIFICATIONS).doc(state.pendingId)
+    );
+    if (!snap.exists || snap.data()?.status !== 'pending') {
+      state.pendingId = null;
+    }
+  }
+
+  if (state.verified) {
+    const approved = state.approvedId
+      ? await tx.get(db().collection(VERIFICATIONS).doc(state.approvedId))
+      : null;
+    if (!approved || !approved.exists || approved.data()?.status !== 'approved') {
+      state.verified = false;
+      state.approvedId = null;
+    }
+  }
+
+  return state;
+}
+
+/// Confirms the three objects exist under the caller's own prefix and freezes
+/// their fingerprints. A file pointing at nothing would be undecidable, and a
+/// fingerprint is what lets the decision step notice a swapped image.
+async function readFingerprints(paths: {
+  recto: string;
+  verso: string;
+  selfie: string;
+}): Promise<Record<'recto' | 'verso' | 'selfie', IdentityFileMetadata>> {
+  const bucket = admin.storage().bucket();
+  const entries = await Promise.all(
+    (['recto', 'verso', 'selfie'] as const).map(async (key) => {
+      const file = bucket.file(paths[key]);
+      const [exists] = await file.exists();
+      if (!exists) {
+        throw new HttpsError(
+          'invalid-argument',
+          'Les trois images du dossier sont introuvables.'
+        );
+      }
+      const [metadata] = await file.getMetadata();
+      const generation = metadata.generation ? String(metadata.generation) : '';
+      const md5Hash = metadata.md5Hash ? String(metadata.md5Hash) : '';
+      if (!generation || !md5Hash) {
+        // Treated as a refusal rather than as two undefined values comparing
+        // equal later, which would silently disable the immutability check.
+        throw new HttpsError(
+          'failed-precondition',
+          'Impossible de figer l empreinte des images.'
+        );
+      }
+      return [key, { generation, md5Hash }] as const;
+    })
+  );
+  return Object.fromEntries(entries) as Record<
+    'recto' | 'verso' | 'selfie',
+    IdentityFileMetadata
+  >;
+}
+
+/// Runs the extraction and the duplicate search, then writes both in a single
+/// conditional update. Never throws: a failed extraction leaves an empty file
+/// for a human to fill in, and never blocks a provider.
+async function runExtraction(
+  docId: string,
+  uid: string,
+  rectoPath: string
+): Promise<void> {
+  let outcome: ExtractionOutcome = { ...FAILED_EXTRACTION };
+  try {
+    const bucket = admin.storage().bucket().name;
+    const lines = await activeExtractor.detect(`gs://${bucket}/${rectoPath}`);
+    outcome = extractionFromLines(lines);
+  } catch {
+    // Never rethrown: a submission is never blocked by a failed extraction.
+    // No card number, no name and no object path in the log (budget line S12).
+    logger.warn('Identity extraction failed', { verificationId: docId });
+  }
+
+  const duplicate = outcome.cniNumberKey
+    ? await findDuplicate(outcome.cniNumberKey, uid)
+    : null;
+
+  const verifRef = db().collection(VERIFICATIONS).doc(docId);
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(verifRef);
+    // Only ever write onto a file still awaiting its extraction. Otherwise a
+    // late result could overwrite a reviewer's correction.
+    if (
+      !snap.exists ||
+      snap.data()?.status !== 'pending' ||
+      snap.data()?.extractionStatus !== 'pending'
+    ) {
+      return;
+    }
+    tx.update(verifRef, {
+      extractionStatus: outcome.status,
+      mrzValid: outcome.mrzValid,
+      cniNumber: outcome.cniNumber,
+      cniNom: outcome.cniNom,
+      cniPrenom: outcome.cniPrenom,
+      cniDateNaissance: outcome.cniDateNaissance,
+      cniDateExpiration: outcome.cniDateExpiration,
+      cniSexe: outcome.cniSexe,
+    });
+    tx.update(verifRef.collection(INTERNAL_SUB).doc(INTERNAL_DOC), {
+      cniNumberKey: outcome.cniNumberKey,
+      mrzRaw: outcome.mrzRaw,
+      doublonPotentiel: duplicate !== null,
+      doublonReferenceId: duplicate,
+    });
+  });
+}
+
+/// Exact duplicate search, paginated.
+///
+/// Never searches an empty key: two files with no readable number would
+/// otherwise be duplicates of each other, and the reference shown to the
+/// reviewer would point at a stranger. Pages past the caller's own files, since
+/// a provider who resubmits repeatedly would otherwise fill the first page with
+/// their own history and hide a real duplicate.
+async function findDuplicate(
+  key: string,
+  callerUid: string
+): Promise<string | null> {
+  const PAGE = 10;
+  const MAX_PAGES = 3;
+
+  let query = db()
+    .collectionGroup(INTERNAL_SUB)
+    .where('cniNumberKey', '==', key)
+    .limit(PAGE);
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const snap = await query.get();
+    if (snap.empty) return null;
+
+    for (const doc of snap.docs) {
+      if (doc.get('providerId') !== callerUid) {
+        return doc.ref.parent.parent?.id ?? null;
+      }
+    }
+    if (snap.size < PAGE) return null;
+    const last = snap.docs[snap.docs.length - 1];
+    if (!last) return null;
+    query = db()
+      .collectionGroup(INTERNAL_SUB)
+      .where('cniNumberKey', '==', key)
+      .startAfter(last)
+      .limit(PAGE);
+  }
+  return null;
+}

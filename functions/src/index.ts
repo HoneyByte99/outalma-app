@@ -2494,3 +2494,9 @@ export const initializeStats = onCall(async (request) => {
 
   return { initialized: true };
 });
+
+// ---------------------------------------------------------------------------
+// Identity verification (provider CNI + selfie)
+// ---------------------------------------------------------------------------
+
+export { submitIdentityVerification } from './identity_verification';

@@ -24,6 +24,12 @@ module.exports = {
   // new code. The modified ranges of index.ts are measured separately, against
   // the diff, since jest thresholds cannot express line ranges.
   coverageThreshold: {
+    './src/identity_verification.ts': {
+      lines: 80,
+      branches: 80,
+      functions: 80,
+      statements: 80,
+    },
     './src/identity_extraction.ts': {
       lines: 80,
       branches: 80,
