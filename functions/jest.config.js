@@ -18,4 +18,17 @@ module.exports = {
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
   coverageDirectory: 'coverage',
   coverageReporters: ['text-summary', 'lcov'],
+
+  // Budget line T5b: 80% on the files this increment adds. Declared per path,
+  // because a global bar on a 2600-line entrypoint would say nothing about the
+  // new code. The modified ranges of index.ts are measured separately, against
+  // the diff, since jest thresholds cannot express line ranges.
+  coverageThreshold: {
+    './src/identity_extraction.ts': {
+      lines: 80,
+      branches: 80,
+      functions: 80,
+      statements: 80,
+    },
+  },
 };
