@@ -3,7 +3,7 @@
 // notification docs, dead-token purge, and reminder timezone formatting.
 import functionsTest from 'firebase-functions-test';
 
-const tf = functionsTest({ projectId: 'demo-outalma' });
+const tf = functionsTest({ projectId: 'demo-outalma', storageBucket: 'demo-outalma.appspot.com' });
 
 import * as fns from '../src/index';
 import * as admin from 'firebase-admin';

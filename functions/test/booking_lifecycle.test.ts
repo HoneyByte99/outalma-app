@@ -2,7 +2,7 @@
 // product trusts). Runs against the Firestore emulator via `npm test`.
 import functionsTest from 'firebase-functions-test';
 
-const tf = functionsTest({ projectId: 'demo-outalma' });
+const tf = functionsTest({ projectId: 'demo-outalma', storageBucket: 'demo-outalma.appspot.com' });
 
 // Importing index initializes the default admin app (pointed at the emulator
 // because emulators:exec sets FIRESTORE_EMULATOR_HOST). Import it BEFORE any
