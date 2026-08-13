@@ -11,12 +11,20 @@ import * as admin from 'firebase-admin';
 import { createHash } from 'crypto';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
-import { assertAuthenticated } from './common';
+import {
+  assertAdminClaim,
+  assertAdminOrModeratorClaim,
+  assertAuthenticated,
+  requireString,
+} from './common';
+import { writeAdminLogTx } from './audit';
+import { createNotification, sendPushToUsers } from './notify';
 import {
   buildObjectPaths,
   extractionFromLines,
   FAILED_EXTRACTION,
   isValidBatchId,
+  normalizeCniNumber,
   type ExtractionOutcome,
   type TextExtractor,
 } from './identity_extraction';
@@ -69,6 +77,10 @@ let visionClient: { textDetection: (uri: string) => Promise<unknown[]> } | null 
 /// France and Senegal, there is no Senegalese GCP region, and the data
 /// protection file has to state where the images are processed, so the choice
 /// is explicit rather than left to a default.
+/* istanbul ignore next -- thin adapter over an external SDK: there is no
+   Cloud Vision emulator, so the only way to execute this body would be to call
+   the paid API from the test suite. Everything it feeds is covered through the
+   injected double, and the interface boundary is one line wide. */
 export const cloudVisionExtractor: TextExtractor = {
   async detect(gcsUri: string): Promise<string[]> {
     if (!visionClient) {
@@ -430,3 +442,262 @@ async function findDuplicate(
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Decision: approve, reject, revoke
+// ---------------------------------------------------------------------------
+
+/// Fields a reviewer may correct. The correction replaces the WHOLE set: what
+/// the reviewer sends is what is stored, so a field left out is cleared rather
+/// than silently kept from a failed extraction.
+const EDITABLE_FIELDS = [
+  'cniNumber',
+  'cniNom',
+  'cniPrenom',
+  'cniDateNaissance',
+  'cniDateExpiration',
+  'cniSexe',
+] as const;
+
+export const MAX_REJECTION_REASON = 1000;
+
+function readEditableFields(raw: unknown): Record<string, string | null> {
+  const input = (raw ?? {}) as Record<string, unknown>;
+  const out: Record<string, string | null> = {};
+  for (const key of EDITABLE_FIELDS) {
+    const value = input[key];
+    out[key] = typeof value === 'string' && value.trim().length > 0
+      ? value.trim()
+      : null;
+  }
+  return out;
+}
+
+/// Confirms the three objects still carry the fingerprints frozen at
+/// submission. This is the second half of the immutability guard: the Storage
+/// rule is the first, and this catches the case where the rule was relaxed by
+/// mistake later, on a path where the mistake would not be visible.
+async function assertFingerprintsUnchanged(
+  internal: admin.firestore.DocumentData
+): Promise<void> {
+  const bucket = admin.storage().bucket();
+  const parts = [
+    ['recto', internal.rectoPath, internal.rectoGeneration, internal.rectoMd5],
+    ['verso', internal.versoPath, internal.versoGeneration, internal.versoMd5],
+    ['selfie', internal.selfiePath, internal.selfieGeneration, internal.selfieMd5],
+  ] as const;
+
+  for (const [, path, generation, md5] of parts) {
+    if (typeof path !== 'string' || !generation || !md5) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Empreinte de piece manquante, dossier non decidable.'
+      );
+    }
+    const [metadata] = await bucket.file(path).getMetadata();
+    if (String(metadata.generation) !== String(generation) ||
+        String(metadata.md5Hash) !== String(md5)) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Une piece a change depuis le depot, dossier non decidable.'
+      );
+    }
+  }
+}
+
+interface DecisionOptions {
+  status: 'approved' | 'rejected' | 'revoked';
+  action: string;
+  requireApprovedSource: boolean;
+  checkFingerprints: boolean;
+}
+
+async function decide(
+  callerUid: string,
+  verificationId: string,
+  reason: string | null,
+  fields: Record<string, string | null> | null,
+  opts: DecisionOptions
+): Promise<{ verificationId: string; status: string }> {
+  const verifRef = db().collection(VERIFICATIONS).doc(verificationId);
+  const internalRef = verifRef.collection(INTERNAL_SUB).doc(INTERNAL_DOC);
+
+  const internalSnap = await internalRef.get();
+  if (!internalSnap.exists) {
+    throw new HttpsError('not-found', 'Dossier introuvable.');
+  }
+  if (opts.checkFingerprints) {
+    // Read outside the transaction: a network call inside one is repeated on
+    // contention. Revoke skips this entirely, see revokeIdentityVerification.
+    await assertFingerprintsUnchanged(internalSnap.data() ?? {});
+  }
+
+  const providerId = await db().runTransaction(async (tx) => {
+    const snap = await tx.get(verifRef);
+    if (!snap.exists) {
+      throw new HttpsError('not-found', 'Dossier introuvable.');
+    }
+    const data = snap.data() ?? {};
+    const expected = opts.requireApprovedSource ? 'approved' : 'pending';
+    if (data.status !== expected) {
+      throw new HttpsError(
+        'failed-precondition',
+        `Dossier deja traite (${String(data.status)}).`
+      );
+    }
+
+    const uid = String(data.providerId);
+    const stateRef = db().collection(STATES).doc(uid);
+    const stateSnap = await tx.get(stateRef);
+    const state = stateSnap.data() ?? {};
+
+    // An extraction still pending long after submission is dead: normalise it
+    // here, the only place in this increment able to observe it.
+    const submittedAtMs = (data.submittedAt as admin.firestore.Timestamp | null)
+      ?.toMillis?.();
+    const staleExtraction =
+      data.extractionStatus === 'pending' &&
+      typeof submittedAtMs === 'number' &&
+      Date.now() - submittedAtMs > EXTRACTION_STALE_MS;
+
+    tx.update(verifRef, {
+      status: opts.status,
+      reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+      ...(reason !== null ? { rejectionReason: reason } : {}),
+      ...(fields ?? {}),
+      ...(staleExtraction ? { extractionStatus: 'failed' } : {}),
+    });
+
+    if (fields && 'cniNumber' in fields) {
+      // The duplicate key must follow a corrected number, otherwise a real
+      // duplicate becomes invisible to every later submission.
+      tx.update(internalRef, {
+        cniNumberKey: normalizeCniNumber(fields.cniNumber) || null,
+        reviewedBy: callerUid,
+      });
+    } else {
+      tx.update(internalRef, { reviewedBy: callerUid });
+    }
+
+    const rejectedCount =
+      (typeof state.rejectedCount === 'number' ? state.rejectedCount : 0) +
+      (opts.status === 'rejected' ? 1 : 0);
+
+    tx.set(
+      stateRef,
+      {
+        pendingId: null,
+        approvedId: opts.status === 'approved' ? verificationId : null,
+        verified: opts.status === 'approved',
+        rejectedCount,
+        submitTimestamps: Array.isArray(state.submitTimestamps)
+          ? state.submitTimestamps
+          : [],
+      },
+      { merge: true }
+    );
+
+    // Inside the transaction: an untraced decision on an identity document
+    // would break "every staff action is traced" without anything noticing.
+    // Never the free-text reason and never an extracted field: admin_logs
+    // survives account deletion, so it must carry no identity data.
+    writeAdminLogTx(tx, {
+      actorUid: callerUid,
+      action: opts.action,
+      targetType: 'identity_verification',
+      targetId: verificationId,
+      notes: reason !== null ? 'reason_stored_on_dossier' : undefined,
+    });
+
+    return uid;
+  });
+
+  const titles: Record<string, [string, string]> = {
+    approved: ['Identite verifiee', 'Votre identite a bien ete verifiee.'],
+    rejected: [
+      'Verification refusee',
+      reason ? `Votre dossier a ete refuse : ${reason}` : 'Votre dossier a ete refuse.',
+    ],
+    revoked: [
+      'Verification retiree',
+      reason ? `Votre verification a ete retiree : ${reason}` : 'Votre verification a ete retiree.',
+    ],
+  };
+  const [title, body] = titles[opts.status] ?? ['Verification', ''];
+
+  // After the commit: these can fail without compromising the verdict, which is
+  // the state. The push body is truncated to stay well inside the FCM payload.
+  await createNotification(providerId, {
+    type: `identity_${opts.status}`,
+    title,
+    body,
+    audience: 'provider',
+  });
+  await sendPushToUsers([providerId], { title, body: body.slice(0, 500) }, {
+    type: `identity_${opts.status}`,
+  });
+
+  return { verificationId, status: opts.status };
+}
+
+export const approveIdentityVerification = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  // NOT assertMinSupportClaim, which approveService uses and which lets
+  // `support` in. The circle that sees identity documents stops at moderator.
+  assertAdminOrModeratorClaim(
+    request.auth?.token as Record<string, unknown> | undefined
+  );
+
+  const verificationId = requireString(request.data?.verificationId, 'verificationId');
+  return decide(callerUid, verificationId, null, readEditableFields(request.data?.fields), {
+    status: 'approved',
+    action: 'approve_identity_verification',
+    requireApprovedSource: false,
+    checkFingerprints: true,
+  });
+});
+
+export const rejectIdentityVerification = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  assertAdminOrModeratorClaim(
+    request.auth?.token as Record<string, unknown> | undefined
+  );
+
+  const verificationId = requireString(request.data?.verificationId, 'verificationId');
+  const reason = requireString(request.data?.reason, 'reason');
+  if (reason.length > MAX_REJECTION_REASON) {
+    throw new HttpsError('invalid-argument', 'Motif trop long.');
+  }
+
+  return decide(callerUid, verificationId, reason, readEditableFields(request.data?.fields), {
+    status: 'rejected',
+    action: 'reject_identity_verification',
+    requireApprovedSource: false,
+    checkFingerprints: true,
+  });
+});
+
+export const revokeIdentityVerification = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  // Admin only: undoing an established fact sits one notch above granting it.
+  assertAdminClaim(request.auth?.token?.admin);
+
+  const verificationId = requireString(request.data?.verificationId, 'verificationId');
+  const reason = requireString(request.data?.reason, 'reason');
+  if (reason.length > MAX_REJECTION_REASON) {
+    throw new HttpsError('invalid-argument', 'Motif trop long.');
+  }
+
+  return decide(callerUid, verificationId, reason, null, {
+    status: 'revoked',
+    action: 'revoke_identity_verification',
+    requireApprovedSource: true,
+    // No fingerprint check: a revoke undoes an established fact, and refusing it
+    // because an image was altered would block it exactly when it is most
+    // needed.
+    checkFingerprints: false,
+  });
+});

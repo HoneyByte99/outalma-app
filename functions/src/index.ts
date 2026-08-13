@@ -751,9 +751,68 @@ export const confirmDone = onCall(async (request) => {
 // Account self-deletion (App Store 5.1.1(v) / Google Play requirement)
 // Server-authoritative: purges the user's auth account + personal data.
 // ---------------------------------------------------------------------------
+/// Removes every identity-verification trace of a provider.
+///
+/// Committed in chunks of 400 writes, never in one batch: each file costs two
+/// deletions (the file and its identity_internal document), a Firestore batch
+/// caps at 500, and the account deletion batch is shared with services and the
+/// profile. Past roughly 245 files, a single batch would fail on every attempt,
+/// the account would become undeletable, and the identity documents would
+/// therefore never be purged. That is exactly the state this path exists to
+/// prevent.
+///
+/// The guard document is nominative on its own: it attests, per uid, that a
+/// person submitted an identity document, with timestamps. Leaving it behind
+/// would keep that trace with no purge path behind it.
+async function deleteIdentityVerificationData(uid: string): Promise<void> {
+  const CHUNK = 400;
+  const files = await db
+    .collection('identity_verifications')
+    .where('providerId', '==', uid)
+    .get();
+
+  let batch = db.batch();
+  let pending = 0;
+  const flush = async () => {
+    if (pending > 0) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  };
+
+  for (const file of files.docs) {
+    // Deleting a parent document does NOT delete its subcollections.
+    const internal = await file.ref.collection('identity_internal').get();
+    for (const sub of internal.docs) {
+      batch.delete(sub.ref);
+      if (++pending >= CHUNK) await flush();
+    }
+    batch.delete(file.ref);
+    if (++pending >= CHUNK) await flush();
+  }
+
+  batch.delete(db.collection('identity_verification_states').doc(uid));
+  pending++;
+  await flush();
+}
+
 export const deleteMyAccount = onCall(async (request) => {
   const uid = request.auth?.uid;
   assertAuthenticated(uid);
+
+  // Identity documents FIRST, and deliberately outside any permissive
+  // try/catch. Retention was decided as "kept until the account is deleted",
+  // which makes this the ONLY purge mechanism in the project: if it fails, the
+  // whole call must fail with nothing else destroyed, so the user can retry
+  // with an intact account. A CNI left orphaned in a bucket behind a deleted
+  // account is the worst reachable state of this feature, and this ordering is
+  // what makes it unreachable. Deleting an already empty prefix succeeds, so a
+  // retry is safe.
+  await admin.storage().bucket().deleteFiles({
+    prefix: `private/identity/${uid}/`,
+  });
+  await deleteIdentityVerificationData(uid);
 
   // Delete owned services (a provider's listings) + provider profile + user doc
   // in a batch. Booking/review/chat history is retained but de-referenced; the
@@ -802,6 +861,35 @@ export const exportMyData = onCall(async (request) => {
       db.collection('reviews').where('revieweeId', '==', uid).get(),
     ]);
 
+  // Identity verification files belonging to the requester, field by field.
+  // Deliberately NOT a raw dump: no image, no storage path, and none of the
+  // internal review aids (duplicate flag, reference to a third party's file,
+  // reviewer identity), which is the same boundary the read rules enforce.
+  //
+  // identity_verification_states is NOT exported, and that is a decision rather
+  // than an omission: every field it holds is reconstructible from the files
+  // already exported (its timestamps are their submittedAt, its counter is the
+  // number of rejected ones, its flags are their statuses). It is a
+  // denormalised index, not a source. It IS deleted with the account, which the
+  // retention rule requires separately.
+  const identityFiles = await db
+    .collection('identity_verifications')
+    .where('providerId', '==', uid)
+    .get();
+  const identityVerifications = identityFiles.docs.map((d) => ({
+    id: d.id,
+    status: d.get('status'),
+    submittedAt: d.get('submittedAt'),
+    reviewedAt: d.get('reviewedAt'),
+    rejectionReason: d.get('rejectionReason'),
+    cniNumber: d.get('cniNumber'),
+    cniNom: d.get('cniNom'),
+    cniPrenom: d.get('cniPrenom'),
+    cniDateNaissance: d.get('cniDateNaissance'),
+    cniDateExpiration: d.get('cniDateExpiration'),
+    cniSexe: d.get('cniSexe'),
+  }));
+
   const one = (s: admin.firestore.DocumentSnapshot) =>
     s.exists ? { id: s.id, ...s.data() } : null;
   const many = (q: admin.firestore.QuerySnapshot) =>
@@ -816,6 +904,7 @@ export const exportMyData = onCall(async (request) => {
     bookingsAsProvider: many(bkProvider),
     reviewsWritten: many(revWritten),
     reviewsReceived: many(revReceived),
+    identityVerifications,
   };
 });
 
@@ -2499,4 +2588,9 @@ export const initializeStats = onCall(async (request) => {
 // Identity verification (provider CNI + selfie)
 // ---------------------------------------------------------------------------
 
-export { submitIdentityVerification } from './identity_verification';
+export {
+  submitIdentityVerification,
+  approveIdentityVerification,
+  rejectIdentityVerification,
+  revokeIdentityVerification,
+} from './identity_verification';
