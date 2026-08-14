@@ -503,6 +503,17 @@ export const MAX_REJECTION_REASON = 1000;
 /// duplicate key of the approved file. The holder of an already approved card
 /// could then resubmit it on a second account without being flagged, which is
 /// precisely what the duplicate search exists to catch.
+/// A document id must be a plain segment. `requireString` already rejects the
+/// empty string, but a value carrying a slash reaches the SDK and comes back as
+/// an untyped error, outside the published error table.
+function requireVerificationId(raw: unknown): string {
+  const value = requireString(raw, 'verificationId');
+  if (value.includes('/') || value.includes('..')) {
+    throw new HttpsError('invalid-argument', "Le champ 'verificationId' est invalide.");
+  }
+  return value;
+}
+
 function readEditableFields(raw: unknown): Record<string, string | null> | null {
   if (raw === undefined || raw === null) return null;
   if (typeof raw !== 'object' || Array.isArray(raw)) {
@@ -719,7 +730,7 @@ export const approveIdentityVerification = onCall(async (request) => {
     request.auth?.token as Record<string, unknown> | undefined
   );
 
-  const verificationId = requireString(request.data?.verificationId, 'verificationId');
+  const verificationId = requireVerificationId(request.data?.verificationId);
   return decide(callerUid, verificationId, null, readEditableFields(request.data?.fields), {
     status: 'approved',
     action: 'approve_identity_verification',
@@ -735,7 +746,7 @@ export const rejectIdentityVerification = onCall(async (request) => {
     request.auth?.token as Record<string, unknown> | undefined
   );
 
-  const verificationId = requireString(request.data?.verificationId, 'verificationId');
+  const verificationId = requireVerificationId(request.data?.verificationId);
   const reason = requireString(request.data?.reason, 'reason');
   if (reason.length > MAX_REJECTION_REASON) {
     throw new HttpsError('invalid-argument', 'Motif trop long.');
@@ -755,7 +766,7 @@ export const revokeIdentityVerification = onCall(async (request) => {
   // Admin only: undoing an established fact sits one notch above granting it.
   assertAdminClaim(request.auth?.token?.admin);
 
-  const verificationId = requireString(request.data?.verificationId, 'verificationId');
+  const verificationId = requireVerificationId(request.data?.verificationId);
   const reason = requireString(request.data?.reason, 'reason');
   if (reason.length > MAX_REJECTION_REASON) {
     throw new HttpsError('invalid-argument', 'Motif trop long.');

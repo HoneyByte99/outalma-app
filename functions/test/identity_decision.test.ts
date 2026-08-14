@@ -667,3 +667,135 @@ describe('a late extraction cannot overwrite a decided file', () => {
     expect(data.status).toBe('approved');
   });
 });
+
+/**
+ * Systematic sweep of the four callables against the same four questions:
+ * what does it read, what does it write, what does it trace, what does it
+ * notify. Three QA passes each found the same motif on a different callable
+ * (deleteMyAccount, then exportMyData, then revoke), so the countermeasure is a
+ * sweep, not another patch on the case that happened to be caught.
+ */
+describe('sweep: revoke writes, traces and notifies like the others', () => {
+  it('actually removes the verification, and lets the provider submit again', async () => {
+    // The heart of AC-30, and the only inverse of AC-21b. Nothing tested what
+    // revoke WRITES: a version that left `verified` true would keep the badge
+    // and lock the provider out of ever resubmitting.
+    await seedPendingFile('approved');
+    await revoke({ verificationId: VERIF, reason: 'fraude avere' }, ADMIN);
+
+    const state = (await db().collection(STATES).doc(OWNER).get()).data();
+    expect(state?.verified).toBe(false);
+    expect(state?.approvedId).toBeNull();
+    expect((await verifDoc().get()).get('status')).toBe('revoked');
+  });
+
+  it('traces a revocation as a revocation, not as an approval', async () => {
+    await seedPendingFile('approved');
+    await revoke({ verificationId: VERIF, reason: 'fraude avere' }, ADMIN);
+
+    const logs = await db().collection('admin_logs').get();
+    expect(logs.size).toBe(1);
+    expect(logs.docs[0]?.get('action')).toBe('revoke_identity_verification');
+    expect(logs.docs[0]?.get('targetType')).toBe('identity_verification');
+    expect(logs.docs[0]?.get('actorUid')).toBe(ADMIN.uid);
+  });
+
+  it('tells the provider their verification was withdrawn', async () => {
+    await seedPendingFile('approved');
+    await revoke({ verificationId: VERIF, reason: 'fraude avere' }, ADMIN);
+
+    const items = await db()
+      .collection('notifications').doc(OWNER).collection('items').get();
+    expect(items.size).toBe(1);
+    expect(items.docs[0]?.get('type')).toBe('identity_revoked');
+    expect(items.docs[0]?.get('body')).toContain('fraude avere');
+  });
+});
+
+describe('sweep: the immutability guard applies to reject, not only approve', () => {
+  it('refuses a rejection when a piece changed since submission', async () => {
+    await seedPendingFile();
+    await admin.storage().bucket().file(paths().selfie)
+      .save(Buffer.from('swapped'), { contentType: 'image/jpeg' });
+
+    await expectCode(
+      reject({ verificationId: VERIF, reason: 'photo floue' }, MOD),
+      'failed-precondition'
+    );
+  });
+});
+
+describe('sweep: a decision never resets the submission window', () => {
+  it('keeps counting submissions across real rejections', async () => {
+    // The earlier accumulation test clears pendingId by writing to the guard
+    // directly. A real provider gets there through a rejection, and a decision
+    // that dropped the timestamps would hand back an unlimited quota on the
+    // billed extraction API.
+    identity.setTextExtractor({
+      async detect() {
+        return [
+          'I<UTOD231458907123456789012345',
+          '7408122F1204159UTO67<<<<<<<<<9',
+          'NDIAYE<<FATOU<<<<<<<<<<<<<<<<<',
+        ];
+      },
+    });
+    try {
+      // A submission requires the account to still exist.
+      await db().collection('users').doc(OWNER).set({ displayName: 'U' });
+      const bucket = admin.storage().bucket();
+      for (const batch of ['sweepAAAA', 'sweepBBBB', 'sweepCCCC']) {
+        for (const name of ['recto.jpg', 'verso.jpg', 'selfie.jpg']) {
+          await bucket.file(`private/identity/${OWNER}/${batch}/${name}`)
+            .save(Buffer.from('x'), { contentType: 'image/jpeg' });
+        }
+        const res = (await wrap(fns.submitIdentityVerification)({
+          data: { batchId: batch }, auth: { uid: OWNER },
+        } as never)) as { verificationId: string };
+        await reject({ verificationId: res.verificationId, reason: 'a refaire' }, MOD);
+      }
+
+      const state = (await db().collection(STATES).doc(OWNER).get()).data();
+      expect(state?.submitTimestamps).toHaveLength(3);
+      expect(state?.rejectedCount).toBe(3);
+
+      for (const name of ['recto.jpg', 'verso.jpg', 'selfie.jpg']) {
+        await bucket.file(`private/identity/${OWNER}/sweepDDDD/${name}`)
+          .save(Buffer.from('x'), { contentType: 'image/jpeg' });
+      }
+      await expect(
+        wrap(fns.submitIdentityVerification)({
+          data: { batchId: 'sweepDDDD' }, auth: { uid: OWNER },
+        } as never)
+      ).rejects.toMatchObject({ code: 'resource-exhausted' });
+    } finally {
+      identity.resetTextExtractor();
+    }
+  });
+});
+
+describe('sweep: the export carries an explicit field list', () => {
+  it('exposes exactly the agreed keys and nothing more', async () => {
+    // A raw `...d.data()` would pass every current assertion while leaking
+    // batchId, mrzValid, attempt and priority, plus any field added later.
+    await seedPendingFile();
+    const out = (await wrap(fns.exportMyData)({
+      data: {}, auth: { uid: OWNER },
+    } as never)) as { identityVerifications: Record<string, unknown>[] };
+
+    expect(Object.keys(out.identityVerifications[0] ?? {}).sort()).toEqual([
+      'cniDateExpiration', 'cniDateNaissance', 'cniNom', 'cniNumber',
+      'cniPrenom', 'cniSexe', 'id', 'rejectionReason', 'reviewedAt',
+      'status', 'submittedAt',
+    ]);
+  });
+});
+
+describe('sweep: a forged verification id refuses through the published table', () => {
+  it('answers invalid-argument rather than a raw SDK error', async () => {
+    for (const bad of ['', '   ', 'a/b/c', '../../etc']) {
+      await expectCode(approve({ verificationId: bad }, ADMIN), 'invalid-argument');
+    }
+    expect((await db().collection('admin_logs').get()).size).toBe(0);
+  });
+});
