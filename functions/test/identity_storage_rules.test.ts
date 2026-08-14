@@ -78,11 +78,16 @@ afterAll(async () => {
   await env.cleanup();
 });
 
+// Run-scoped as well as test-scoped: on a persistent emulator (a shared one, or
+// a rerun without a wipe) a purely sequential counter would land on paths a
+// previous run already created, and `create`-only rules would refuse them for a
+// reason that has nothing to do with the guard under test.
+const RUN = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
 let counter = 0;
 
 beforeEach(() => {
   counter += 1;
-  BATCH = `batch${String(counter).padStart(4, '0')}`;
+  BATCH = `b${RUN}${String(counter).padStart(3, '0')}`;
   RECTO = `private/identity/${OWNER}/${BATCH}/recto.jpg`;
 });
 

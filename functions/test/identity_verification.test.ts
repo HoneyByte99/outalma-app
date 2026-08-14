@@ -517,3 +517,49 @@ describe('end to end: a card approved once is flagged on a second account', () =
     expect(internal?.doublonReferenceId).toBe(first.verificationId);
   });
 });
+
+describe('the rate limit accumulates from real submissions', () => {
+  it('refuses the fourth after three genuine submissions', async () => {
+    // The other cap test seeds the timestamps by hand: it proves the threshold
+    // is read, never that a submission records itself. Dropping the recording
+    // (`[...recent, now]` becoming `recent`) left the whole suite green, which
+    // means the billed extraction API had no effective cap at all.
+    //
+    // Clearing pendingId between submissions is fixture work, not what is being
+    // proven: a real provider gets there through a rejection.
+    setTextExtractor(extractorReturning(MRZ_OK).double);
+
+    for (const batch of ['batchAAAA', 'batchBBBB', 'batchCCCC']) {
+      await uploadBatch(OWNER, batch);
+      await submit({ batchId: batch }, { uid: OWNER });
+      await db().collection(STATES).doc(OWNER).update({ pendingId: null });
+    }
+
+    const state = (await db().collection(STATES).doc(OWNER).get()).data();
+    expect(state?.submitTimestamps).toHaveLength(3);
+
+    await uploadBatch(OWNER, 'batchDDDD');
+    await expect(
+      submit({ batchId: 'batchDDDD' }, { uid: OWNER })
+    ).rejects.toMatchObject({ code: 'resource-exhausted' });
+  });
+
+  it('still counts a submission made 23 hours ago', async () => {
+    // The window boundary is only ever tested from the "released" side (25h).
+    // Shortening it to a minute would go unnoticed.
+    setTextExtractor(extractorReturning(MRZ_OK).double);
+    const recent = Date.now() - 23 * 60 * 60 * 1000;
+    await db().collection(STATES).doc(OWNER).set({
+      pendingId: null,
+      approvedId: null,
+      verified: false,
+      rejectedCount: 0,
+      submitTimestamps: [recent, recent, recent],
+    });
+    await uploadBatch(OWNER, BATCH);
+
+    await expect(submit({ batchId: BATCH }, { uid: OWNER })).rejects.toMatchObject({
+      code: 'resource-exhausted',
+    });
+  });
+});

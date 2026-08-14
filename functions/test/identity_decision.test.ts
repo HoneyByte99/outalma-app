@@ -16,6 +16,7 @@ import {
   STATES,
   VERIFICATIONS,
 } from '../src/identity_verification';
+import * as identity from '../src/identity_verification';
 import { clearFirestore, createAuthUser } from './helpers';
 
 type Auth = { uid: string; token?: Record<string, unknown> };
@@ -269,6 +270,9 @@ describe('what a decision writes', () => {
     expect(log.action).toBe('reject_identity_verification');
     expect(log.actorUid).toBe(MOD.uid);
     expect(log.targetId).toBe(VERIF);
+    // The target TYPE matters as much as the id: an audit trail that does not
+    // say what kind of object was acted on cannot be filtered or audited.
+    expect(log.targetType).toBe('identity_verification');
     const serialised = JSON.stringify(log);
     expect(serialised).not.toContain('numero illisible 999');
     expect(serialised).not.toContain('12345678901234567');
@@ -289,6 +293,8 @@ describe('what a decision writes', () => {
       .get();
     expect(items.size).toBe(1);
     expect(items.docs[0]?.get('audience')).toBe('provider');
+    // A generic type would make the notification unroutable by the app.
+    expect(items.docs[0]?.get('type')).toBe('identity_approved');
   });
 
   it('keeps a corrected number and recomputes the duplicate key with it', async () => {
@@ -566,5 +572,98 @@ describe('what a decision emits, observed rather than assumed', () => {
       .get();
     expect(items.size).toBe(1);
     expect(items.docs[0]?.get('body')).toContain('le verso est illisible');
+  });
+});
+
+describe('the export is confined to its requester', () => {
+  it('never returns another provider file', async () => {
+    // Same class of defect as the deletion scoping, on the callable that sweeps
+    // the same collection with the same filter. Without this, dropping the
+    // providerId filter would hand every provider's card number, names and
+    // dates to any authenticated caller, and neither the suite nor the smoke
+    // would notice: both only ever had one provider.
+    await seedPendingFile();
+    const other = verifDoc('stranger-file');
+    await other.set({
+      providerId: 'p9',
+      status: 'approved',
+      cniNumber: '99998888777766665',
+      cniNom: 'AUTRE',
+    });
+
+    const out = (await wrap(fns.exportMyData)({
+      data: {},
+      auth: { uid: OWNER },
+    } as never)) as { identityVerifications: Record<string, unknown>[] };
+
+    expect(out.identityVerifications).toHaveLength(1);
+    expect(out.identityVerifications[0]?.id).toBe(VERIF);
+    const serialised = JSON.stringify(out);
+    expect(serialised).not.toContain('99998888777766665');
+    expect(serialised).not.toContain('AUTRE');
+  });
+
+  it('returns an empty list for a provider who never submitted', async () => {
+    await db().collection('users').doc('p8').set({ displayName: 'X' });
+    const out = (await wrap(fns.exportMyData)({
+      data: {},
+      auth: { uid: 'p8' },
+    } as never)) as { identityVerifications: unknown[] };
+    expect(out.identityVerifications).toHaveLength(0);
+  });
+});
+
+describe('the fingerprint guard covers all three pieces', () => {
+  for (const piece of ['verso', 'selfie'] as const) {
+    it(`refuses a decision when the ${piece} changed`, async () => {
+      // Checking only the recto would leave the selfie swappable, which is the
+      // very image the reviewer compares against the card.
+      await seedPendingFile();
+      await admin
+        .storage()
+        .bucket()
+        .file(paths()[piece])
+        .save(Buffer.from('swapped'), { contentType: 'image/jpeg' });
+
+      await expectCode(approve({ verificationId: VERIF }, ADMIN), 'failed-precondition');
+    });
+  }
+});
+
+describe('a late extraction cannot overwrite a decided file', () => {
+  it('leaves a reviewer correction untouched', async () => {
+    // The conditional write exists for this: a slow extraction landing after a
+    // decision would otherwise replace what the reviewer typed.
+    await seedPendingFile();
+    await approve(
+      { verificationId: VERIF, fields: { cniNumber: '11112222333344445', cniNom: 'CORRIGE' } },
+      ADMIN
+    );
+
+    // A double, otherwise the step reaches for the real Cloud Vision client and
+    // hangs on the network instead of testing anything.
+    identity.setTextExtractor({
+      async detect() {
+        return [
+          'I<UTOD231458907123456789012345',
+          '7408122F1204159UTO67<<<<<<<<<9',
+          'NDIAYE<<FATOU<<<<<<<<<<<<<<<<<',
+        ];
+      },
+    });
+    try {
+      await identity.runExtraction(
+        VERIF,
+        OWNER,
+        `private/identity/${OWNER}/${BATCH}/recto.jpg`
+      );
+    } finally {
+      identity.resetTextExtractor();
+    }
+
+    const data = (await verifDoc().get()).data() ?? {};
+    expect(data.cniNumber).toBe('11112222333344445');
+    expect(data.cniNom).toBe('CORRIGE');
+    expect(data.status).toBe('approved');
   });
 });
