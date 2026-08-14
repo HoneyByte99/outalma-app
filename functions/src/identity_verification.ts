@@ -141,10 +141,25 @@ export const submitIdentityVerification = onCall(async (request) => {
     const verifRef = db().collection(VERIFICATIONS).doc(docId);
     const stateRef = db().collection(STATES).doc(uid);
 
-    const [verifSnap, stateSnap] = await Promise.all([
+    const userRef = db().collection('users').doc(uid);
+    const [verifSnap, stateSnap, userSnap] = await Promise.all([
       tx.get(verifRef),
       tx.get(stateRef),
+      tx.get(userRef),
     ]);
+
+    // The account must still exist. Two windows this closes, both of which
+    // would leave identity documents behind a deleted account with no purge
+    // mechanism left (decision D4 removed the scheduled one):
+    //  - deleteMyAccount takes hundreds of milliseconds between purging the
+    //    identity data and removing the auth user. Reading users/{uid} inside
+    //    this transaction makes a concurrent submission conflict with the
+    //    deletion batch and replay, instead of recreating what was just purged.
+    //  - after deleteUser, Firebase revokes refresh tokens but an ID token
+    //    already issued stays acceptable until it expires, up to an hour.
+    if (!userSnap.exists) {
+      throw new HttpsError('failed-precondition', 'Compte introuvable.');
+    }
 
     // Idempotence, scoped by construction: this id can only be the caller's.
     if (verifSnap.exists) {
@@ -489,7 +504,13 @@ export const MAX_REJECTION_REASON = 1000;
 /// could then resubmit it on a second account without being flagged, which is
 /// precisely what the duplicate search exists to catch.
 function readEditableFields(raw: unknown): Record<string, string | null> | null {
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    // Present but malformed is refused, never silently read as "no correction":
+    // a review screen serialising its form badly would otherwise approve while
+    // dropping what the reviewer typed, with no signal at all.
+    throw new HttpsError('invalid-argument', "Le champ 'fields' est invalide.");
+  }
   const input = raw as Record<string, unknown>;
   const out: Record<string, string | null> = {};
   for (const key of EDITABLE_FIELDS) {

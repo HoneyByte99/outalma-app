@@ -20,7 +20,7 @@ import {
   VERIFICATIONS,
 } from '../src/identity_verification';
 import * as identity from '../src/identity_verification';
-import { clearFirestore } from './helpers';
+import { clearFirestore, seedUser } from './helpers';
 
 type Auth = { uid: string; token?: Record<string, unknown> };
 
@@ -79,6 +79,10 @@ beforeEach(async () => {
   await clearFirestore();
   await clearStorage();
   resetTextExtractor();
+  // A submission now requires the account to still exist, which is what closes
+  // the window where a deletion in flight could be outrun.
+  await seedUser(OWNER);
+  await seedUser(OTHER);
 });
 
 afterAll(() => {
@@ -415,9 +419,69 @@ describe('the extraction step never breaks a submission', () => {
     // Exercised here by pointing the step at a file that does not exist, so its
     // conditional write throws: the step must still resolve.
     setTextExtractor(extractorReturning(MRZ_OK).double);
+
+    // The file must EXIST and be pending, otherwise the step returns early on
+    // its own guard and the test proves nothing: removing the try/catch would
+    // still leave it green. Here the parent exists but its internal document
+    // does not, so the conditional tx.update raises NOT_FOUND and the commit
+    // fails, which is exactly what the guard has to absorb.
+    await verifDoc('orphan').set({
+      providerId: OWNER,
+      status: 'pending',
+      extractionStatus: 'pending',
+    });
+
     await expect(
-      identity.runExtraction('no-such-file', OWNER, 'private/identity/x/y/recto.jpg')
+      identity.runExtraction('orphan', OWNER, `private/identity/${OWNER}/${BATCH}/recto.jpg`)
     ).resolves.toBeUndefined();
+    // And the file is left decidable rather than half written.
+    expect((await verifDoc('orphan').get()).get('status')).toBe('pending');
+  });
+
+  it('refuses a submission once the account is gone', async () => {
+    // deleteMyAccount takes hundreds of milliseconds between purging identity
+    // data and removing the auth user, and an ID token already issued stays
+    // acceptable for up to an hour after deleteUser. Without this guard, a
+    // second device could recreate a file and three CNI images behind a deleted
+    // account, with no purge mechanism left to remove them.
+    setTextExtractor(extractorReturning(MRZ_OK).double);
+    await uploadBatch(OWNER, BATCH);
+    await db().collection('users').doc(OWNER).delete();
+
+    await expect(submit({ batchId: BATCH }, { uid: OWNER })).rejects.toMatchObject({
+      code: 'failed-precondition',
+    });
+    expect((await db().collection(VERIFICATIONS).get()).size).toBe(0);
+  });
+
+  it('pages past the caller own files to find a real duplicate', async () => {
+    // A provider who resubmits many times would otherwise fill the first page
+    // with their own history and hide a stranger's file carrying the same
+    // number.
+    setTextExtractor(extractorReturning(MRZ_OK).double);
+    for (let i = 0; i < 11; i++) {
+      const ref = verifDoc(`mine-${i}`);
+      await ref.set({ providerId: OWNER, status: 'rejected' });
+      await ref
+        .collection(INTERNAL_SUB)
+        .doc(INTERNAL_DOC)
+        .set({ providerId: OWNER, cniNumberKey: MRZ_NUMBER });
+    }
+    const foreign = verifDoc('foreign-deep');
+    await foreign.set({ providerId: OTHER, status: 'approved' });
+    await foreign
+      .collection(INTERNAL_SUB)
+      .doc(INTERNAL_DOC)
+      .set({ providerId: OTHER, cniNumberKey: MRZ_NUMBER });
+
+    await uploadBatch(OWNER, BATCH);
+    await submit({ batchId: BATCH }, { uid: OWNER });
+
+    const internal = (
+      await internalDoc(verificationDocId(OWNER, BATCH)).get()
+    ).data();
+    expect(internal?.doublonPotentiel).toBe(true);
+    expect(internal?.doublonReferenceId).toBe('foreign-deep');
   });
 });
 

@@ -412,3 +412,39 @@ describe('normalisation at decision time', () => {
     expect(data.cniPrenom).toBeNull();
   });
 });
+
+describe('decision error paths', () => {
+  it('reports a missing object as failed-precondition, not as a raw storage error', async () => {
+    // Manual cleanup, or an account deletion interrupted between the storage
+    // purge and the Firestore purge. The published error table promises
+    // failed-precondition; a bare GCS 404 would surface as `internal`.
+    await seedPendingFile();
+    await admin.storage().bucket().file(paths().recto).delete();
+
+    await expectCode(approve({ verificationId: VERIF }, ADMIN), 'failed-precondition');
+  });
+
+  it('bounds the reason on revoke as well as on reject', async () => {
+    // Same failure mechanism on both: the reason is copied into the push body,
+    // and the FCM payload caps at 4 KB, after the verdict is already written.
+    await seedPendingFile('approved');
+    await expectCode(
+      revoke({ verificationId: VERIF, reason: 'x'.repeat(1001) }, ADMIN),
+      'invalid-argument'
+    );
+  });
+
+  it('refuses a malformed fields payload instead of silently ignoring it', async () => {
+    // A review screen serialising its form badly would otherwise approve while
+    // dropping what the reviewer typed, with no signal at all.
+    await seedPendingFile();
+    await expectCode(
+      approve({ verificationId: VERIF, fields: 'cniNumber=X' }, ADMIN),
+      'invalid-argument'
+    );
+    await expectCode(
+      approve({ verificationId: VERIF, fields: 42 }, ADMIN),
+      'invalid-argument'
+    );
+  });
+});
