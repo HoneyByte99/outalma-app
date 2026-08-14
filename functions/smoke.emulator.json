@@ -1,0 +1,14 @@
+{
+  "firestore": {
+    "rules": "firestore.test.rules"
+  },
+  "storage": {
+    "rules": "storage.test.rules"
+  },
+  "emulators": {
+    "firestore": { "port": 8095 },
+    "auth": { "port": 9109 },
+    "storage": { "port": 9209 },
+    "ui": { "enabled": false }
+  }
+}
