@@ -751,6 +751,27 @@ export const confirmDone = onCall(async (request) => {
 // Account self-deletion (App Store 5.1.1(v) / Google Play requirement)
 // Server-authoritative: purges the user's auth account + personal data.
 // ---------------------------------------------------------------------------
+/// True when the account holds any identity-verification data. Used to decide
+/// whether the purge below is allowed to fail the whole call.
+async function providerHasIdentityData(uid: string): Promise<boolean> {
+  const [files, state] = await Promise.all([
+    db
+      .collection('identity_verifications')
+      .where('providerId', '==', uid)
+      .limit(1)
+      .get(),
+    db.collection('identity_verification_states').doc(uid).get(),
+  ]);
+  return !files.empty || state.exists;
+}
+
+async function purgeIdentityData(uid: string): Promise<void> {
+  await admin.storage().bucket().deleteFiles({
+    prefix: `private/identity/${uid}/`,
+  });
+  await deleteIdentityVerificationData(uid);
+}
+
 /// Removes every identity-verification trace of a provider.
 ///
 /// Committed in chunks of 400 writes, never in one batch: each file costs two
@@ -801,18 +822,27 @@ export const deleteMyAccount = onCall(async (request) => {
   const uid = request.auth?.uid;
   assertAuthenticated(uid);
 
-  // Identity documents FIRST, and deliberately outside any permissive
-  // try/catch. Retention was decided as "kept until the account is deleted",
-  // which makes this the ONLY purge mechanism in the project: if it fails, the
-  // whole call must fail with nothing else destroyed, so the user can retry
-  // with an intact account. A CNI left orphaned in a bucket behind a deleted
-  // account is the worst reachable state of this feature, and this ordering is
-  // what makes it unreachable. Deleting an already empty prefix succeeds, so a
-  // retry is safe.
-  await admin.storage().bucket().deleteFiles({
-    prefix: `private/identity/${uid}/`,
-  });
-  await deleteIdentityVerificationData(uid);
+  // Identity data is purged in TWO passes, before and after the account
+  // document disappears. Retention was decided as "kept until the account is
+  // deleted", so this is the ONLY purge mechanism in the project.
+  //
+  // First pass, hard: if it fails, the whole call fails with nothing else
+  // destroyed, so the user can retry with an intact account. It runs only for
+  // accounts that actually hold identity data, so a Storage outage cannot block
+  // account deletion (an App Store requirement) for the vast majority of users
+  // who have nothing to purge.
+  //
+  // Second pass, after `users/{uid}` is gone: the first pass alone left a race.
+  // A submission in flight (readFingerprints takes ~6 storage calls) could
+  // commit between the purge and the batch, recreating the file, its internal
+  // document and the guard behind an account about to vanish, with no scheduled
+  // purge left to catch it. Once `users/{uid}` is deleted, submitIdentityVerification
+  // refuses outright, so a second pass closes the window for good. Both passes
+  // are idempotent, and deleting an empty prefix succeeds.
+  const hadIdentityData = await providerHasIdentityData(uid);
+  if (hadIdentityData) {
+    await purgeIdentityData(uid);
+  }
 
   // Delete owned services (a provider's listings) + provider profile + user doc
   // in a batch. Booking/review/chat history is retained but de-referenced; the
@@ -827,6 +857,19 @@ export const deleteMyAccount = onCall(async (request) => {
   batch.delete(db.collection('providers').doc(uid));
   batch.delete(db.collection('users').doc(uid));
   await batch.commit();
+
+  // Second pass, see above. Hard for accounts that held identity data, best
+  // effort otherwise: there was nothing to purge in that case, and failing here
+  // would make account deletion depend on Storage for every user.
+  if (hadIdentityData) {
+    await purgeIdentityData(uid);
+  } else {
+    try {
+      await purgeIdentityData(uid);
+    } catch (e) {
+      console.warn(`deleteMyAccount: late identity purge failed for ${uid}: ${e}`);
+    }
+  }
 
   // Best-effort cleanup of the user's avatar folder.
   try {

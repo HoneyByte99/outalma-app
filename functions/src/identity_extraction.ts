@@ -24,7 +24,8 @@ export const TD1_LINE_COUNT = 3;
 /// Weights of the ICAO 9303 check digit, applied cyclically.
 const CHECK_WEIGHTS: readonly [number, number, number] = [7, 3, 1];
 
-/// Object names are imposed by the server. The client never sends a path.
+/// Object names are imposed by the server. The client never sends a path, and
+/// the Storage rule bounds the same three names.
 export const IDENTITY_OBJECT_NAMES = ['recto.jpg', 'verso.jpg', 'selfie.jpg'] as const;
 
 export interface Td1Fields {
@@ -244,10 +245,11 @@ export function buildObjectPaths(
   batchId: string
 ): { recto: string; verso: string; selfie: string } {
   const prefix = `private/identity/${uid}/${batchId}`;
+  const [recto, verso, selfie] = IDENTITY_OBJECT_NAMES;
   return {
-    recto: `${prefix}/recto.jpg`,
-    verso: `${prefix}/verso.jpg`,
-    selfie: `${prefix}/selfie.jpg`,
+    recto: `${prefix}/${recto}`,
+    verso: `${prefix}/${verso}`,
+    selfie: `${prefix}/${selfie}`,
   };
 }
 

@@ -460,14 +460,18 @@ describe('the extraction step never breaks a submission', () => {
     // number.
     setTextExtractor(extractorReturning(MRZ_OK).double);
     for (let i = 0; i < 11; i++) {
-      const ref = verifDoc(`mine-${i}`);
+      // Named so they sort BEFORE the stranger's file: a collectionGroup
+      // equality query orders by __name__, so `foreign-*` used to come first
+      // and the duplicate was found on page one. The suite stayed green with
+      // pagination disabled entirely.
+      const ref = verifDoc(`aaa-mine-${String(i).padStart(2, '0')}`);
       await ref.set({ providerId: OWNER, status: 'rejected' });
       await ref
         .collection(INTERNAL_SUB)
         .doc(INTERNAL_DOC)
         .set({ providerId: OWNER, cniNumberKey: MRZ_NUMBER });
     }
-    const foreign = verifDoc('foreign-deep');
+    const foreign = verifDoc('zzz-foreign-deep');
     await foreign.set({ providerId: OTHER, status: 'approved' });
     await foreign
       .collection(INTERNAL_SUB)
@@ -481,7 +485,7 @@ describe('the extraction step never breaks a submission', () => {
       await internalDoc(verificationDocId(OWNER, BATCH)).get()
     ).data();
     expect(internal?.doublonPotentiel).toBe(true);
-    expect(internal?.doublonReferenceId).toBe('foreign-deep');
+    expect(internal?.doublonReferenceId).toBe('zzz-foreign-deep');
   });
 });
 

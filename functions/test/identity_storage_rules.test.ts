@@ -31,8 +31,16 @@ let env: RulesTestEnvironment;
 
 const OWNER = 'p1';
 const OTHER = 'p2';
-const BATCH = 'batch1234';
-const RECTO = `private/identity/${OWNER}/${BATCH}/recto.jpg`;
+
+// A FRESH prefix per test, and not a shared one cleaned between tests.
+// `env.clearStorage()` is not recursive: it lists the bucket root and deletes
+// only the items it finds there, never walking into prefixes. With a shared
+// path, the object written by the first test survived, and every later test
+// aiming at it was refused by `resource == null` instead of by the guard it
+// names. The suite stayed green even with `isSelf(uid)` relaxed to `signedIn()`,
+// the image check removed and the ceiling raised to 500 MB.
+let BATCH = 'batch0000';
+let RECTO = '';
 
 const JPEG = { contentType: 'image/jpeg' };
 const bytes = (n = 16) => new Uint8Array(n).fill(1);
@@ -70,10 +78,12 @@ afterAll(async () => {
   await env.cleanup();
 });
 
-beforeEach(async () => {
-  // Without this, a path written by one test is an UPDATE in the next one, and
-  // `create`-only rules would make the suite order-dependent.
-  await env.clearStorage();
+let counter = 0;
+
+beforeEach(() => {
+  counter += 1;
+  BATCH = `batch${String(counter).padStart(4, '0')}`;
+  RECTO = `private/identity/${OWNER}/${BATCH}/recto.jpg`;
 });
 
 /// Puts an object in place bypassing the rules, so a later denial can only come
