@@ -352,7 +352,27 @@ async function readFingerprints(paths: {
 /// Runs the extraction and the duplicate search, then writes both in a single
 /// conditional update. Never throws: a failed extraction leaves an empty file
 /// for a human to fill in, and never blocks a provider.
-async function runExtraction(
+export async function runExtraction(
+  docId: string,
+  uid: string,
+  rectoPath: string
+): Promise<void> {
+  // The WHOLE body is best effort, not just the extraction call. The duplicate
+  // search uses a collection group index that is built asynchronously after a
+  // deploy: while it builds, the query raises FAILED_PRECONDITION. Guarding
+  // only the detect call would make the callable fail AFTER the main
+  // transaction committed, leaving a pending file, a consumed rate-limit slot,
+  // and a provider convinced their submission failed while a replay tells them
+  // one is already in progress.
+  try {
+    await extractAndFlag(docId, uid, rectoPath);
+  } catch {
+    // No card number, no name and no object path in the log (budget line S12).
+    logger.warn('Identity extraction step failed', { verificationId: docId });
+  }
+}
+
+export async function extractAndFlag(
   docId: string,
   uid: string,
   rectoPath: string
@@ -363,8 +383,6 @@ async function runExtraction(
     const lines = await activeExtractor.detect(`gs://${bucket}/${rectoPath}`);
     outcome = extractionFromLines(lines);
   } catch {
-    // Never rethrown: a submission is never blocked by a failed extraction.
-    // No card number, no name and no object path in the log (budget line S12).
     logger.warn('Identity extraction failed', { verificationId: docId });
   }
 
@@ -461,11 +479,23 @@ const EDITABLE_FIELDS = [
 
 export const MAX_REJECTION_REASON = 1000;
 
-function readEditableFields(raw: unknown): Record<string, string | null> {
-  const input = (raw ?? {}) as Record<string, unknown>;
+/// Returns null when the caller sent NO correction at all, and a complete set
+/// when they did.
+///
+/// The distinction is not cosmetic. Deciding without corrections means "the
+/// extracted values are right", not "wipe them": treating an absent `fields` as
+/// an empty one erased the six extracted fields and, worse, nulled the
+/// duplicate key of the approved file. The holder of an already approved card
+/// could then resubmit it on a second account without being flagged, which is
+/// precisely what the duplicate search exists to catch.
+function readEditableFields(raw: unknown): Record<string, string | null> | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
+  const input = raw as Record<string, unknown>;
   const out: Record<string, string | null> = {};
   for (const key of EDITABLE_FIELDS) {
     const value = input[key];
+    // Within a correction, an omitted field IS cleared: the reviewer replaces
+    // the whole set (decision O6).
     out[key] = typeof value === 'string' && value.trim().length > 0
       ? value.trim()
       : null;
@@ -494,7 +524,17 @@ async function assertFingerprintsUnchanged(
         'Empreinte de piece manquante, dossier non decidable.'
       );
     }
-    const [metadata] = await bucket.file(path).getMetadata();
+    let metadata;
+    try {
+      [metadata] = await bucket.file(path).getMetadata();
+    } catch {
+      // A missing object (manual cleanup, an interrupted account deletion)
+      // must surface as the published refusal code, not as a raw storage error.
+      throw new HttpsError(
+        'failed-precondition',
+        'Une piece est introuvable, dossier non decidable.'
+      );
+    }
     if (String(metadata.generation) !== String(generation) ||
         String(metadata.md5Hash) !== String(md5)) {
       throw new HttpsError(
@@ -568,7 +608,7 @@ async function decide(
       ...(staleExtraction ? { extractionStatus: 'failed' } : {}),
     });
 
-    if (fields && 'cniNumber' in fields) {
+    if (fields) {
       // The duplicate key must follow a corrected number, otherwise a real
       // duplicate becomes invisible to every later submission.
       tx.update(internalRef, {
@@ -627,15 +667,24 @@ async function decide(
 
   // After the commit: these can fail without compromising the verdict, which is
   // the state. The push body is truncated to stay well inside the FCM payload.
-  await createNotification(providerId, {
-    type: `identity_${opts.status}`,
-    title,
-    body,
-    audience: 'provider',
-  });
-  await sendPushToUsers([providerId], { title, body: body.slice(0, 500) }, {
-    type: `identity_${opts.status}`,
-  });
+  try {
+    await createNotification(providerId, {
+      type: `identity_${opts.status}`,
+      title,
+      body,
+      audience: 'provider',
+    });
+    await sendPushToUsers([providerId], { title, body: body.slice(0, 500) }, {
+      type: `identity_${opts.status}`,
+    });
+  } catch {
+    // The verdict, its audit entry and the guard are already committed. Failing
+    // the call here would tell a reviewer their decision did not go through,
+    // and their retry would be refused as already decided.
+    logger.warn('Identity decision notification failed', {
+      verificationId,
+    });
+  }
 
   return { verificationId, status: opts.status };
 }

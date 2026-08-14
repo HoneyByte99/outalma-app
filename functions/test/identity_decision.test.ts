@@ -380,15 +380,35 @@ describe('normalisation at decision time', () => {
     expect((await verifDoc().get()).get('extractionStatus')).toBe('pending');
   });
 
-  it('clears every editable field when the reviewer sends none', async () => {
-    // The correction replaces the whole set, so approving without fields is an
-    // explicit "none of these are right", not "keep what the OCR guessed".
+  it('keeps the extracted fields when the reviewer sends no correction', async () => {
+    // Deciding without corrections means "the extracted values are right".
+    // Treating it as an empty correction erased them AND nulled the duplicate
+    // key, letting the holder of an approved card resubmit it on another
+    // account unflagged.
     await seedPendingFile();
     await approve({ verificationId: VERIF }, ADMIN);
 
     const data = (await verifDoc().get()).data() ?? {};
-    for (const key of ['cniNumber', 'cniNom', 'cniPrenom', 'cniSexe']) {
-      expect(data[key]).toBeNull();
-    }
+    expect(data.cniNumber).toBe('12345678901234567');
+    expect(data.cniNom).toBe('NDIAYE');
+    expect(data.cniPrenom).toBe('FATOU');
+    expect((await internalDoc().get()).get('cniNumberKey')).toBe(
+      '12345678901234567'
+    );
+  });
+
+  it('clears a field omitted from an ACTUAL correction', async () => {
+    // Within a correction the reviewer replaces the whole set, so a field left
+    // out is cleared rather than silently kept from a failed extraction.
+    await seedPendingFile();
+    await approve(
+      { verificationId: VERIF, fields: { cniNumber: '12345678901234567' } },
+      ADMIN
+    );
+
+    const data = (await verifDoc().get()).data() ?? {};
+    expect(data.cniNumber).toBe('12345678901234567');
+    expect(data.cniNom).toBeNull();
+    expect(data.cniPrenom).toBeNull();
   });
 });

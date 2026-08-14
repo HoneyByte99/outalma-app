@@ -123,7 +123,12 @@ service cloud.firestore {
 
     // Per-provider guard document. Serialises concurrent submissions and holds
     // the rate-limit window. Nominative, so it is deleted with the account.
-    // No client reads it: everything it says is already visible on the files.
+    //
+    // Read is open to staff only, and NOT to the provider it describes: letting
+    // the owner read it would expose nothing they cannot already infer from
+    // their own files, but it would put a rate-limit counter in reach of the
+    // party the limit constrains. Staff can read it because the review screen
+    // will need to explain why a provider cannot submit again.
     match /identity_verification_states/{uid} {
       allow read: if isAdminOrModerator();
       allow write: if false;

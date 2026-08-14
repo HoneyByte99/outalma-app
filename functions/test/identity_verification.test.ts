@@ -19,6 +19,7 @@ import {
   STATES,
   VERIFICATIONS,
 } from '../src/identity_verification';
+import * as identity from '../src/identity_verification';
 import { clearFirestore } from './helpers';
 
 type Auth = { uid: string; token?: Record<string, unknown> };
@@ -399,5 +400,52 @@ describe('submitIdentityVerification: duplicate search', () => {
 
     const data = (await verifDoc(verificationDocId(OWNER, BATCH)).get()).data();
     expect(data?.status).toBe('pending');
+  });
+});
+
+describe('the extraction step never breaks a submission', () => {
+  it('swallows a failure of the duplicate search or of its own write', async () => {
+    // Only the detect call used to be guarded. The duplicate search runs on a
+    // collection group index, and a Firestore index is built asynchronously
+    // after a deploy: while it builds, the query raises FAILED_PRECONDITION.
+    // Unguarded, that made the callable fail AFTER the main transaction had
+    // committed, leaving a pending file, a consumed rate-limit slot, and a
+    // provider convinced their submission had failed.
+    //
+    // Exercised here by pointing the step at a file that does not exist, so its
+    // conditional write throws: the step must still resolve.
+    setTextExtractor(extractorReturning(MRZ_OK).double);
+    await expect(
+      identity.runExtraction('no-such-file', OWNER, 'private/identity/x/y/recto.jpg')
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe('end to end: a card approved once is flagged on a second account', () => {
+  it('flags a resubmission of an approved number by another provider', async () => {
+    // The whole point of the duplicate search, and the case a defect made
+    // silently pass: approving without corrections used to null the duplicate
+    // key of the approved file, so the same card could be reused elsewhere
+    // unflagged.
+    setTextExtractor(extractorReturning(MRZ_OK).double);
+    await uploadBatch(OWNER, BATCH);
+    const first = (await submit({ batchId: BATCH }, { uid: OWNER })) as {
+      verificationId: string;
+    };
+
+    await wrap(fns.approveIdentityVerification)({
+      data: { verificationId: first.verificationId },
+      auth: { uid: 'boss', token: { admin: true } },
+    } as never);
+
+    setTextExtractor(extractorReturning(MRZ_OK).double);
+    await uploadBatch(OTHER, BATCH);
+    const second = (await submit({ batchId: BATCH }, { uid: OTHER })) as {
+      verificationId: string;
+    };
+
+    const internal = (await internalDoc(second.verificationId).get()).data();
+    expect(internal?.doublonPotentiel).toBe(true);
+    expect(internal?.doublonReferenceId).toBe(first.verificationId);
   });
 });
