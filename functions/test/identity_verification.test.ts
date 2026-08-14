@@ -563,3 +563,67 @@ describe('the rate limit accumulates from real submissions', () => {
     });
   });
 });
+
+/**
+ * The sweep the previous round announced for four callables but only performed
+ * on three. submitIdentityVerification is the one that was skipped, and its
+ * "what does it write" question is where the remaining holes lived.
+ */
+describe('sweep: what submitIdentityVerification writes', () => {
+  it('does not flag a provider as a duplicate of their own earlier file', async () => {
+    // Every duplicate test so far seeded the internal document by hand, so the
+    // providerId written by the callable was never checked at its write site.
+    // Corrupt it and every honest resubmission is flagged as a potential
+    // duplicate of itself, on the central anti-fraud control, with a reference
+    // pointing at the provider's own file.
+    setTextExtractor(extractorReturning(MRZ_OK).double);
+
+    await uploadBatch(OWNER, 'ownfileAAA');
+    const first = (await submit({ batchId: 'ownfileAAA' }, { uid: OWNER })) as {
+      verificationId: string;
+    };
+    await db().collection(STATES).doc(OWNER).update({ pendingId: null });
+
+    await uploadBatch(OWNER, 'ownfileBBB');
+    const second = (await submit({ batchId: 'ownfileBBB' }, { uid: OWNER })) as {
+      verificationId: string;
+    };
+
+    // Both files were produced by the callable, so the owner stamp is under test.
+    expect((await internalDoc(first.verificationId).get()).get('providerId')).toBe(OWNER);
+    const internal = (await internalDoc(second.verificationId).get()).data();
+    expect(internal?.providerId).toBe(OWNER);
+    expect(internal?.doublonPotentiel).toBe(false);
+    expect(internal?.doublonReferenceId).toBeNull();
+  });
+
+  it('records the submission timestamp, which the review queue orders on', async () => {
+    setTextExtractor(extractorReturning(MRZ_OK).double);
+    await uploadBatch(OWNER, BATCH);
+    await submit({ batchId: BATCH }, { uid: OWNER });
+
+    const data = (await verifDoc(verificationDocId(OWNER, BATCH)).get()).data();
+    expect(data?.submittedAt).toBeTruthy();
+  });
+
+  it('repairs a guard pointing at a file that is no longer pending', async () => {
+    // The sibling case (`the file does not exist`) is covered; this half is the
+    // one the repair actually exists for: a file decided out of band leaves the
+    // guard claiming a submission is still in flight.
+    setTextExtractor(extractorReturning(MRZ_OK).double);
+    await verifDoc('decided-elsewhere').set({
+      providerId: OWNER,
+      status: 'rejected',
+    });
+    await db().collection(STATES).doc(OWNER).set({
+      pendingId: 'decided-elsewhere',
+      approvedId: null,
+      verified: false,
+      rejectedCount: 0,
+      submitTimestamps: [],
+    });
+    await uploadBatch(OWNER, BATCH);
+
+    await expect(submit({ batchId: BATCH }, { uid: OWNER })).resolves.toBeTruthy();
+  });
+});

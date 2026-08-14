@@ -494,6 +494,12 @@ const EDITABLE_FIELDS = [
 
 export const MAX_REJECTION_REASON = 1000;
 
+/// Same reasoning as the rejection reason: an unbounded corrected field reaches
+/// the Firestore document limit and comes back as a raw gRPC code, outside the
+/// published error table. A card number or a name has no legitimate reason to
+/// be long.
+export const MAX_EDITABLE_FIELD = 200;
+
 /// Returns null when the caller sent NO correction at all, and a complete set
 /// when they did.
 ///
@@ -528,6 +534,12 @@ function readEditableFields(raw: unknown): Record<string, string | null> | null 
     const value = input[key];
     // Within a correction, an omitted field IS cleared: the reviewer replaces
     // the whole set (decision O6).
+    if (typeof value === 'string' && value.trim().length > MAX_EDITABLE_FIELD) {
+      throw new HttpsError(
+        'invalid-argument',
+        `Le champ '${key}' est trop long.`
+      );
+    }
     out[key] = typeof value === 'string' && value.trim().length > 0
       ? value.trim()
       : null;

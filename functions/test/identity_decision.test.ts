@@ -799,3 +799,43 @@ describe('sweep: a forged verification id refuses through the published table', 
     expect((await db().collection('admin_logs').get()).size).toBe(0);
   });
 });
+
+describe('sweep: the branches the earlier passes only half covered', () => {
+  it('records the reviewer even when they corrected the fields', async () => {
+    // reviewedBy was only ever asserted on the branch WITHOUT a correction,
+    // which is the branch a real review screen will rarely take.
+    await seedPendingFile();
+    await approve(
+      { verificationId: VERIF, fields: { cniNumber: '12345678901234567' } },
+      ADMIN
+    );
+    expect((await internalDoc().get()).get('reviewedBy')).toBe(ADMIN.uid);
+  });
+
+  it('exports VALUES, not just the shape', async () => {
+    // The key-set assertion added last round would stay green with every value
+    // turned to null, which is a family my own fix created.
+    await seedPendingFile();
+    await reject({ verificationId: VERIF, reason: 'verso illisible' }, MOD);
+
+    const out = (await wrap(fns.exportMyData)({
+      data: {}, auth: { uid: OWNER },
+    } as never)) as { identityVerifications: Record<string, unknown>[] };
+    const entry = out.identityVerifications[0] ?? {};
+
+    expect(entry.status).toBe('rejected');
+    expect(entry.rejectionReason).toBe('verso illisible');
+    expect(entry.submittedAt).toBeTruthy();
+    expect(entry.reviewedAt).toBeTruthy();
+    expect(entry.cniNumber).toBe('12345678901234567');
+  });
+
+  it('refuses an unbounded correction like it refuses an unbounded reason', async () => {
+    await seedPendingFile();
+    await expectCode(
+      approve({ verificationId: VERIF, fields: { cniNom: 'A'.repeat(201) } }, ADMIN),
+      'invalid-argument'
+    );
+    expect((await verifDoc().get()).get('status')).toBe('pending');
+  });
+});
