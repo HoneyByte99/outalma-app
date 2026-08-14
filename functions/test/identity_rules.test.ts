@@ -174,11 +174,8 @@ describe('identity_verification_states: the guard document', () => {
   });
 });
 
-describe('providers/{uid}: no trust field is reachable from a client', () => {
-  it('refuses a self-granted verification flag on the provider profile', async () => {
-    // The provider update rule uses a denylist of three moderation keys, so any
-    // NEW trust field written there would be self-assignable. This is why the
-    // verification state lives in its own collection instead (decision D3).
+describe('providers/{uid}: why no trust field may ever live there', () => {
+  beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore() as unknown as Firestore;
       await setDoc(doc(db, 'providers', OWNER), {
@@ -187,11 +184,45 @@ describe('providers/{uid}: no trust field is reachable from a client', () => {
         suspended: false,
       });
     });
+  });
 
+  it('lets the owner write an ARBITRARY new field, verification flag included', async () => {
+    // This is the point, and it is uncomfortable on purpose: the update rule
+    // uses a denylist of three moderation keys, so ANY field it does not name
+    // is self-writable. A provider can therefore set `identityVerified: true`
+    // on their own profile right now.
+    //
+    // It is harmless only because nothing reads it: the verification state
+    // lives in its own collection, closed to client writes (decision D3). The
+    // day something reads a trust field from `providers/{uid}`, that reader is
+    // trusting a value its own subject controls.
     const db = asOwner();
     await assertSucceeds(updateDoc(doc(db, 'providers', OWNER), { bio: 'hello' }));
+    await assertSucceeds(
+      updateDoc(doc(db, 'providers', OWNER), { identityVerified: true })
+    );
+  });
+
+  it('refuses the three moderation keys the denylist does name', async () => {
+    const db = asOwner();
     await assertFails(
       updateDoc(doc(db, 'providers', OWNER), { suspended: false, suspendedAt: null })
+    );
+  });
+
+  it('keeps the real verification state out of the client reach', async () => {
+    // The invariant that actually protects the badge: the verdict is in a
+    // collection where every client write is denied, so the denylist above is
+    // never what stands between a provider and their own verification.
+    const db = asOwner();
+    await assertFails(
+      setDoc(doc(db, 'identity_verifications', 'forged-by-owner'), {
+        providerId: OWNER,
+        status: 'approved',
+      })
+    );
+    await assertFails(
+      setDoc(doc(db, 'identity_verification_states', OWNER), { verified: true })
     );
   });
 });

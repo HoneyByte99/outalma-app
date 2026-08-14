@@ -448,3 +448,123 @@ describe('decision error paths', () => {
     );
   });
 });
+
+describe('account deletion is scoped and exhaustive', () => {
+  const STRANGER = 'p9';
+
+  async function seedFor(uid: string, batches: string[]): Promise<string[]> {
+    const bucket = admin.storage().bucket();
+    const ids: string[] = [];
+    for (const batch of batches) {
+      const id = `${uid}-${batch}`;
+      ids.push(id);
+      for (const name of ['recto.jpg', 'verso.jpg', 'selfie.jpg']) {
+        await bucket
+          .file(`private/identity/${uid}/${batch}/${name}`)
+          .save(Buffer.from('x'), { contentType: 'image/jpeg' });
+      }
+      await verifDoc(id).set({ providerId: uid, status: 'rejected', batchId: batch });
+      await internalDoc(id).set({
+        providerId: uid,
+        rectoPath: `private/identity/${uid}/${batch}/recto.jpg`,
+      });
+    }
+    await db().collection(STATES).doc(uid).set({
+      pendingId: null,
+      approvedId: null,
+      verified: false,
+      rejectedCount: batches.length,
+      submitTimestamps: [],
+    });
+    return ids;
+  }
+
+  const objectCount = async (uid: string): Promise<number> => {
+    const [files] = await admin
+      .storage()
+      .bucket()
+      .getFiles({ prefix: `private/identity/${uid}/` });
+    return files.length;
+  };
+
+  it('erases the WHOLE history, not only the most recent file', async () => {
+    // A loop that stopped after the first file would leave older submissions,
+    // images included, behind a deleted account. Retention was decided as
+    // "kept until the account is deleted", so nothing else would ever remove
+    // them.
+    const mine = await seedFor(OWNER, ['b1', 'b2', 'b3']);
+    await createAuthUser(OWNER);
+
+    await wrap(fns.deleteMyAccount)({ data: {}, auth: { uid: OWNER } } as never);
+
+    for (const id of mine) {
+      expect((await verifDoc(id).get()).exists).toBe(false);
+      expect((await internalDoc(id).get()).exists).toBe(false);
+    }
+    expect(await objectCount(OWNER)).toBe(0);
+    expect((await db().collection(STATES).doc(OWNER).get()).exists).toBe(false);
+  });
+
+  it('spares every other provider, documents and images alike', async () => {
+    // The guard this proves is not "deletion happens" but "deletion is scoped".
+    // Without it, dropping the providerId filter, or widening the storage
+    // prefix to private/identity/, would wipe every provider's identity
+    // documents on any single account deletion, and no test would notice.
+    await seedFor(OWNER, ['b1', 'b2']);
+    const theirs = await seedFor(STRANGER, ['b1']);
+    await createAuthUser(OWNER);
+
+    await wrap(fns.deleteMyAccount)({ data: {}, auth: { uid: OWNER } } as never);
+
+    expect(await objectCount(OWNER)).toBe(0);
+
+    for (const id of theirs) {
+      expect((await verifDoc(id).get()).exists).toBe(true);
+      expect((await internalDoc(id).get()).exists).toBe(true);
+    }
+    expect(await objectCount(STRANGER)).toBe(3);
+    expect((await db().collection(STATES).doc(STRANGER).get()).exists).toBe(true);
+  });
+});
+
+describe('what a decision emits, observed rather than assumed', () => {
+  it('writes an audit entry on an APPROVAL too, not only on a rejection', async () => {
+    await seedPendingFile();
+    await approve({ verificationId: VERIF }, ADMIN);
+
+    const logs = await db().collection('admin_logs').get();
+    expect(logs.size).toBe(1);
+    expect(logs.docs[0]?.get('action')).toBe('approve_identity_verification');
+  });
+
+  it('emits exactly one push, to the provider token and no other', async () => {
+    await seedPendingFile();
+    await db().collection('users').doc(OWNER).set({ pushToken: 'tok-p1' }, { merge: true });
+    await db().collection('users').doc('someone-else').set({ pushToken: 'tok-other' });
+
+    const spy = jest
+      .spyOn(admin.messaging(), 'sendEachForMulticast')
+      .mockResolvedValue({ successCount: 1, failureCount: 0, responses: [{ success: true }] } as never);
+
+    await approve({ verificationId: VERIF }, ADMIN);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]?.[0]?.tokens).toEqual(['tok-p1']);
+    spy.mockRestore();
+  });
+
+  it('carries the rejection reason all the way to the provider notification', async () => {
+    // The reason is the only thing that tells a provider what to fix. A
+    // notification that dropped it would leave them guessing.
+    await seedPendingFile();
+    await reject({ verificationId: VERIF, reason: 'le verso est illisible' }, MOD);
+
+    const items = await db()
+      .collection('notifications')
+      .doc(OWNER)
+      .collection('items')
+      .get();
+    expect(items.size).toBe(1);
+    expect(items.docs[0]?.get('body')).toContain('le verso est illisible');
+  });
+});
