@@ -245,6 +245,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryAll => 'All';
 
   @override
+  String get categoryMenage => 'Cleaning';
+
+  @override
+  String get categoryPlomberie => 'Plumbing';
+
+  @override
+  String get categoryJardinage => 'Gardening';
+
+  @override
+  String get categoryElectricite => 'Electricity';
+
+  @override
+  String get categoryPeinture => 'Painting';
+
+  @override
+  String get categoryBricolage => 'Handyman';
+
+  @override
+  String get categoryGardeEnfants => 'Childcare';
+
+  @override
+  String get categoryCuisine => 'Cooking';
+
+  @override
+  String get categoryRepassage => 'Ironing';
+
+  @override
   String get servicesEmpty => 'No services available\nright now';
 
   @override

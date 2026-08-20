@@ -5,7 +5,9 @@ enum CategoryId {
   electricite,
   peinture,
   bricolage,
-  gardeEnfants;
+  gardeEnfants,
+  cuisine,
+  repassage;
 
   static CategoryId fromString(String value) {
     return CategoryId.values.firstWhere(
@@ -14,6 +16,11 @@ enum CategoryId {
     );
   }
 
+  bool get visibleInClientFilter => switch (this) {
+    menage || gardeEnfants || cuisine || repassage => true,
+    _ => false,
+  };
+
   String get label => switch (this) {
     menage => 'Ménage',
     plomberie => 'Plomberie',
@@ -21,6 +28,8 @@ enum CategoryId {
     electricite => 'Électricité',
     peinture => 'Peinture',
     bricolage => 'Bricolage',
-    gardeEnfants => 'Garde d\'enfants',
+    gardeEnfants => "Garde d'enfants",
+    cuisine => 'Cuisine',
+    repassage => 'Repassage',
   };
 }
