@@ -174,7 +174,7 @@ describe('identity_verification_states: the guard document', () => {
   });
 });
 
-describe('providers/{uid}: why no trust field may ever live there', () => {
+describe('providers/{uid}: the identity badge flag is server-owned (D6-a)', () => {
   beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore() as unknown as Firestore;
@@ -186,20 +186,41 @@ describe('providers/{uid}: why no trust field may ever live there', () => {
     });
   });
 
-  it('lets the owner write an ARBITRARY new field, verification flag included', async () => {
-    // This is the point, and it is uncomfortable on purpose: the update rule
-    // uses a denylist of three moderation keys, so ANY field it does not name
-    // is self-writable. A provider can therefore set `identityVerified: true`
-    // on their own profile right now.
-    //
-    // It is harmless only because nothing reads it: the verification state
-    // lives in its own collection, closed to client writes (decision D3). The
-    // day something reads a trust field from `providers/{uid}`, that reader is
-    // trusting a value its own subject controls.
+  it('lets the owner write an ordinary profile field, but NOT the badge flag', async () => {
+    // D6-a (Amath, 2026-08-21): the public "Verified" badge now reads
+    // `providers/{uid}.identityVerified`. That makes the field a trust
+    // decision, so it joins the denylist: the owner may still edit their own
+    // bio, but must never grant themselves the badge. Only the decision Cloud
+    // Function (Admin SDK) writes it.
     const db = asOwner();
     await assertSucceeds(updateDoc(doc(db, 'providers', OWNER), { bio: 'hello' }));
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(db, 'providers', OWNER), { identityVerified: true })
+    );
+  });
+
+  it('refuses the owner setting the badge flag on create either', async () => {
+    // The denylist guards update; create is guarded by forbidding the key
+    // outright, so a first-write cannot smuggle the badge in.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await deleteDoc(doc(ctx.firestore() as unknown as Firestore, 'providers', OWNER));
+    });
+    const db = asOwner();
+    await assertFails(
+      setDoc(doc(db, 'providers', OWNER), {
+        uid: OWNER,
+        active: true,
+        suspended: false,
+        identityVerified: true,
+      })
+    );
+    // The same create without the trust field is allowed.
+    await assertSucceeds(
+      setDoc(doc(db, 'providers', OWNER), {
+        uid: OWNER,
+        active: true,
+        suspended: false,
+      })
     );
   });
 

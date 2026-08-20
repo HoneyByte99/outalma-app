@@ -36,6 +36,12 @@ export const INTERNAL_SUB = 'identity_internal';
 export const INTERNAL_DOC = 'review';
 export const STATES = 'identity_verification_states';
 
+/// Public provider profile collection. Holds the server-owned identity badge
+/// flag (D6-a, Amath 2026-08-21): a boolean the client is never trusted to
+/// write. See the decision transaction and firestore.rules.
+export const PROVIDERS = 'providers';
+export const IDENTITY_VERIFIED_FIELD = 'identityVerified';
+
 /// Rate limit. Exported so tests can reason about the window without waiting a
 /// day, and so no other file re-invents the numbers.
 export const SUBMIT_MAX_PER_WINDOW = 3;
@@ -678,6 +684,18 @@ async function decide(
           ? state.submitTimestamps
           : [],
       },
+      { merge: true }
+    );
+
+    // D6-a (Amath, 2026-08-21): the public "Verified" badge reads this
+    // server-owned boolean on the provider profile, never a client-supplied
+    // field. Written ONLY here, in the same transaction as the verdict, so the
+    // badge can never diverge from the guard. approve -> true, reject/revoke ->
+    // false. Firestore rules forbid the owner from writing this key, so a
+    // provider can never grant themselves the badge.
+    tx.set(
+      db().collection(PROVIDERS).doc(uid),
+      { [IDENTITY_VERIFIED_FIELD]: opts.status === 'approved' },
       { merge: true }
     );
 

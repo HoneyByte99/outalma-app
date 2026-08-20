@@ -75,19 +75,26 @@ service cloud.firestore {
     // ---------- PROVIDERS (public read, owner write) ----------
     match /providers/{uid} {
       allow read: if true;
-      allow create: if isAdmin() || isSelf(uid);
+      // `identityVerified` is the public identity badge (D6-a). It is a trust
+      // decision, so the owner must never set it on create either: only the
+      // decision Cloud Function (Admin SDK, which bypasses these rules) writes it.
+      allow create: if isAdmin()
+        || (isSelf(uid) && !('identityVerified' in request.resource.data));
       // Owner may edit their own profile (bio, working hours) AND flip their own
       // availability `active` (Disponible/En pause). But NOT the moderation
       // fields: a suspended provider must not be able to self-write
       // `suspended:false` and undo moderation. Those keys are set exclusively by
       // suspendProvider/unsuspendProvider (Admin SDK) and read back as a gate in
       // createBooking. (Security review S2.) `active` is intentionally NOT in
-      // this list - it is the owner-controlled pause switch, also gated server-
-      // side in createBooking.
+      // this list, it is the owner-controlled pause switch, also gated server-
+      // side in createBooking. `identityVerified` joins the deny list (D6-a):
+      // the public badge reads it, and a provider granting it to themselves
+      // would be a trust forgery.
       allow update: if isAdmin()
         || (isSelf(uid)
             && !request.resource.data.diff(resource.data).affectedKeys()
-                  .hasAny(['suspended', 'suspendedAt', 'suspendedReason']));
+                  .hasAny(['suspended', 'suspendedAt', 'suspendedReason',
+                           'identityVerified']));
       allow delete: if isAdmin();
     }
 

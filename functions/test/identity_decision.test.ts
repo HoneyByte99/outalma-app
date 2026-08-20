@@ -11,8 +11,10 @@ const tf = functionsTest({
 import * as fns from '../src/index';
 import * as admin from 'firebase-admin';
 import {
+  IDENTITY_VERIFIED_FIELD,
   INTERNAL_DOC,
   INTERNAL_SUB,
+  PROVIDERS,
   STATES,
   VERIFICATIONS,
 } from '../src/identity_verification';
@@ -248,6 +250,59 @@ describe('what a decision writes', () => {
     expect(state?.verified).toBe(true);
     expect(state?.approvedId).toBe(VERIF);
     expect(state?.pendingId).toBeNull();
+  });
+
+  it('sets the public identity badge flag on approve, in the same write path', async () => {
+    // D6-a: the badge the client reads is providers/{uid}.identityVerified,
+    // written only by the decision. Before any decision the flag is absent.
+    expect((await db().collection(PROVIDERS).doc(OWNER).get()).exists).toBe(
+      false
+    );
+
+    await approve({ verificationId: VERIF }, ADMIN);
+
+    const provider = (await db().collection(PROVIDERS).doc(OWNER).get()).data();
+    expect(provider?.[IDENTITY_VERIFIED_FIELD]).toBe(true);
+  });
+
+  it('clears the public identity badge flag on revoke', async () => {
+    await approve({ verificationId: VERIF }, ADMIN);
+    expect(
+      (await db().collection(PROVIDERS).doc(OWNER).get()).get(
+        IDENTITY_VERIFIED_FIELD
+      )
+    ).toBe(true);
+
+    await revoke({ verificationId: VERIF, reason: 'fraude' }, ADMIN);
+    expect(
+      (await db().collection(PROVIDERS).doc(OWNER).get()).get(
+        IDENTITY_VERIFIED_FIELD
+      )
+    ).toBe(false);
+  });
+
+  it('leaves the public identity badge flag false on reject', async () => {
+    await reject({ verificationId: VERIF, reason: 'photo floue' }, MOD);
+    expect(
+      (await db().collection(PROVIDERS).doc(OWNER).get()).get(
+        IDENTITY_VERIFIED_FIELD
+      )
+    ).toBe(false);
+  });
+
+  it('preserves the rest of the provider profile when flipping the flag', async () => {
+    // The decision merges the flag; it must never clobber bio or availability.
+    await db()
+      .collection(PROVIDERS)
+      .doc(OWNER)
+      .set({ bio: 'Menage a domicile', active: true, suspended: false });
+
+    await approve({ verificationId: VERIF }, ADMIN);
+
+    const provider = (await db().collection(PROVIDERS).doc(OWNER).get()).data();
+    expect(provider?.[IDENTITY_VERIFIED_FIELD]).toBe(true);
+    expect(provider?.bio).toBe('Menage a domicile');
+    expect(provider?.active).toBe(true);
   });
 
   it('counts a rejection so the next attempt can be flagged priority', async () => {
