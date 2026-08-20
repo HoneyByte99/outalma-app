@@ -196,12 +196,11 @@ class _ProfileHeader extends ConsumerWidget {
     final avgRating = reviews.isEmpty
         ? null
         : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
-    // A.8 — trust signal: a provider is "verified" once they have completed
-    // their onboarding (profile exists) AND have a verified phone number on
-    // file (phoneE164 set, which only happens through Twilio OTP or
-    // sign-up).
-    final isVerified =
-        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
+    // D6-a/E7: the trust badge now reflects a server-owned identity verdict,
+    // read from providers/{uid}.identityVerified. A verified phone number no
+    // longer grants it: only an approved identity file does. The provider sees
+    // their own public page exactly as a client would (E15).
+    final isVerified = providerProfile?.identityVerified ?? false;
 
     return Container(
       color: oc.cardSurface,
@@ -224,7 +223,7 @@ class _ProfileHeader extends ConsumerWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        user?.displayName ?? '—',
+                        user?.displayName ?? ':',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -334,7 +333,7 @@ class _ReviewTile extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  reviewer?.displayName ?? '—',
+                  reviewer?.displayName ?? ':',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),

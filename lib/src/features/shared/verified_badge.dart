@@ -4,8 +4,10 @@ import '../../../l10n/app_localizations.dart';
 import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 
-/// Trust signal badge — displayed next to a provider's name when their
-/// profile is "verified" (phone confirmed + provider profile completed).
+/// Trust signal badge, displayed next to a provider's name when their identity
+/// has been verified. Since D6-a/E7 that means an approved identity file: the
+/// callers gate this widget on the server-owned providers/{uid}.identityVerified
+/// flag, never on a verified phone number.
 ///
 /// Sized to sit inline with a [titleLarge] heading.
 class VerifiedBadge extends StatelessWidget {

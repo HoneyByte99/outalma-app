@@ -35,7 +35,7 @@ class ProviderDashboardPage extends ConsumerWidget {
     // Resolve the dashboard state with explicit priority: profile setup
     // first, then "create first service" if there are none, then the normal
     // services dashboard. Only the screen for the current state shows a
-    // strong CTA — no competing primary actions (security review A.3).
+    // strong CTA : no competing primary actions (security review A.3).
     // Every provider is available by default. The hub card carries a self-
     // service availability toggle (Disponible/En pause) that hides the whole
     // catalogue at once; per-listing on/off lives on each service tile. Profile
@@ -114,7 +114,7 @@ class ProviderDashboardPage extends ConsumerWidget {
                   (context, i) => _ServiceTile(
                     service: servicesAsync.value![i],
                     // When the provider is paused, every listing is hidden from
-                    // clients regardless of its own published flag — reflect
+                    // clients regardless of its own published flag : reflect
                     // that on the tile so the hub/listing hierarchy is clear.
                     providerPaused: profile != null && !profile.active,
                   ),
@@ -141,7 +141,7 @@ class ProviderDashboardPage extends ConsumerWidget {
 // Profile card
 // ---------------------------------------------------------------------------
 
-/// "Mon activité" — the provider hub. Identity row (avatar + name + verified +
+/// "Mon activité" : the provider hub. Identity row (avatar + name + verified +
 /// rating + edit) over an availability control: a pill toggle distinct from the
 /// per-listing switches below. "Disponible" → listings visible & bookable;
 /// "En pause" → the whole catalogue is hidden (non-destructive, instant resume).
@@ -155,7 +155,7 @@ class _ProviderHubCard extends ConsumerStatefulWidget {
 }
 
 class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
-  /// Optimistic availability — reflects the tap immediately, reverts on error.
+  /// Optimistic availability : reflects the tap immediately, reverts on error.
   bool? _pending;
 
   @override
@@ -172,7 +172,9 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
     final available = _pending ?? widget.profile.active;
     final auth = ref.watch(authNotifierProvider).valueOrNull;
     final appUser = auth is AuthAuthenticated ? auth.user : null;
-    final isVerified = appUser?.phoneE164?.isNotEmpty ?? false;
+    // D6-a/E7: the badge reflects the server-owned identity verdict on the
+    // provider's own profile, not a verified phone number.
+    final isVerified = widget.profile.identityVerified;
     final publishedCount =
         ref
             .watch(providerServicesProvider)
@@ -190,7 +192,7 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
         decoration: BoxDecoration(
           color: oc.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          // Uniform border — a non-uniform border can't be combined with a
+          // Uniform border : a non-uniform border can't be combined with a
           // borderRadius. The state accent is the clipped top strip below.
           border: Border.all(color: oc.border),
         ),
@@ -204,7 +206,7 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                 height: 3,
                 color: canToggle ? accent : Colors.transparent,
               ),
-              // Row 1 — identity. The whole row opens the profile editor (like
+              // Row 1 : identity. The whole row opens the profile editor (like
               // tapping a service tile), the pencil is just the affordance.
               Semantics(
                 button: true,
@@ -266,7 +268,7 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                 ),
               ),
               Divider(height: 1, color: oc.border),
-              // Row 2 — availability (the whole row is the tap target)
+              // Row 2 : availability (the whole row is the tap target)
               Semantics(
                 button: canToggle,
                 label: available ? l10n.hubSemanticsOn : l10n.hubSemanticsOff,
@@ -434,7 +436,7 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
   }
 }
 
-/// Custom availability pill — deliberately NOT a [Switch], so a provider never
+/// Custom availability pill : deliberately NOT a [Switch], so a provider never
 /// confuses this whole-account control with the per-listing switches below.
 class _AvailabilityPill extends StatelessWidget {
   const _AvailabilityPill({required this.available, required this.enabled});
@@ -496,7 +498,7 @@ class _ServiceTile extends ConsumerStatefulWidget {
   final Service service;
 
   /// When the provider is "En pause", every listing is hidden from clients
-  /// regardless of its own `published` flag — the footer reflects that.
+  /// regardless of its own `published` flag : the footer reflects that.
   final bool providerPaused;
 
   @override
@@ -512,7 +514,7 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
   @override
   void didUpdateWidget(covariant _ServiceTile oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Stream has caught up to our optimistic value — stop overriding it.
+    // Stream has caught up to our optimistic value : stop overriding it.
     if (_pending != null && widget.service.published == _pending) {
       _pending = null;
     }
@@ -527,7 +529,7 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
     final priceLabel = service.priceType.name == 'hourly'
         ? '$formattedPrice/h'
         : '$formattedPrice (forfait)';
-    // A rejected/pending service can't be toggled live by the provider — the
+    // A rejected/pending service can't be toggled live by the provider : the
     // moderation flow governs it.
     final moderationLocked =
         service.status == 'rejected' || service.status == 'pending_review';
@@ -589,7 +591,7 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Only moderation states (pending/rejected) — the active/
+                // Only moderation states (pending/rejected) : the active/
                 // inactive state is the toggle below.
                 _ServiceStatusBadge(service: service),
                 Icon(Icons.chevron_right_rounded, color: oc.icons, size: 20),
@@ -597,9 +599,9 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
             ),
             onTap: () => context.push(AppRoutes.serviceEdit(service.id)),
           ),
-          // On/off footer — status (dot + label) on the left, control on the
+          // On/off footer : status (dot + label) on the left, control on the
           // right. Hidden entirely under moderation: the trailing badge already
-          // explains why, and a disabled switch reads as "broken". No divider —
+          // explains why, and a disabled switch reads as "broken". No divider :
           // this is a light footer of the same card, not a separate section.
           if (!moderationLocked)
             Padding(
@@ -649,7 +651,7 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
                     label: published
                         ? l10n.serviceToggleDeactivate(service.title)
                         : l10n.serviceToggleActivate(service.title),
-                    // Disabled while the whole profile is paused — a live-looking
+                    // Disabled while the whole profile is paused : a live-looking
                     // switch that does nothing visible to clients would confuse.
                     child: Switch(
                       value: published,
@@ -750,7 +752,7 @@ class _ServiceStatusBadge extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
 
-    // Only the moderation states need a badge — the live/offline state is shown
+    // Only the moderation states need a badge : the live/offline state is shown
     // by the activate/deactivate toggle on the card.
     final (label, color, icon) = switch (service.status) {
       'rejected' => (l10n.serviceStatusRejected, oc.error, Icons.block_rounded),
@@ -871,7 +873,7 @@ class _ErrorState extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Provider stats row (B.5) — KPIs for the provider dashboard.
+// Provider stats row (B.5) : KPIs for the provider dashboard.
 // ---------------------------------------------------------------------------
 
 class _ProviderStatsRow extends ConsumerWidget {
@@ -885,7 +887,7 @@ class _ProviderStatsRow extends ConsumerWidget {
 
     String acceptanceLabel() {
       final r = stats.acceptanceRate;
-      if (r == null) return '—';
+      if (r == null) return ':';
       return '${(r * 100).round()}%';
     }
 

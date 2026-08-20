@@ -12,13 +12,21 @@ class ProviderProfile {
     this.bio,
     this.workingHourStart,
     this.workingHourEnd,
+    this.identityVerified = false,
   });
 
   final String uid;
   final String? bio;
 
+  /// Public identity badge (D6-a). Server-owned boolean, written ONLY by the
+  /// decision Cloud Function (approve sets it true, reject and revoke set it
+  /// false). Firestore rules forbid the owner from writing it, so this value is
+  /// trustworthy: the "Verified" badge reads it and nothing else. Absent field
+  /// means not verified. Replaces the old phone-number heuristic (E7/D6).
+  final bool identityVerified;
+
   /// Daily working-hours window [start, end) in 24h local hours. Null when the
-  /// provider hasn't configured it — callers fall back to the k* defaults.
+  /// provider hasn't configured it: callers fall back to the k* defaults.
   /// Clients can offer bookings only on hourly slots inside this window.
   final int? workingHourStart;
   final int? workingHourEnd;
@@ -50,6 +58,7 @@ class ProviderProfile {
     bool? active,
     bool? suspended,
     DateTime? createdAt,
+    bool? identityVerified,
   }) {
     return ProviderProfile(
       uid: uid,
@@ -59,6 +68,7 @@ class ProviderProfile {
       active: active ?? this.active,
       suspended: suspended ?? this.suspended,
       createdAt: createdAt ?? this.createdAt,
+      identityVerified: identityVerified ?? this.identityVerified,
     );
   }
 }

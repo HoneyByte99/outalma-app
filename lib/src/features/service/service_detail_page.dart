@@ -245,7 +245,7 @@ class _ServiceDetailContent extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Hero gallery — swipeable photo carousel with page indicators
+// Hero gallery : swipeable photo carousel with page indicators
 // ---------------------------------------------------------------------------
 
 class _HeroGallery extends StatefulWidget {
@@ -259,7 +259,7 @@ class _HeroGallery extends StatefulWidget {
 }
 
 class _HeroGalleryState extends State<_HeroGallery> {
-  // viewportFraction < 1 lets the next photo peek in from the right — the
+  // viewportFraction < 1 lets the next photo peek in from the right : the
   // primary visual cue that the hero is swipeable (no text needed).
   final _controller = PageController(viewportFraction: 0.92);
   int _current = 0;
@@ -274,10 +274,10 @@ class _HeroGalleryState extends State<_HeroGallery> {
   Widget build(BuildContext context) {
     final photos = widget.photos;
 
-    // Empty state — no photos uploaded.
+    // Empty state : no photos uploaded.
     if (photos.isEmpty) return widget.fallback;
 
-    // Single photo — no carousel chrome needed.
+    // Single photo : no carousel chrome needed.
     if (photos.length == 1) {
       return AppNetworkImage(
         url: photos.first,
@@ -308,7 +308,7 @@ class _HeroGalleryState extends State<_HeroGallery> {
             ),
           ),
         ),
-        // Page indicator dots — anchored to the bottom of the hero.
+        // Page indicator dots : anchored to the bottom of the hero.
         Positioned(
           left: 0,
           right: 0,
@@ -409,11 +409,13 @@ class _ProviderRow extends ConsumerWidget {
     final providerProfile = ref
         .watch(providerProfileByIdProvider(providerId))
         .valueOrNull;
-    final isVerified =
-        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
+    // D6-a/E7: the badge now reflects a server-owned identity verdict, read
+    // from providers/{uid}.identityVerified. A verified phone no longer grants
+    // it: only an approved identity file does.
+    final isVerified = providerProfile?.identityVerified ?? false;
 
     return Semantics(
-      label: '${user?.displayName ?? ''} — ${l10n.serviceViewProfile}',
+      label: '${user?.displayName ?? ''} : ${l10n.serviceViewProfile}',
       button: true,
       child: InkWell(
         onTap: () => context.push(AppRoutes.providerProfile(providerId)),
@@ -447,7 +449,7 @@ class _ProviderRow extends ConsumerWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            user?.displayName ?? '—',
+                            user?.displayName ?? ':',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: oc.primaryText,
@@ -643,7 +645,7 @@ class _EditBottomBar extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Loading state — animated shimmer skeleton
+// Loading state : animated shimmer skeleton
 // ---------------------------------------------------------------------------
 
 class _ServiceDetailLoading extends StatefulWidget {
