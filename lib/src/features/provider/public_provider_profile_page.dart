@@ -10,7 +10,7 @@ import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/user/user_providers.dart';
-import '../../core/utils/format_utils.dart';
+import '../shared/service_price_label.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
 import '../shared/category_icon.dart';
@@ -196,7 +196,7 @@ class _ProfileHeader extends ConsumerWidget {
     final avgRating = reviews.isEmpty
         ? null
         : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
-    // A.8 — trust signal: a provider is "verified" once they have completed
+    // A.8 - trust signal: a provider is "verified" once they have completed
     // their onboarding (profile exists) AND have a verified phone number on
     // file (phoneE164 set, which only happens through Twilio OTP or
     // sign-up).
@@ -224,7 +224,7 @@ class _ProfileHeader extends ConsumerWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        user?.displayName ?? '—',
+                        user?.displayName ?? '-',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -334,7 +334,7 @@ class _ReviewTile extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  reviewer?.displayName ?? '—',
+                  reviewer?.displayName ?? '-',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -401,10 +401,8 @@ class _PublicServiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    final formattedPrice = formatPriceFromCents(service.price);
-    final priceLabel = service.priceType.name == 'hourly'
-        ? '$formattedPrice/h'
-        : formattedPrice;
+    final l10n = AppLocalizations.of(context)!;
+    final priceLabel = servicePriceLabel(service, l10n);
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.serviceDetail(service.id)),

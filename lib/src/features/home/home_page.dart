@@ -14,12 +14,11 @@ import '../../application/home/location_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
-import '../../core/utils/format_utils.dart';
+import '../shared/service_price_label.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
-import '../../domain/enums/price_type.dart';
 import '../../domain/models/review.dart';
 import '../auth/email_verification_banner.dart';
 import '../../domain/models/service.dart';
@@ -32,7 +31,7 @@ import '../shared/user_avatar.dart';
 import '../../../l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
-// Filter state — local to this page subtree
+// Filter state - local to this page subtree
 // ---------------------------------------------------------------------------
 
 final _selectedCategoryProvider = StateProvider<CategoryId?>((ref) => null);
@@ -79,7 +78,7 @@ class HomePage extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting — compact single line
+          // Greeting - compact single line
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.l,
@@ -100,7 +99,7 @@ class HomePage extends ConsumerWidget {
           ),
           // Non-blocking email verification nudge (email accounts only).
           const EmailVerificationBanner(),
-          // Search bar — replaces static subtitle
+          // Search bar - replaces static subtitle
           const _SearchBar(),
           // Category chips
           const _CategoryChipsRow(),
@@ -114,7 +113,7 @@ class HomePage extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Location pill — compact AppBar location indicator
+// Location pill - compact AppBar location indicator
 // ---------------------------------------------------------------------------
 
 class _LocationPill extends ConsumerWidget {
@@ -190,7 +189,7 @@ class _LocationPill extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Location bottom sheet — search + radius + favorites
+// Location bottom sheet - search + radius + favorites
 // ---------------------------------------------------------------------------
 
 class _LocationSheet extends ConsumerStatefulWidget {
@@ -999,7 +998,7 @@ class _ServiceGrid extends ConsumerWidget {
                   final currentLimit = ref.read(serviceListPageSizeProvider);
                   if (services.length >= currentLimit) {
                     // Only request more if we've actually got the previous
-                    // page filled — otherwise we're at the true end.
+                    // page filled - otherwise we're at the true end.
                     ref.read(serviceListPageSizeProvider.notifier).state =
                         currentLimit + 30;
                   }
@@ -1049,10 +1048,8 @@ class _ServiceCard extends ConsumerWidget {
         .valueOrNull;
     final reviews =
         ref.watch(reviewsForUserProvider(service.providerId)).valueOrNull ?? [];
-    final formattedPrice = formatPriceFromCents(service.price);
-    final priceLabel = service.priceType == PriceType.hourly
-        ? '$formattedPrice/h'
-        : formattedPrice;
+    final l10n = AppLocalizations.of(context)!;
+    final priceLabel = servicePriceLabel(service, l10n);
 
     return Semantics(
       label: service.title,
@@ -1076,7 +1073,7 @@ class _ServiceCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image — takes all remaining space
+              // Image - takes all remaining space
               Expanded(
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
@@ -1120,7 +1117,7 @@ class _ServiceCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              // Info — intrinsic height, never overflows
+              // Info - intrinsic height, never overflows
               // Info block \u2014 hierarchy A.4: title dominant, price+rating
               // secondary on one row, provider name as discreet tertiary.
               Padding(
@@ -1206,7 +1203,7 @@ class _ServiceCard extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Rating row — stars + average or "Nouveau" badge
+// Rating row - stars + average or "Nouveau" badge
 // ---------------------------------------------------------------------------
 
 class _RatingRow extends StatelessWidget {

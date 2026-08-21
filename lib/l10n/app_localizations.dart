@@ -2450,6 +2450,96 @@ abstract class AppLocalizations {
   /// **'flat fee'**
   String get priceFixed;
 
+  /// No description provided for @priceDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'per day'**
+  String get priceDaily;
+
+  /// No description provided for @priceMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'per month'**
+  String get priceMonthly;
+
+  /// No description provided for @priceUnitHourly.
+  ///
+  /// In en, this message translates to:
+  /// **'/h'**
+  String get priceUnitHourly;
+
+  /// No description provided for @priceUnitDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'/day'**
+  String get priceUnitDaily;
+
+  /// No description provided for @priceUnitMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'/mo'**
+  String get priceUnitMonthly;
+
+  /// No description provided for @serviceFormBillingMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing mode'**
+  String get serviceFormBillingMode;
+
+  /// No description provided for @serviceFormExtraTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional tasks covered'**
+  String get serviceFormExtraTasks;
+
+  /// No description provided for @serviceFormExtraTasksSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to three tasks beyond the main one'**
+  String get serviceFormExtraTasksSubtitle;
+
+  /// No description provided for @serviceFormExtraTasksMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Three additional tasks at most.'**
+  String get serviceFormExtraTasksMax;
+
+  /// No description provided for @serviceFormPriceRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed range: {min} to {max} F CFA'**
+  String serviceFormPriceRange(String min, String max);
+
+  /// No description provided for @serviceFormPriceOutOfRange.
+  ///
+  /// In en, this message translates to:
+  /// **'The price must be between {min} and {max} F CFA.'**
+  String serviceFormPriceOutOfRange(String min, String max);
+
+  /// No description provided for @serviceFormPriceMonthlyMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly minimum'**
+  String get serviceFormPriceMonthlyMin;
+
+  /// No description provided for @serviceFormPriceMonthlyMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly maximum'**
+  String get serviceFormPriceMonthlyMax;
+
+  /// No description provided for @serviceFormMonthlyMaxBelowMin.
+  ///
+  /// In en, this message translates to:
+  /// **'The maximum must be greater than or equal to the minimum.'**
+  String get serviceFormMonthlyMaxBelowMin;
+
+  /// No description provided for @serviceFormPricingUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The pricing grid is unavailable. Retry.'**
+  String get serviceFormPricingUnavailable;
+
   /// No description provided for @photoAdd.
   ///
   /// In en, this message translates to:

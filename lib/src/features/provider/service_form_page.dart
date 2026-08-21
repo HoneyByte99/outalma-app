@@ -50,7 +50,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     _titleController = TextEditingController(text: s?.title ?? '');
     _descriptionController = TextEditingController(text: s?.description ?? '');
     _priceController = TextEditingController(
-      text: s != null ? (s.price / 100).toStringAsFixed(0) : '',
+      text: s != null ? s.price.toString() : '',
     );
     _category = s?.categoryId ?? CategoryId.menage;
     _priceType = s?.priceType ?? PriceType.hourly;
@@ -63,7 +63,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   }
 
   // Captured so we can clear our snackbars on dispose (the messenger is an
-  // ancestor that outlives this page) — otherwise the photo-removed "undo"
+  // ancestor that outlives this page) - otherwise the photo-removed "undo"
   // snackbar lingers onto the next screen after pop/back.
   ScaffoldMessengerState? _messenger;
 
@@ -209,7 +209,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
-    // Publishing is not gated on onboarding — providers are active by default.
+    // Publishing is not gated on onboarding - providers are active by default.
     // Only a suspended provider is blocked, which the server rule enforces.
 
     final priceEuros = int.tryParse(_priceController.text.trim()) ?? 0;
@@ -225,7 +225,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               : _descriptionController.text.trim(),
           categoryId: _category,
           priceType: _priceType,
-          price: priceEuros * 100,
+          price: priceEuros,
           serviceZones: _zones,
           photos: _photos,
           published: _published,
@@ -244,7 +244,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               : _descriptionController.text.trim(),
           photos: _photos,
           priceType: _priceType,
-          price: priceEuros * 100,
+          price: priceEuros,
           published: _published,
           serviceZones: _zones,
           createdAt: now,
@@ -600,7 +600,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
     final e = widget.existing;
     _addressController = TextEditingController(text: e?.label ?? '');
     _radiusKm = e?.radiusKm.toDouble() ?? 30;
-    // For editing, we already have coords — create a fake PlaceSuggestion
+    // For editing, we already have coords - create a fake PlaceSuggestion
     // so _validate can reuse existing coords if the label hasn't changed.
     if (e != null) {
       _selected = PlaceSuggestion(placeId: '', description: e.label);
@@ -622,7 +622,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
       final results = await widget.geocoding.autocomplete(input);
       if (mounted) setState(() => _suggestions = results);
     } catch (_) {
-      // Silently ignore — suggestions are not critical
+      // Silently ignore - suggestions are not critical
     }
   }
 
