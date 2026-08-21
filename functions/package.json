@@ -13,6 +13,7 @@
     "lint": "eslint --max-warnings=0 .",
     "lint:fix": "eslint --fix .",
     "test": "firebase emulators:exec --only firestore,auth --project demo-outalma --config firebase.emulator.json \"jest --runInBand --forceExit\"",
+    "test:coverage": "firebase emulators:exec --only firestore,auth --project demo-outalma --config firebase.emulator.json \"jest --runInBand --forceExit --coverage\"",
     "serve": "firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
