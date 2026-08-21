@@ -161,17 +161,26 @@ service cloud.firestore {
         let d = request.resource.data;
         let cfg = pricingCfg();
         let extras = d.get('extraTasks', []);
-        let n = extras.size();
+        let distinct = extras.toSet();
+        // Count DISTINCT tasks. Using the raw list length here would let a
+        // direct write inflate the ceiling with duplicates (e.g. three copies
+        // of one task priced at the N=3 cap); the equality below also rejects
+        // any list that carries duplicates in the first place.
+        let n = distinct.size();
         let b = boundsFor(cfg, d.priceType);
         let cap = b.max * (100 + b.extraBonusPercent * n);
         return d.priceType in ['hourly', 'daily', 'monthly']
+          && d.price is int
           && n <= cfg.maxExtraTasks
-          && extras.toSet().hasOnly(cfg.boundedCategories)
+          && extras.size() == n
+          && distinct.hasOnly(cfg.boundedCategories)
           && !(d.categoryId in extras)
           && d.price >= b.min
           && d.price * 100 <= cap
           && (d.priceType == 'monthly'
-                ? (d.priceMax >= d.price && d.priceMax * 100 <= cap)
+                ? (d.priceMax is int
+                    && d.priceMax >= d.price
+                    && d.priceMax * 100 <= cap)
                 : !('priceMax' in d));
       }
 

@@ -453,6 +453,22 @@ describe('pricing guard', () => {
     await assertFails(write({ extraTasks: ['menage'] }));
   });
 
+  test('duplicate extra tasks cannot inflate the ceiling', async () => {
+    // Three copies of one task must NOT unlock the N=3 cap (6125); the list
+    // has duplicates and covers only one real extra, so 6125 is rejected and
+    // the true one-extra ceiling (4375) still applies.
+    await assertFails(
+      write({ price: 6125, extraTasks: ['cuisine', 'cuisine', 'cuisine'] }, 'dup1')
+    );
+    await assertFails(
+      write({ price: 4375, extraTasks: ['cuisine', 'cuisine'] }, 'dup2')
+    );
+  });
+
+  test('rejects a fractional (non-integer) price', async () => {
+    await assertFails(write({ price: 2000.99 }));
+  });
+
   test('rejects an extra task outside the bounded categories', async () => {
     await assertFails(write({ extraTasks: ['plomberie'] }));
   });
@@ -500,6 +516,10 @@ describe('pricing guard', () => {
           base({ priceType: 'monthly', price: 60000 })
         )
       );
+    });
+
+    test('rejects a fractional priceMax', async () => {
+      await assertFails(monthly({ price: 60000, priceMax: 90000.5 }));
     });
   });
 
