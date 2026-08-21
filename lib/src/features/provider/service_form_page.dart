@@ -8,11 +8,14 @@ import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/pricing/pricing_providers.dart';
 import '../../application/service/service_providers.dart';
+import '../../core/utils/format_utils.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/service_photo_upload_service.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/enums/price_type.dart';
+import '../../domain/pricing/pricing_config.dart';
 import '../shared/category_icon.dart';
 import '../../domain/models/service.dart';
 import '../../domain/models/service_zone.dart';
@@ -31,9 +34,15 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
+  // For hourly/daily this is the single price; for monthly it is the low end
+  // of the range (the high end lives in [_priceMaxController]).
   late final TextEditingController _priceController;
+  late final TextEditingController _priceMaxController;
   late CategoryId _category;
   late PriceType _priceType;
+  // Extra tasks the listing also covers, beyond the main category. Never
+  // contains the main category; capped at the grid's maxExtraTasks.
+  late Set<String> _extraTasks;
   late bool _published;
   List<String> _photos = [];
   List<ServiceZone> _zones = [];
@@ -52,8 +61,16 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     _priceController = TextEditingController(
       text: s != null ? s.price.toString() : '',
     );
+    _priceMaxController = TextEditingController(
+      text: s?.priceMax != null ? s!.priceMax.toString() : '',
+    );
     _category = s?.categoryId ?? CategoryId.menage;
-    _priceType = s?.priceType ?? PriceType.hourly;
+    // Legacy fixed listings are treated as daily (spec decision 11); the
+    // migration rewrites them in the database, the form does so on next save.
+    _priceType = s == null
+        ? PriceType.hourly
+        : (s.priceType == PriceType.fixed ? PriceType.daily : s.priceType);
+    _extraTasks = {...?s?.extraTasks};
     _published = s?.published ?? false;
     _photos = List<String>.from(s?.photos ?? []);
     _zones = List<ServiceZone>.from(s?.serviceZones ?? []);
@@ -79,6 +96,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    _priceMaxController.dispose();
     super.dispose();
   }
 
@@ -212,7 +230,20 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     // Publishing is not gated on onboarding - providers are active by default.
     // Only a suspended provider is blocked, which the server rule enforces.
 
-    final priceEuros = int.tryParse(_priceController.text.trim()) ?? 0;
+    final price = int.tryParse(_priceController.text.trim()) ?? 0;
+    final isMonthly = _priceType == PriceType.monthly;
+    // Monthly stores the range: price = low end, priceMax = high end. The other
+    // modes carry no priceMax; the server rule rejects a priceMax outside the
+    // monthly mode, so it must be cleared (not just left stale) when switching.
+    final priceMax = isMonthly
+        ? (int.tryParse(_priceMaxController.text.trim()) ?? 0)
+        : null;
+    // Only bounded categories carry extra tasks; a legacy non-launch listing
+    // keeps none. Never include the main category in its own extras.
+    final config = ref.read(pricingConfigProvider).valueOrNull;
+    final extraTasks = (config?.isBounded(_category.name) ?? false)
+        ? (_extraTasks.where((t) => t != _category.name).toList()..sort())
+        : const <String>[];
 
     setState(() => _saving = true);
     try {
@@ -225,7 +256,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               : _descriptionController.text.trim(),
           categoryId: _category,
           priceType: _priceType,
-          price: priceEuros,
+          price: price,
+          priceMax: priceMax,
+          extraTasks: extraTasks,
           serviceZones: _zones,
           photos: _photos,
           published: _published,
@@ -244,7 +277,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               : _descriptionController.text.trim(),
           photos: _photos,
           priceType: _priceType,
-          price: priceEuros,
+          price: price,
+          priceMax: priceMax,
+          extraTasks: extraTasks,
           published: _published,
           serviceZones: _zones,
           createdAt: now,
@@ -264,10 +299,238 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     }
   }
 
+  // ---- Pricing section ----------------------------------------------------
+
+  CategoryId? _categoryFromName(String name) {
+    for (final c in CategoryId.values) {
+      if (c.name == name) return c;
+    }
+    return null;
+  }
+
+  /// Categories offered in the selector: the bounded launch tasks, plus the
+  /// current category when editing a legacy non-launch listing so it stays
+  /// editable (SC-13). Falls back to the current category alone while the grid
+  /// is still loading (save is disabled in that state anyway).
+  List<CategoryId> _selectableCategories(PricingConfig? config) {
+    if (config == null) return [_category];
+    final bounded = config.boundedCategories
+        .map(_categoryFromName)
+        .whereType<CategoryId>()
+        .toList();
+    if (!bounded.contains(_category)) bounded.insert(0, _category);
+    return bounded;
+  }
+
+  void _toggleExtra(String name, bool selected, int maxExtra) {
+    setState(() {
+      if (selected) {
+        if (_extraTasks.length < maxExtra) _extraTasks.add(name);
+      } else {
+        _extraTasks.remove(name);
+      }
+    });
+  }
+
+  Widget _buildPricing(
+    AppLocalizations l10n,
+    OutalmaColors oc,
+    AsyncValue<PricingConfig> pricingAsync,
+  ) {
+    return pricingAsync.when(
+      loading: () => const _PricingLoading(),
+      error: (_, __) => _PricingError(
+        message: l10n.serviceFormPricingUnavailable,
+        retryLabel: l10n.retry,
+        onRetry: () => ref.invalidate(pricingConfigProvider),
+      ),
+      data: (config) => config.isBounded(_category.name)
+          ? _buildBoundedPricing(l10n, oc, config)
+          : _buildFreePrice(l10n),
+    );
+  }
+
+  /// Legacy non-launch category: unbounded, single free price, no extra tasks
+  /// (spec section 4, SC-13 / SC-22).
+  Widget _buildFreePrice(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Label(l10n.serviceFormPrice),
+        TextFormField(
+          controller: _priceController,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          decoration: const InputDecoration(hintText: '0', suffixText: 'F CFA'),
+          validator: (v) {
+            final n = int.tryParse((v ?? '').trim());
+            if (n == null || n <= 0) return l10n.serviceFormPriceInvalid;
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBoundedPricing(
+    AppLocalizations l10n,
+    OutalmaColors oc,
+    PricingConfig config,
+  ) {
+    final isMonthly = _priceType == PriceType.monthly;
+    final bounds = config.boundsFor(_priceType)!;
+    // Monthly carries no extra-task bonus, so its ceiling is the flat max; the
+    // other modes lift the ceiling by extraBonusPercent per extra task.
+    final cap = bounds.capFor(_extraTasks.length);
+    final rangeText = isMonthly
+        ? l10n.serviceFormPriceRange(
+            formatAmount(bounds.min),
+            formatAmount(bounds.max),
+          )
+        : l10n.serviceFormPriceRange(
+            formatAmount(bounds.min),
+            formatAmount(cap),
+          );
+
+    final extraOptions = config.boundedCategories
+        .where((name) => name != _category.name)
+        .map(_categoryFromName)
+        .whereType<CategoryId>()
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Label(l10n.serviceFormBillingMode),
+        _ModeSelector(
+          value: _priceType,
+          onChanged: (t) => setState(() => _priceType = t),
+        ),
+        const SizedBox(height: 20),
+
+        _Label(l10n.serviceFormPrice),
+        // The allowed range, always visible before any input (AC-01) and
+        // updated live as the mode or extra tasks change (AC-03, AC-06).
+        Text(
+          rangeText,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+        ),
+        const SizedBox(height: 8),
+        if (isMonthly)
+          _buildMonthlyFields(l10n, bounds)
+        else
+          _buildSinglePrice(l10n, bounds, cap),
+        const SizedBox(height: 20),
+
+        _Label(l10n.serviceFormExtraTasks),
+        Text(
+          l10n.serviceFormExtraTasksSubtitle,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+        ),
+        const SizedBox(height: 8),
+        _ExtraTasksSelector(
+          options: extraOptions,
+          selected: _extraTasks,
+          maxExtra: config.maxExtraTasks,
+          limitLabel: l10n.serviceFormExtraTasksMax,
+          onToggle: (name, sel) =>
+              _toggleExtra(name, sel, config.maxExtraTasks),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSinglePrice(
+    AppLocalizations l10n,
+    PricingModeBounds bounds,
+    int cap,
+  ) {
+    return TextFormField(
+      controller: _priceController,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      decoration: const InputDecoration(hintText: '0', suffixText: 'F CFA'),
+      validator: (v) {
+        final n = int.tryParse((v ?? '').trim());
+        if (n == null) return l10n.serviceFormPriceRequired;
+        if (n < bounds.min || n > cap) {
+          return l10n.serviceFormPriceOutOfRange(
+            formatAmount(bounds.min),
+            formatAmount(cap),
+          );
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildMonthlyFields(AppLocalizations l10n, PricingModeBounds bounds) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Label(l10n.serviceFormPriceMonthlyMin),
+        TextFormField(
+          controller: _priceController,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          decoration: const InputDecoration(hintText: '0', suffixText: 'F CFA'),
+          validator: (v) {
+            final n = int.tryParse((v ?? '').trim());
+            if (n == null) return l10n.serviceFormPriceRequired;
+            if (n < bounds.min || n > bounds.max) {
+              return l10n.serviceFormPriceOutOfRange(
+                formatAmount(bounds.min),
+                formatAmount(bounds.max),
+              );
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 12),
+        _Label(l10n.serviceFormPriceMonthlyMax),
+        TextFormField(
+          controller: _priceMaxController,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          decoration: const InputDecoration(hintText: '0', suffixText: 'F CFA'),
+          validator: (v) {
+            final n = int.tryParse((v ?? '').trim());
+            if (n == null) return l10n.serviceFormPriceRequired;
+            if (n < bounds.min || n > bounds.max) {
+              return l10n.serviceFormPriceOutOfRange(
+                formatAmount(bounds.min),
+                formatAmount(bounds.max),
+              );
+            }
+            final min = int.tryParse(_priceController.text.trim());
+            if (min != null && n < min) {
+              return l10n.serviceFormMonthlyMaxBelowMin;
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+    final pricingAsync = ref.watch(pricingConfigProvider);
+    // The grid is the single source of the ranges the form enforces. Until it
+    // loads (or if it fails), publishing is disabled and the pricing section
+    // shows a loading/error state (archi section 5, spec AC-15 / SC-12).
+    final config = pricingAsync.valueOrNull;
+    final canSave = !_saving && config != null;
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
@@ -283,7 +546,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
           child: ElevatedButton(
-            onPressed: _saving ? null : _save,
+            onPressed: canSave ? _save : null,
             child: _saving
                 ? const SizedBox(
                     width: 20,
@@ -327,11 +590,19 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               ),
               const SizedBox(height: 20),
 
-              // Category
+              // Category. Only the bounded launch tasks are creatable; the five
+              // non-launch categories are hidden at creation (spec section 4,
+              // SC-13). An existing non-launch listing keeps its category so it
+              // stays editable.
               _Label(l10n.serviceFormCategory),
               _CategorySelector(
                 value: _category,
-                onChanged: (c) => setState(() => _category = c),
+                selectable: _selectableCategories(config),
+                onChanged: (c) => setState(() {
+                  _category = c;
+                  // A category can never be its own extra task.
+                  _extraTasks.remove(c.name);
+                }),
               ),
               const SizedBox(height: 20),
 
@@ -348,43 +619,10 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               ),
               const SizedBox(height: 20),
 
-              // Price + type
-              _Label(l10n.serviceFormPrice),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: TextFormField(
-                      controller: _priceController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        hintText: '0',
-                        suffixText: 'F CFA',
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return l10n.serviceFormPriceRequired;
-                        }
-                        final n = int.tryParse(v.trim());
-                        if (n == null || n <= 0) {
-                          return l10n.serviceFormPriceInvalid;
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 3,
-                    child: _PriceTypeSelector(
-                      value: _priceType,
-                      onChanged: (t) => setState(() => _priceType = t),
-                    ),
-                  ),
-                ],
-              ),
+              // Pricing: billing mode, encadre range, extra tasks. The whole
+              // section is driven by the grid; it renders loading/error states
+              // when the grid is unavailable (spec AC-15, SC-12).
+              _buildPricing(l10n, oc, pricingAsync),
               const SizedBox(height: 20),
 
               // Zones d'intervention
@@ -1092,21 +1330,22 @@ class _Label extends StatelessWidget {
 }
 
 class _CategorySelector extends StatelessWidget {
-  const _CategorySelector({required this.value, required this.onChanged});
+  const _CategorySelector({
+    required this.value,
+    required this.selectable,
+    required this.onChanged,
+  });
 
   final CategoryId value;
+  final List<CategoryId> selectable;
   final ValueChanged<CategoryId> onChanged;
-
-  static Map<CategoryId, String> get _labels => {
-    for (final c in CategoryId.values) c: c.label,
-  };
 
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
     return Wrap(
       spacing: 8,
-      children: CategoryId.values.map((c) {
+      children: selectable.map((c) {
         final selected = c == value;
         // Icon + label so the category reads visually, not by text alone.
         return ChoiceChip(
@@ -1115,7 +1354,7 @@ class _CategorySelector extends StatelessWidget {
             size: 18,
             color: selected ? oc.primary : oc.icons,
           ),
-          label: Text(_labels[c]!),
+          label: Text(c.label),
           selected: selected,
           selectedColor: oc.primary.withValues(alpha: 0.12),
           labelStyle: TextStyle(
@@ -1129,8 +1368,11 @@ class _CategorySelector extends StatelessWidget {
   }
 }
 
-class _PriceTypeSelector extends StatelessWidget {
-  const _PriceTypeSelector({required this.value, required this.onChanged});
+/// Billing-mode selector: hourly, daily, monthly (spec section 5, decision 4).
+/// `fixed` is gone from the choices; a legacy fixed listing was mapped to daily
+/// on load.
+class _ModeSelector extends StatelessWidget {
+  const _ModeSelector({required this.value, required this.onChanged});
 
   final PriceType value;
   final ValueChanged<PriceType> onChanged;
@@ -1138,19 +1380,184 @@ class _PriceTypeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return DropdownButtonFormField<PriceType>(
-      initialValue: value,
-      decoration: const InputDecoration(),
-      items: [
-        DropdownMenuItem(
-          value: PriceType.hourly,
-          child: Text(l10n.priceHourly),
-        ),
-        DropdownMenuItem(value: PriceType.fixed, child: Text(l10n.priceFixed)),
+    return SegmentedButton<PriceType>(
+      segments: [
+        ButtonSegment(value: PriceType.hourly, label: Text(l10n.priceHourly)),
+        ButtonSegment(value: PriceType.daily, label: Text(l10n.priceDaily)),
+        ButtonSegment(value: PriceType.monthly, label: Text(l10n.priceMonthly)),
       ],
-      onChanged: (t) {
-        if (t != null) onChanged(t);
+      selected: {value},
+      showSelectedIcon: false,
+      onSelectionChanged: (s) {
+        if (s.isNotEmpty) onChanged(s.first);
       },
+    );
+  }
+}
+
+/// Extra-task checkboxes. Every option beyond the main category, capped at
+/// [maxExtra]: once the cap is reached the unchecked boxes are disabled and a
+/// text explains the limit, so the ceiling is never breached from the UI
+/// (spec AC-04, SC-08) and the limit is not signalled by colour alone (A3).
+class _ExtraTasksSelector extends StatelessWidget {
+  const _ExtraTasksSelector({
+    required this.options,
+    required this.selected,
+    required this.maxExtra,
+    required this.limitLabel,
+    required this.onToggle,
+  });
+
+  final List<CategoryId> options;
+  final Set<String> selected;
+  final int maxExtra;
+  final String limitLabel;
+  final void Function(String name, bool selected) onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final atLimit = selected.length >= maxExtra;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final c in options)
+          _ExtraTaskTile(
+            category: c,
+            checked: selected.contains(c.name),
+            // Keep already-checked tiles tappable so they can be unchecked;
+            // only block adding beyond the cap.
+            enabled: selected.contains(c.name) || !atLimit,
+            onChanged: (v) => onToggle(c.name, v),
+          ),
+        if (atLimit)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              limitLabel,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ExtraTaskTile extends StatelessWidget {
+  const _ExtraTaskTile({
+    required this.category,
+    required this.checked,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final CategoryId category;
+  final bool checked;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    // The whole row is the tap target (>= 44pt tall, A2), covering the label
+    // and not just the box.
+    return InkWell(
+      onTap: enabled ? () => onChanged(!checked) : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Semantics(
+        label: category.label,
+        checked: checked,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Checkbox(
+                value: checked,
+                onChanged: enabled ? (v) => onChanged(v ?? false) : null,
+              ),
+              Icon(
+                category.icon,
+                size: 18,
+                color: enabled ? oc.icons : oc.icons.withValues(alpha: 0.4),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                category.label,
+                style: TextStyle(
+                  color: enabled ? oc.primaryText : oc.secondaryText,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Grid still loading: a spinner in place of the pricing fields; publishing is
+/// disabled by the parent (SC-12 case A).
+class _PricingLoading extends StatelessWidget {
+  const _PricingLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 24),
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+/// Grid unreadable (absent or failed): a plain-language message and a retry
+/// action; no hard-coded fallback range (archi section 5, SC-12 cases B/C).
+class _PricingError extends StatelessWidget {
+  const _PricingError({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
+
+  final String message;
+  final String retryLabel;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: oc.cardSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: oc.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline, size: 20, color: oc.error),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(onPressed: onRetry, child: Text(retryLabel)),
+          ),
+        ],
+      ),
     );
   }
 }
