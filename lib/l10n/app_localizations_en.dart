@@ -1837,4 +1837,136 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get identityDone => 'Done';
+
+  @override
+  String get identityGuideTitle => 'Verify your identity';
+
+  @override
+  String get identityGuideStepRecto => 'Front';
+
+  @override
+  String get identityGuideStepVerso => 'Back';
+
+  @override
+  String get identityGuideStepSelfie => 'Selfie';
+
+  @override
+  String get identityGuideWhy =>
+      'A verified profile earns client trust. The badge shows you are who you say you are.';
+
+  @override
+  String get identityGuideNext =>
+      'A member of our team reviews your file within 48 hours. You can keep offering your services in the meantime.';
+
+  @override
+  String get identityGuideHave =>
+      'Have your CEDEAO ID card ready, in a well-lit spot. Allow about two minutes. Your photos are not kept on the phone.';
+
+  @override
+  String get identityGuideStart => 'Start';
+
+  @override
+  String get identityGuideConsentHint => 'Tick the box to continue';
+
+  @override
+  String get identityGuideMention1 =>
+      'We collect a photo of the front and back of your ID card, and a selfie.';
+
+  @override
+  String get identityGuideMention2 =>
+      'They are used only to check that you are the person offering services on Outalma.';
+
+  @override
+  String get identityGuideMention3 =>
+      'Only authorised members of the Outalma team can view them. No client and no other provider has access.';
+
+  @override
+  String get identityGuideMention4 =>
+      'They are kept until you delete your account.';
+
+  @override
+  String get identityGuideMention5 =>
+      'You can delete your account at any time from your settings.';
+
+  @override
+  String get identityGuideMention6 =>
+      'We reply within 48 hours. You can keep offering your services in the meantime.';
+
+  @override
+  String get identityConsentCheckbox =>
+      'I have read the above and I agree to send my ID document and my selfie to Outalma for verification.';
+
+  @override
+  String get identityConsentTermsLink => 'Read the terms of use';
+
+  @override
+  String get identityStatusTitle => 'Identity verification';
+
+  @override
+  String get identityStatusNoneBody =>
+      'Get the « Verified profile » badge so clients can trust you before booking.';
+
+  @override
+  String get identityStatusStartCta => 'Verify my identity';
+
+  @override
+  String get identityStatusRestartCta => 'Start again';
+
+  @override
+  String identityStatusPendingBody(String date) {
+    return 'Submitted on $date, reply within 48 hours. You will be notified of the decision.';
+  }
+
+  @override
+  String get identityStatusPendingBodyNoDate =>
+      'Your file is under review, reply within 48 hours. You will be notified of the decision.';
+
+  @override
+  String identityStatusVerifiedBody(String date) {
+    return 'Verified since $date.';
+  }
+
+  @override
+  String get identityStatusVerifiedBodyNoDate => 'Your profile is verified.';
+
+  @override
+  String get identityStatusRejectedTitle => 'Verification refused';
+
+  @override
+  String get identityStatusRevokedTitle => 'Verification withdrawn';
+
+  @override
+  String get identityStatusPriorityNote =>
+      'Your next file will be handled as a priority.';
+
+  @override
+  String get identityStatusNoReason =>
+      'No reason was provided. You can start again.';
+
+  @override
+  String get identityStatusUnavailable => 'State unavailable';
+
+  @override
+  String get identityWebOnlyMobile =>
+      'Identity verification is done from the Outalma mobile app.';
+
+  @override
+  String get identityWebBack => 'Back';
+
+  @override
+  String identitySupportReference(String reference) {
+    return 'Your reference: $reference';
+  }
+
+  @override
+  String get hubIdentityVerifiedSub => 'Your profile is verified';
+
+  @override
+  String get hubIdentityPendingSub => 'Reply within 48 hours';
+
+  @override
+  String get hubIdentityVerifyCta => 'Verify my identity';
+
+  @override
+  String get hubIdentityVerifySub => 'Get the « Verified profile » badge';
 }

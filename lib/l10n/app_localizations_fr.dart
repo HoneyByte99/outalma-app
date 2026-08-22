@@ -1861,4 +1861,136 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get identityDone => 'Terminé';
+
+  @override
+  String get identityGuideTitle => 'Vérifier votre identité';
+
+  @override
+  String get identityGuideStepRecto => 'Recto';
+
+  @override
+  String get identityGuideStepVerso => 'Verso';
+
+  @override
+  String get identityGuideStepSelfie => 'Selfie';
+
+  @override
+  String get identityGuideWhy =>
+      'Un profil vérifié inspire confiance aux clients. Le badge montre que vous êtes bien la personne annoncée.';
+
+  @override
+  String get identityGuideNext =>
+      'Un membre de notre équipe examine votre dossier sous 48 heures. Vous pouvez continuer à proposer vos services pendant ce temps.';
+
+  @override
+  String get identityGuideHave =>
+      'Munissez-vous de votre carte d\'identité CEDEAO, dans un endroit éclairé. Prévoyez deux minutes. Vos photos ne sont pas conservées sur le téléphone.';
+
+  @override
+  String get identityGuideStart => 'Commencer';
+
+  @override
+  String get identityGuideConsentHint => 'Cochez la case pour continuer';
+
+  @override
+  String get identityGuideMention1 =>
+      'Nous collectons une photo du recto et du verso de votre carte d\'identité, et un selfie.';
+
+  @override
+  String get identityGuideMention2 =>
+      'Elles servent uniquement à vérifier que vous êtes bien la personne qui propose ses services sur Outalma.';
+
+  @override
+  String get identityGuideMention3 =>
+      'Seules les personnes habilitées de l\'équipe Outalma peuvent les consulter. Aucun client, aucun autre prestataire n\'y a accès.';
+
+  @override
+  String get identityGuideMention4 =>
+      'Elles sont conservées jusqu\'à la suppression de votre compte.';
+
+  @override
+  String get identityGuideMention5 =>
+      'Vous pouvez supprimer votre compte à tout moment depuis vos réglages.';
+
+  @override
+  String get identityGuideMention6 =>
+      'Nous répondons sous 48 heures. Vous pouvez continuer à proposer vos services pendant ce temps.';
+
+  @override
+  String get identityConsentCheckbox =>
+      'J\'ai lu ce qui précède et j\'accepte d\'envoyer ma pièce d\'identité et mon selfie à Outalma pour vérification.';
+
+  @override
+  String get identityConsentTermsLink => 'Lire les conditions d\'utilisation';
+
+  @override
+  String get identityStatusTitle => 'Vérification d\'identité';
+
+  @override
+  String get identityStatusNoneBody =>
+      'Obtenez le badge « Profil vérifié » pour que les clients vous fassent confiance avant de réserver.';
+
+  @override
+  String get identityStatusStartCta => 'Vérifier mon identité';
+
+  @override
+  String get identityStatusRestartCta => 'Recommencer';
+
+  @override
+  String identityStatusPendingBody(String date) {
+    return 'Déposé le $date, réponse sous 48 heures. Vous recevrez une notification de la décision.';
+  }
+
+  @override
+  String get identityStatusPendingBodyNoDate =>
+      'Votre dossier est en cours d\'examen, réponse sous 48 heures. Vous recevrez une notification de la décision.';
+
+  @override
+  String identityStatusVerifiedBody(String date) {
+    return 'Vérifié depuis le $date.';
+  }
+
+  @override
+  String get identityStatusVerifiedBodyNoDate => 'Votre profil est vérifié.';
+
+  @override
+  String get identityStatusRejectedTitle => 'Vérification refusée';
+
+  @override
+  String get identityStatusRevokedTitle => 'Vérification retirée';
+
+  @override
+  String get identityStatusPriorityNote =>
+      'Votre prochain dossier sera traité en priorité.';
+
+  @override
+  String get identityStatusNoReason =>
+      'Aucun motif n\'a été indiqué. Vous pouvez recommencer.';
+
+  @override
+  String get identityStatusUnavailable => 'État indisponible';
+
+  @override
+  String get identityWebOnlyMobile =>
+      'La vérification d\'identité se fait depuis l\'application mobile Outalma.';
+
+  @override
+  String get identityWebBack => 'Retour';
+
+  @override
+  String identitySupportReference(String reference) {
+    return 'Votre référence : $reference';
+  }
+
+  @override
+  String get hubIdentityVerifiedSub => 'Votre profil est vérifié';
+
+  @override
+  String get hubIdentityPendingSub => 'Réponse sous 48 heures';
+
+  @override
+  String get hubIdentityVerifyCta => 'Vérifier mon identité';
+
+  @override
+  String get hubIdentityVerifySub => 'Obtenez le badge « Profil vérifié »';
 }

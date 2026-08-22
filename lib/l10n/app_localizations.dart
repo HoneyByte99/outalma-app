@@ -3481,6 +3481,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get identityDone;
+
+  /// No description provided for @identityGuideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your identity'**
+  String get identityGuideTitle;
+
+  /// No description provided for @identityGuideStepRecto.
+  ///
+  /// In en, this message translates to:
+  /// **'Front'**
+  String get identityGuideStepRecto;
+
+  /// No description provided for @identityGuideStepVerso.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get identityGuideStepVerso;
+
+  /// No description provided for @identityGuideStepSelfie.
+  ///
+  /// In en, this message translates to:
+  /// **'Selfie'**
+  String get identityGuideStepSelfie;
+
+  /// No description provided for @identityGuideWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'A verified profile earns client trust. The badge shows you are who you say you are.'**
+  String get identityGuideWhy;
+
+  /// No description provided for @identityGuideNext.
+  ///
+  /// In en, this message translates to:
+  /// **'A member of our team reviews your file within 48 hours. You can keep offering your services in the meantime.'**
+  String get identityGuideNext;
+
+  /// No description provided for @identityGuideHave.
+  ///
+  /// In en, this message translates to:
+  /// **'Have your CEDEAO ID card ready, in a well-lit spot. Allow about two minutes. Your photos are not kept on the phone.'**
+  String get identityGuideHave;
+
+  /// No description provided for @identityGuideStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get identityGuideStart;
+
+  /// No description provided for @identityGuideConsentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tick the box to continue'**
+  String get identityGuideConsentHint;
+
+  /// No description provided for @identityGuideMention1.
+  ///
+  /// In en, this message translates to:
+  /// **'We collect a photo of the front and back of your ID card, and a selfie.'**
+  String get identityGuideMention1;
+
+  /// No description provided for @identityGuideMention2.
+  ///
+  /// In en, this message translates to:
+  /// **'They are used only to check that you are the person offering services on Outalma.'**
+  String get identityGuideMention2;
+
+  /// No description provided for @identityGuideMention3.
+  ///
+  /// In en, this message translates to:
+  /// **'Only authorised members of the Outalma team can view them. No client and no other provider has access.'**
+  String get identityGuideMention3;
+
+  /// No description provided for @identityGuideMention4.
+  ///
+  /// In en, this message translates to:
+  /// **'They are kept until you delete your account.'**
+  String get identityGuideMention4;
+
+  /// No description provided for @identityGuideMention5.
+  ///
+  /// In en, this message translates to:
+  /// **'You can delete your account at any time from your settings.'**
+  String get identityGuideMention5;
+
+  /// No description provided for @identityGuideMention6.
+  ///
+  /// In en, this message translates to:
+  /// **'We reply within 48 hours. You can keep offering your services in the meantime.'**
+  String get identityGuideMention6;
+
+  /// No description provided for @identityConsentCheckbox.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read the above and I agree to send my ID document and my selfie to Outalma for verification.'**
+  String get identityConsentCheckbox;
+
+  /// No description provided for @identityConsentTermsLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the terms of use'**
+  String get identityConsentTermsLink;
+
+  /// No description provided for @identityStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity verification'**
+  String get identityStatusTitle;
+
+  /// No description provided for @identityStatusNoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Get the « Verified profile » badge so clients can trust you before booking.'**
+  String get identityStatusNoneBody;
+
+  /// No description provided for @identityStatusStartCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify my identity'**
+  String get identityStatusStartCta;
+
+  /// No description provided for @identityStatusRestartCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Start again'**
+  String get identityStatusRestartCta;
+
+  /// No description provided for @identityStatusPendingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted on {date}, reply within 48 hours. You will be notified of the decision.'**
+  String identityStatusPendingBody(String date);
+
+  /// No description provided for @identityStatusPendingBodyNoDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Your file is under review, reply within 48 hours. You will be notified of the decision.'**
+  String get identityStatusPendingBodyNoDate;
+
+  /// No description provided for @identityStatusVerifiedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified since {date}.'**
+  String identityStatusVerifiedBody(String date);
+
+  /// No description provided for @identityStatusVerifiedBodyNoDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile is verified.'**
+  String get identityStatusVerifiedBodyNoDate;
+
+  /// No description provided for @identityStatusRejectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification refused'**
+  String get identityStatusRejectedTitle;
+
+  /// No description provided for @identityStatusRevokedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification withdrawn'**
+  String get identityStatusRevokedTitle;
+
+  /// No description provided for @identityStatusPriorityNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your next file will be handled as a priority.'**
+  String get identityStatusPriorityNote;
+
+  /// No description provided for @identityStatusNoReason.
+  ///
+  /// In en, this message translates to:
+  /// **'No reason was provided. You can start again.'**
+  String get identityStatusNoReason;
+
+  /// No description provided for @identityStatusUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'State unavailable'**
+  String get identityStatusUnavailable;
+
+  /// No description provided for @identityWebOnlyMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity verification is done from the Outalma mobile app.'**
+  String get identityWebOnlyMobile;
+
+  /// No description provided for @identityWebBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get identityWebBack;
+
+  /// No description provided for @identitySupportReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reference: {reference}'**
+  String identitySupportReference(String reference);
+
+  /// No description provided for @hubIdentityVerifiedSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile is verified'**
+  String get hubIdentityVerifiedSub;
+
+  /// No description provided for @hubIdentityPendingSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply within 48 hours'**
+  String get hubIdentityPendingSub;
+
+  /// No description provided for @hubIdentityVerifyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify my identity'**
+  String get hubIdentityVerifyCta;
+
+  /// No description provided for @hubIdentityVerifySub.
+  ///
+  /// In en, this message translates to:
+  /// **'Get the « Verified profile » badge'**
+  String get hubIdentityVerifySub;
 }
 
 class _AppLocalizationsDelegate
