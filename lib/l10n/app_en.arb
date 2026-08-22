@@ -704,5 +704,75 @@
   "trustUnverifiedLabel": "Identity not verified",
   "@trustUnverifiedLabel": {
     "description": "Public identity trust state shown to clients."
-  }
+  },
+  "identityCaptureRectoTitle": "Front of the ID",
+  "identityCaptureVersoTitle": "Back of the ID",
+  "identityCaptureRectoInstruction": "Place the front of your card inside the frame, flat and readable.",
+  "identityCaptureVersoInstruction": "Place the back of your card inside the frame, flat and readable.",
+  "identityCaptureButton": "Take the photo",
+  "identityCaptureRetake": "Retake",
+  "identityCaptureUse": "Use this photo",
+  "identityCaptureBlurry": "Photo too blurry. Steady the device and move closer to the document.",
+  "identityCaptureSendAnyway": "Send anyway, a human will review it",
+  "identityStepProgress": "Step {current} of {total}",
+  "@identityStepProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "identityPermissionDeniedTitle": "Camera not allowed",
+  "identityPermissionDeniedBody": "Outalma needs the camera to photograph your ID. Allow camera access to continue.",
+  "identityOpenSettings": "Open settings",
+  "identityCameraUnavailableTitle": "Camera unavailable",
+  "identityCameraUnavailableBody": "No usable camera on this device. The verification journey runs on a phone.",
+  "identityRetry": "Try again",
+  "identitySelfieTitle": "Verification selfie",
+  "identityLivenessWaitingFace": "Place your face inside the frame.",
+  "identityLivenessMultipleFaces": "Only one face must be visible.",
+  "identityLivenessTurnHead": "Slowly turn your head to the side.",
+  "identityLivenessReturnToFront": "Now face the lens again.",
+  "identityLivenessReady": "Hold still.",
+  "identityLivenessExpired": "The challenge timed out. Let's start over.",
+  "identityLivenessRetryDifferent": "Let's retry: turn your head the other way, then face the lens again.",
+  "identityLivenessSupportTitle": "Need a hand?",
+  "identityLivenessSupportBody": "The challenge did not complete after several tries. Contact support to finish your verification.",
+  "identityContactSupport": "Contact support",
+  "identityRecapTitle": "Check your photos",
+  "identityRecapBody": "These three images will be sent for verification.",
+  "identityRecapConfirm": "Send for verification",
+  "identityDepositUploading": "Sending your photos…",
+  "identityDepositSubmitting": "Finalising…",
+  "identityDepositSuccessTitle": "Photos sent",
+  "identityDepositSuccessBody": "Your file is being reviewed. You will be notified of the decision.",
+  "identityDepositAlreadySubmitted": "This submission was already recorded.",
+  "identityErrorBatchInvalid": "The upload did not complete. Retake your photos.",
+  "identityErrorObjectsMissing": "Your photos did not arrive. Retake the capture.",
+  "identityErrorBatchStale": "Your photos waited too long. Retake the capture.",
+  "identityErrorAccountMissing": "Session expired. Please sign in again.",
+  "identityErrorPendingExists": "A file is already under review.",
+  "identityErrorAlreadyVerified": "Your identity is already verified.",
+  "identityErrorRateLimited": "Too many recent submissions. Try again later.",
+  "identityErrorRateLimitedWithDelay": "Too many recent submissions. Try again in {duration}.",
+  "@identityErrorRateLimitedWithDelay": {
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+  "identityErrorStorageDenied": "The upload was refused. Retake your photos.",
+  "identityErrorNetwork": "Connection interrupted. You can resume.",
+  "identityErrorUnknown": "Something went wrong. Please try again.",
+  "identityDurationHours": "{hours} h",
+  "@identityDurationHours": {
+    "placeholders": {
+      "hours": { "type": "int" }
+    }
+  },
+  "identityDurationMinutes": "{minutes} min",
+  "@identityDurationMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "identityDone": "Done"
 }

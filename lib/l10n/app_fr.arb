@@ -704,5 +704,75 @@
   "trustUnverifiedLabel": "Identité non vérifiée",
   "@trustUnverifiedLabel": {
     "description": "Public identity trust state shown to clients."
-  }
+  },
+  "identityCaptureRectoTitle": "Recto de la pièce",
+  "identityCaptureVersoTitle": "Verso de la pièce",
+  "identityCaptureRectoInstruction": "Placez le recto de votre carte dans le cadre, bien à plat et lisible.",
+  "identityCaptureVersoInstruction": "Placez le verso de votre carte dans le cadre, bien à plat et lisible.",
+  "identityCaptureButton": "Prendre la photo",
+  "identityCaptureRetake": "Reprendre",
+  "identityCaptureUse": "Utiliser cette photo",
+  "identityCaptureBlurry": "Photo trop floue. Stabilisez l'appareil et rapprochez le document.",
+  "identityCaptureSendAnyway": "Envoyer quand même, un humain relira",
+  "identityStepProgress": "Étape {current} sur {total}",
+  "@identityStepProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "identityPermissionDeniedTitle": "Caméra non autorisée",
+  "identityPermissionDeniedBody": "Outalma a besoin de la caméra pour photographier votre pièce d'identité. Autorisez l'accès à la caméra pour continuer.",
+  "identityOpenSettings": "Ouvrir les réglages",
+  "identityCameraUnavailableTitle": "Caméra indisponible",
+  "identityCameraUnavailableBody": "Aucune caméra utilisable sur cet appareil. Le parcours de vérification se fait depuis un téléphone.",
+  "identityRetry": "Réessayer",
+  "identitySelfieTitle": "Selfie de vérification",
+  "identityLivenessWaitingFace": "Placez votre visage dans le cadre.",
+  "identityLivenessMultipleFaces": "Un seul visage doit être visible.",
+  "identityLivenessTurnHead": "Tournez lentement la tête sur le côté.",
+  "identityLivenessReturnToFront": "Revenez maintenant face à l'objectif.",
+  "identityLivenessReady": "Ne bougez plus.",
+  "identityLivenessExpired": "Le défi a expiré. On recommence.",
+  "identityLivenessRetryDifferent": "On recommence : tournez la tête de l'autre côté, puis revenez de face.",
+  "identityLivenessSupportTitle": "Besoin d'aide ?",
+  "identityLivenessSupportBody": "Le défi n'a pas abouti après plusieurs essais. Contactez le support pour finaliser votre vérification.",
+  "identityContactSupport": "Contacter le support",
+  "identityRecapTitle": "Vérifiez vos photos",
+  "identityRecapBody": "Ces trois images vont être envoyées pour vérification.",
+  "identityRecapConfirm": "Envoyer pour vérification",
+  "identityDepositUploading": "Envoi de vos photos…",
+  "identityDepositSubmitting": "Finalisation…",
+  "identityDepositSuccessTitle": "Photos envoyées",
+  "identityDepositSuccessBody": "Votre dossier est en cours d'examen. Vous serez notifié de la décision.",
+  "identityDepositAlreadySubmitted": "Ce dépôt a déjà été enregistré.",
+  "identityErrorBatchInvalid": "L'envoi n'est pas allé au bout. Reprenez vos photos.",
+  "identityErrorObjectsMissing": "Vos photos ne sont pas arrivées. Reprenez la capture.",
+  "identityErrorBatchStale": "Vos photos ont trop attendu. Reprenez la capture.",
+  "identityErrorAccountMissing": "Session expirée. Reconnectez-vous.",
+  "identityErrorPendingExists": "Un dossier est déjà en cours de vérification.",
+  "identityErrorAlreadyVerified": "Votre identité est déjà vérifiée.",
+  "identityErrorRateLimited": "Trop de dépôts récents. Réessayez plus tard.",
+  "identityErrorRateLimitedWithDelay": "Trop de dépôts récents. Réessayez dans {duration}.",
+  "@identityErrorRateLimitedWithDelay": {
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+  "identityErrorStorageDenied": "L'envoi a été refusé. Reprenez vos photos.",
+  "identityErrorNetwork": "Connexion interrompue. Vous pouvez reprendre.",
+  "identityErrorUnknown": "Une erreur est survenue. Réessayez.",
+  "identityDurationHours": "{hours} h",
+  "@identityDurationHours": {
+    "placeholders": {
+      "hours": { "type": "int" }
+    }
+  },
+  "identityDurationMinutes": "{minutes} min",
+  "@identityDurationMinutes": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "identityDone": "Terminé"
 }

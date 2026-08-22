@@ -7,7 +7,20 @@ lib/src/data/auth/phone_otp_service.dart
 lib/src/data/auth/phone_otp_service_web.dart
 lib/src/data/auth/phone_otp_service_stub.dart
 # Firebase Storage + ImagePicker I/O wrapper (uploads, download URLs). Its only
-# pure logic — the image size budget — is regression-tested in
+# pure logic (the image size budget) is regression-tested in
 # test/data/services/chat_media_service_test.dart; the rest is untestable
 # plumbing, like the phone_otp_service wrappers above.
 lib/src/data/services/chat_media_service.dart
+# Identity capture I/O adapters (archi T5c, same precedent as the socle's
+# cloudVisionExtractor). The camera + ML Kit source can only run on a real
+# device; the Storage and callable wrappers are untestable Firebase plumbing.
+# Every pure decision they sit behind is tested: sharpness (image_sharpness),
+# liveness machine (liveness_challenge), capture window (liveness_capture),
+# deposit orchestration (identity_deposit_service), error mapping
+# (identity_submit_error), batch id (batch_id). The Riverpod wiring only
+# instantiates these Firebase-backed services, so it is structural too.
+lib/src/data/services/camera_capture_source.dart
+lib/src/data/services/camera_capture_source_stub.dart
+lib/src/data/services/identity_upload_service.dart
+lib/src/data/services/functions_identity_submit_service.dart
+lib/src/application/identity/identity_capture_providers.dart

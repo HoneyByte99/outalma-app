@@ -1664,4 +1664,177 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trustUnverifiedLabel => 'Identity not verified';
+
+  @override
+  String get identityCaptureRectoTitle => 'Front of the ID';
+
+  @override
+  String get identityCaptureVersoTitle => 'Back of the ID';
+
+  @override
+  String get identityCaptureRectoInstruction =>
+      'Place the front of your card inside the frame, flat and readable.';
+
+  @override
+  String get identityCaptureVersoInstruction =>
+      'Place the back of your card inside the frame, flat and readable.';
+
+  @override
+  String get identityCaptureButton => 'Take the photo';
+
+  @override
+  String get identityCaptureRetake => 'Retake';
+
+  @override
+  String get identityCaptureUse => 'Use this photo';
+
+  @override
+  String get identityCaptureBlurry =>
+      'Photo too blurry. Steady the device and move closer to the document.';
+
+  @override
+  String get identityCaptureSendAnyway => 'Send anyway, a human will review it';
+
+  @override
+  String identityStepProgress(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get identityPermissionDeniedTitle => 'Camera not allowed';
+
+  @override
+  String get identityPermissionDeniedBody =>
+      'Outalma needs the camera to photograph your ID. Allow camera access to continue.';
+
+  @override
+  String get identityOpenSettings => 'Open settings';
+
+  @override
+  String get identityCameraUnavailableTitle => 'Camera unavailable';
+
+  @override
+  String get identityCameraUnavailableBody =>
+      'No usable camera on this device. The verification journey runs on a phone.';
+
+  @override
+  String get identityRetry => 'Try again';
+
+  @override
+  String get identitySelfieTitle => 'Verification selfie';
+
+  @override
+  String get identityLivenessWaitingFace => 'Place your face inside the frame.';
+
+  @override
+  String get identityLivenessMultipleFaces => 'Only one face must be visible.';
+
+  @override
+  String get identityLivenessTurnHead => 'Slowly turn your head to the side.';
+
+  @override
+  String get identityLivenessReturnToFront => 'Now face the lens again.';
+
+  @override
+  String get identityLivenessReady => 'Hold still.';
+
+  @override
+  String get identityLivenessExpired =>
+      'The challenge timed out. Let\'s start over.';
+
+  @override
+  String get identityLivenessRetryDifferent =>
+      'Let\'s retry: turn your head the other way, then face the lens again.';
+
+  @override
+  String get identityLivenessSupportTitle => 'Need a hand?';
+
+  @override
+  String get identityLivenessSupportBody =>
+      'The challenge did not complete after several tries. Contact support to finish your verification.';
+
+  @override
+  String get identityContactSupport => 'Contact support';
+
+  @override
+  String get identityRecapTitle => 'Check your photos';
+
+  @override
+  String get identityRecapBody =>
+      'These three images will be sent for verification.';
+
+  @override
+  String get identityRecapConfirm => 'Send for verification';
+
+  @override
+  String get identityDepositUploading => 'Sending your photos…';
+
+  @override
+  String get identityDepositSubmitting => 'Finalising…';
+
+  @override
+  String get identityDepositSuccessTitle => 'Photos sent';
+
+  @override
+  String get identityDepositSuccessBody =>
+      'Your file is being reviewed. You will be notified of the decision.';
+
+  @override
+  String get identityDepositAlreadySubmitted =>
+      'This submission was already recorded.';
+
+  @override
+  String get identityErrorBatchInvalid =>
+      'The upload did not complete. Retake your photos.';
+
+  @override
+  String get identityErrorObjectsMissing =>
+      'Your photos did not arrive. Retake the capture.';
+
+  @override
+  String get identityErrorBatchStale =>
+      'Your photos waited too long. Retake the capture.';
+
+  @override
+  String get identityErrorAccountMissing =>
+      'Session expired. Please sign in again.';
+
+  @override
+  String get identityErrorPendingExists => 'A file is already under review.';
+
+  @override
+  String get identityErrorAlreadyVerified =>
+      'Your identity is already verified.';
+
+  @override
+  String get identityErrorRateLimited =>
+      'Too many recent submissions. Try again later.';
+
+  @override
+  String identityErrorRateLimitedWithDelay(String duration) {
+    return 'Too many recent submissions. Try again in $duration.';
+  }
+
+  @override
+  String get identityErrorStorageDenied =>
+      'The upload was refused. Retake your photos.';
+
+  @override
+  String get identityErrorNetwork => 'Connection interrupted. You can resume.';
+
+  @override
+  String get identityErrorUnknown => 'Something went wrong. Please try again.';
+
+  @override
+  String identityDurationHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String identityDurationMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get identityDone => 'Done';
 }

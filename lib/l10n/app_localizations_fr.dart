@@ -1682,4 +1682,183 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get trustUnverifiedLabel => 'Identité non vérifiée';
+
+  @override
+  String get identityCaptureRectoTitle => 'Recto de la pièce';
+
+  @override
+  String get identityCaptureVersoTitle => 'Verso de la pièce';
+
+  @override
+  String get identityCaptureRectoInstruction =>
+      'Placez le recto de votre carte dans le cadre, bien à plat et lisible.';
+
+  @override
+  String get identityCaptureVersoInstruction =>
+      'Placez le verso de votre carte dans le cadre, bien à plat et lisible.';
+
+  @override
+  String get identityCaptureButton => 'Prendre la photo';
+
+  @override
+  String get identityCaptureRetake => 'Reprendre';
+
+  @override
+  String get identityCaptureUse => 'Utiliser cette photo';
+
+  @override
+  String get identityCaptureBlurry =>
+      'Photo trop floue. Stabilisez l\'appareil et rapprochez le document.';
+
+  @override
+  String get identityCaptureSendAnyway =>
+      'Envoyer quand même, un humain relira';
+
+  @override
+  String identityStepProgress(int current, int total) {
+    return 'Étape $current sur $total';
+  }
+
+  @override
+  String get identityPermissionDeniedTitle => 'Caméra non autorisée';
+
+  @override
+  String get identityPermissionDeniedBody =>
+      'Outalma a besoin de la caméra pour photographier votre pièce d\'identité. Autorisez l\'accès à la caméra pour continuer.';
+
+  @override
+  String get identityOpenSettings => 'Ouvrir les réglages';
+
+  @override
+  String get identityCameraUnavailableTitle => 'Caméra indisponible';
+
+  @override
+  String get identityCameraUnavailableBody =>
+      'Aucune caméra utilisable sur cet appareil. Le parcours de vérification se fait depuis un téléphone.';
+
+  @override
+  String get identityRetry => 'Réessayer';
+
+  @override
+  String get identitySelfieTitle => 'Selfie de vérification';
+
+  @override
+  String get identityLivenessWaitingFace =>
+      'Placez votre visage dans le cadre.';
+
+  @override
+  String get identityLivenessMultipleFaces =>
+      'Un seul visage doit être visible.';
+
+  @override
+  String get identityLivenessTurnHead =>
+      'Tournez lentement la tête sur le côté.';
+
+  @override
+  String get identityLivenessReturnToFront =>
+      'Revenez maintenant face à l\'objectif.';
+
+  @override
+  String get identityLivenessReady => 'Ne bougez plus.';
+
+  @override
+  String get identityLivenessExpired => 'Le défi a expiré. On recommence.';
+
+  @override
+  String get identityLivenessRetryDifferent =>
+      'On recommence : tournez la tête de l\'autre côté, puis revenez de face.';
+
+  @override
+  String get identityLivenessSupportTitle => 'Besoin d\'aide ?';
+
+  @override
+  String get identityLivenessSupportBody =>
+      'Le défi n\'a pas abouti après plusieurs essais. Contactez le support pour finaliser votre vérification.';
+
+  @override
+  String get identityContactSupport => 'Contacter le support';
+
+  @override
+  String get identityRecapTitle => 'Vérifiez vos photos';
+
+  @override
+  String get identityRecapBody =>
+      'Ces trois images vont être envoyées pour vérification.';
+
+  @override
+  String get identityRecapConfirm => 'Envoyer pour vérification';
+
+  @override
+  String get identityDepositUploading => 'Envoi de vos photos…';
+
+  @override
+  String get identityDepositSubmitting => 'Finalisation…';
+
+  @override
+  String get identityDepositSuccessTitle => 'Photos envoyées';
+
+  @override
+  String get identityDepositSuccessBody =>
+      'Votre dossier est en cours d\'examen. Vous serez notifié de la décision.';
+
+  @override
+  String get identityDepositAlreadySubmitted =>
+      'Ce dépôt a déjà été enregistré.';
+
+  @override
+  String get identityErrorBatchInvalid =>
+      'L\'envoi n\'est pas allé au bout. Reprenez vos photos.';
+
+  @override
+  String get identityErrorObjectsMissing =>
+      'Vos photos ne sont pas arrivées. Reprenez la capture.';
+
+  @override
+  String get identityErrorBatchStale =>
+      'Vos photos ont trop attendu. Reprenez la capture.';
+
+  @override
+  String get identityErrorAccountMissing =>
+      'Session expirée. Reconnectez-vous.';
+
+  @override
+  String get identityErrorPendingExists =>
+      'Un dossier est déjà en cours de vérification.';
+
+  @override
+  String get identityErrorAlreadyVerified =>
+      'Votre identité est déjà vérifiée.';
+
+  @override
+  String get identityErrorRateLimited =>
+      'Trop de dépôts récents. Réessayez plus tard.';
+
+  @override
+  String identityErrorRateLimitedWithDelay(String duration) {
+    return 'Trop de dépôts récents. Réessayez dans $duration.';
+  }
+
+  @override
+  String get identityErrorStorageDenied =>
+      'L\'envoi a été refusé. Reprenez vos photos.';
+
+  @override
+  String get identityErrorNetwork =>
+      'Connexion interrompue. Vous pouvez reprendre.';
+
+  @override
+  String get identityErrorUnknown => 'Une erreur est survenue. Réessayez.';
+
+  @override
+  String identityDurationHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String identityDurationMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get identityDone => 'Terminé';
 }

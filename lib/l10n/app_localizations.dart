@@ -3187,6 +3187,300 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Identity not verified'**
   String get trustUnverifiedLabel;
+
+  /// No description provided for @identityCaptureRectoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Front of the ID'**
+  String get identityCaptureRectoTitle;
+
+  /// No description provided for @identityCaptureVersoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Back of the ID'**
+  String get identityCaptureVersoTitle;
+
+  /// No description provided for @identityCaptureRectoInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the front of your card inside the frame, flat and readable.'**
+  String get identityCaptureRectoInstruction;
+
+  /// No description provided for @identityCaptureVersoInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the back of your card inside the frame, flat and readable.'**
+  String get identityCaptureVersoInstruction;
+
+  /// No description provided for @identityCaptureButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Take the photo'**
+  String get identityCaptureButton;
+
+  /// No description provided for @identityCaptureRetake.
+  ///
+  /// In en, this message translates to:
+  /// **'Retake'**
+  String get identityCaptureRetake;
+
+  /// No description provided for @identityCaptureUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this photo'**
+  String get identityCaptureUse;
+
+  /// No description provided for @identityCaptureBlurry.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo too blurry. Steady the device and move closer to the document.'**
+  String get identityCaptureBlurry;
+
+  /// No description provided for @identityCaptureSendAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Send anyway, a human will review it'**
+  String get identityCaptureSendAnyway;
+
+  /// No description provided for @identityStepProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String identityStepProgress(int current, int total);
+
+  /// No description provided for @identityPermissionDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera not allowed'**
+  String get identityPermissionDeniedTitle;
+
+  /// No description provided for @identityPermissionDeniedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Outalma needs the camera to photograph your ID. Allow camera access to continue.'**
+  String get identityPermissionDeniedBody;
+
+  /// No description provided for @identityOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get identityOpenSettings;
+
+  /// No description provided for @identityCameraUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera unavailable'**
+  String get identityCameraUnavailableTitle;
+
+  /// No description provided for @identityCameraUnavailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No usable camera on this device. The verification journey runs on a phone.'**
+  String get identityCameraUnavailableBody;
+
+  /// No description provided for @identityRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get identityRetry;
+
+  /// No description provided for @identitySelfieTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification selfie'**
+  String get identitySelfieTitle;
+
+  /// No description provided for @identityLivenessWaitingFace.
+  ///
+  /// In en, this message translates to:
+  /// **'Place your face inside the frame.'**
+  String get identityLivenessWaitingFace;
+
+  /// No description provided for @identityLivenessMultipleFaces.
+  ///
+  /// In en, this message translates to:
+  /// **'Only one face must be visible.'**
+  String get identityLivenessMultipleFaces;
+
+  /// No description provided for @identityLivenessTurnHead.
+  ///
+  /// In en, this message translates to:
+  /// **'Slowly turn your head to the side.'**
+  String get identityLivenessTurnHead;
+
+  /// No description provided for @identityLivenessReturnToFront.
+  ///
+  /// In en, this message translates to:
+  /// **'Now face the lens again.'**
+  String get identityLivenessReturnToFront;
+
+  /// No description provided for @identityLivenessReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold still.'**
+  String get identityLivenessReady;
+
+  /// No description provided for @identityLivenessExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The challenge timed out. Let\'s start over.'**
+  String get identityLivenessExpired;
+
+  /// No description provided for @identityLivenessRetryDifferent.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s retry: turn your head the other way, then face the lens again.'**
+  String get identityLivenessRetryDifferent;
+
+  /// No description provided for @identityLivenessSupportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Need a hand?'**
+  String get identityLivenessSupportTitle;
+
+  /// No description provided for @identityLivenessSupportBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The challenge did not complete after several tries. Contact support to finish your verification.'**
+  String get identityLivenessSupportBody;
+
+  /// No description provided for @identityContactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get identityContactSupport;
+
+  /// No description provided for @identityRecapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your photos'**
+  String get identityRecapTitle;
+
+  /// No description provided for @identityRecapBody.
+  ///
+  /// In en, this message translates to:
+  /// **'These three images will be sent for verification.'**
+  String get identityRecapBody;
+
+  /// No description provided for @identityRecapConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Send for verification'**
+  String get identityRecapConfirm;
+
+  /// No description provided for @identityDepositUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending your photos…'**
+  String get identityDepositUploading;
+
+  /// No description provided for @identityDepositSubmitting.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalising…'**
+  String get identityDepositSubmitting;
+
+  /// No description provided for @identityDepositSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos sent'**
+  String get identityDepositSuccessTitle;
+
+  /// No description provided for @identityDepositSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your file is being reviewed. You will be notified of the decision.'**
+  String get identityDepositSuccessBody;
+
+  /// No description provided for @identityDepositAlreadySubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'This submission was already recorded.'**
+  String get identityDepositAlreadySubmitted;
+
+  /// No description provided for @identityErrorBatchInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The upload did not complete. Retake your photos.'**
+  String get identityErrorBatchInvalid;
+
+  /// No description provided for @identityErrorObjectsMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Your photos did not arrive. Retake the capture.'**
+  String get identityErrorObjectsMissing;
+
+  /// No description provided for @identityErrorBatchStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Your photos waited too long. Retake the capture.'**
+  String get identityErrorBatchStale;
+
+  /// No description provided for @identityErrorAccountMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Session expired. Please sign in again.'**
+  String get identityErrorAccountMissing;
+
+  /// No description provided for @identityErrorPendingExists.
+  ///
+  /// In en, this message translates to:
+  /// **'A file is already under review.'**
+  String get identityErrorPendingExists;
+
+  /// No description provided for @identityErrorAlreadyVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Your identity is already verified.'**
+  String get identityErrorAlreadyVerified;
+
+  /// No description provided for @identityErrorRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many recent submissions. Try again later.'**
+  String get identityErrorRateLimited;
+
+  /// No description provided for @identityErrorRateLimitedWithDelay.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many recent submissions. Try again in {duration}.'**
+  String identityErrorRateLimitedWithDelay(String duration);
+
+  /// No description provided for @identityErrorStorageDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'The upload was refused. Retake your photos.'**
+  String get identityErrorStorageDenied;
+
+  /// No description provided for @identityErrorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection interrupted. You can resume.'**
+  String get identityErrorNetwork;
+
+  /// No description provided for @identityErrorUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get identityErrorUnknown;
+
+  /// No description provided for @identityDurationHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h'**
+  String identityDurationHours(int hours);
+
+  /// No description provided for @identityDurationMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String identityDurationMinutes(int minutes);
+
+  /// No description provided for @identityDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get identityDone;
 }
 
 class _AppLocalizationsDelegate
