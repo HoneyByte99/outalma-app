@@ -512,6 +512,27 @@
   "zoneAdd": "Add an area",
   "priceHourly": "per hour",
   "priceFixed": "flat fee",
+  "priceDaily": "per day",
+  "priceMonthly": "per month",
+  "priceUnitHourly": "/h",
+  "priceUnitDaily": "/day",
+  "priceUnitMonthly": "/mo",
+  "serviceFormBillingMode": "Billing mode",
+  "serviceFormExtraTasks": "Additional tasks covered",
+  "serviceFormExtraTasksSubtitle": "Up to three tasks beyond the main one",
+  "serviceFormExtraTasksMax": "Three additional tasks at most.",
+  "serviceFormPriceRange": "Allowed range: {min} to {max} F CFA",
+  "@serviceFormPriceRange": {
+    "placeholders": { "min": { "type": "String" }, "max": { "type": "String" } }
+  },
+  "serviceFormPriceOutOfRange": "The price must be between {min} and {max} F CFA.",
+  "@serviceFormPriceOutOfRange": {
+    "placeholders": { "min": { "type": "String" }, "max": { "type": "String" } }
+  },
+  "serviceFormPriceMonthlyMin": "Monthly minimum",
+  "serviceFormPriceMonthlyMax": "Monthly maximum",
+  "serviceFormMonthlyMaxBelowMin": "The maximum must be greater than or equal to the minimum.",
+  "serviceFormPricingUnavailable": "The pricing grid is unavailable. Retry.",
   "photoAdd": "Add a photo (optional)",
   "zoneRadiusLabel": "Radius: {radius}",
   "@zoneRadiusLabel": {

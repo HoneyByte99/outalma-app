@@ -1281,6 +1281,59 @@ class AppLocalizationsFr extends AppLocalizations {
   String get priceFixed => 'forfait';
 
   @override
+  String get priceDaily => 'par jour';
+
+  @override
+  String get priceMonthly => 'par mois';
+
+  @override
+  String get priceUnitHourly => '/h';
+
+  @override
+  String get priceUnitDaily => '/jour';
+
+  @override
+  String get priceUnitMonthly => '/mois';
+
+  @override
+  String get serviceFormBillingMode => 'Mode de facturation';
+
+  @override
+  String get serviceFormExtraTasks => 'Tâches supplémentaires couvertes';
+
+  @override
+  String get serviceFormExtraTasksSubtitle =>
+      'Jusqu\'à trois tâches en plus de la tâche principale';
+
+  @override
+  String get serviceFormExtraTasksMax =>
+      'Trois tâches supplémentaires au maximum.';
+
+  @override
+  String serviceFormPriceRange(String min, String max) {
+    return 'Fourchette autorisée : $min à $max F CFA';
+  }
+
+  @override
+  String serviceFormPriceOutOfRange(String min, String max) {
+    return 'Le tarif doit être compris entre $min et $max F CFA.';
+  }
+
+  @override
+  String get serviceFormPriceMonthlyMin => 'Minimum mensuel';
+
+  @override
+  String get serviceFormPriceMonthlyMax => 'Maximum mensuel';
+
+  @override
+  String get serviceFormMonthlyMaxBelowMin =>
+      'Le maximum doit être supérieur ou égal au minimum.';
+
+  @override
+  String get serviceFormPricingUnavailable =>
+      'La grille tarifaire n\'est pas disponible. Réessayez.';
+
+  @override
   String get photoAdd => 'Ajouter une photo (optionnel)';
 
   @override

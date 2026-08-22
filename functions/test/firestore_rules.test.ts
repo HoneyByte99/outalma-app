@@ -1,4 +1,4 @@
-// Firestore security-rules tests — run the REAL production rules
+// Firestore security-rules tests, run the REAL production rules
 // (firebase/firestore.rules) against the emulator via @firebase/rules-unit-testing.
 // Locks the security fixes S2/S3/S4 and the core access invariants.
 import {
@@ -60,8 +60,25 @@ const asUser = (uid: string, claims?: Record<string, unknown>) =>
 const asAdmin = () => asUser('boss', { admin: true });
 const anon = () => env.unauthenticatedContext().firestore() as unknown as Firestore;
 
+// The pricing grid, as it lives in config/pricing (archi section 3.1). Seeded
+// (rules disabled) before any test that writes a service, since the price guard
+// reads it on every service create/update.
+const PRICING_GRID = {
+  version: 1,
+  currency: 'XOF',
+  boundedCategories: ['menage', 'cuisine', 'gardeEnfants', 'repassage'],
+  maxExtraTasks: 3,
+  modes: {
+    hourly: { min: 1000, max: 3500, extraBonusPercent: 25 },
+    daily: { min: 2000, max: 10000, extraBonusPercent: 25 },
+    monthly: { min: 50000, max: 150000, extraBonusPercent: 0, isRange: true },
+  },
+};
+const seedPricing = () =>
+  seed((db) => setDoc(doc(db, 'config/pricing'), PRICING_GRID));
+
 // ---------------------------------------------------------------------------
-// S2 — providers: owner cannot self-clear moderation fields
+// S2, providers: owner cannot self-clear moderation fields
 // ---------------------------------------------------------------------------
 describe('S2 providers moderation fields', () => {
   beforeEach(async () => {
@@ -83,7 +100,7 @@ describe('S2 providers moderation fields', () => {
   });
 
   test('owner CAN flip their own availability (active)', async () => {
-    // `active` is the owner-controlled Disponible/En pause switch — not a
+    // `active` is the owner-controlled Disponible/En pause switch, not a
     // moderation field, so self-writes are allowed.
     await assertSucceeds(
       updateDoc(doc(asUser('p1'), 'providers/p1'), { active: false })
@@ -98,7 +115,7 @@ describe('S2 providers moderation fields', () => {
 });
 
 // ---------------------------------------------------------------------------
-// S3 — bookings are server-authoritative; no client update
+// S3, bookings are server-authoritative; no client update
 // ---------------------------------------------------------------------------
 describe('S3 bookings update is admin-only', () => {
   beforeEach(async () => {
@@ -150,7 +167,7 @@ describe('S3 bookings update is admin-only', () => {
 });
 
 // ---------------------------------------------------------------------------
-// S4 — chat reactions own-key only; edit locked after booking done
+// S4, chat reactions own-key only; edit locked after booking done
 // ---------------------------------------------------------------------------
 describe('S4 chat message integrity', () => {
   async function seedChat(opts: { bookingId?: string; bookingStatus?: string }) {
@@ -221,7 +238,7 @@ describe('S4 chat message integrity', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Message create gating — blocked pair cannot message
+// Message create gating, blocked pair cannot message
 // ---------------------------------------------------------------------------
 describe('message create gating', () => {
   beforeEach(async () => {
@@ -264,7 +281,7 @@ describe('message create gating', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Reviews create gating — bilateral after done, but never between a blocked
+// Reviews create gating, bilateral after done, but never between a blocked
 // pair (coupure totale).
 // ---------------------------------------------------------------------------
 describe('reviews block gating', () => {
@@ -307,16 +324,23 @@ describe('reviews block gating', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Services publish gate — a service goes live only with an active provider
+// Services publish gate, a service goes live only with an active provider
 // profile (E1). Drafts are always allowed.
 // ---------------------------------------------------------------------------
 describe('services publish gate', () => {
+  // menage is a bounded category, so the price guard now applies: seed the grid
+  // and give the service an in-range hourly price + empty extraTasks.
+  beforeEach(seedPricing);
+
   function svc(db: Firestore, published: boolean) {
     return setDoc(doc(db, 'services/s1'), {
       providerId: 'alice',
       published,
       title: 'x',
       categoryId: 'menage',
+      priceType: 'hourly',
+      price: 2000,
+      extraTasks: [],
     });
   }
 
@@ -366,7 +390,190 @@ describe('services publish gate', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Data export requests — owner + support read; client cannot self-create
+// Encadre pricing guard (spec pricing-ranges): the server, not the app, is the
+// source of truth for price bounds. Reads config/pricing on every write.
+// ---------------------------------------------------------------------------
+describe('pricing guard', () => {
+  beforeEach(seedPricing);
+
+  const base = (over: Record<string, unknown> = {}) => ({
+    providerId: 'alice',
+    published: false,
+    title: 'x',
+    categoryId: 'menage',
+    priceType: 'hourly',
+    price: 2000,
+    extraTasks: [] as string[],
+    ...over,
+  });
+  const write = (over: Record<string, unknown> = {}, id = 's1') =>
+    setDoc(doc(asUser('alice'), `services/${id}`), base(over));
+
+  // Validates the three rule constructs the design assumes (archi 4.2, R4):
+  // let-bindings, toSet().hasOnly() on a list, nested ternary. If any were
+  // unsupported the in-range accept below would error out instead of passing.
+  test('accepts an in-range hourly price', async () => {
+    await assertSucceeds(write());
+  });
+
+  test('rejects a price below the floor', async () => {
+    await assertFails(write({ price: 999 }));
+  });
+
+  test('rejects a price above the ceiling', async () => {
+    await assertFails(write({ price: 3501 }));
+  });
+
+  test('accepts the exact floor and ceiling', async () => {
+    await assertSucceeds(write({ price: 1000 }, 'floor'));
+    await assertSucceeds(write({ price: 3500 }, 'ceil'));
+  });
+
+  test('one extra task raises the ceiling to 4375', async () => {
+    await assertSucceeds(write({ price: 4375, extraTasks: ['cuisine'] }, 'x1'));
+    await assertFails(write({ price: 4376, extraTasks: ['cuisine'] }, 'x2'));
+  });
+
+  test('the floor never moves with extra tasks', async () => {
+    // Still 1000, not raised by the extra task (spec decision 10).
+    await assertSucceeds(write({ price: 1000, extraTasks: ['cuisine'] }, 'f1'));
+    await assertFails(write({ price: 999, extraTasks: ['cuisine'] }, 'f2'));
+  });
+
+  test('rejects more than three extra tasks', async () => {
+    await assertFails(
+      write({
+        price: 3000,
+        extraTasks: ['cuisine', 'gardeEnfants', 'repassage', 'menage'],
+      })
+    );
+  });
+
+  test('rejects an extra task equal to the main category', async () => {
+    await assertFails(write({ extraTasks: ['menage'] }));
+  });
+
+  test('duplicate extra tasks cannot inflate the ceiling', async () => {
+    // Three copies of one task must NOT unlock the N=3 cap (6125); the list
+    // has duplicates and covers only one real extra, so 6125 is rejected and
+    // the true one-extra ceiling (4375) still applies.
+    await assertFails(
+      write({ price: 6125, extraTasks: ['cuisine', 'cuisine', 'cuisine'] }, 'dup1')
+    );
+    await assertFails(
+      write({ price: 4375, extraTasks: ['cuisine', 'cuisine'] }, 'dup2')
+    );
+  });
+
+  test('rejects a fractional (non-integer) price', async () => {
+    await assertFails(write({ price: 2000.99 }));
+  });
+
+  test('rejects an extra task outside the bounded categories', async () => {
+    await assertFails(write({ extraTasks: ['plomberie'] }));
+  });
+
+  test('rejects an unknown priceType', async () => {
+    await assertFails(write({ priceType: 'weekly', price: 2000 }));
+  });
+
+  test('rejects a priceMax present outside the monthly mode', async () => {
+    await assertFails(write({ price: 2000, priceMax: 3000 }));
+  });
+
+  describe('monthly range', () => {
+    const monthly = (over: Record<string, unknown> = {}, id = 'm1') =>
+      setDoc(
+        doc(asUser('alice'), `services/${id}`),
+        base({
+          priceType: 'monthly',
+          price: 60000,
+          priceMax: 90000,
+          ...over,
+        })
+      );
+
+    test('accepts a valid min/max range', async () => {
+      await assertSucceeds(monthly());
+    });
+
+    test('rejects a max below the min', async () => {
+      await assertFails(monthly({ price: 90000, priceMax: 60000 }));
+    });
+
+    test('rejects a min below the floor', async () => {
+      await assertFails(monthly({ price: 49000, priceMax: 90000 }));
+    });
+
+    test('rejects a max above the ceiling', async () => {
+      await assertFails(monthly({ price: 60000, priceMax: 150001 }));
+    });
+
+    test('rejects a monthly listing missing priceMax', async () => {
+      await assertFails(
+        setDoc(
+          doc(asUser('alice'), 'services/m_nomax'),
+          base({ priceType: 'monthly', price: 60000 })
+        )
+      );
+    });
+
+    test('rejects a fractional priceMax', async () => {
+      await assertFails(monthly({ price: 60000, priceMax: 90000.5 }));
+    });
+  });
+
+  test('leaves the five off-launch categories at a free price', async () => {
+    await assertSucceeds(
+      setDoc(doc(asUser('alice'), 'services/free1'), {
+        providerId: 'alice',
+        published: false,
+        title: 'x',
+        categoryId: 'plomberie',
+        priceType: 'hourly',
+        price: 999999,
+      })
+    );
+  });
+
+  test('rejects an out-of-range price on UPDATE too', async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'services/upd'), base({ price: 2000 }))
+    );
+    await assertFails(
+      updateDoc(doc(asUser('alice'), 'services/upd'), { price: 50000 })
+    );
+    await assertSucceeds(
+      updateDoc(doc(asUser('alice'), 'services/upd'), { price: 3000 })
+    );
+  });
+
+  test('fails closed when config/pricing is absent', async () => {
+    await env.clearFirestore(); // remove the seeded grid
+    await assertFails(write({ price: 2000 }));
+  });
+
+  describe('config/pricing document', () => {
+    test('is readable by an anonymous client', async () => {
+      await assertSucceeds(getDoc(doc(anon(), 'config/pricing')));
+    });
+
+    test('cannot be written by an authenticated client', async () => {
+      await assertFails(
+        setDoc(doc(asUser('alice'), 'config/pricing'), PRICING_GRID)
+      );
+    });
+
+    test('cannot be written even by an admin (console-only)', async () => {
+      await assertFails(
+        setDoc(doc(asAdmin(), 'config/pricing'), PRICING_GRID)
+      );
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Data export requests, owner + support read; client cannot self-create
 // ---------------------------------------------------------------------------
 describe('data export requests', () => {
   beforeEach(async () => {
@@ -405,7 +612,7 @@ describe('data export requests', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Core invariants — users PII guard, notifications, default deny
+// Core invariants, users PII guard, notifications, default deny
 // ---------------------------------------------------------------------------
 describe('core access invariants', () => {
   test('user create cannot include phoneE164 (server-only)', async () => {

@@ -74,3 +74,6 @@ seed/
 android/key.properties
 *.jks
 *.keystore
+
+# Forge cycle state, ephemeral and per-worktree, never committed
+.claude/forge/

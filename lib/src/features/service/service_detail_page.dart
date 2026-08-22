@@ -11,10 +11,9 @@ import '../../application/auth/auth_state.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
-import '../../core/utils/format_utils.dart';
 import '../../domain/enums/category_id.dart';
-import '../../domain/enums/price_type.dart';
 import '../../domain/models/service.dart';
+import '../shared/service_price_label.dart';
 import '../booking/booking_request_sheet.dart';
 import '../shared/network_image.dart';
 import '../shared/marketplace_disclaimer.dart';
@@ -63,10 +62,7 @@ class _ServiceDetailContent extends ConsumerWidget {
               .id
         : null;
     final isOwner = uid != null && uid == service.providerId;
-    final formattedPrice = formatPriceFromCents(service.price);
-    final priceLabel = service.priceType == PriceType.hourly
-        ? '$formattedPrice/h'
-        : '$formattedPrice (${l10n.priceFixed})';
+    final priceLabel = servicePriceLabel(service, l10n);
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -245,7 +241,7 @@ class _ServiceDetailContent extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Hero gallery — swipeable photo carousel with page indicators
+// Hero gallery - swipeable photo carousel with page indicators
 // ---------------------------------------------------------------------------
 
 class _HeroGallery extends StatefulWidget {
@@ -259,7 +255,7 @@ class _HeroGallery extends StatefulWidget {
 }
 
 class _HeroGalleryState extends State<_HeroGallery> {
-  // viewportFraction < 1 lets the next photo peek in from the right — the
+  // viewportFraction < 1 lets the next photo peek in from the right - the
   // primary visual cue that the hero is swipeable (no text needed).
   final _controller = PageController(viewportFraction: 0.92);
   int _current = 0;
@@ -274,10 +270,10 @@ class _HeroGalleryState extends State<_HeroGallery> {
   Widget build(BuildContext context) {
     final photos = widget.photos;
 
-    // Empty state — no photos uploaded.
+    // Empty state - no photos uploaded.
     if (photos.isEmpty) return widget.fallback;
 
-    // Single photo — no carousel chrome needed.
+    // Single photo - no carousel chrome needed.
     if (photos.length == 1) {
       return AppNetworkImage(
         url: photos.first,
@@ -308,7 +304,7 @@ class _HeroGalleryState extends State<_HeroGallery> {
             ),
           ),
         ),
-        // Page indicator dots — anchored to the bottom of the hero.
+        // Page indicator dots - anchored to the bottom of the hero.
         Positioned(
           left: 0,
           right: 0,
@@ -413,7 +409,7 @@ class _ProviderRow extends ConsumerWidget {
         providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
 
     return Semantics(
-      label: '${user?.displayName ?? ''} — ${l10n.serviceViewProfile}',
+      label: '${user?.displayName ?? ''} - ${l10n.serviceViewProfile}',
       button: true,
       child: InkWell(
         onTap: () => context.push(AppRoutes.providerProfile(providerId)),
@@ -447,7 +443,7 @@ class _ProviderRow extends ConsumerWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            user?.displayName ?? '—',
+                            user?.displayName ?? '-',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: oc.primaryText,
@@ -643,7 +639,7 @@ class _EditBottomBar extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Loading state — animated shimmer skeleton
+// Loading state - animated shimmer skeleton
 // ---------------------------------------------------------------------------
 
 class _ServiceDetailLoading extends StatefulWidget {

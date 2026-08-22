@@ -1267,6 +1267,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get priceFixed => 'flat fee';
 
   @override
+  String get priceDaily => 'per day';
+
+  @override
+  String get priceMonthly => 'per month';
+
+  @override
+  String get priceUnitHourly => '/h';
+
+  @override
+  String get priceUnitDaily => '/day';
+
+  @override
+  String get priceUnitMonthly => '/mo';
+
+  @override
+  String get serviceFormBillingMode => 'Billing mode';
+
+  @override
+  String get serviceFormExtraTasks => 'Additional tasks covered';
+
+  @override
+  String get serviceFormExtraTasksSubtitle =>
+      'Up to three tasks beyond the main one';
+
+  @override
+  String get serviceFormExtraTasksMax => 'Three additional tasks at most.';
+
+  @override
+  String serviceFormPriceRange(String min, String max) {
+    return 'Allowed range: $min to $max F CFA';
+  }
+
+  @override
+  String serviceFormPriceOutOfRange(String min, String max) {
+    return 'The price must be between $min and $max F CFA.';
+  }
+
+  @override
+  String get serviceFormPriceMonthlyMin => 'Monthly minimum';
+
+  @override
+  String get serviceFormPriceMonthlyMax => 'Monthly maximum';
+
+  @override
+  String get serviceFormMonthlyMaxBelowMin =>
+      'The maximum must be greater than or equal to the minimum.';
+
+  @override
+  String get serviceFormPricingUnavailable =>
+      'The pricing grid is unavailable. Retry.';
+
+  @override
   String get photoAdd => 'Add a photo (optional)';
 
   @override

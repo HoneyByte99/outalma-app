@@ -1,102 +1,78 @@
 // Tests for format_utils.dart
 //
 // Covered:
-//   - formatPriceFromCents: formats integer cents as a fr_FR currency string
-//     with symbol "F CFA" and 0 decimal digits
-//   - Various cent values: 0, 100, 1500, 100000, 500000
-//   - No decimal separator in output (decimalDigits: 0)
-//   - Thousands grouping for large values
-//   - Symbol always present
-//   - Negative value behaviour
+//   - formatPrice: formats whole FCFA (spec decision 3, no cents) as a fr_FR
+//     currency string with symbol "F CFA" and 0 decimal digits.
+//   - formatPriceRange: monthly low - high range, symbol once on the high end.
+//   - formatAmount: grouped number, no symbol, for injecting into localised
+//     strings that carry "F CFA" themselves.
+//   - Replaces the former formatPriceFromCents suite: the unit bascule from
+//     cents to whole FCFA means 1500 now reads "1 500 F CFA", not "15 F CFA".
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/src/core/utils/format_utils.dart';
 
 // ---------------------------------------------------------------------------
-// Helper: normalise non-breaking spaces to regular spaces for safe matching
+// Helper: normalise the various non-breaking spaces intl emits to plain spaces
 // ---------------------------------------------------------------------------
 
-String _normalise(String s) => s
-    .replaceAll(' ', ' ') // non-breaking space U+00A0
-    .replaceAll(' ', ' ') // narrow non-breaking space U+202F
-    .trim();
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+String _normalise(String s) =>
+    s.replaceAll(RegExp('[\u00A0\u202F\u2009\u2007]'), ' ').trim();
 
 void main() {
-  group('formatPriceFromCents', () {
-    test('formats 0 cents as "0 F CFA"', () {
-      final result = _normalise(formatPriceFromCents(0));
-      expect(result, '0 F CFA');
+  group('formatPrice', () {
+    test('formats 0 as "0 F CFA"', () {
+      expect(_normalise(formatPrice(0)), '0 F CFA');
     });
 
-    test('formats 100 cents (1 unit) as "1 F CFA"', () {
-      final result = _normalise(formatPriceFromCents(100));
-      expect(result, '1 F CFA');
+    test('formats whole FCFA without dividing by a hundred', () {
+      // The core of the unit bascule: 1500 is 1 500 FCFA, not 15.
+      expect(_normalise(formatPrice(1500)), '1 500 F CFA');
+      expect(_normalise(formatPrice(15000)), '15 000 F CFA');
     });
 
-    test('formats 1500 cents as 15 F CFA', () {
-      // 1500 cents = 15 units
-      final result = formatPriceFromCents(1500);
-      expect(result, contains('15'));
-      expect(result, contains('F CFA'));
+    test('formats 2500 as "2 500 F CFA" (SC-41)', () {
+      expect(_normalise(formatPrice(2500)), '2 500 F CFA');
     });
 
-    test('formats 200 cents (2 units) without decimal separator', () {
-      final result = formatPriceFromCents(200);
-      expect(result, isNot(contains(',')));
-      expect(result, contains('2'));
+    test('groups thousands', () {
+      expect(_normalise(formatPrice(150000)), '150 000 F CFA');
     });
 
-    test('formats 100000 cents (1 000 units) with thousand separator', () {
-      final result = _normalise(formatPriceFromCents(100000));
-      // Locale fr_FR uses non-breaking space as thousand separator
-      expect(result, '1 000 F CFA');
-    });
-
-    test('formats 50 cents — rounds to 0 decimal digits, no comma', () {
-      // 50 cents = 0.5 units; fr_FR currency with 0 decimal digits rounds
-      final result = formatPriceFromCents(50);
-      expect(result, contains('F CFA'));
-      // Should not contain a decimal separator since decimalDigits: 0
-      expect(result, isNot(contains(',')));
-    });
-
-    test('formats 500000 cents (5 000 units) with grouping', () {
-      final result = _normalise(formatPriceFromCents(500000));
-      expect(result, '5 000 F CFA');
-    });
-
-    test('formats 5000 cents (50 units) as "50 F CFA"', () {
-      expect(_normalise(formatPriceFromCents(5000)), '50 F CFA');
-    });
-
-    test('result always contains "F CFA" symbol', () {
-      for (final cents in [0, 100, 2500, 75000, 1000000]) {
-        expect(
-          formatPriceFromCents(cents),
-          contains('F CFA'),
-          reason: 'cents=$cents should include F CFA',
-        );
+    test('never emits a decimal separator (decimalDigits: 0)', () {
+      for (final v in [1000, 3500, 12500, 99999]) {
+        expect(formatPrice(v), isNot(contains(',')));
       }
     });
 
-    test('output never contains decimal comma (decimalDigits is 0)', () {
-      for (final cents in [50, 100, 150, 1234, 99999]) {
-        expect(
-          formatPriceFromCents(cents),
-          isNot(contains(',')),
-          reason: 'cents=$cents should have no decimal separator',
-        );
+    test('always contains the F CFA symbol', () {
+      for (final v in [0, 1000, 2500, 150000]) {
+        expect(formatPrice(v), contains('F CFA'));
       }
     });
+  });
 
-    test('negative value contains number and F CFA symbol', () {
-      final result = formatPriceFromCents(-100);
-      expect(result, contains('F CFA'));
-      expect(result, contains('1'));
+  group('formatPriceRange', () {
+    test('renders low - high with the symbol once (SC-30)', () {
+      expect(
+        _normalise(formatPriceRange(60000, 90000)),
+        '60 000 - 90 000 F CFA',
+      );
+    });
+
+    test('carries both bounds', () {
+      final r = _normalise(formatPriceRange(50000, 150000));
+      expect(r, contains('50 000'));
+      expect(r, contains('150 000'));
+      expect(r, contains('F CFA'));
+    });
+  });
+
+  group('formatAmount', () {
+    test('groups thousands with no currency symbol', () {
+      expect(_normalise(formatAmount(1000)), '1 000');
+      expect(_normalise(formatAmount(3500)), '3 500');
+      expect(formatAmount(3500), isNot(contains('F CFA')));
     });
   });
 }
