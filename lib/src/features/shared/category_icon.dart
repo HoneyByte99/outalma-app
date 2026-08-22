@@ -12,7 +12,7 @@ extension CategoryIdIcon on CategoryId {
     CategoryId.bricolage => Icons.handyman_outlined,
     CategoryId.gardeEnfants => Icons.child_care_outlined,
     CategoryId.cuisine => Icons.restaurant_outlined,
-    CategoryId.repassage => Icons.iron,
+    CategoryId.repassage => Icons.iron_outlined,
   };
 }
 

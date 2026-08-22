@@ -282,6 +282,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get servicesEmpty => 'Aucun service disponible\npour le moment';
 
   @override
+  String homeCategoryEmpty(String category) {
+    return 'Aucune fiche « $category »\npour le moment';
+  }
+
+  @override
   String get clearFilters => 'Effacer les filtres';
 
   @override

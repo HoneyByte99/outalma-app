@@ -608,6 +608,12 @@ abstract class AppLocalizations {
   /// **'No services available\nright now'**
   String get servicesEmpty;
 
+  /// No description provided for @homeCategoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No « {category} » listings\nyet'**
+  String homeCategoryEmpty(String category);
+
   /// No description provided for @clearFilters.
   ///
   /// In en, this message translates to:

@@ -275,6 +275,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get servicesEmpty => 'No services available\nright now';
 
   @override
+  String homeCategoryEmpty(String category) {
+    return 'No « $category » listings\nyet';
+  }
+
+  @override
   String get clearFilters => 'Clear filters';
 
   @override

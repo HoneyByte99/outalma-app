@@ -26,6 +26,8 @@ import '../../domain/models/service.dart';
 import '../../domain/utils/distance.dart';
 import '../../app/app_spacing.dart';
 import '../shared/category_icon.dart';
+import '../shared/category_filter_bar.dart';
+import '../shared/empty_state_view.dart';
 import '../shared/mode_badge.dart';
 import '../shared/network_image.dart';
 import '../shared/user_avatar.dart';
@@ -840,89 +842,11 @@ class _CategoryChipsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
     final selected = ref.watch(_selectedCategoryProvider);
-
-    final items = <(String label, IconData icon, CategoryId? value)>[
-      (l10n.categoryAll, Icons.apps_outlined, null),
-      ...CategoryId.values
-          .where((c) => c.visibleInClientFilter)
-          .map((c) => (c.labelOf(l10n), c.icon, c)),
-    ];
-
-    return SizedBox(
-      height: AppSpacing.minTouchTarget,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final (label, icon, value) = items[i];
-          final isActive = selected == value;
-          return _CategoryChip(
-            icon: icon,
-            label: label,
-            isActive: isActive,
-            onTap: () =>
-                ref.read(_selectedCategoryProvider.notifier).state = value,
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final oc = context.oc;
-    final color = isActive ? oc.surface : oc.primaryText;
-    return Semantics(
-      label: label,
-      button: true,
-      selected: isActive,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          constraints: const BoxConstraints(
-            minHeight: AppSpacing.minTouchTarget,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: isActive ? oc.primary : oc.surface,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
-            border: Border.all(color: isActive ? oc.primary : oc.border),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return CategoryFilterBar(
+      selected: selected,
+      onSelected: (value) =>
+          ref.read(_selectedCategoryProvider.notifier).state = value,
     );
   }
 }
@@ -1352,46 +1276,41 @@ class _EmptyState extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final oc = context.oc;
-    final message = searchQuery.isNotEmpty
-        ? l10n.homeSearchEmpty(searchQuery)
-        : l10n.servicesEmpty;
+    final selectedCategory = ref.watch(_selectedCategoryProvider);
+
+    // Contextualize the copy: a specific-task empty ("no listings for this task
+    // yet") reads calmer and more informative than a generic failed-search icon.
+    final (IconData icon, String message) = switch ((
+      searchQuery.isNotEmpty,
+      selectedCategory,
+    )) {
+      (true, _) => (
+        Icons.search_off_outlined,
+        l10n.homeSearchEmpty(searchQuery),
+      ),
+      (false, final CategoryId c) => (
+        Icons.inbox_outlined,
+        l10n.homeCategoryEmpty(c.labelOf(l10n)),
+      ),
+      (false, null) => (Icons.search_off_outlined, l10n.servicesEmpty),
+    };
 
     final hasActiveFilters =
-        ref.watch(_selectedCategoryProvider) != null ||
+        selectedCategory != null ||
         ref.watch(_searchQueryProvider).isNotEmpty ||
         ref.watch(locationFilterProvider) != null;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.search_off_outlined, size: 56, color: oc.icons),
-            const SizedBox(height: AppSpacing.l),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
-            ),
-            if (hasActiveFilters) ...[
-              const SizedBox(height: AppSpacing.l),
-              OutlinedButton.icon(
-                onPressed: () {
-                  ref.read(_selectedCategoryProvider.notifier).state = null;
-                  ref.read(_searchQueryProvider.notifier).state = '';
-                  ref.read(locationFilterProvider.notifier).state = null;
-                },
-                icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-                label: Text(l10n.clearFilters),
-              ),
-            ],
-          ],
-        ),
-      ),
+    return EmptyStateView(
+      icon: icon,
+      message: message,
+      actionLabel: hasActiveFilters ? l10n.clearFilters : null,
+      onAction: hasActiveFilters
+          ? () {
+              ref.read(_selectedCategoryProvider.notifier).state = null;
+              ref.read(_searchQueryProvider.notifier).state = '';
+              ref.read(locationFilterProvider.notifier).state = null;
+            }
+          : null,
     );
   }
 }

@@ -106,6 +106,12 @@
   "categoryCuisine": "Cooking",
   "categoryRepassage": "Ironing",
   "servicesEmpty": "No services available\nright now",
+  "homeCategoryEmpty": "No « {category} » listings\nyet",
+  "@homeCategoryEmpty": {
+    "placeholders": {
+      "category": { "type": "String" }
+    }
+  },
   "clearFilters": "Clear filters",
   "modeClient": "Client",
   "modeProvider": "Provider",

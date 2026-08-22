@@ -79,4 +79,37 @@ void main() {
       expect(visibleCount, 4);
     });
   });
+
+  group('CategoryId.clientFilterCategories', () {
+    test('is the curated order, not the raw enum order', () {
+      expect(CategoryId.clientFilterCategories, [
+        CategoryId.menage,
+        CategoryId.repassage,
+        CategoryId.cuisine,
+        CategoryId.gardeEnfants,
+      ]);
+    });
+
+    test('Menage is first (anchor of the pool)', () {
+      expect(CategoryId.clientFilterCategories.first, CategoryId.menage);
+    });
+
+    test('every curated entry is visible in the client filter', () {
+      for (final c in CategoryId.clientFilterCategories) {
+        expect(c.visibleInClientFilter, isTrue, reason: '${c.name} hidden');
+      }
+    });
+
+    test('contains exactly the visible categories (no drift)', () {
+      expect(
+        CategoryId.clientFilterCategories.toSet(),
+        CategoryId.values.where((c) => c.visibleInClientFilter).toSet(),
+      );
+    });
+
+    test('has no duplicates', () {
+      const list = CategoryId.clientFilterCategories;
+      expect(list.toSet().length, list.length);
+    });
+  });
 }

@@ -106,6 +106,12 @@
   "categoryCuisine": "Cuisine",
   "categoryRepassage": "Repassage",
   "servicesEmpty": "Aucun service disponible\npour le moment",
+  "homeCategoryEmpty": "Aucune fiche « {category} »\npour le moment",
+  "@homeCategoryEmpty": {
+    "placeholders": {
+      "category": { "type": "String" }
+    }
+  },
   "clearFilters": "Effacer les filtres",
   "modeClient": "Client",
   "modeProvider": "Prestataire",

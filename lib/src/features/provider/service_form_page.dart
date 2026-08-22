@@ -63,7 +63,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   }
 
   // Captured so we can clear our snackbars on dispose (the messenger is an
-  // ancestor that outlives this page) — otherwise the photo-removed "undo"
+  // ancestor that outlives this page) - otherwise the photo-removed "undo"
   // snackbar lingers onto the next screen after pop/back.
   ScaffoldMessengerState? _messenger;
 
@@ -209,7 +209,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
-    // Publishing is not gated on onboarding — providers are active by default.
+    // Publishing is not gated on onboarding - providers are active by default.
     // Only a suspended provider is blocked, which the server rule enforces.
 
     final priceEuros = int.tryParse(_priceController.text.trim()) ?? 0;
@@ -600,7 +600,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
     final e = widget.existing;
     _addressController = TextEditingController(text: e?.label ?? '');
     _radiusKm = e?.radiusKm.toDouble() ?? 30;
-    // For editing, we already have coords — create a fake PlaceSuggestion
+    // For editing, we already have coords - create a fake PlaceSuggestion
     // so _validate can reuse existing coords if the label hasn't changed.
     if (e != null) {
       _selected = PlaceSuggestion(placeId: '', description: e.label);
@@ -622,7 +622,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
       final results = await widget.geocoding.autocomplete(input);
       if (mounted) setState(() => _suggestions = results);
     } catch (_) {
-      // Silently ignore — suggestions are not critical
+      // Silently ignore - suggestions are not critical
     }
   }
 
@@ -1097,16 +1097,23 @@ class _CategorySelector extends StatelessWidget {
   final CategoryId value;
   final ValueChanged<CategoryId> onChanged;
 
-  static Map<CategoryId, String> get _labels => {
-    for (final c in CategoryId.values) c: c.label,
-  };
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+
+    // Providers may only publish within the MVP task pool, in the same curated
+    // order as the client filter (one listing = one task). Defensive: if we are
+    // editing a listing whose category is now hidden, keep it selectable so the
+    // save does not silently rewrite it.
+    final categories = <CategoryId>[
+      ...CategoryId.clientFilterCategories,
+      if (!CategoryId.clientFilterCategories.contains(value)) value,
+    ];
+
     return Wrap(
       spacing: 8,
-      children: CategoryId.values.map((c) {
+      children: categories.map((c) {
         final selected = c == value;
         // Icon + label so the category reads visually, not by text alone.
         return ChoiceChip(
@@ -1115,7 +1122,7 @@ class _CategorySelector extends StatelessWidget {
             size: 18,
             color: selected ? oc.primary : oc.icons,
           ),
-          label: Text(_labels[c]!),
+          label: Text(c.labelOf(l10n)),
           selected: selected,
           selectedColor: oc.primary.withValues(alpha: 0.12),
           labelStyle: TextStyle(

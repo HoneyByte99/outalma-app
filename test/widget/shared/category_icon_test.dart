@@ -44,8 +44,8 @@ void main() {
       expect(CategoryId.cuisine.icon, equals(Icons.restaurant_outlined));
     });
 
-    test('repassage maps to iron', () {
-      expect(CategoryId.repassage.icon, equals(Icons.iron));
+    test('repassage maps to iron_outlined', () {
+      expect(CategoryId.repassage.icon, equals(Icons.iron_outlined));
     });
 
     test('no two CategoryId values share the same icon', () {

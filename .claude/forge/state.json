@@ -1,9 +1,9 @@
 {
   "feature": "prestations-phase1",
-  "phase": "approved",
-  "review": "approved",
+  "phase": "building",
+  "review": "in_progress",
   "smoke": "pending",
-  "round": 1,
-  "updated": "2026-08-20",
-  "note": "GO recu via PROGRAMME.md (nuit du 20/08/2026, delegation Amath). Chantier 1 PRESTATIONS : cuisine+repassage dans CategoryId, masquage 5 categories hors-MVP, tests. Branche feature/prestations-phase1 uniquement."
+  "round": 2,
+  "updated": "2026-08-22",
+  "note": "Chantier 2 PRESTATIONS (design categories MVP) : ordre cure clientFilterCategories, icones outlined coherentes, CategoryFilterBar reutilisable, EmptyStateView contextualise, selecteur prestataire restreint aux 4 taches, golden tests. GO delegue via PROGRAMME.md (nuit 20/08/2026, Amath). Branche feature/prestations-phase1 uniquement, aucun push (attend verif finale Amath)."
 }
