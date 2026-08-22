@@ -1,0 +1,15 @@
+rules_version = '2';
+// Permissive rules for the LOCAL EMULATOR TEST RUN ONLY - never deployed.
+// Mirrors the firestore.test.rules arrangement: Cloud Function handlers under
+// test use the admin SDK, which bypasses rules entirely, so the production
+// rules (firebase/storage.rules) are irrelevant to handler tests.
+//
+// The real rules ARE exercised, but only by the rules suites, which load
+// ../../firebase/storage.rules explicitly through initializeTestEnvironment.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}

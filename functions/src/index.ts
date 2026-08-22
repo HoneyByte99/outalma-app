@@ -5,6 +5,8 @@ import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from 'firebas
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as logger from 'firebase-functions/logger';
 import { assertAdminClaim, assertAdminOrModeratorClaim, assertMinSupportClaim, assertAuthenticated, requireBoolean, requireString } from './common';
+import { writeAdminLog } from './audit';
+import { createNotification, sendPushToUsers } from './notify';
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -105,123 +107,6 @@ export {
 // pipeline's surface area but lack the hardening done in `auth_phone.ts`
 // (Auth-side uniqueness, displayName sanitisation, race protection).
 // Re-enable behind a feature flag only if a future benchmark needs them.
-
-// ---------------------------------------------------------------------------
-// Push notification helper
-// ---------------------------------------------------------------------------
-
-async function sendPushToUsers(
-  uids: string[],
-  notification: { title: string; body: string },
-  // Optional deep-link payload so the app can route on tap. All values must be
-  // strings (FCM data payload constraint).
-  data?: { [key: string]: string }
-): Promise<void> {
-  if (uids.length === 0) return;
-
-  // Fetch push tokens from user documents, keeping the uid↔token mapping so we
-  // can purge a token that FCM reports as permanently invalid (below).
-  const snapshots = await Promise.all(
-    uids.map(uid => db.collection('users').doc(uid).get())
-  );
-
-  const entries: { uid: string; token: string }[] = [];
-  for (const snap of snapshots) {
-    const token = snap.data()?.pushToken as string | undefined;
-    if (token) entries.push({ uid: snap.id, token });
-  }
-
-  if (entries.length === 0) return;
-
-  // Send multicast. No Android `clickAction`: modern firebase_messaging routes
-  // notification taps natively via onMessageOpenedApp/getInitialMessage, so the
-  // legacy FLUTTER_NOTIFICATION_CLICK intent is unnecessary (and was a no-op
-  // without a matching intent-filter).
-  const result = await admin.messaging().sendEachForMulticast({
-    tokens: entries.map(e => e.token),
-    notification: {
-      title: notification.title,
-      body: notification.body,
-    },
-    ...(data ? { data } : {}),
-    android: { priority: 'high' },
-    apns: { payload: { aps: { sound: 'default' } } },
-  });
-
-  logger.info('Push sent', {
-    successCount: result.successCount,
-    failureCount: result.failureCount,
-  });
-
-  // Purge tokens FCM reports as permanently invalid (uninstalled / reinstalled
-  // app, expired token). Otherwise they linger forever and every send silently
-  // fails. Delete only if the stored token still matches — never clobber a
-  // fresh token registered in the meantime.
-  const stale: { uid: string; token: string }[] = [];
-  result.responses.forEach((resp, i) => {
-    if (resp.success) return;
-    const entry = entries[i];
-    if (!entry) return;
-    const code = resp.error?.code;
-    if (
-      code === 'messaging/registration-token-not-registered' ||
-      code === 'messaging/invalid-registration-token' ||
-      code === 'messaging/invalid-argument'
-    ) {
-      stale.push(entry);
-    }
-  });
-  await Promise.all(
-    stale.map(async ({ uid, token }) => {
-      try {
-        const ref = db.collection('users').doc(uid);
-        await db.runTransaction(async (tx) => {
-          const cur = await tx.get(ref);
-          if (cur.data()?.pushToken === token) {
-            tx.update(ref, {
-              pushToken: admin.firestore.FieldValue.delete(),
-            });
-          }
-        });
-      } catch {
-        logger.warn('Failed to purge stale token', { uid });
-      }
-    })
-  );
-}
-
-// ---------------------------------------------------------------------------
-// In-app notification helper
-// ---------------------------------------------------------------------------
-
-async function createNotification(
-  uid: string,
-  data: {
-    type: string;
-    title: string;
-    body: string;
-    bookingId?: string;
-    chatId?: string;
-    // Which role this notification targets — drives the Client/Provider tabs in
-    // the app. Always set it: the caller knows the recipient's role.
-    audience?: 'client' | 'provider';
-  }
-): Promise<void> {
-  await db
-    .collection('notifications')
-    .doc(uid)
-    .collection('items')
-    .add({
-      type: data.type,
-      title: data.title,
-      body: data.body,
-      bookingId: data.bookingId ?? null,
-      chatId: data.chatId ?? null,
-      ...(data.audience ? { audience: data.audience } : {}),
-      read: false,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-}
 
 type BookingStatus =
   | 'requested'
@@ -866,9 +751,102 @@ export const confirmDone = onCall(async (request) => {
 // Account self-deletion (App Store 5.1.1(v) / Google Play requirement)
 // Server-authoritative: purges the user's auth account + personal data.
 // ---------------------------------------------------------------------------
+/// True when the account holds any identity-verification data. Used to decide
+/// whether the purge below is allowed to fail the whole call.
+async function providerHasIdentityData(uid: string): Promise<boolean> {
+  const [files, state] = await Promise.all([
+    db
+      .collection('identity_verifications')
+      .where('providerId', '==', uid)
+      .limit(1)
+      .get(),
+    db.collection('identity_verification_states').doc(uid).get(),
+  ]);
+  return !files.empty || state.exists;
+}
+
+async function purgeIdentityData(uid: string): Promise<void> {
+  await admin.storage().bucket().deleteFiles({
+    prefix: `private/identity/${uid}/`,
+  });
+  await deleteIdentityVerificationData(uid);
+}
+
+/// Removes every identity-verification trace of a provider.
+///
+/// Committed in chunks of 400 writes, never in one batch: each file costs two
+/// deletions (the file and its identity_internal document), a Firestore batch
+/// caps at 500, and the account deletion batch is shared with services and the
+/// profile. Past roughly 245 files, a single batch would fail on every attempt,
+/// the account would become undeletable, and the identity documents would
+/// therefore never be purged. That is exactly the state this path exists to
+/// prevent.
+///
+/// The guard document is nominative on its own: it attests, per uid, that a
+/// person submitted an identity document, with timestamps. Leaving it behind
+/// would keep that trace with no purge path behind it.
+async function deleteIdentityVerificationData(uid: string): Promise<void> {
+  const CHUNK = 400;
+  const files = await db
+    .collection('identity_verifications')
+    .where('providerId', '==', uid)
+    .get();
+
+  let batch = db.batch();
+  let pending = 0;
+  const flush = async () => {
+    if (pending > 0) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  };
+
+  for (const file of files.docs) {
+    // Deleting a parent document does NOT delete its subcollections.
+    const internal = await file.ref.collection('identity_internal').get();
+    for (const sub of internal.docs) {
+      batch.delete(sub.ref);
+      if (++pending >= CHUNK) await flush();
+    }
+    batch.delete(file.ref);
+    if (++pending >= CHUNK) await flush();
+  }
+
+  batch.delete(db.collection('identity_verification_states').doc(uid));
+  // Public projection (E1). Same batch as the guard it derives from: leaving it
+  // behind would keep a public "verified" badge on a deleted account, and this
+  // is the only purge mechanism the project has (D4).
+  batch.delete(db.collection('provider_trust').doc(uid));
+  pending++;
+  await flush();
+}
+
 export const deleteMyAccount = onCall(async (request) => {
   const uid = request.auth?.uid;
   assertAuthenticated(uid);
+
+  // Identity data is purged in TWO passes, before and after the account
+  // document disappears. Retention was decided as "kept until the account is
+  // deleted", so this is the ONLY purge mechanism in the project.
+  //
+  // First pass, hard: if it fails, the whole call fails with nothing else
+  // destroyed, so the user can retry with an intact account. It runs only for
+  // accounts that actually hold identity data, so a Storage outage cannot block
+  // account deletion (an App Store requirement) for the vast majority of users
+  // who have nothing to purge.
+  //
+  // Second pass, after `users/{uid}` is gone: the first pass alone left a race.
+  // A submission in flight (readFingerprints takes ~6 storage calls) could
+  // commit between the purge and the batch, recreating the file, its internal
+  // document and the guard behind an account about to vanish, with no scheduled
+  // purge left to catch it. Once `users/{uid}` is deleted, submitIdentityVerification
+  // refuses outright, so a second pass closes the window for good. Both passes
+  // are idempotent, and deleting an empty prefix succeeds.
+  const hadIdentityData = await providerHasIdentityData(uid);
+  if (hadIdentityData) {
+    await purgeIdentityData(uid);
+  }
 
   // Delete owned services (a provider's listings) + provider profile + user doc
   // in a batch. Booking/review/chat history is retained but de-referenced; the
@@ -883,6 +861,19 @@ export const deleteMyAccount = onCall(async (request) => {
   batch.delete(db.collection('providers').doc(uid));
   batch.delete(db.collection('users').doc(uid));
   await batch.commit();
+
+  // Second pass, see above. Hard for accounts that held identity data, best
+  // effort otherwise: there was nothing to purge in that case, and failing here
+  // would make account deletion depend on Storage for every user.
+  if (hadIdentityData) {
+    await purgeIdentityData(uid);
+  } else {
+    try {
+      await purgeIdentityData(uid);
+    } catch (e) {
+      console.warn(`deleteMyAccount: late identity purge failed for ${uid}: ${e}`);
+    }
+  }
 
   // Best-effort cleanup of the user's avatar folder.
   try {
@@ -917,6 +908,43 @@ export const exportMyData = onCall(async (request) => {
       db.collection('reviews').where('revieweeId', '==', uid).get(),
     ]);
 
+  // Identity verification files belonging to the requester, field by field.
+  // Deliberately NOT a raw dump: no image, no storage path, and none of the
+  // internal review aids (duplicate flag, reference to a third party's file,
+  // reviewer identity), which is the same boundary the read rules enforce.
+  //
+  // identity_verification_states is NOT exported, and that is a decision rather
+  // than an omission: every field it holds is reconstructible from the files
+  // already exported (its timestamps are their submittedAt, its counter is the
+  // number of rejected ones, its flags are their statuses). It is a
+  // denormalised index, not a source. It IS deleted with the account, which the
+  // retention rule requires separately.
+  const identityFiles = await db
+    .collection('identity_verifications')
+    .where('providerId', '==', uid)
+    .get();
+  const identityVerifications = identityFiles.docs.map((d) => ({
+    id: d.id,
+    status: d.get('status'),
+    submittedAt: d.get('submittedAt'),
+    reviewedAt: d.get('reviewedAt'),
+    rejectionReason: d.get('rejectionReason'),
+    cniNumber: d.get('cniNumber'),
+    cniNom: d.get('cniNom'),
+    cniPrenom: d.get('cniPrenom'),
+    cniDateNaissance: d.get('cniDateNaissance'),
+    cniDateExpiration: d.get('cniDateExpiration'),
+    cniSexe: d.get('cniSexe'),
+  }));
+
+  // Public projection (E1). Budget line S10 asks for erasure AND export of any
+  // new PII collection. This one holds no PII at all, so exporting it is
+  // arguably unnecessary; it is exported anyway, because satisfying the line
+  // costs three lines and arguing about it costs more. The socle set the
+  // precedent of writing down what is excluded and why (see the guard document
+  // above), so here is the symmetric note for what is included.
+  const trust = await db.collection('provider_trust').doc(uid).get();
+
   const one = (s: admin.firestore.DocumentSnapshot) =>
     s.exists ? { id: s.id, ...s.data() } : null;
   const many = (q: admin.firestore.QuerySnapshot) =>
@@ -931,6 +959,8 @@ export const exportMyData = onCall(async (request) => {
     bookingsAsProvider: many(bkProvider),
     reviewsWritten: many(revWritten),
     reviewsReceived: many(revReceived),
+    identityVerifications,
+    identityTrust: one(trust),
   };
 });
 
@@ -1128,22 +1158,6 @@ export const sendBookingReminders = onSchedule(
 // Admin audit log helper
 // ---------------------------------------------------------------------------
 
-async function writeAdminLog(data: {
-  actorUid: string;
-  action: string;
-  targetType: string;
-  targetId: string;
-  notes?: string;
-}): Promise<void> {
-  await db.collection('admin_logs').add({
-    actorUid: data.actorUid,
-    action: data.action,
-    targetType: data.targetType,
-    targetId: data.targetId,
-    notes: data.notes ?? null,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-  });
-}
 
 // ---------------------------------------------------------------------------
 // setModeratorClaim — admin only
@@ -2625,3 +2639,14 @@ export const initializeStats = onCall(async (request) => {
 
   return { initialized: true };
 });
+
+// ---------------------------------------------------------------------------
+// Identity verification (provider CNI + selfie)
+// ---------------------------------------------------------------------------
+
+export {
+  submitIdentityVerification,
+  approveIdentityVerification,
+  rejectIdentityVerification,
+  revokeIdentityVerification,
+} from './identity_verification';

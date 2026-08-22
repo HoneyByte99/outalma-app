@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../shared/network_image.dart';
-import '../shared/verified_badge.dart';
+import '../shared/identity_trust_signal.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
@@ -196,12 +196,8 @@ class _ProfileHeader extends ConsumerWidget {
     final avgRating = reviews.isEmpty
         ? null
         : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
-    // A.8 - trust signal: a provider is "verified" once they have completed
-    // their onboarding (profile exists) AND have a verified phone number on
-    // file (phoneE164 set, which only happens through Twilio OTP or
-    // sign-up).
-    final isVerified =
-        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
+    // D6-a/E7: the trust badge now reflects a server-owned identity verdict,
+    // rendered by IdentityTrustSignal below (no client-side phone heuristic).
 
     return Container(
       color: oc.cardSurface,
@@ -232,12 +228,14 @@ class _ProfileHeader extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (isVerified) ...[
-                      const SizedBox(width: 6),
-                      const VerifiedBadge(compact: true),
-                    ],
                   ],
                 ),
+                // Own line, right under the name and BEFORE the rating: it
+                // answers the question a client asks first, and inline next to
+                // the name it would leave two characters for the name itself at
+                // 375 px.
+                const SizedBox(height: 6),
+                IdentityTrustSignal(providerId: providerId),
                 const SizedBox(height: 6),
                 if (avgRating != null) ...[
                   Row(

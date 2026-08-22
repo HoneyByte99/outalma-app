@@ -64,6 +64,9 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     required this.shadow,
     required this.statusInProgress,
     required this.star,
+    required this.trustVerifiedText,
+    required this.trustPendingText,
+    required this.trustRejectedText,
   });
 
   final Color primary;
@@ -96,6 +99,21 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
   /// Rating star color (amber).
   final Color star;
 
+  /// Text and icon colors of the three identity trust states.
+  ///
+  /// They exist because the accent colors fail WCAG AA as TEXT on their own
+  /// tinted pill in the light theme: `success` measures 2.73:1 there and
+  /// `warning` 2.25:1, against the 4.5:1 that AA asks for body text, and the
+  /// badge label is body text. These darkened variants measure 4.73:1, 5.76:1
+  /// and 5.54:1 on the same pills. The pill, the icon and the label all use
+  /// them, so a state is never carried by a colour that cannot be read.
+  ///
+  /// The dark theme needs no such variant (6.09:1 and 7.02:1 already), so these
+  /// three simply mirror `success`, `warning` and `error` there.
+  final Color trustVerifiedText;
+  final Color trustPendingText;
+  final Color trustRejectedText;
+
   /// Light palette — mirrors AppColors static values.
   static const light = OutalmaColors(
     primary: Color(0xFF1B3A4B),
@@ -114,6 +132,9 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     successAccent: Color(0x1A00A678),
     warning: Color(0xFFE8900A),
     error: Color(0xFFE03D3A),
+    trustVerifiedText: Color(0xFF00795A),
+    trustPendingText: Color(0xFF8A5200),
+    trustRejectedText: Color(0xFFB3261E),
     icons: Color(0xFF8AAAB8),
     shadow: Color(0x1F1B3A4B),
     statusInProgress: Color(0xFF7B2FBE),
@@ -144,6 +165,9 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     successAccent: Color(0x1A2DD17A),
     warning: Color(0xFFFFBB33),
     error: Color(0xFFFF6B68),
+    trustVerifiedText: Color(0xFF2DD17A),
+    trustPendingText: Color(0xFFFFBB33),
+    trustRejectedText: Color(0xFFFF6B68),
     icons: Color(0xFF7A8B98),
     shadow: Color(0x33000000),
     statusInProgress: Color(0xFFC79BF0),
@@ -172,6 +196,9 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
     Color? shadow,
     Color? statusInProgress,
     Color? star,
+    Color? trustVerifiedText,
+    Color? trustPendingText,
+    Color? trustRejectedText,
   }) {
     return OutalmaColors(
       primary: primary ?? this.primary,
@@ -194,6 +221,9 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
       shadow: shadow ?? this.shadow,
       statusInProgress: statusInProgress ?? this.statusInProgress,
       star: star ?? this.star,
+      trustVerifiedText: trustVerifiedText ?? this.trustVerifiedText,
+      trustPendingText: trustPendingText ?? this.trustPendingText,
+      trustRejectedText: trustRejectedText ?? this.trustRejectedText,
     );
   }
 
@@ -225,6 +255,21 @@ class OutalmaColors extends ThemeExtension<OutalmaColors> {
         t,
       )!,
       star: Color.lerp(star, other.star, t)!,
+      trustVerifiedText: Color.lerp(
+        trustVerifiedText,
+        other.trustVerifiedText,
+        t,
+      )!,
+      trustPendingText: Color.lerp(
+        trustPendingText,
+        other.trustPendingText,
+        t,
+      )!,
+      trustRejectedText: Color.lerp(
+        trustRejectedText,
+        other.trustRejectedText,
+        t,
+      )!,
     );
   }
 }

@@ -1,6 +1,22 @@
 {
   "indexes": [
     {
+      "collectionGroup": "identity_verifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "identity_verifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "providerId", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "events",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
@@ -191,6 +207,14 @@
     }
   ],
   "fieldOverrides": [
+    {
+      "collectionGroup": "identity_internal",
+      "fieldPath": "cniNumberKey",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
     {
       "collectionGroup": "events",
       "fieldPath": "loggedAt",

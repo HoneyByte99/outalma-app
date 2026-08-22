@@ -4,6 +4,10 @@ service firebase.storage {
 
     function signedIn() { return request.auth != null; }
     function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function isAdminOrModerator() {
+      return signedIn()
+        && (request.auth.token.admin == true || request.auth.token.moderator == true);
+    }
     function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
 
     function bookingDoc(bookingId) {
@@ -34,7 +38,7 @@ service firebase.storage {
     // Write restricted to the provider who owns the service document.
     // This prevents arbitrary uploads to other providers' service paths.
     // Service images are uploaded under the uploader's uid segment so writes
-    // authorise via isSelf(uid) — NO cross-service firestore.get (those silently
+    // authorise via isSelf(uid) - NO cross-service firestore.get (those silently
     // fail from Storage in this project, which is why the previous doc-ownership
     // rule denied legitimate uploads). This also works during the new-service
     // flow, before the Firestore service doc exists. The photo URLs are stored
@@ -68,7 +72,7 @@ service firebase.storage {
 
     // Chat media (images + voice messages)
     // Path: /private/chats/{chatId}/media/{uid}/{filename}
-    // Scoped by uploader uid so writes authorize via isSelf(uid) — NO
+    // Scoped by uploader uid so writes authorize via isSelf(uid) - NO
     // cross-service firestore.get (that lookup silently fails from Storage and
     // denied legitimate participants). The recipient plays media via the
     // tokenised download URL stored on the chat message, so read stays simple:
@@ -112,6 +116,46 @@ service firebase.storage {
             && (request.resource.contentType.matches('image/.*')
                 || request.resource.contentType.matches('application/pdf'))
             && smallEnough(20 * 1024 * 1024));
+    }
+
+    // Identity verification documents (provider CNI recto/verso + selfie)
+    // Path: /private/identity/{uid}/{batchId}/{filename}
+    //
+    // Uploaded BEFORE the Firestore file exists, so the path is scoped by the
+    // uploader uid, same shape as the booking voice messages above. NO
+    // firestore.get here: those silently fail from Storage in this project
+    // (see the comments above), and an authorisation that fails open on a
+    // lookup error has no place in front of identity documents.
+    //
+    // READ is staff only. Not even the owner: they produced the images, they
+    // have no need to read them back, and every extra reader is extra exposure
+    // of an identity document. No tokenised download URL is ever stored either,
+    // so this rule is the only way in.
+    //
+    // CREATE only, AND only when nothing is there yet. Two separate guards,
+    // because `allow create` alone does NOT prevent an overwrite: re-uploading
+    // an existing path writes a new object generation, which the rules evaluate
+    // as a create, not an update. Verified against the emulator: with only
+    // `allow update, delete: if false`, the owner could still replace the file.
+    // `resource == null` is what actually closes it.
+    //
+    // What this protects: a provider could otherwise swap the recto AFTER the
+    // server validated it and BEFORE a human compares the selfie against it
+    // (target review time is 48h), or erase the evidence once approved. The
+    // server also freezes generation and md5Hash at submission and re-checks
+    // them at decision time, so a relaxed rule alone would not slip an image
+    // through.
+    //
+    // Filenames are bounded so an authenticated user cannot pile up arbitrary
+    // objects under their prefix.
+    match /private/identity/{uid}/{batchId}/{filename} {
+      allow read: if isAdminOrModerator();
+      allow create: if isSelf(uid)
+        && resource == null
+        && isImage()
+        && smallEnough(5 * 1024 * 1024)
+        && filename in ['recto.jpg', 'verso.jpg', 'selfie.jpg'];
+      allow update, delete: if false;
     }
 
     // Default deny

@@ -2,7 +2,7 @@
 // auto-provisions a providers/{id} doc so the public profile is never empty.
 import functionsTest from 'firebase-functions-test';
 
-const tf = functionsTest({ projectId: 'demo-outalma' });
+const tf = functionsTest({ projectId: 'demo-outalma', storageBucket: 'demo-outalma.appspot.com' });
 
 import * as fns from '../src/index';
 import * as admin from 'firebase-admin';

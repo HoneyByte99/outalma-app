@@ -8,7 +8,6 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
-import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../domain/enums/category_id.dart';
@@ -17,7 +16,7 @@ import '../shared/service_price_label.dart';
 import '../booking/booking_request_sheet.dart';
 import '../shared/network_image.dart';
 import '../shared/marketplace_disclaimer.dart';
-import '../shared/verified_badge.dart';
+import '../shared/identity_trust_signal.dart';
 import 'service_zones_map.dart';
 import '../shared/user_avatar.dart';
 
@@ -402,11 +401,9 @@ class _ProviderRow extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
-    final providerProfile = ref
-        .watch(providerProfileByIdProvider(providerId))
-        .valueOrNull;
-    final isVerified =
-        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
+    // The provider profile is no longer read here: since E1 the trust state
+    // comes from provider_trust, and nothing else on this card needs the
+    // profile. One document read less per provider shown.
 
     return Semantics(
       label: '${user?.displayName ?? ''} - ${l10n.serviceViewProfile}',
@@ -453,12 +450,12 @@ class _ProviderRow extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (isVerified) ...[
-                          const SizedBox(width: AppSpacing.xs),
-                          const VerifiedBadge(compact: true),
-                        ],
                       ],
                     ),
+                    // Own line under the name: measured at 375 px, the full
+                    // mention inline would leave two characters for the name.
+                    const SizedBox(height: AppSpacing.xs),
+                    IdentityTrustSignal(providerId: providerId),
                   ],
                 ),
               ),

@@ -84,6 +84,11 @@ service cloud.firestore {
       // createBooking. (Security review S2.) `active` is intentionally NOT in
       // this list, it is the owner-controlled pause switch, also gated server-
       // side in createBooking.
+      //
+      // The identity badge is deliberately NOT here: budget line S4 forbids
+      // guarding a trust field with a deny list, since a deny list only covers
+      // the keys someone remembered to list. It lives in `provider_trust`,
+      // below, which no client can write at all.
       allow update: if isAdmin()
         || (isSelf(uid)
             && !request.resource.data.diff(resource.data).affectedKeys()
@@ -96,6 +101,63 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create, update: if isAdmin() || isSelf(uid);
       allow delete: if isAdmin() || isSelf(uid);
+    }
+
+    // ---------- IDENTITY VERIFICATION (provider CNI + selfie) ----------
+    // Every write goes through Cloud Functions (Admin SDK bypasses these rules).
+    // Direct client writes are denied everywhere below: a verdict is a trust
+    // decision, and the client is never trusted with one.
+    //
+    // The file is deliberately split in two documents because Firestore rules
+    // authorise a WHOLE document, never a field: the provider must be able to
+    // read their own status, rejection reason and extracted fields, but must
+    // never see the duplicate flag nor `doublonReferenceId`, which is the id of
+    // ANOTHER provider's file. Hence a subcollection the owner cannot read.
+    match /identity_verifications/{verificationId} {
+      allow read: if isAdminOrModerator()
+        || (signedIn() && resource.data.providerId == request.auth.uid);
+      allow write: if false;
+
+      // Review aids: duplicate flag, reference to a third party's file, storage
+      // paths, raw MRZ, reviewer identity. Staff only, never the owner.
+      match /identity_internal/{docId} {
+        allow read: if isAdminOrModerator();
+        allow write: if false;
+      }
+    }
+
+    // Per-provider guard document. Serialises concurrent submissions and holds
+    // the rate-limit window. Nominative, so it is deleted with the account.
+    //
+    // Read is open to staff only, and NOT to the provider it describes: letting
+    // the owner read it would expose nothing they cannot already infer from
+    // their own files, but it would put a rate-limit counter in reach of the
+    // party the limit constrains. Staff can read it because the review screen
+    // will need to explain why a provider cannot submit again.
+    match /identity_verification_states/{uid} {
+      allow read: if isAdminOrModerator();
+      allow write: if false;
+    }
+
+    // ---------- PROVIDER TRUST (public projection, server-owned) ----------
+    //
+    // One document per provider, carrying the public identity state and nothing
+    // else: no name, no card number, no storage path, no rejection reason, no
+    // file id. The document is world readable, so everything in it is public.
+    //
+    // Two values only, `pending` and `verified`. Absence is the third state,
+    // "not verified": a rejected or revoked file deletes the document, so a
+    // refusal is publicly indistinguishable from never having submitted. There
+    // is no public shaming in this product.
+    //
+    // `write: if false` for every client, including the provider it describes
+    // and including admin: it is derived from the guard document by the decision
+    // transaction (Admin SDK, which bypasses these rules), never typed by hand.
+    // That is what budget line S4 asks for, and it is why the flag does not live
+    // on `providers/{uid}` behind a deny list.
+    match /provider_trust/{uid} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // ---------- SERVICE TYPES (reference collection) ----------
