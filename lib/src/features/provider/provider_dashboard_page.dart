@@ -10,16 +10,17 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/identity/identity_trust_providers.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../shared/service_price_label.dart';
 import '../review/rating_summary.dart';
 import '../shared/mode_badge.dart';
 import '../../domain/enums/category_id.dart';
+import '../../domain/enums/identity_trust_status.dart';
 import '../../domain/models/provider_profile.dart';
 import '../shared/category_icon.dart';
 import '../shared/user_avatar.dart';
-import '../shared/verified_badge.dart';
 import '../../domain/models/service.dart';
 
 class ProviderDashboardPage extends ConsumerWidget {
@@ -172,7 +173,8 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
     final available = _pending ?? widget.profile.active;
     final auth = ref.watch(authNotifierProvider).valueOrNull;
     final appUser = auth is AuthAuthenticated ? auth.user : null;
-    final isVerified = appUser?.phoneE164?.isNotEmpty ?? false;
+    // D6-a/E7: the badge reflects the server-owned identity verdict on the
+    // provider's own profile, not a verified phone number.
     final publishedCount =
         ref
             .watch(providerServicesProvider)
@@ -243,10 +245,6 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  if (isVerified) ...[
-                                    const SizedBox(width: 6),
-                                    const VerifiedBadge(compact: true),
-                                  ],
                                 ],
                               ),
                               const SizedBox(height: 2),
@@ -323,6 +321,14 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                     ),
                   ),
                 ),
+              ),
+              Divider(height: 1, color: oc.border),
+              // Row 3: identity verification (E6). The whole row opens the
+              // status/entry screen; it carries the current state at a glance.
+              _IdentityHubLine(
+                providerId: widget.profile.uid,
+                onOpen: () =>
+                    GoRouter.of(context).push(AppRoutes.identityStatus),
               ),
             ],
           ),
@@ -952,6 +958,92 @@ class _ProviderStatsRow extends ConsumerWidget {
             label: l10n.dashboardStatsAcceptanceRate,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Third hub line: the identity verification entry (E6).
+///
+/// It watches the public trust projection for a state at a glance (verified,
+/// under way, or not verified) and routes to the full status screen for the
+/// story the projection cannot carry. Loading and read errors collapse to a
+/// neutral "verify" affordance rather than a false negative: the same failure
+/// mode the trust signal uses (design section 2).
+class _IdentityHubLine extends ConsumerWidget {
+  const _IdentityHubLine({required this.providerId, required this.onOpen});
+
+  final String providerId;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final status = ref.watch(identityTrustProvider(providerId)).valueOrNull;
+
+    final IconData icon;
+    final Color accent;
+    final String label;
+    final String subtitle;
+    switch (status) {
+      case IdentityTrustStatus.verified:
+        icon = Icons.verified_rounded;
+        accent = oc.trustVerifiedText;
+        label = l10n.trustVerifiedLabel;
+        subtitle = l10n.hubIdentityVerifiedSub;
+      case IdentityTrustStatus.pending:
+        icon = Icons.schedule_rounded;
+        accent = oc.trustPendingText;
+        label = l10n.trustPendingLabel;
+        subtitle = l10n.hubIdentityPendingSub;
+      case null:
+        icon = Icons.shield_outlined;
+        accent = oc.secondaryText;
+        label = l10n.hubIdentityVerifyCta;
+        subtitle = l10n.hubIdentityVerifySub;
+    }
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              Icon(icon, size: 22, color: accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Label in primaryText, accent lives in the icon only
+                    // (design section 3): the coloured-label grammar fails A1.
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: oc.primaryText,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, color: oc.secondaryText),
+            ],
+          ),
+        ),
       ),
     );
   }
