@@ -252,7 +252,39 @@ class AppLocalizationsFr extends AppLocalizations {
   String get categoryAll => 'Tout';
 
   @override
+  String get categoryMenage => 'Ménage';
+
+  @override
+  String get categoryPlomberie => 'Plomberie';
+
+  @override
+  String get categoryJardinage => 'Jardinage';
+
+  @override
+  String get categoryElectricite => 'Électricité';
+
+  @override
+  String get categoryPeinture => 'Peinture';
+
+  @override
+  String get categoryBricolage => 'Bricolage';
+
+  @override
+  String get categoryGardeEnfants => 'Garde d\'enfants';
+
+  @override
+  String get categoryCuisine => 'Cuisine';
+
+  @override
+  String get categoryRepassage => 'Repassage';
+
+  @override
   String get servicesEmpty => 'Aucun service disponible\npour le moment';
+
+  @override
+  String homeCategoryEmpty(String category) {
+    return 'Aucune fiche « $category »\npour le moment';
+  }
 
   @override
   String get clearFilters => 'Effacer les filtres';

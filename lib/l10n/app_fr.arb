@@ -96,7 +96,22 @@
     }
   },
   "categoryAll": "Tout",
+  "categoryMenage": "Ménage",
+  "categoryPlomberie": "Plomberie",
+  "categoryJardinage": "Jardinage",
+  "categoryElectricite": "Électricité",
+  "categoryPeinture": "Peinture",
+  "categoryBricolage": "Bricolage",
+  "categoryGardeEnfants": "Garde d'enfants",
+  "categoryCuisine": "Cuisine",
+  "categoryRepassage": "Repassage",
   "servicesEmpty": "Aucun service disponible\npour le moment",
+  "homeCategoryEmpty": "Aucune fiche « {category} »\npour le moment",
+  "@homeCategoryEmpty": {
+    "placeholders": {
+      "category": { "type": "String" }
+    }
+  },
   "clearFilters": "Effacer les filtres",
   "modeClient": "Client",
   "modeProvider": "Prestataire",

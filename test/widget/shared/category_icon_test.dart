@@ -40,6 +40,14 @@ void main() {
       expect(CategoryId.gardeEnfants.icon, equals(Icons.child_care_outlined));
     });
 
+    test('cuisine maps to restaurant_outlined', () {
+      expect(CategoryId.cuisine.icon, equals(Icons.restaurant_outlined));
+    });
+
+    test('repassage maps to iron_outlined', () {
+      expect(CategoryId.repassage.icon, equals(Icons.iron_outlined));
+    });
+
     test('no two CategoryId values share the same icon', () {
       final icons = CategoryId.values.map((c) => c.icon).toList();
       final uniqueIcons = icons.toSet();

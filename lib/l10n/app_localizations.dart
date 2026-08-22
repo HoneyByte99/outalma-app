@@ -548,11 +548,71 @@ abstract class AppLocalizations {
   /// **'All'**
   String get categoryAll;
 
+  /// No description provided for @categoryMenage.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleaning'**
+  String get categoryMenage;
+
+  /// No description provided for @categoryPlomberie.
+  ///
+  /// In en, this message translates to:
+  /// **'Plumbing'**
+  String get categoryPlomberie;
+
+  /// No description provided for @categoryJardinage.
+  ///
+  /// In en, this message translates to:
+  /// **'Gardening'**
+  String get categoryJardinage;
+
+  /// No description provided for @categoryElectricite.
+  ///
+  /// In en, this message translates to:
+  /// **'Electricity'**
+  String get categoryElectricite;
+
+  /// No description provided for @categoryPeinture.
+  ///
+  /// In en, this message translates to:
+  /// **'Painting'**
+  String get categoryPeinture;
+
+  /// No description provided for @categoryBricolage.
+  ///
+  /// In en, this message translates to:
+  /// **'Handyman'**
+  String get categoryBricolage;
+
+  /// No description provided for @categoryGardeEnfants.
+  ///
+  /// In en, this message translates to:
+  /// **'Childcare'**
+  String get categoryGardeEnfants;
+
+  /// No description provided for @categoryCuisine.
+  ///
+  /// In en, this message translates to:
+  /// **'Cooking'**
+  String get categoryCuisine;
+
+  /// No description provided for @categoryRepassage.
+  ///
+  /// In en, this message translates to:
+  /// **'Ironing'**
+  String get categoryRepassage;
+
   /// No description provided for @servicesEmpty.
   ///
   /// In en, this message translates to:
   /// **'No services available\nright now'**
   String get servicesEmpty;
+
+  /// No description provided for @homeCategoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No « {category} » listings\nyet'**
+  String homeCategoryEmpty(String category);
 
   /// No description provided for @clearFilters.
   ///

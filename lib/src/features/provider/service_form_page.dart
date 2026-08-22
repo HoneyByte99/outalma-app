@@ -1342,10 +1342,25 @@ class _CategorySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+
+    // Providers may only publish within the MVP task pool the server has
+    // actually priced ([selectable], config-driven), shown in the same curated
+    // order as the client filter (one listing = one task). Defensive: an
+    // editable legacy category not in the curated pool is appended so the save
+    // does not silently rewrite it ([selectable] already carries the current
+    // value, so [value] is always present).
+    final categories = <CategoryId>[
+      ...CategoryId.clientFilterCategories.where(selectable.contains),
+      ...selectable.where(
+        (c) => !CategoryId.clientFilterCategories.contains(c),
+      ),
+    ];
+
     return Wrap(
       spacing: 8,
-      children: selectable.map((c) {
+      children: categories.map((c) {
         final selected = c == value;
         // Icon + label so the category reads visually, not by text alone.
         return ChoiceChip(
@@ -1354,7 +1369,7 @@ class _CategorySelector extends StatelessWidget {
             size: 18,
             color: selected ? oc.primary : oc.icons,
           ),
-          label: Text(c.label),
+          label: Text(c.labelOf(l10n)),
           selected: selected,
           selectedColor: oc.primary.withValues(alpha: 0.12),
           labelStyle: TextStyle(
