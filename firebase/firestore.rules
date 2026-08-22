@@ -75,11 +75,7 @@ service cloud.firestore {
     // ---------- PROVIDERS (public read, owner write) ----------
     match /providers/{uid} {
       allow read: if true;
-      // `identityVerified` is the public identity badge (D6-a). It is a trust
-      // decision, so the owner must never set it on create either: only the
-      // decision Cloud Function (Admin SDK, which bypasses these rules) writes it.
-      allow create: if isAdmin()
-        || (isSelf(uid) && !('identityVerified' in request.resource.data));
+      allow create: if isAdmin() || isSelf(uid);
       // Owner may edit their own profile (bio, working hours) AND flip their own
       // availability `active` (Disponible/En pause). But NOT the moderation
       // fields: a suspended provider must not be able to self-write
@@ -87,14 +83,16 @@ service cloud.firestore {
       // suspendProvider/unsuspendProvider (Admin SDK) and read back as a gate in
       // createBooking. (Security review S2.) `active` is intentionally NOT in
       // this list, it is the owner-controlled pause switch, also gated server-
-      // side in createBooking. `identityVerified` joins the deny list (D6-a):
-      // the public badge reads it, and a provider granting it to themselves
-      // would be a trust forgery.
+      // side in createBooking.
+      //
+      // The identity badge is deliberately NOT here: budget line S4 forbids
+      // guarding a trust field with a deny list, since a deny list only covers
+      // the keys someone remembered to list. It lives in `provider_trust`,
+      // below, which no client can write at all.
       allow update: if isAdmin()
         || (isSelf(uid)
             && !request.resource.data.diff(resource.data).affectedKeys()
-                  .hasAny(['suspended', 'suspendedAt', 'suspendedReason',
-                           'identityVerified']));
+                  .hasAny(['suspended', 'suspendedAt', 'suspendedReason']));
       allow delete: if isAdmin();
     }
 
@@ -138,6 +136,27 @@ service cloud.firestore {
     // will need to explain why a provider cannot submit again.
     match /identity_verification_states/{uid} {
       allow read: if isAdminOrModerator();
+      allow write: if false;
+    }
+
+    // ---------- PROVIDER TRUST (public projection, server-owned) ----------
+    //
+    // One document per provider, carrying the public identity state and nothing
+    // else: no name, no card number, no storage path, no rejection reason, no
+    // file id. The document is world readable, so everything in it is public.
+    //
+    // Two values only, `pending` and `verified`. Absence is the third state,
+    // "not verified": a rejected or revoked file deletes the document, so a
+    // refusal is publicly indistinguishable from never having submitted. There
+    // is no public shaming in this product.
+    //
+    // `write: if false` for every client, including the provider it describes
+    // and including admin: it is derived from the guard document by the decision
+    // transaction (Admin SDK, which bypasses these rules), never typed by hand.
+    // That is what budget line S4 asks for, and it is why the flag does not live
+    // on `providers/{uid}` behind a deny list.
+    match /provider_trust/{uid} {
+      allow read: if true;
       allow write: if false;
     }
 

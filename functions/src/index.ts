@@ -814,6 +814,10 @@ async function deleteIdentityVerificationData(uid: string): Promise<void> {
   }
 
   batch.delete(db.collection('identity_verification_states').doc(uid));
+  // Public projection (E1). Same batch as the guard it derives from: leaving it
+  // behind would keep a public "verified" badge on a deleted account, and this
+  // is the only purge mechanism the project has (D4).
+  batch.delete(db.collection('provider_trust').doc(uid));
   pending++;
   await flush();
 }
@@ -933,6 +937,14 @@ export const exportMyData = onCall(async (request) => {
     cniSexe: d.get('cniSexe'),
   }));
 
+  // Public projection (E1). Budget line S10 asks for erasure AND export of any
+  // new PII collection. This one holds no PII at all, so exporting it is
+  // arguably unnecessary; it is exported anyway, because satisfying the line
+  // costs three lines and arguing about it costs more. The socle set the
+  // precedent of writing down what is excluded and why (see the guard document
+  // above), so here is the symmetric note for what is included.
+  const trust = await db.collection('provider_trust').doc(uid).get();
+
   const one = (s: admin.firestore.DocumentSnapshot) =>
     s.exists ? { id: s.id, ...s.data() } : null;
   const many = (q: admin.firestore.QuerySnapshot) =>
@@ -948,6 +960,7 @@ export const exportMyData = onCall(async (request) => {
     reviewsWritten: many(revWritten),
     reviewsReceived: many(revReceived),
     identityVerifications,
+    identityTrust: one(trust),
   };
 });
 

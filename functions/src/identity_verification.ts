@@ -36,11 +36,21 @@ export const INTERNAL_SUB = 'identity_internal';
 export const INTERNAL_DOC = 'review';
 export const STATES = 'identity_verification_states';
 
-/// Public provider profile collection. Holds the server-owned identity badge
-/// flag (D6-a, Amath 2026-08-21): a boolean the client is never trusted to
-/// write. See the decision transaction and firestore.rules.
-export const PROVIDERS = 'providers';
-export const IDENTITY_VERIFIED_FIELD = 'identityVerified';
+/// Public trust projection. One document per provider, world readable and
+/// `write: if false` for every client (decision E1, Amath 2026-08-22, replacing
+/// D6-a).
+///
+/// Why a dedicated collection rather than a flag on `providers/{uid}`: budget
+/// line S4 forbids protecting a trust field with a deny list, because a deny
+/// list only covers the keys someone remembered to list. And the product needs
+/// THREE public states (E3), which a boolean cannot carry: a client must be able
+/// to tell "verification under way" from "nothing submitted".
+export const TRUST = 'provider_trust';
+
+/// The only two values the projection ever holds. Absence of the document is
+/// the third state, "not verified": nothing public is ever written about a
+/// provider whose file was rejected or revoked.
+export type TrustStatus = 'pending' | 'verified';
 
 /// Rate limit. Exported so tests can reason about the window without waiting a
 /// day, and so no other file re-invents the numbers.
@@ -59,6 +69,41 @@ export const EXTRACTION_STALE_MS = 15 * 60 * 1000;
 export interface IdentityFileMetadata {
   generation: string;
   md5Hash: string;
+}
+
+/// Derives the public projection from the guard document, and nothing else.
+///
+/// Single deriver on purpose: the guard is already the serialisation point of
+/// this subsystem (both the submission and the decision transactions read and
+/// write it), so anything derived from it inside one of those transactions
+/// cannot interleave. Every caller passes its own transaction.
+///
+/// Returns what was written, so callers can assert on it without re-reading.
+export function projectFromGuard(
+  tx: admin.firestore.Transaction,
+  uid: string,
+  guard: { verified: boolean; pendingId: string | null }
+): TrustStatus | null {
+  const ref = db().collection(TRUST).doc(uid);
+  if (guard.verified) {
+    tx.set(ref, {
+      identityStatus: 'verified',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return 'verified';
+  }
+  if (guard.pendingId) {
+    tx.set(ref, {
+      identityStatus: 'pending',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return 'pending';
+  }
+  // Rejected, revoked, or never submitted: the document is deleted, so a
+  // refusal is indistinguishable from an absence of submission. That is the
+  // product contract (spec section 5), not an implementation detail.
+  tx.delete(ref);
+  return null;
 }
 
 /// Deterministic, caller-scoped document id.
@@ -254,6 +299,9 @@ export const submitIdentityVerification = onCall(async (request) => {
       },
       { merge: true }
     );
+
+    // Public projection, in the same transaction as the guard it derives from.
+    projectFromGuard(tx, uid, { verified: state.verified, pendingId: docId });
 
     return { alreadySubmitted: false, verificationId: docId };
   });
@@ -687,17 +735,14 @@ async function decide(
       { merge: true }
     );
 
-    // D6-a (Amath, 2026-08-21): the public "Verified" badge reads this
-    // server-owned boolean on the provider profile, never a client-supplied
-    // field. Written ONLY here, in the same transaction as the verdict, so the
-    // badge can never diverge from the guard. approve -> true, reject/revoke ->
-    // false. Firestore rules forbid the owner from writing this key, so a
-    // provider can never grant themselves the badge.
-    tx.set(
-      db().collection(PROVIDERS).doc(uid),
-      { [IDENTITY_VERIFIED_FIELD]: opts.status === 'approved' },
-      { merge: true }
-    );
+    // Public projection (E1), in the same transaction as the verdict, so the
+    // badge can never diverge from it. Approve projects "verified"; reject and
+    // revoke delete the document, which is what makes a refusal publicly
+    // indistinguishable from never having submitted.
+    projectFromGuard(tx, uid, {
+      verified: opts.status === 'approved',
+      pendingId: null,
+    });
 
     // Inside the transaction: an untraced decision on an identity document
     // would break "every staff action is traced" without anything noticing.

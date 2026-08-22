@@ -186,42 +186,51 @@ describe('providers/{uid}: the identity badge flag is server-owned (D6-a)', () =
     });
   });
 
-  it('lets the owner write an ordinary profile field, but NOT the badge flag', async () => {
-    // D6-a (Amath, 2026-08-21): the public "Verified" badge now reads
-    // `providers/{uid}.identityVerified`. That makes the field a trust
-    // decision, so it joins the denylist: the owner may still edit their own
-    // bio, but must never grant themselves the badge. Only the decision Cloud
-    // Function (Admin SDK) writes it.
+  it('lets the owner write an ordinary profile field, badge or no badge', async () => {
+    // E1 (Amath, 2026-08-22) replaced D6-a: the badge left `providers/{uid}`
+    // for its own collection, so there is nothing to deny here any more. The
+    // owner edits their profile freely, and no key of this document decides
+    // anything about trust. Budget line S4 is satisfied by absence, which is
+    // the only way it can be satisfied: a deny list only covers the keys
+    // someone remembered to list.
     const db = asOwner();
     await assertSucceeds(updateDoc(doc(db, 'providers', OWNER), { bio: 'hello' }));
+  });
+
+  it('lets nobody write the public trust projection, whatever their claim', async () => {
+    // The projection is derived by the decision transaction through the Admin
+    // SDK, which bypasses rules. Every client is refused, INCLUDING the
+    // provider it describes and including admin: a value nobody can type by
+    // hand cannot be forged, and cannot drift from the verdict it mirrors.
     await assertFails(
-      updateDoc(doc(db, 'providers', OWNER), { identityVerified: true })
+      setDoc(doc(asOwner(), 'provider_trust', OWNER), { identityStatus: 'verified' })
+    );
+    await assertFails(
+      setDoc(doc(asOther(), 'provider_trust', OWNER), { identityStatus: 'verified' })
+    );
+    await assertFails(
+      setDoc(doc(asSupport(), 'provider_trust', OWNER), { identityStatus: 'verified' })
+    );
+    await assertFails(
+      setDoc(doc(asModerator(), 'provider_trust', OWNER), { identityStatus: 'verified' })
+    );
+    await assertFails(
+      setDoc(doc(asAdmin(), 'provider_trust', OWNER), { identityStatus: 'verified' })
     );
   });
 
-  it('refuses the owner setting the badge flag on create either', async () => {
-    // The denylist guards update; create is guarded by forbidding the key
-    // outright, so a first-write cannot smuggle the badge in.
+  it('lets anyone read the public trust projection, signed in or not', async () => {
+    // The badge is meant to be read by a client deciding whether to book, and
+    // that client may not even have an account yet. The document holds no
+    // personal data precisely so that this read is safe.
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await deleteDoc(doc(ctx.firestore() as unknown as Firestore, 'providers', OWNER));
+      await setDoc(
+        doc(ctx.firestore() as unknown as Firestore, 'provider_trust', OWNER),
+        { identityStatus: 'verified' }
+      );
     });
-    const db = asOwner();
-    await assertFails(
-      setDoc(doc(db, 'providers', OWNER), {
-        uid: OWNER,
-        active: true,
-        suspended: false,
-        identityVerified: true,
-      })
-    );
-    // The same create without the trust field is allowed.
-    await assertSucceeds(
-      setDoc(doc(db, 'providers', OWNER), {
-        uid: OWNER,
-        active: true,
-        suspended: false,
-      })
-    );
+    await assertSucceeds(getDoc(doc(asAnon(), 'provider_trust', OWNER)));
+    await assertSucceeds(getDoc(doc(asOther(), 'provider_trust', OWNER)));
   });
 
   it('refuses the three moderation keys the denylist does name', async () => {
