@@ -438,8 +438,6 @@ class FirestoreCollections {
       active: (data['active'] as bool?) ?? true,
       suspended: (data['suspended'] as bool?) ?? false,
       createdAt: dateTimeFromFirestore(data['createdAt']),
-      // D6-a: server-owned identity badge. Absent means not verified.
-      identityVerified: (data['identityVerified'] as bool?) ?? false,
     );
   }
 

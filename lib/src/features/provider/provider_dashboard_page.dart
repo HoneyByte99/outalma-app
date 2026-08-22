@@ -19,7 +19,6 @@ import '../../domain/enums/category_id.dart';
 import '../../domain/models/provider_profile.dart';
 import '../shared/category_icon.dart';
 import '../shared/user_avatar.dart';
-import '../shared/verified_badge.dart';
 import '../../domain/models/service.dart';
 
 class ProviderDashboardPage extends ConsumerWidget {
@@ -174,7 +173,6 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
     final appUser = auth is AuthAuthenticated ? auth.user : null;
     // D6-a/E7: the badge reflects the server-owned identity verdict on the
     // provider's own profile, not a verified phone number.
-    final isVerified = widget.profile.identityVerified;
     final publishedCount =
         ref
             .watch(providerServicesProvider)
@@ -245,10 +243,6 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  if (isVerified) ...[
-                                    const SizedBox(width: 6),
-                                    const VerifiedBadge(compact: true),
-                                  ],
                                 ],
                               ),
                               const SizedBox(height: 2),

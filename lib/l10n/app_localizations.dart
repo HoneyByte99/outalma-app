@@ -3169,6 +3169,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Undo'**
   String get serviceFormPhotoUndo;
+
+  /// Public identity trust state shown to clients.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified profile'**
+  String get trustVerifiedLabel;
+
+  /// Public identity trust state shown to clients.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification under way'**
+  String get trustPendingLabel;
+
+  /// Public identity trust state shown to clients.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity not verified'**
+  String get trustUnverifiedLabel;
 }
 
 class _AppLocalizationsDelegate

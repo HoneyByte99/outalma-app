@@ -1,0 +1,21 @@
+{
+  "feature": "identity-verification-capture",
+  "cycle": "major",
+  "phase": "approved",
+  "stage": "dev",
+  "review": "pending",
+  "smoke": "pending",
+  "round": 0,
+  "escalations": 0,
+  "updated": "2026-08-22",
+  "worktree": ".worktrees/app-identity-capture",
+  "branch": "feature/identity-verification-capture (base: feature/identity-verification-backend)",
+  "gate1": "GO Amath 2026-08-21 00:02 (Telegram) : GO Forge capture accorde. Build autorise.",
+  "decision_D6": "ARBITRAGE D'AMATH DU 2026-08-22 : E1 fait foi. Le badge public vit dans provider_trust/{uid} (lecture publique, write: if false), PAS dans providers/{uid}.identityVerified. D6-a est annule. Motif : ligne HARD S4 (pas de denylist sur un champ de confiance) et E3 (trois etats publics, qu'un booleen ne peut pas porter). Les commits D6-a deja livres sont migres vers E1 par des commits AVANT, jamais par une reecriture d'historique.",
+  "note": "Cycle capture. Etat LOCAL au worktree depuis le 2026-08-22 (arbitrage d'Amath apres collision de deux agents sur un state partage). Le state a la racine du projet ne pilote plus ce cycle.",
+  "archi": "v4, 3 rounds faits, amendements round 3 appliques (plafond protocole).",
+  "conflict_note": "RESOLU 2026-08-21 : la collision pricing du 20/08 11:26 est traitee ; le cycle pricing-ranges utilise son state local (.worktrees/app-pricing/.claude/forge/state.json). Artefacts capture (spec+archi+scenarios) verifies presents et complets.",
+  "gate2": "GO d'Amath le 2026-08-21 : passage au design apres 3 rounds d'archi, amendements du round 3 appliques",
+  "design": "v4, 3 rounds, amendements du round 3 appliques sans 4e round (plafond du protocole)",
+  "collision": "2026-08-21/22 : un second agent a livre 3 commits sur cette branche (D6-a) sous GO Telegram, contredisant E1 valide en 3 rounds. Arbitre par Amath le 2026-08-22 en faveur d'E1. Le commit c820acc (pipeline pur de capture) est conserve integralement."
+}

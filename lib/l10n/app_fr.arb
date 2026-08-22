@@ -1,6 +1,5 @@
 {
   "@@locale": "fr",
-
   "navHome": "Accueil",
   "navBookings": "Réservations",
   "navChats": "Chats",
@@ -9,12 +8,10 @@
   "navMissions": "Missions",
   "navNotifications": "Notifications",
   "tooltipNotifications": "Notifications",
-
   "themeLight": "Clair",
   "themeDark": "Sombre",
   "themeAuto": "Auto",
   "themeSystem": "Système",
-
   "cancel": "Annuler",
   "save": "Enregistrer",
   "confirm": "Confirmer",
@@ -23,7 +20,6 @@
   "errorGeneral": "Une erreur est survenue. Veuillez réessayer.",
   "errorLoading": "Erreur de chargement",
   "errorNetwork": "Erreur de connexion",
-
   "signInWelcome": "Bon retour !",
   "signInSubtitle": "Connectez-vous pour accéder à vos services.",
   "signInEmailHint": "Adresse email",
@@ -40,7 +36,6 @@
   "authErrorAccountDisabled": "Ce compte est désactivé.",
   "authErrorTooManyRequests": "Trop de tentatives. Réessayez plus tard.",
   "authErrorSignInFailed": "Connexion échouée. Vérifiez vos informations.",
-
   "signUpTitle": "Créez votre compte",
   "signUpSubtitle": "Rejoignez Outalma et accédez à des services à domicile.",
   "signUpNameHint": "Votre nom complet",
@@ -73,17 +68,20 @@
   "phoneOtpSentTo": "Code envoyé au {phone}",
   "@phoneOtpSentTo": {
     "placeholders": {
-      "phone": { "type": "String" }
+      "phone": {
+        "type": "String"
+      }
     }
   },
   "phoneOtpNoAccount": "Aucun compte trouvé pour ce numéro. Inscrivez-vous d'abord.",
   "signUpVerificationNotice": "À la création du compte, un email de vérification sera envoyé. Cliquez sur le lien dans votre boîte mail pour confirmer votre adresse.",
   "signUpVerificationResent": "Email de vérification renvoyé.",
-
   "homeGreeting": "Bonjour {name}",
   "@homeGreeting": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "homeGreetingNoName": "Bonjour",
@@ -92,7 +90,9 @@
   "homeSearchEmpty": "Aucun résultat pour « {query} »",
   "@homeSearchEmpty": {
     "placeholders": {
-      "query": { "type": "String" }
+      "query": {
+        "type": "String"
+      }
     }
   },
   "categoryAll": "Tout",
@@ -111,7 +111,6 @@
   "dashboardStatsUpcomingWeek": "À venir cette semaine",
   "dashboardStatsThisMonth": "Réservations ce mois",
   "dashboardStatsAcceptanceRate": "Taux d'acceptation",
-
   "locationTitle": "Localisation",
   "locationAllFrance": "Toute la France",
   "locationValidate": "Valider",
@@ -128,10 +127,11 @@
   "locationSaved": "\"{name}\" enregistré",
   "@locationSaved": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "profileTitle": "Profil & Paramètres",
   "profileMyReviews": "Mes avis",
   "profileActiveMode": "Mode actif",
@@ -141,7 +141,9 @@
   "profileErrorUpload": "Erreur : {error}",
   "@profileErrorUpload": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "profileSaved": "Profil mis à jour.",
@@ -164,10 +166,11 @@
   "reviewsCount": "{count, plural, =0{Aucun avis} =1{1 avis} other{{count} avis}}",
   "@reviewsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "dashboardTitle": "Tableau de bord",
   "dashboardMyServices": "Mes services",
   "dashboardAdd": "Ajouter",
@@ -191,7 +194,9 @@
   "hubPauseBody": "Vos {count} annonces seront masquées aux clients. Réactivez quand vous voulez.",
   "@hubPauseBody": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "hubPauseBodyNoCount": "Vos annonces seront masquées aux clients. Réactivez quand vous voulez.",
@@ -210,13 +215,17 @@
   "serviceToggleActivate": "Mettre {title} en ligne",
   "@serviceToggleActivate": {
     "placeholders": {
-      "title": { "type": "String" }
+      "title": {
+        "type": "String"
+      }
     }
   },
   "serviceToggleDeactivate": "Mettre {title} hors ligne",
   "@serviceToggleDeactivate": {
     "placeholders": {
-      "title": { "type": "String" }
+      "title": {
+        "type": "String"
+      }
     }
   },
   "serviceDelete": "Supprimer",
@@ -225,7 +234,6 @@
   "serviceDeleted": "Service supprimé",
   "ratingNew": "Nouveau",
   "tooltipProviderProfile": "Mon profil prestataire",
-
   "bookingsTitle": "Mes réservations",
   "tabActive": "En cours",
   "tabDone": "Terminées",
@@ -242,16 +250,19 @@
   "bookingRequestedAt": "Demande du {date}",
   "@bookingRequestedAt": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "bookingScheduledAt": "Prévu : {datetime}",
   "@bookingScheduledAt": {
     "placeholders": {
-      "datetime": { "type": "String" }
+      "datetime": {
+        "type": "String"
+      }
     }
   },
-
   "bookingDetailTitle": "Détail de la réservation",
   "bookingService": "Service",
   "bookingMessage": "Message",
@@ -263,7 +274,9 @@
   "bookingDistanceEstimate": "Distance estimée : ~{km} km",
   "@bookingDistanceEstimate": {
     "placeholders": {
-      "km": {"type": "String"}
+      "km": {
+        "type": "String"
+      }
     }
   },
   "bookingOpenDirections": "Itinéraire",
@@ -274,7 +287,9 @@
   "bookingSharePhone": "Partager mon numéro ({phone})",
   "@bookingSharePhone": {
     "placeholders": {
-      "phone": { "type": "String" }
+      "phone": {
+        "type": "String"
+      }
     }
   },
   "bookingSharePhoneError": "Impossible de partager le numéro.",
@@ -318,7 +333,6 @@
   "bookingConfirmDoneButton": "Confirmer la fin du service",
   "bookingDoneSuccess": "Service terminé !",
   "bookingDoneError": "Erreur lors de la confirmation.",
-
   "bookingRequestTitle": "Demander ce service",
   "bookingStep1Title": "Décrivez votre besoin",
   "bookingStep1Subtitle": "Donnez des détails pour aider le prestataire à comprendre votre demande.",
@@ -326,7 +340,9 @@
   "bookingDefaultMessage": "Bonjour, je suis intéressé(e) par votre service « {serviceTitle} ». Pouvez-vous me contacter pour convenir d'un rendez-vous ? Merci !",
   "@bookingDefaultMessage": {
     "placeholders": {
-      "serviceTitle": { "type": "String" }
+      "serviceTitle": {
+        "type": "String"
+      }
     }
   },
   "bookingStep2Title": "Date et heure souhaitées",
@@ -354,7 +370,6 @@
   "bookingConflictBusy": "Le prestataire a déjà un RDV prévu à cette heure.",
   "bookingConflictUnavailableDay": "Le prestataire est indisponible ce jour.",
   "bookingConflictUnavailableSlot": "Le prestataire est indisponible sur ce créneau.",
-
   "messagesTitle": "Messages",
   "chatEmpty": "Aucun chat actif",
   "chatEmptySubtitle": "Les conversations démarrent après\nl'acceptation d'une réservation.",
@@ -369,12 +384,15 @@
   "chatErrorSend": "Impossible d'envoyer.",
   "chatTabActive": "En cours",
   "chatTabDone": "Terminées",
-
   "notificationsTitle": "Notifications",
   "notificationsReadAll": "Tout lire",
   "notificationsUnreadCount": "{count} non lues",
   "@notificationsUnreadCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "notificationsEmpty": "Aucune notification",
   "notificationsEmptySubtitle": "Vous serez notifié ici lorsque\nquelque chose se passe.",
@@ -383,23 +401,28 @@
   "notificationTimeMinutes": "Il y a {count} min",
   "@notificationTimeMinutes": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "notificationTimeHours": "Il y a {count} h",
   "@notificationTimeHours": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "notificationTimeYesterday": "Hier",
   "notificationTimeDays": "Il y a {count} j",
   "@notificationTimeDays": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "inboxTitle": "Missions",
   "inboxCalendarTooltip": "Mon calendrier",
   "calendarFullDay": "Journée entière",
@@ -418,7 +441,6 @@
   "inboxLoadError": "Impossible de charger les données.",
   "inboxOpenChat": "Ouvrir le chat",
   "inboxMoreDetails": "Plus de détails",
-
   "reviewTitle": "Laisser un avis",
   "reviewEvaluateProvider": "Évaluez le prestataire",
   "reviewEvaluateClient": "Évaluez le client",
@@ -430,7 +452,6 @@
   "reviewError": "Impossible d'envoyer l'avis.",
   "reviewBookingNotFound": "Réservation introuvable.",
   "reviewOnlyAfterDone": "Avis disponible uniquement après la fin du service.",
-
   "reportTitle": "Signaler",
   "reportQuestion": "Pourquoi signalez-vous ?",
   "reportSubtitle": "Votre signalement est anonyme et sera examiné par notre équipe.",
@@ -443,15 +464,18 @@
   "reportReason4": "Contenu offensant",
   "reportReason5": "Harcèlement",
   "reportReason6": "Autre",
-
   "serviceDescription": "Description",
   "serviceProviderLabel": "Prestataire",
   "serviceViewProfile": "Voir le profil",
   "servicePhotoCounter": "Photo {current} sur {total}",
   "@servicePhotoCounter": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "serviceBook": "Demander ce service",
@@ -459,7 +483,6 @@
   "serviceNotFound": "Service introuvable",
   "seeMore": "Voir plus",
   "seeLess": "Voir moins",
-
   "onboardingTitle": "Devenir prestataire",
   "onboardingHeadline": "Proposez vos services",
   "onboardingBody": "Créez votre profil prestataire en quelques secondes. Vous pourrez ensuite publier vos services et recevoir des demandes.",
@@ -471,7 +494,6 @@
   "onboardingHoursStart": "De",
   "onboardingHoursEnd": "À",
   "onboardingError": "Impossible d'activer le profil. Réessayez.",
-
   "serviceFormCreateTitle": "Nouveau service",
   "serviceFormEditTitle": "Modifier le service",
   "serviceFormTitleLabel": "Titre du service",
@@ -493,11 +515,22 @@
   "serviceFormPhotoAdd": "Ajouter une photo (optionnel)",
   "serviceFormPhotoMax": "Vous pouvez ajouter jusqu'à {max} photos.",
   "@serviceFormPhotoMax": {
-    "placeholders": { "max": { "type": "int" } }
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
   },
   "serviceFormPhotoCount": "{count} photo(s) sur {max}",
   "@serviceFormPhotoCount": {
-    "placeholders": { "count": { "type": "int" }, "max": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
   },
   "serviceFormSaveError": "Impossible d'enregistrer. Réessayez.",
   "serviceFormPublishNeedsProfile": "Complétez votre profil prestataire avant de publier. Vous pouvez l'enregistrer en brouillon pour l'instant.",
@@ -516,12 +549,13 @@
   "zoneRadiusLabel": "Rayon : {radius}",
   "@zoneRadiusLabel": {
     "placeholders": {
-      "radius": { "type": "String" }
+      "radius": {
+        "type": "String"
+      }
     }
   },
   "zoneValidate": "Valider",
   "zoneModify": "Modifier",
-
   "phoneAuthTitle": "Numéro de téléphone",
   "phoneAuthSubtitle": "Entrez votre numéro pour recevoir un code de vérification par SMS.",
   "phoneAuthButton": "Envoyer le code",
@@ -532,7 +566,9 @@
   "otpSubtitle": "Un code a été envoyé au {phone}",
   "@otpSubtitle": {
     "placeholders": {
-      "phone": { "type": "String" }
+      "phone": {
+        "type": "String"
+      }
     }
   },
   "otpHint": "Code à 6 chiffres",
@@ -540,7 +576,9 @@
   "otpResendIn": "Renvoyer dans {seconds}s",
   "@otpResendIn": {
     "placeholders": {
-      "seconds": { "type": "int" }
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "otpResend": "Renvoyer le code",
@@ -551,11 +589,9 @@
   "phoneNameHint": "Prénom et nom",
   "phoneNameButton": "Continuer",
   "phoneNameError": "Impossible de sauvegarder. Réessayez.",
-
   "langSystem": "Système (appareil)",
   "langFrench": "Français",
   "langEnglish": "Anglais",
-
   "switchModeTitle": "Choisir un mode",
   "switchModeHeading": "Votre mode actif",
   "switchModeDescription": "Passez du mode client au mode prestataire à tout moment.",
@@ -563,8 +599,7 @@
   "themeSystemSubtitle": "Suit les préférences de votre appareil",
   "themeLightSubtitle": "Toujours en mode clair",
   "themeDarkSubtitle": "Toujours en mode sombre",
-
-  "chatRecording": "Enregistrement en cours\u2026",
+  "chatRecording": "Enregistrement en cours…",
   "chatSubtitle": "Coordonnez les détails du service ici.",
   "chatMicError": "Impossible d'activer le micro.",
   "chatMicPermission": "Autorisez l'accès au micro pour envoyer un vocal.",
@@ -576,13 +611,11 @@
   "chatVoiceError": "Impossible d'envoyer le vocal.",
   "chatVoiceSending": "Envoi du message vocal…",
   "chatFileError": "Impossible d'envoyer le fichier.",
-  "chatAddCaption": "Ajouter un message\u2026",
+  "chatAddCaption": "Ajouter un message…",
   "chatGallery": "Galerie",
-
   "reviewsLabel": "Avis",
   "servicesOffered": "Services proposés",
   "bookingAddressLabel": "Adresse d'intervention",
-
   "introSlide1Title": "Bienvenue sur Outalma",
   "introSlide1Body": "Trouvez les meilleurs prestataires de services près de chez vous, rapidement et en toute confiance.",
   "introSlide2Title": "Réservez en un instant",
@@ -633,7 +666,13 @@
   "bookingModeText": "Texte",
   "bookingModeVoice": "Vocal",
   "reviewStarLabel": "{count} étoile{count, plural, one{} other{s}}",
-  "@reviewStarLabel": { "placeholders": { "count": { "type": "int" } } },
+  "@reviewStarLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "chatReply": "Répondre",
   "chatCopy": "Copier",
   "chatCopied": "Copié",
@@ -650,10 +689,20 @@
   "zoneSheetEditTitle": "Modifier la zone",
   "zoneSheetAddTitle": "Ajouter une zone",
   "zoneCityOrAddress": "Ville ou adresse",
-  "zoneRadius": "Rayon d'intervention",
   "zoneEdit": "Modifier",
-  "zoneValidate": "Valider",
   "serviceFormPhotoRemove": "Supprimer la photo",
   "serviceFormPhotoRemoved": "Photo supprimée",
-  "serviceFormPhotoUndo": "Annuler"
+  "serviceFormPhotoUndo": "Annuler",
+  "trustVerifiedLabel": "Profil vérifié",
+  "@trustVerifiedLabel": {
+    "description": "Public identity trust state shown to clients."
+  },
+  "trustPendingLabel": "Vérification en cours",
+  "@trustPendingLabel": {
+    "description": "Public identity trust state shown to clients."
+  },
+  "trustUnverifiedLabel": "Identité non vérifiée",
+  "@trustUnverifiedLabel": {
+    "description": "Public identity trust state shown to clients."
+  }
 }

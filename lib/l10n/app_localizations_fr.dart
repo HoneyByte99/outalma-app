@@ -1673,4 +1673,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get serviceFormPhotoUndo => 'Annuler';
+
+  @override
+  String get trustVerifiedLabel => 'Profil vérifié';
+
+  @override
+  String get trustPendingLabel => 'Vérification en cours';
+
+  @override
+  String get trustUnverifiedLabel => 'Identité non vérifiée';
 }
