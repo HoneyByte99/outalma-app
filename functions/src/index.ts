@@ -120,6 +120,71 @@ function chatIdForBooking(bookingId: string): string {
   return `chat_${bookingId}`;
 }
 
+// ---------------------------------------------------------------------------
+// Senegal-only service location (CADRAGE section 5)
+// ---------------------------------------------------------------------------
+//
+// The prestation itself must take place in Senegal. The client filters and warns
+// at publication, but the server is the source of truth: a booking whose address
+// is provably outside Senegal is refused here regardless of what the client did.
+//
+// Two independent signals, both authoritative when present:
+//  - `countryCode`: the ISO code resolved by geocoding. If present it must be SN.
+//  - `lat`/`lng`: verified against Senegal's bounding box. Coordinates cannot be
+//    spoofed as easily as a label, so they are checked even when a countryCode
+//    claims SN.
+// When neither signal is present (a free-text address with no geocode) the
+// booking is allowed through, consistent with the zone check's "provider
+// discretion" stance: the gate refuses what it can prove is foreign, it does not
+// demand proof of Senegalese-ness the client may not have.
+
+// Padded bounding box for Senegal. Mainland Senegal spans roughly lat 12.3..16.7
+// and lng -17.6..-11.3; the padding avoids rejecting a coastal or border address
+// whose geocode lands just outside the tight hull. The point of this box is to
+// reject France/Europe/other continents, not to adjudicate the Gambia border.
+const SN_LAT_MIN = 12.0;
+const SN_LAT_MAX = 17.0;
+const SN_LNG_MIN = -17.9;
+const SN_LNG_MAX = -11.0;
+
+export function isWithinSenegalBox(lat: number, lng: number): boolean {
+  return (
+    lat >= SN_LAT_MIN &&
+    lat <= SN_LAT_MAX &&
+    lng >= SN_LNG_MIN &&
+    lng <= SN_LNG_MAX
+  );
+}
+
+/// Throws `failed-precondition` when the address snapshot is provably outside
+/// Senegal. A missing/partial snapshot is not rejected (see the note above).
+function assertServiceLocationInSenegal(addressSnapshot: unknown): void {
+  const addr = addressSnapshot as
+    | { lat?: unknown; lng?: unknown; countryCode?: unknown }
+    | null;
+  if (!addr || typeof addr !== 'object') return;
+
+  const cc =
+    typeof addr.countryCode === 'string'
+      ? addr.countryCode.trim().toUpperCase()
+      : null;
+  if (cc && cc !== 'SN') {
+    throw new HttpsError(
+      'failed-precondition',
+      'La prestation doit se situer au Senegal.'
+    );
+  }
+
+  if (typeof addr.lat === 'number' && typeof addr.lng === 'number') {
+    if (!isWithinSenegalBox(addr.lat, addr.lng)) {
+      throw new HttpsError(
+        'failed-precondition',
+        'La prestation doit se situer au Senegal.'
+      );
+    }
+  }
+}
+
 export const createBooking = onCall(async (request) => {
   const uid = request.auth?.uid;
   assertAuthenticated(uid);
@@ -134,6 +199,9 @@ export const createBooking = onCall(async (request) => {
   // schedule/addressSnapshot are intentionally permissive for MVP; validate in app + tighten later.
   const schedule = request.data?.schedule ?? null;
   const addressSnapshot = request.data?.addressSnapshot ?? null;
+  // CADRAGE section 5: the prestation must be in Senegal. Server is source of
+  // truth; refuse an address provably outside SN before doing any work.
+  assertServiceLocationInSenegal(addressSnapshot);
   const audioMessageUrl = typeof request.data?.audioMessageUrl === 'string'
     ? request.data.audioMessageUrl.trim()
     : null;
@@ -1151,6 +1219,76 @@ export const sendBookingReminders = onSchedule(
     }
 
     logger.info(`Booking reminders: checked ${snap.size}, sent ${sent}`);
+  }
+);
+
+// ---------------------------------------------------------------------------
+// autoCloseStaleBookings (SPEC section 1.5 / CADRAGE section 4)
+// ---------------------------------------------------------------------------
+//
+// A booking the provider started (`in_progress`) but the client never confirms
+// would otherwise stay open forever, and the bilateral review is gated on
+// `done`, so it would never unlock. This closes such a booking automatically
+// 48h after `startedAt`, exactly as `confirmDone` would, but system-driven.
+//
+// `confirmDone` (the manual path) is untouched: it still transitions the same
+// `in_progress -> done` and remains the normal way to close a booking early.
+//
+// The transition fires `onBookingStatusChange` (case `done`), which already
+// sends the "service termine" notification, so nothing is added on the notif
+// side. The extra markers (`autoClosed`, `closedBy`) let the UI and analytics
+// tell an auto-close apart from a client confirmation.
+
+/// 48h, the delay fixed on 2026-08-13 (SPEC section 1.5).
+const AUTO_CLOSE_AFTER_MS = 48 * 60 * 60 * 1000;
+
+export const autoCloseStaleBookings = onSchedule(
+  { schedule: 'every 60 minutes', timeZone: 'Europe/Paris' },
+  async () => {
+    const cutoff = admin.firestore.Timestamp.fromMillis(
+      Date.now() - AUTO_CLOSE_AFTER_MS
+    );
+
+    // status == in_progress AND startedAt <= cutoff. Needs the composite index
+    // (status asc, startedAt asc) added to firestore.indexes.json.
+    const snap = await db
+      .collection('bookings')
+      .where('status', '==', 'in_progress')
+      .where('startedAt', '<=', cutoff)
+      .get();
+
+    let closed = 0;
+
+    for (const doc of snap.docs) {
+      // Re-read and re-check inside the transaction: another scheduler run (retry
+      // or overlap) or a manual confirmDone/cancelBooking may have moved this
+      // booking since the query. Only a booking that is STILL in_progress and
+      // STILL past the cutoff is closed, which makes the job idempotent.
+      const didClose = await db.runTransaction(async (tx) => {
+        const fresh = await tx.get(doc.ref);
+        if (!fresh.exists) return false;
+        const b = fresh.data() as {
+          status?: BookingStatus;
+          startedAt?: admin.firestore.Timestamp | null;
+        };
+        if (b.status !== 'in_progress') return false;
+        if (!b.startedAt || b.startedAt.toMillis() > cutoff.toMillis()) {
+          return false;
+        }
+        tx.update(doc.ref, {
+          status: 'done' as BookingStatus,
+          doneAt: admin.firestore.FieldValue.serverTimestamp(),
+          autoClosed: true,
+          closedBy: 'system',
+        });
+        return true;
+      });
+      if (didClose) closed++;
+    }
+
+    logger.info(
+      `Auto-close stale bookings: checked ${snap.size}, closed ${closed}`
+    );
   }
 );
 
@@ -2649,4 +2787,5 @@ export {
   approveIdentityVerification,
   rejectIdentityVerification,
   revokeIdentityVerification,
+  getIdentityVerificationImages,
 } from './identity_verification';

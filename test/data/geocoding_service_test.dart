@@ -26,6 +26,7 @@ http.Response _nominatimResponse() {
       'lat': '48.8566',
       'lon': '2.3522',
       'display_name': 'Paris, Île-de-France, France',
+      'address': {'country_code': 'fr'},
     },
   ]);
   return http.Response(body, 200);
@@ -132,6 +133,20 @@ void main() {
     );
   });
 
+  group('GeocodingService.autocomplete country code', () {
+    test('nominatim placeId encodes the ISO country code', () async {
+      final client = MockClient((request) async {
+        expect(request.url.host, 'nominatim.openstreetmap.org');
+        // addressdetails is requested so the country can be read.
+        expect(request.url.queryParameters['addressdetails'], '1');
+        return _nominatimResponse();
+      });
+      final service = GeocodingService(apiKey: '', httpClient: client);
+      final results = await service.autocomplete('Paris');
+      expect(results.first.placeId, 'nominatim:48.8566,2.3522,FR');
+    });
+  });
+
   group('GeocodingService.getPlaceLatLng', () {
     test('parses nominatim-encoded placeId without HTTP', () async {
       final service = GeocodingService(apiKey: '');
@@ -140,6 +155,50 @@ void main() {
       expect(coords, isNotNull);
       expect(coords!.lat, closeTo(48.8566, 0.0001));
       expect(coords.lng, closeTo(2.3522, 0.0001));
+      // No country segment: countryCode is unknown.
+      expect(coords.countryCode, isNull);
+    });
+
+    test('parses the country segment of a nominatim placeId', () async {
+      final service = GeocodingService(apiKey: '');
+      final coords = await service.getPlaceLatLng(
+        'nominatim:14.6928,-17.4467,SN',
+      );
+
+      expect(coords, isNotNull);
+      expect(coords!.lat, closeTo(14.6928, 0.0001));
+      expect(coords.lng, closeTo(-17.4467, 0.0001));
+      expect(coords.countryCode, 'SN');
+    });
+
+    test('reads the country from Google addressComponents', () async {
+      final client = MockClient((request) async {
+        expect(request.url.host, 'places.googleapis.com');
+        // The FieldMask must ask for addressComponents, else no country.
+        expect(
+          request.headers['X-Goog-FieldMask'],
+          contains('addressComponents'),
+        );
+        return http.Response(
+          jsonEncode({
+            'location': {'latitude': 14.6928, 'longitude': -17.4467},
+            'addressComponents': [
+              {
+                'longText': 'Senegal',
+                'shortText': 'SN',
+                'types': ['country', 'political'],
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      final service = GeocodingService(apiKey: 'key', httpClient: client);
+      final coords = await service.getPlaceLatLng('somePlaceId');
+
+      expect(coords, isNotNull);
+      expect(coords!.countryCode, 'SN');
+      expect(coords.lat, closeTo(14.6928, 0.0001));
     });
 
     test('returns null for malformed nominatim data', () async {

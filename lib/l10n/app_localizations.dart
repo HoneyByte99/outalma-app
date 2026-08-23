@@ -1682,6 +1682,12 @@ abstract class AppLocalizations {
   /// **'This provider is currently unavailable.'**
   String get bookingProviderUnavailable;
 
+  /// No description provided for @bookingAddressNotInSenegal.
+  ///
+  /// In en, this message translates to:
+  /// **'The service must take place in Senegal. Please choose an address in Senegal.'**
+  String get bookingAddressNotInSenegal;
+
   /// No description provided for @marketplaceDisclaimer.
   ///
   /// In en, this message translates to:
@@ -1703,7 +1709,7 @@ abstract class AppLocalizations {
   /// No description provided for @bookingStep3Hint.
   ///
   /// In en, this message translates to:
-  /// **'E.g. 12 rue de la Paix, Paris 75001'**
+  /// **'E.g. Rue 10, Point E, Dakar'**
   String get bookingStep3Hint;
 
   /// No description provided for @bookingBack.

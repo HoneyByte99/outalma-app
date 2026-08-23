@@ -853,6 +853,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This provider is currently unavailable.';
 
   @override
+  String get bookingAddressNotInSenegal =>
+      'The service must take place in Senegal. Please choose an address in Senegal.';
+
+  @override
   String get marketplaceDisclaimer =>
       'Outalma only connects clients and independent providers. Any agreement and payment is made directly between you, outside the app and at your own risk. Always check who you are dealing with.';
 
@@ -864,7 +868,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Where should the provider intervene? (optional)';
 
   @override
-  String get bookingStep3Hint => 'E.g. 12 rue de la Paix, Paris 75001';
+  String get bookingStep3Hint => 'E.g. Rue 10, Point E, Dakar';
 
   @override
   String get bookingBack => 'Back';

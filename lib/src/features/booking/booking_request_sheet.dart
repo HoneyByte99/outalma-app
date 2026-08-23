@@ -19,6 +19,7 @@ import '../../application/booking/booking_providers.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../data/services/chat_media_service.dart';
 import '../../data/services/geocoding_service.dart';
+import '../../data/services/senegal_location.dart';
 import '../../domain/models/provider_profile.dart';
 import '../shared/marketplace_disclaimer.dart';
 
@@ -281,6 +282,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     try {
       double? lat;
       double? lng;
+      String? countryCode;
       final placeId = _selectedPlaceId;
       if (placeId != null && placeId.isNotEmpty) {
         try {
@@ -289,10 +291,31 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
           if (coords != null) {
             lat = coords.lat;
             lng = coords.lng;
+            countryCode = coords.countryCode;
           }
         } catch (_) {
           // Non-blocking: the booking can still be created without coords.
         }
+      }
+
+      // CADRAGE section 5: the prestation must be in Senegal. Block with an
+      // explicit message when we can prove the address is elsewhere. The server
+      // (createBooking) enforces the same rule as the source of truth.
+      if (evaluateSenegalLocation(
+            countryCode: countryCode,
+            lat: lat,
+            lng: lng,
+          ) ==
+          SenegalLocationResult.outside) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.bookingAddressNotInSenegal),
+            backgroundColor: errorColor,
+          ),
+        );
+        setState(() => _loading = false);
+        return;
       }
 
       String requestMessage;
@@ -327,6 +350,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         address: _addressController.text.trim(),
         addressLat: lat,
         addressLng: lng,
+        addressCountryCode: countryCode,
         audioMessageUrl: audioMessageUrl,
       );
       if (mounted) {

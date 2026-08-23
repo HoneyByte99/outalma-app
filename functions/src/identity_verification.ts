@@ -17,7 +17,7 @@ import {
   assertAuthenticated,
   requireString,
 } from './common';
-import { writeAdminLogTx } from './audit';
+import { writeAdminLog, writeAdminLogTx } from './audit';
 import { createNotification, sendPushToUsers } from './notify';
 import {
   buildObjectPaths,
@@ -856,4 +856,116 @@ export const revokeIdentityVerification = onCall(async (request) => {
     // needed.
     checkFingerprints: false,
   });
+});
+
+// ---------------------------------------------------------------------------
+// getIdentityVerificationImages : staff-only, short-lived signed URLs
+// ---------------------------------------------------------------------------
+//
+// The three identity images live under a private, staff-only bucket prefix
+// (`private/identity/{uid}/{batchId}/`): no client, not even their owner, can
+// read them directly (storage.rules deny every path under `private/`). The
+// review screen therefore cannot load them straight from Storage. This callable
+// is the only door: the SERVER signs a short-lived read URL for each object,
+// so the bucket stays staff-only and the URL cannot be reused past its window.
+//
+// The paths are never taken from the caller: they are read from the internal
+// review document written at submission, exactly like the decision callables.
+
+/// How long a signed identity-image URL stays valid. Ten minutes: long enough
+/// for a reviewer to open the three images, short enough that a leaked URL is
+/// worthless almost immediately. Exported so tests reason about the window.
+export const IDENTITY_IMAGE_URL_TTL_MS = 10 * 60 * 1000;
+
+/// Signs a short-lived read URL for one Storage object. Behind an interface for
+/// the same reason as the text extractor: `getSignedUrl` calls the IAM signBlob
+/// API (or a local key) that the Storage emulator cannot serve, so the only way
+/// to test "the callable signs exactly these three paths, and refuses the wrong
+/// caller" without a billed dependency is to substitute a double.
+export interface UrlSigner {
+  sign(objectPath: string, expiresAtMs: number): Promise<string>;
+}
+
+/// Production signer: a v4 read URL via the bucket's default credentials. On a
+/// deployed function the runtime service account holds `signBlob`, so no private
+/// key is shipped.
+/* istanbul ignore next -- thin adapter over the Storage SDK: there is no signer
+   in the emulator, so the only way to execute this body would be to sign against
+   the real API. The seam it sits behind is one line wide and covered through the
+   injected double. */
+export const storageUrlSigner: UrlSigner = {
+  async sign(objectPath: string, expiresAtMs: number): Promise<string> {
+    const [url] = await admin
+      .storage()
+      .bucket()
+      .file(objectPath)
+      .getSignedUrl({ version: 'v4', action: 'read', expires: expiresAtMs });
+    return url;
+  },
+};
+
+let activeSigner: UrlSigner = storageUrlSigner;
+
+/// Swaps the URL signer. The only supported use is a test double: see UrlSigner.
+export function setUrlSigner(signer: UrlSigner): void {
+  activeSigner = signer;
+}
+
+export function resetUrlSigner(): void {
+  activeSigner = storageUrlSigner;
+}
+
+export const getIdentityVerificationImages = onCall(async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  // Same circle as the decision callables: the people who may see identity
+  // documents stop at moderator. `support` never reaches the images.
+  assertAdminOrModeratorClaim(
+    request.auth?.token as Record<string, unknown> | undefined
+  );
+
+  const verificationId = requireVerificationId(request.data?.verificationId);
+
+  const internalRef = db()
+    .collection(VERIFICATIONS)
+    .doc(verificationId)
+    .collection(INTERNAL_SUB)
+    .doc(INTERNAL_DOC);
+  const snap = await internalRef.get();
+  if (!snap.exists) {
+    throw new HttpsError('not-found', 'Dossier introuvable.');
+  }
+
+  const data = snap.data() ?? {};
+  const rectoPath = data.rectoPath;
+  const versoPath = data.versoPath;
+  const selfiePath = data.selfiePath;
+  if (
+    typeof rectoPath !== 'string' ||
+    typeof versoPath !== 'string' ||
+    typeof selfiePath !== 'string'
+  ) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Chemins de pieces manquants, dossier non consultable.'
+    );
+  }
+
+  const expiresAt = Date.now() + IDENTITY_IMAGE_URL_TTL_MS;
+  const [rectoUrl, versoUrl, selfieUrl] = await Promise.all([
+    activeSigner.sign(rectoPath, expiresAt),
+    activeSigner.sign(versoPath, expiresAt),
+    activeSigner.sign(selfiePath, expiresAt),
+  ]);
+
+  // Trace the PII access. Opaque marker only: never the extracted card fields
+  // (admin_logs survives account deletion, see audit.ts, and must carry no PII).
+  await writeAdminLog({
+    actorUid: callerUid as string,
+    action: 'view_identity_verification_images',
+    targetType: 'identity_verification',
+    targetId: verificationId,
+  });
+
+  return { rectoUrl, versoUrl, selfieUrl };
 });

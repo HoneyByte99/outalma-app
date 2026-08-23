@@ -865,6 +865,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ce prestataire est indisponible pour le moment.';
 
   @override
+  String get bookingAddressNotInSenegal =>
+      'La prestation doit se situer au Sénégal. Choisissez une adresse au Sénégal.';
+
+  @override
   String get marketplaceDisclaimer =>
       'Outalma met uniquement en relation des clients et des prestataires indépendants. Tout accord et paiement se fait directement entre vous, hors de l\'application et sous votre responsabilité. Vérifiez toujours à qui vous avez affaire.';
 
@@ -876,7 +880,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Où souhaitez-vous que le prestataire intervienne ? (optionnel)';
 
   @override
-  String get bookingStep3Hint => 'Ex: 12 rue de la Paix, Paris 75001';
+  String get bookingStep3Hint => 'Ex: Rue 10, Point E, Dakar';
 
   @override
   String get bookingBack => 'Retour';
