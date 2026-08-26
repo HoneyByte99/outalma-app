@@ -11,12 +11,14 @@ import '../../app/router.dart';
 import '../../data/services/callable_function_client.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/identity/identity_trust_providers.dart';
 import '../../application/locale/locale_provider.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../application/user/user_providers.dart';
 import '../../data/services/avatar_upload_service.dart';
 import '../../domain/enums/active_mode.dart';
+import '../../domain/enums/identity_trust_status.dart';
 import '../../domain/models/app_user.dart';
 import '../../domain/models/review.dart';
 import '../shared/user_avatar.dart';
@@ -61,6 +63,17 @@ class ProfilePage extends ConsumerWidget {
             const _ModeToggle(),
             const SizedBox(height: 28),
 
+            // Identity verification (provider only): the natural place a
+            // provider looks for their own verification state and the entry to
+            // the capture flow. Hidden in client mode, where it means nothing.
+            if (user != null &&
+                ref.watch(activeModeProvider) == ActiveMode.provider) ...[
+              _SectionLabel(label: l10n.profileIdentitySection),
+              const SizedBox(height: 12),
+              _IdentityVerificationCard(providerId: user.id),
+              const SizedBox(height: 28),
+            ],
+
             // Identity: edit profile.
             if (user != null) ...[
               _SectionLabel(label: l10n.profileInformation),
@@ -89,7 +102,7 @@ class ProfilePage extends ConsumerWidget {
             const _ExportDataTile(),
             const SizedBox(height: 28),
 
-            // Account actions at the bottom — sign out, then the destructive
+            // Account actions at the bottom , sign out, then the destructive
             // delete account last.
             _SectionLabel(label: l10n.profileAccount),
             const SizedBox(height: 12),
@@ -119,7 +132,7 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
   bool _uploading = false;
 
   Future<void> _pickAvatar() async {
-    // Read current user at call time — don't depend on widget prop
+    // Read current user at call time , don't depend on widget prop
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
@@ -156,7 +169,7 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    // Watch directly — always fresh, no prop-timing race condition
+    // Watch directly , always fresh, no prop-timing race condition
     final authAsync = ref.watch(authNotifierProvider);
     final user = authAsync.valueOrNull is AuthAuthenticated
         ? (authAsync.valueOrNull as AuthAuthenticated).user
@@ -341,7 +354,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Email — read-only
+            // Email , read-only
             _ReadOnlyField(
               label: l10n.fieldEmail,
               value: widget.user.email,
@@ -363,11 +376,11 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
             ),
             const SizedBox(height: 14),
 
-            // Phone — read-only. Changing the phone requires re-verification
+            // Phone , read-only. Changing the phone requires re-verification
             // via OTP and will be handled by a dedicated flow.
             _ReadOnlyField(
               label: l10n.fieldPhone,
-              value: _phone == null || _phone!.isEmpty ? '—' : _phone!,
+              value: _phone == null || _phone!.isEmpty ? '-' : _phone!,
               icon: Icons.phone_outlined,
             ),
             const SizedBox(height: 20),
@@ -862,7 +875,7 @@ class _AccountSection extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Legal links (privacy + terms) — must stay reachable after sign-up
+// Legal links (privacy + terms) , must stay reachable after sign-up
 // ---------------------------------------------------------------------------
 
 class _LegalLinksSection extends StatelessWidget {
@@ -918,7 +931,7 @@ class _LegalLinksSection extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Blocked accounts — entry point to the management screen
+// Blocked accounts , entry point to the management screen
 // ---------------------------------------------------------------------------
 
 class _BlockedAccountsTile extends StatelessWidget {
@@ -1447,7 +1460,7 @@ class _ReviewTile extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  reviewer?.displayName ?? '—',
+                  reviewer?.displayName ?? '-',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -1566,6 +1579,102 @@ class _LanguageSelector extends ConsumerWidget {
             ],
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Identity verification (provider only)
+// ---------------------------------------------------------------------------
+
+/// The provider's own identity verification state, plus the entry into the
+/// capture flow. Mirrors the dashboard hub line (_IdentityHubLine) so the state
+/// grammar is the same everywhere: verified, under way, or not verified.
+///
+/// Loading and read errors collapse to the neutral "verify" affordance rather
+/// than a false "not verified" - the same fail-closed rule the trust signal
+/// uses: an unread state never publishes an untrue claim.
+class _IdentityVerificationCard extends ConsumerWidget {
+  const _IdentityVerificationCard({required this.providerId});
+
+  final String providerId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final status = ref.watch(identityTrustProvider(providerId)).valueOrNull;
+
+    final IconData icon;
+    final Color accent;
+    final String label;
+    final String subtitle;
+    switch (status) {
+      case IdentityTrustStatus.verified:
+        icon = Icons.verified_rounded;
+        accent = oc.trustVerifiedText;
+        label = l10n.trustVerifiedLabel;
+        subtitle = l10n.hubIdentityVerifiedSub;
+      case IdentityTrustStatus.pending:
+        icon = Icons.schedule_rounded;
+        accent = oc.trustPendingText;
+        label = l10n.trustPendingLabel;
+        subtitle = l10n.hubIdentityPendingSub;
+      case null:
+        icon = Icons.shield_outlined;
+        accent = oc.secondaryText;
+        label = l10n.hubIdentityVerifyCta;
+        subtitle = l10n.hubIdentityVerifySub;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: oc.cardSurface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        border: Border.all(color: oc.border),
+      ),
+      child: Semantics(
+        button: true,
+        label: label,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+          onTap: () => context.push(AppRoutes.identityStatus),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                Icon(icon, size: 22, color: accent),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Label in primaryText, the accent lives in the icon only
+                      // (matches the dashboard hub line grammar).
+                      Text(
+                        label,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: oc.primaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded, color: oc.secondaryText),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

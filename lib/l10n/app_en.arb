@@ -851,5 +851,6 @@
   "hubIdentityVerifiedSub": "Your profile is verified",
   "hubIdentityPendingSub": "Reply within 48 hours",
   "hubIdentityVerifyCta": "Verify my identity",
-  "hubIdentityVerifySub": "Get the « Verified profile » badge"
+  "hubIdentityVerifySub": "Get the « Verified profile » badge",
+  "profileIdentitySection": "Identity verification"
 }

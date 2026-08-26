@@ -42,7 +42,13 @@ class ProviderDashboardPage extends ConsumerWidget {
     // catalogue at once; per-listing on/off lives on each service tile. Profile
     // details (bio / working hours) are edited via the hub's edit pencil.
     final profile = profileAsync.valueOrNull;
-    final servicesCount = servicesAsync.valueOrNull?.length ?? 0;
+    // MVP defensive filter: only surface services whose category is part of the
+    // MVP home-help pool. The service form already prevents creating anything
+    // else, but legacy/off-MVP data must not leak into the provider's view.
+    final visibleServices = (servicesAsync.valueOrNull ?? const <Service>[])
+        .where((s) => s.categoryId.visibleInClientFilter)
+        .toList();
+    final servicesCount = visibleServices.length;
     final showFab = servicesCount > 0;
 
     return Scaffold(
@@ -113,7 +119,7 @@ class ProviderDashboardPage extends ConsumerWidget {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, i) => _ServiceTile(
-                    service: servicesAsync.value![i],
+                    service: visibleServices[i],
                     // When the provider is paused, every listing is hidden from
                     // clients regardless of its own published flag - reflect
                     // that on the tile so the hub/listing hierarchy is clear.
@@ -179,7 +185,7 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
         ref
             .watch(providerServicesProvider)
             .valueOrNull
-            ?.where((s) => s.published)
+            ?.where((s) => s.published && s.categoryId.visibleInClientFilter)
             .length ??
         0;
     // Toggling "Disponible" only makes sense once at least one listing is live.

@@ -842,5 +842,6 @@
   "hubIdentityVerifiedSub": "Votre profil est vérifié",
   "hubIdentityPendingSub": "Réponse sous 48 heures",
   "hubIdentityVerifyCta": "Vérifier mon identité",
-  "hubIdentityVerifySub": "Obtenez le badge « Profil vérifié »"
+  "hubIdentityVerifySub": "Obtenez le badge « Profil vérifié »",
+  "profileIdentitySection": "Vérification d'identité"
 }

@@ -3859,6 +3859,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Get the « Verified profile » badge'**
   String get hubIdentityVerifySub;
+
+  /// No description provided for @profileIdentitySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity verification'**
+  String get profileIdentitySection;
 }
 
 class _AppLocalizationsDelegate

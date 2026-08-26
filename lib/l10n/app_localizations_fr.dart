@@ -2082,4 +2082,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get hubIdentityVerifySub => 'Obtenez le badge « Profil vérifié »';
+
+  @override
+  String get profileIdentitySection => 'Vérification d\'identité';
 }
