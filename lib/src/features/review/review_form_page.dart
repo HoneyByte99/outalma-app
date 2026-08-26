@@ -249,7 +249,7 @@ class _StarRating extends StatelessWidget {
               child: Icon(
                 filled ? Icons.star_rounded : Icons.star_outline_rounded,
                 size: 40,
-                color: filled ? oc.warning : oc.border,
+                color: filled ? oc.star : oc.border,
               ),
             ),
           ),

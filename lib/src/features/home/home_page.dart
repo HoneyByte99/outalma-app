@@ -128,7 +128,7 @@ class _LocationPill extends ConsumerWidget {
     final filter = ref.watch(locationFilterProvider);
     final label = filter != null
         ? '${filter.label}, ${filter.radiusKm.round()} km'
-        : l10n.locationAllFrance;
+        : l10n.locationAllAreas;
 
     return Semantics(
       label: label,
@@ -653,7 +653,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
               child: OutlinedButton.icon(
                 onPressed: _clearFilter,
                 icon: const Icon(Icons.public_outlined, size: 18),
-                label: Text(l10n.locationAllFrance),
+                label: Text(l10n.locationAllAreas),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, AppSpacing.minTouchTarget),
                   side: BorderSide(color: oc.border),
@@ -1030,7 +1030,7 @@ class _ServiceCard extends ConsumerWidget {
                             ),
                           ),
                           child: Text(
-                            service.categoryId.label,
+                            service.categoryId.labelOf(l10n),
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: Colors.white,
@@ -1095,7 +1095,7 @@ class _ServiceCard extends ConsumerWidget {
                           child: Text(
                             providerUser?.displayName.isNotEmpty == true
                                 ? providerUser!.displayName
-                                : '\u2014',
+                                : '-',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: oc.secondaryText),
                             maxLines: 1,
@@ -1167,7 +1167,7 @@ class _RatingRow extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.star_rounded, size: 12, color: oc.warning),
+        Icon(Icons.star_rounded, size: 12, color: oc.star),
         const SizedBox(width: 2),
         Text(
           '${avg.toStringAsFixed(1)} (${reviews.length})',

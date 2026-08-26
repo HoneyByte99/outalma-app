@@ -22,10 +22,11 @@ enum _AuthMode { mail, phone }
 enum _PhoneStep { enterDetails, enterOtp }
 
 /// Best-effort country detection from an E.164 phone prefix.
-/// Defaults to FR if the prefix is anything other than +221 (Senegal).
+/// Defaults to SN (Senegal, the launch market) when the prefix is not a
+/// recognised one, so a signup never lands on a foreign country by default.
 String _countryFromPhone(String phoneE164) {
   if (phoneE164.startsWith('+221')) return 'SN';
-  return 'FR';
+  return 'SN';
 }
 
 class SignUpPage extends ConsumerStatefulWidget {
@@ -75,7 +76,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // Email sign-up — password + one-time verification email
+  // Email sign-up: password + one-time verification email
   // ---------------------------------------------------------------------------
 
   Future<void> _signUpEmail() async {
@@ -119,7 +120,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // Phone sign-up — OTP flow (Twilio Verify backend)
+  // Phone sign-up: OTP flow (Twilio Verify backend)
   // ---------------------------------------------------------------------------
 
   /// Step 1: validate name + phone, request an OTP, transition to step 2.
@@ -249,7 +250,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
-          // Explicit back button — context.go() to /sign-in replaces the stack
+          // Explicit back button: context.go() to /sign-in replaces the stack
           // so the default Material back arrow wouldn't be shown.
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -406,7 +407,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     ),
                   ),
                 ] else if (_phoneStep == _PhoneStep.enterDetails) ...[
-                  // Step 1 — name + phone
+                  // Step 1: name + phone
                   TextField(
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
@@ -425,7 +426,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     onChanged: (v) => setState(() => _phoneE164 = v),
                   ),
                 ] else ...[
-                  // Step 2 — OTP code
+                  // Step 2: OTP code
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
@@ -674,7 +675,7 @@ class _AuthLogo extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Theme toggle button — cycles system → light → dark
+// Theme toggle button: cycles system → light → dark
 // ---------------------------------------------------------------------------
 
 class _ThemeToggleButton extends ConsumerWidget {

@@ -30,7 +30,23 @@ class UserReviewsPage extends ConsumerWidget {
       appBar: AppBar(title: Text(user?.displayName ?? l10n.reviewsTitle)),
       body: reviewsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => Center(child: Text(l10n.reviewsEmpty)),
+        error: (_, __) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.errorGeneral,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
+              ),
+              TextButton(
+                onPressed: () => ref.invalidate(reviewsForUserProvider(userId)),
+                child: Text(l10n.retry),
+              ),
+            ],
+          ),
+        ),
         data: (reviews) {
           final sorted = [...reviews]
             ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -51,7 +67,7 @@ class UserReviewsPage extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user?.displayName ?? '—',
+                          user?.displayName ?? '-',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
@@ -93,6 +109,7 @@ class _ReviewTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     final reviewer = ref.watch(userByIdProvider(review.reviewerId)).valueOrNull;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -109,7 +126,7 @@ class _ReviewTile extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  reviewer?.displayName ?? '—',
+                  reviewer?.displayName ?? '-',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -137,7 +154,7 @@ class _ReviewTile extends ConsumerWidget {
                 Icon(review.categoryId!.icon, size: 13, color: oc.primary),
                 const SizedBox(width: 4),
                 Text(
-                  review.categoryId!.label,
+                  review.categoryId!.labelOf(l10n),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: oc.primary,
                     fontWeight: FontWeight.w600,

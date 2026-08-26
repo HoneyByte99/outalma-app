@@ -109,8 +109,14 @@ class PublicProviderProfilePage extends ConsumerWidget {
                 ),
               ),
             ),
-            error: (_, __) =>
-                const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) => SliverToBoxAdapter(
+              child: _ErrorSection(
+                label: l10n.errorGeneral,
+                retryLabel: l10n.retry,
+                onRetry: () =>
+                    ref.invalidate(reviewsForUserProvider(providerId)),
+              ),
+            ),
             data: (reviews) => reviews.isEmpty
                 ? SliverToBoxAdapter(
                     child: _EmptySection(
@@ -149,8 +155,14 @@ class PublicProviderProfilePage extends ConsumerWidget {
                 ),
               ),
             ),
-            error: (_, __) =>
-                const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) => SliverToBoxAdapter(
+              child: _ErrorSection(
+                label: l10n.errorGeneral,
+                retryLabel: l10n.retry,
+                onRetry: () =>
+                    ref.invalidate(publicProviderServicesProvider(providerId)),
+              ),
+            ),
             data: (services) => services.isEmpty
                 ? SliverToBoxAdapter(
                     child: _EmptySection(
@@ -309,6 +321,7 @@ class _ReviewTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     final reviewer = ref.watch(userByIdProvider(review.reviewerId)).valueOrNull;
 
     return Container(
@@ -362,7 +375,7 @@ class _ReviewTile extends ConsumerWidget {
                 Icon(review.categoryId!.icon, size: 13, color: oc.primary),
                 const SizedBox(width: 4),
                 Text(
-                  review.categoryId!.label,
+                  review.categoryId!.labelOf(l10n),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: oc.primary,
                     fontWeight: FontWeight.w600,
@@ -485,6 +498,44 @@ class _PublicServiceTile extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Empty section placeholder
 // ---------------------------------------------------------------------------
+
+/// A network error inside a profile section, distinct from an empty section: a
+/// short line plus a retry, so a load failure never reads as "no reviews" or "no
+/// services" (aligned with the home and chat error states).
+class _ErrorSection extends StatelessWidget {
+  const _ErrorSection({
+    required this.label,
+    required this.retryLabel,
+    required this.onRetry,
+  });
+
+  final String label;
+  final String retryLabel;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, size: 18, color: oc.icons),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: Text(retryLabel)),
+        ],
+      ),
+    );
+  }
+}
 
 class _EmptySection extends StatelessWidget {
   const _EmptySection({required this.icon, required this.label});

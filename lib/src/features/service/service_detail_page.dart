@@ -12,6 +12,7 @@ import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/models/service.dart';
+import '../shared/category_icon.dart';
 import '../shared/service_price_label.dart';
 import '../booking/booking_request_sheet.dart';
 import '../shared/network_image.dart';
@@ -367,6 +368,7 @@ class _CategoryBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.m,
@@ -377,7 +379,7 @@ class _CategoryBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
       ),
       child: Text(
-        categoryId.label,
+        categoryId.labelOf(l10n),
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: oc.primary,
           fontWeight: FontWeight.w600,
