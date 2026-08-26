@@ -7,8 +7,10 @@ import 'package:outalma_app/l10n/app_localizations.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/application/identity/capture_config.dart';
 import 'package:outalma_app/src/application/identity/capture_source.dart';
+import 'package:outalma_app/src/application/identity/document_text_detector.dart';
 import 'package:outalma_app/src/application/identity/identity_capture_providers.dart';
 import 'package:outalma_app/src/data/services/fake_capture_source.dart';
+import 'package:outalma_app/src/data/services/fake_document_text_detector.dart';
 import 'package:outalma_app/src/features/provider/identity/capture_document_page.dart';
 
 // A sharp luma plane: a 0/255 checkerboard has a large Laplacian variance.
@@ -31,10 +33,14 @@ LumaFrame _blurryFrame({int size = 8}) {
 Widget _wrap(
   FakeCaptureSource source, {
   required ValueChanged<Uint8List> onCaptured,
+  FakeDocumentTextDetector? textDetector,
 }) {
   return ProviderScope(
     overrides: [
       identityCaptureSourceProvider.overrideWithValue(source),
+      documentTextDetectorProvider.overrideWithValue(
+        textDetector ?? FakeDocumentTextDetector(),
+      ),
       // Low thresholds so the checkerboard passes and the flat frame fails,
       // while keeping recto strictly harder than verso.
       captureConfigProvider.overrideWithValue(
@@ -155,5 +161,96 @@ void main() {
     await tester.pumpAndSettle();
     expect(captured, isNotNull);
     expect(source.captureCount, 1);
+  });
+
+  testWidgets('refuses a sharp still that carries no readable text (AC-C06b)', (
+    tester,
+  ) async {
+    // A crisp photo of anything but a document (a wall, a cow) passes the
+    // sharpness gate; the readable-text gate must still refuse it.
+    final source = FakeCaptureSource();
+    addTearDown(source.dispose);
+    final detector = FakeDocumentTextDetector(result: DocumentTextResult.none);
+    Uint8List? captured;
+
+    await tester.pumpWidget(
+      _wrap(source, onCaptured: (b) => captured = b, textDetector: detector),
+    );
+    await tester.pumpAndSettle();
+
+    source.emitLuma(_sharpFrame());
+    await tester.pump();
+
+    await tester.tap(find.text('Prendre la photo'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Aucun texte lisible'),
+      findsOneWidget,
+      reason: 'a sharp still with no text must be refused with guidance',
+    );
+    expect(captured, isNull, reason: 'a non-document is never accepted');
+    expect(detector.detectCount, 1, reason: 'the text gate must run');
+    // The still WAS shot (sharpness passed) before the text gate rejected it.
+    expect(source.captureCount, 1);
+  });
+
+  testWidgets('"send anyway" still requires readable text (hardened AC-C34)', (
+    tester,
+  ) async {
+    // The blur escape must not become a hole: a still with no text at all is
+    // refused even on the "send anyway" path.
+    final source = FakeCaptureSource();
+    addTearDown(source.dispose);
+    final detector = FakeDocumentTextDetector(result: DocumentTextResult.none);
+    Uint8List? captured;
+
+    await tester.pumpWidget(
+      _wrap(source, onCaptured: (b) => captured = b, textDetector: detector),
+    );
+    await tester.pumpAndSettle();
+
+    source.emitLuma(_blurryFrame());
+    await tester.pump();
+
+    await tester.tap(find.text('Prendre la photo'));
+    await tester.pump();
+    await tester.tap(find.text('Prendre la photo'));
+    await tester.pump();
+    expect(find.text('Envoyer quand même, un humain relira'), findsOneWidget);
+
+    await tester.tap(find.text('Envoyer quand même, un humain relira'));
+    await tester.pumpAndSettle();
+
+    expect(captured, isNull, reason: 'no text means no accept, even forced');
+    expect(find.textContaining('Aucun texte lisible'), findsOneWidget);
+    expect(detector.detectCount, 1);
+  });
+
+  testWidgets('accepts a sharp still once readable text is detected', (
+    tester,
+  ) async {
+    final source = FakeCaptureSource(
+      captureBytes: Uint8List.fromList(const [7, 7, 7]),
+    );
+    addTearDown(source.dispose);
+    final detector = FakeDocumentTextDetector(
+      result: const DocumentTextResult(hasText: true, blockCount: 5),
+    );
+    Uint8List? captured;
+
+    await tester.pumpWidget(
+      _wrap(source, onCaptured: (b) => captured = b, textDetector: detector),
+    );
+    await tester.pumpAndSettle();
+
+    source.emitLuma(_sharpFrame());
+    await tester.pump();
+
+    await tester.tap(find.text('Prendre la photo'));
+    await tester.pumpAndSettle();
+
+    expect(captured, equals(Uint8List.fromList(const [7, 7, 7])));
+    expect(detector.detectCount, 1);
   });
 }

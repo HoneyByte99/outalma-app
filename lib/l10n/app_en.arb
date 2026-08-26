@@ -127,7 +127,7 @@
   "dashboardStatsThisMonth": "Bookings this month",
   "dashboardStatsAcceptanceRate": "Acceptance rate",
   "locationTitle": "Location",
-  "locationAllFrance": "All of France",
+  "locationAllAreas": "All of Senegal",
   "locationValidate": "Apply",
   "locationUseMyPosition": "Use my location",
   "locationPermissionDenied": "Location permission denied",
@@ -153,14 +153,7 @@
   "profileInformation": "Information",
   "profileAppearance": "Appearance",
   "profileAccount": "Account",
-  "profileErrorUpload": "Error: {error}",
-  "@profileErrorUpload": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "profileErrorUpload": "Could not upload the photo. Please try again.",
   "profileSaved": "Profile updated.",
   "profileSaveError": "Could not save. Please try again.",
   "profileLanguage": "Language",
@@ -297,6 +290,9 @@
   "bookingOpenDirections": "Directions",
   "bookingContact": "Contact",
   "bookingPhoneNotShared": "Phone number not yet shared",
+  "bookingCallAction": "Call",
+  "bookingWhatsappAction": "WhatsApp",
+  "bookingPhoneCopied": "Number copied",
   "bookingAddPhoneInProfile": "Add your phone number in your profile to share it.",
   "bookingPhoneShared": "Your phone number is shared",
   "bookingSharePhone": "Share my number ({phone})",
@@ -376,6 +372,7 @@
   "bookingContinue": "Continue",
   "bookingSend": "Send request",
   "bookingVoiceMessageLabel": "Voice message",
+  "chatPhotoMessageLabel": "Photo",
   "bookingRecordPrompt": "Tap to record",
   "bookingDeleteRecording": "Delete recording",
   "bookingVoicePermissionDenied": "Microphone permission denied. Check your settings.",
@@ -442,6 +439,9 @@
   "inboxTitle": "Missions",
   "inboxCalendarTooltip": "My calendar",
   "calendarFullDay": "All day",
+  "calendarLegendBooking": "Booking",
+  "calendarLegendBlocked": "Unavailable",
+  "calendarServiceFallback": "Service",
   "calendarDeleteSlotTitle": "Remove this block?",
   "calendarDeleteSlotBody": "This time will become bookable again.",
   "calendarDeleteSlotConfirm": "Remove",
@@ -500,11 +500,15 @@
   "seeMore": "See more",
   "seeLess": "See less",
   "onboardingTitle": "Become a provider",
+  "onboardingEditTitle": "Edit my profile",
   "onboardingHeadline": "Offer your services",
+  "onboardingEditHeadline": "Your provider profile",
   "onboardingBody": "Create your provider profile in seconds. You can then publish your services and receive requests.",
+  "onboardingEditBody": "Update your introduction and working hours.",
   "onboardingBio": "Introduction (optional)",
-  "onboardingBioHint": "E.g. Plumber with 10 years of experience, available in the Paris area…",
+  "onboardingBioHint": "E.g. Plumber with 10 years of experience, available in Dakar…",
   "onboardingActivate": "Activate my provider profile",
+  "onboardingSave": "Save",
   "onboardingHours": "Working hours",
   "onboardingHoursHint": "Clients can only book time slots within this window.",
   "onboardingHoursStart": "From",
@@ -750,6 +754,7 @@
   "identityCaptureRetake": "Retake",
   "identityCaptureUse": "Use this photo",
   "identityCaptureBlurry": "Photo too blurry. Steady the device and move closer to the document.",
+  "identityCaptureNoText": "No readable text detected. Line up your ID card inside the frame.",
   "identityCaptureSendAnyway": "Send anyway, a human will review it",
   "identityStepProgress": "Step {current} of {total}",
   "@identityStepProgress": {
@@ -852,5 +857,6 @@
   "hubIdentityPendingSub": "Reply within 48 hours",
   "hubIdentityVerifyCta": "Verify my identity",
   "hubIdentityVerifySub": "Get the « Verified profile » badge",
+  "hubIdentityActionRequiredSub": "Action required: restart verification",
   "profileIdentitySection": "Identity verification"
 }

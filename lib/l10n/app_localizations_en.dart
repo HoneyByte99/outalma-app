@@ -326,7 +326,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationTitle => 'Location';
 
   @override
-  String get locationAllFrance => 'All of France';
+  String get locationAllAreas => 'All of Senegal';
 
   @override
   String get locationValidate => 'Apply';
@@ -385,9 +385,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAccount => 'Account';
 
   @override
-  String profileErrorUpload(String error) {
-    return 'Error: $error';
-  }
+  String get profileErrorUpload =>
+      'Could not upload the photo. Please try again.';
 
   @override
   String get profileSaved => 'Profile updated.';
@@ -677,6 +676,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingPhoneNotShared => 'Phone number not yet shared';
 
   @override
+  String get bookingCallAction => 'Call';
+
+  @override
+  String get bookingWhatsappAction => 'WhatsApp';
+
+  @override
+  String get bookingPhoneCopied => 'Number copied';
+
+  @override
   String get bookingAddPhoneInProfile =>
       'Add your phone number in your profile to share it.';
 
@@ -883,6 +891,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingVoiceMessageLabel => 'Voice message';
 
   @override
+  String get chatPhotoMessageLabel => 'Photo';
+
+  @override
   String get bookingRecordPrompt => 'Tap to record';
 
   @override
@@ -1010,6 +1021,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calendarFullDay => 'All day';
+
+  @override
+  String get calendarLegendBooking => 'Booking';
+
+  @override
+  String get calendarLegendBlocked => 'Unavailable';
+
+  @override
+  String get calendarServiceFallback => 'Service';
 
   @override
   String get calendarDeleteSlotTitle => 'Remove this block?';
@@ -1162,21 +1182,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingTitle => 'Become a provider';
 
   @override
+  String get onboardingEditTitle => 'Edit my profile';
+
+  @override
   String get onboardingHeadline => 'Offer your services';
+
+  @override
+  String get onboardingEditHeadline => 'Your provider profile';
 
   @override
   String get onboardingBody =>
       'Create your provider profile in seconds. You can then publish your services and receive requests.';
 
   @override
+  String get onboardingEditBody =>
+      'Update your introduction and working hours.';
+
+  @override
   String get onboardingBio => 'Introduction (optional)';
 
   @override
   String get onboardingBioHint =>
-      'E.g. Plumber with 10 years of experience, available in the Paris area…';
+      'E.g. Plumber with 10 years of experience, available in Dakar…';
 
   @override
   String get onboardingActivate => 'Activate my provider profile';
+
+  @override
+  String get onboardingSave => 'Save';
 
   @override
   String get onboardingHours => 'Working hours';
@@ -1781,6 +1814,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Photo too blurry. Steady the device and move closer to the document.';
 
   @override
+  String get identityCaptureNoText =>
+      'No readable text detected. Line up your ID card inside the frame.';
+
+  @override
   String get identityCaptureSendAnyway => 'Send anyway, a human will review it';
 
   @override
@@ -2057,6 +2094,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hubIdentityVerifySub => 'Get the « Verified profile » badge';
+
+  @override
+  String get hubIdentityActionRequiredSub =>
+      'Action required: restart verification';
 
   @override
   String get profileIdentitySection => 'Identity verification';

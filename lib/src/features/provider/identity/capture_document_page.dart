@@ -49,6 +49,7 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
   int _blurFails = 0;
   bool _capturing = false;
   bool _showBlurHint = false;
+  bool _showNoTextHint = false;
 
   @override
   void initState() {
@@ -104,10 +105,27 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       return;
     }
 
-    setState(() => _capturing = true);
+    setState(() {
+      _capturing = true;
+      _showNoTextHint = false;
+    });
     try {
       final image = await _source.capture();
       if (!mounted) return;
+
+      // Readable-text gate (AC-C06b): a sharp still is not necessarily a
+      // document. Refuse any still on which no text at all was recognised, even
+      // on the "send anyway" path, so a crisp photo of anything but an ID card
+      // (a wall, a hand, a cow) never reaches the reviewer.
+      final textResult = await ref
+          .read(documentTextDetectorProvider)
+          .detect(image.jpegBytes);
+      if (!mounted) return;
+      if (!textResult.hasText) {
+        setState(() => _showNoTextHint = true);
+        return;
+      }
+
       widget.onCaptured(image.jpegBytes);
     } on CaptureUnavailable {
       if (mounted) setState(() => _ui = _Ui.unavailable);
@@ -185,6 +203,8 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
             capturing: _capturing,
             showBlurHint: _showBlurHint,
             blurMessage: l10n.identityCaptureBlurry,
+            showNoTextHint: _showNoTextHint,
+            noTextMessage: l10n.identityCaptureNoText,
             captureLabel: l10n.identityCaptureButton,
             sendAnywayLabel: l10n.identityCaptureSendAnyway,
             offerSendAnyway: _blurFails >= config.blurOverrideAfter,
@@ -202,6 +222,8 @@ class _BottomBar extends StatelessWidget {
     required this.capturing,
     required this.showBlurHint,
     required this.blurMessage,
+    required this.showNoTextHint,
+    required this.noTextMessage,
     required this.captureLabel,
     required this.sendAnywayLabel,
     required this.offerSendAnyway,
@@ -212,6 +234,8 @@ class _BottomBar extends StatelessWidget {
   final bool capturing;
   final bool showBlurHint;
   final String blurMessage;
+  final bool showNoTextHint;
+  final String noTextMessage;
   final String captureLabel;
   final String sendAnywayLabel;
   final bool offerSendAnyway;
@@ -234,7 +258,16 @@ class _BottomBar extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (showBlurHint)
+            if (showNoTextHint)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.m),
+                child: Text(
+                  noTextMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              )
+            else if (showBlurHint)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.m),
                 child: Text(

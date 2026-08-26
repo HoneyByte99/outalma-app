@@ -268,6 +268,13 @@ export interface TextExtractor {
 export interface ExtractionOutcome {
   status: 'ok' | 'partial' | 'failed';
   mrzValid: boolean;
+  /// True when the OCR returned no text at all on the recto: the still is not a
+  /// readable document (a wall, a hand, a cow). A review AID only, never an
+  /// automatic rejection (decision D1): a human still decides. Distinct from
+  /// `status: 'failed'`, which also fires when text IS present but no MRZ can be
+  /// isolated. Left false when the extractor itself threw, since an infra error
+  /// is not evidence the image lacks a document.
+  noReadableText: boolean;
   mrzRaw: string | null;
   cniNumber: string | null;
   cniNumberKey: string | null;
@@ -281,6 +288,7 @@ export interface ExtractionOutcome {
 export const FAILED_EXTRACTION: ExtractionOutcome = {
   status: 'failed',
   mrzValid: false,
+  noReadableText: false,
   mrzRaw: null,
   cniNumber: null,
   cniNumberKey: null,
@@ -297,8 +305,14 @@ export const FAILED_EXTRACTION: ExtractionOutcome = {
 /// failed: the reviewer still gets the fields, flagged as unverified. `failed`
 /// means no MRZ could be isolated at all. Neither blocks anything.
 export function extractionFromLines(rawLines: string[]): ExtractionOutcome {
+  // Whether the OCR saw ANY text, independent of whether an MRZ was isolated.
+  // No text at all is the "not a document" signal flagged for the reviewer.
+  const noReadableText = !rawLines.some(line => line.trim().length > 0);
+
   const mrzLines = isolateMrzLines(rawLines);
-  if (mrzLines.length !== TD1_LINE_COUNT) return { ...FAILED_EXTRACTION };
+  if (mrzLines.length !== TD1_LINE_COUNT) {
+    return { ...FAILED_EXTRACTION, noReadableText };
+  }
 
   const parsed = parseTd1(mrzLines);
   const cniNumber = pickCniNumber(parsed.fields);
@@ -307,6 +321,7 @@ export function extractionFromLines(rawLines: string[]): ExtractionOutcome {
   return {
     status: parsed.valid ? 'ok' : 'partial',
     mrzValid: parsed.valid,
+    noReadableText,
     mrzRaw: mrzLines.join('\n'),
     cniNumber: cniNumber || null,
     // An empty key is never stored, so it can never be searched for.

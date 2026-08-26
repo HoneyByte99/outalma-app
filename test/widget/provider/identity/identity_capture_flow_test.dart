@@ -13,6 +13,7 @@ import 'package:outalma_app/src/application/identity/capture_source.dart';
 import 'package:outalma_app/src/application/identity/identity_capture_providers.dart';
 import 'package:outalma_app/src/application/identity/identity_ports.dart';
 import 'package:outalma_app/src/data/services/fake_capture_source.dart';
+import 'package:outalma_app/src/data/services/fake_document_text_detector.dart';
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
 import 'package:outalma_app/src/domain/identity/identity_submit_error.dart';
 import 'package:outalma_app/src/domain/models/app_user.dart';
@@ -77,6 +78,11 @@ Widget _wrap({
     overrides: [
       authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
       identityCaptureSourceProvider.overrideWithValue(source),
+      // Documents carry text: the readable-text gate must pass so the flow can
+      // advance past each capture (the detector itself is exercised elsewhere).
+      documentTextDetectorProvider.overrideWithValue(
+        FakeDocumentTextDetector(),
+      ),
       captureConfigProvider.overrideWithValue(
         const CaptureConfig(
           rectoSharpnessThreshold: 10,

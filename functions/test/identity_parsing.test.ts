@@ -290,6 +290,29 @@ describe('extractionFromLines', () => {
     expect(out.mrzRaw).toBeNull();
   });
 
+  it('flags noReadableText only when the OCR returned no text at all', () => {
+    // A cow photo: the OCR sees nothing, so the reviewer is warned the upload is
+    // probably not a document. Still "failed", never auto-rejected (decision D1).
+    const cow = extractionFromLines([]);
+    expect(cow.status).toBe('failed');
+    expect(cow.noReadableText).toBe(true);
+
+    const blankStrings = extractionFromLines(['', '   ', '\n']);
+    expect(blankStrings.noReadableText).toBe(true);
+  });
+
+  it('does not flag noReadableText when text is present but has no MRZ', () => {
+    // An unreadable card still carries printed text: not a "no document" case.
+    const out = extractionFromLines(['CARTE NATIONALE', 'illisible']);
+    expect(out.status).toBe('failed');
+    expect(out.noReadableText).toBe(false);
+  });
+
+  it('does not flag noReadableText on a valid MRZ', () => {
+    const out = extractionFromLines(['NOISE', ...VALID_TD1]);
+    expect(out.noReadableText).toBe(false);
+  });
+
   it('the constructed fixture is itself valid, so later cases mean something', () => {
     const built = buildTd1({ documentNumber: 'D23145890', primaryName: 'DIOP' });
     expect(parseTd1(built).valid).toBe(true);

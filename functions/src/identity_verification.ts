@@ -486,6 +486,10 @@ export async function extractAndFlag(
       mrzRaw: outcome.mrzRaw,
       doublonPotentiel: duplicate !== null,
       doublonReferenceId: duplicate,
+      // Review aid only (decision D1): the recto carried no readable text, so the
+      // upload is likely not a document. The reviewer decides; nothing is
+      // auto-rejected.
+      pasDocumentLisible: outcome.noReadableText,
     });
   });
 }

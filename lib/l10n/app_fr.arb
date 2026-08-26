@@ -127,7 +127,7 @@
   "dashboardStatsThisMonth": "Réservations ce mois",
   "dashboardStatsAcceptanceRate": "Taux d'acceptation",
   "locationTitle": "Localisation",
-  "locationAllFrance": "Toute la France",
+  "locationAllAreas": "Tout le Sénégal",
   "locationValidate": "Valider",
   "locationUseMyPosition": "Utiliser ma position",
   "locationPermissionDenied": "Accès à la localisation refusé",
@@ -153,14 +153,7 @@
   "profileInformation": "Informations",
   "profileAppearance": "Apparence",
   "profileAccount": "Compte",
-  "profileErrorUpload": "Erreur : {error}",
-  "@profileErrorUpload": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
+  "profileErrorUpload": "Impossible d'importer la photo. Réessayez.",
   "profileSaved": "Profil mis à jour.",
   "profileSaveError": "Impossible de sauvegarder. Réessayez.",
   "profileLanguage": "Langue",
@@ -297,6 +290,9 @@
   "bookingOpenDirections": "Itinéraire",
   "bookingContact": "Contact",
   "bookingPhoneNotShared": "Numéro non encore partagé",
+  "bookingCallAction": "Appeler",
+  "bookingWhatsappAction": "WhatsApp",
+  "bookingPhoneCopied": "Numéro copié",
   "bookingAddPhoneInProfile": "Ajoutez votre numéro dans votre profil pour le partager.",
   "bookingPhoneShared": "Votre numéro est partagé",
   "bookingSharePhone": "Partager mon numéro ({phone})",
@@ -376,6 +372,7 @@
   "bookingContinue": "Continuer",
   "bookingSend": "Envoyer la demande",
   "bookingVoiceMessageLabel": "Message vocal",
+  "chatPhotoMessageLabel": "Photo",
   "bookingRecordPrompt": "Appuyez pour enregistrer",
   "bookingDeleteRecording": "Supprimer l'enregistrement",
   "bookingVoicePermissionDenied": "Permission micro refusée. Vérifiez les réglages.",
@@ -442,6 +439,9 @@
   "inboxTitle": "Missions",
   "inboxCalendarTooltip": "Mon calendrier",
   "calendarFullDay": "Journée entière",
+  "calendarLegendBooking": "Rendez-vous",
+  "calendarLegendBlocked": "Indisponibilité",
+  "calendarServiceFallback": "Service",
   "calendarDeleteSlotTitle": "Supprimer ce blocage ?",
   "calendarDeleteSlotBody": "Ce créneau redeviendra réservable.",
   "calendarDeleteSlotConfirm": "Supprimer",
@@ -500,11 +500,15 @@
   "seeMore": "Voir plus",
   "seeLess": "Voir moins",
   "onboardingTitle": "Devenir prestataire",
+  "onboardingEditTitle": "Modifier mon profil",
   "onboardingHeadline": "Proposez vos services",
+  "onboardingEditHeadline": "Votre profil prestataire",
   "onboardingBody": "Créez votre profil prestataire en quelques secondes. Vous pourrez ensuite publier vos services et recevoir des demandes.",
+  "onboardingEditBody": "Mettez à jour votre présentation et vos horaires de travail.",
   "onboardingBio": "Présentation (optionnel)",
-  "onboardingBioHint": "Ex: Plombier avec 10 ans d'expérience, disponible en région parisienne…",
+  "onboardingBioHint": "Ex: Plombier avec 10 ans d'expérience, disponible à Dakar…",
   "onboardingActivate": "Activer mon profil prestataire",
+  "onboardingSave": "Enregistrer",
   "onboardingHours": "Horaires de travail",
   "onboardingHoursHint": "Les clients ne peuvent réserver qu'à l'intérieur de ce créneau.",
   "onboardingHoursStart": "De",
@@ -744,6 +748,7 @@
   "identityCaptureRetake": "Reprendre",
   "identityCaptureUse": "Utiliser cette photo",
   "identityCaptureBlurry": "Photo trop floue. Stabilisez l'appareil et rapprochez le document.",
+  "identityCaptureNoText": "Aucun texte lisible détecté. Cadrez bien votre carte d'identité dans le repère.",
   "identityCaptureSendAnyway": "Envoyer quand même, un humain relira",
   "identityStepProgress": "Étape {current} sur {total}",
   "@identityStepProgress": {
@@ -843,5 +848,6 @@
   "hubIdentityPendingSub": "Réponse sous 48 heures",
   "hubIdentityVerifyCta": "Vérifier mon identité",
   "hubIdentityVerifySub": "Obtenez le badge « Profil vérifié »",
+  "hubIdentityActionRequiredSub": "Action requise : recommencez la vérification",
   "profileIdentitySection": "Vérification d'identité"
 }

@@ -704,11 +704,11 @@ abstract class AppLocalizations {
   /// **'Location'**
   String get locationTitle;
 
-  /// No description provided for @locationAllFrance.
+  /// No description provided for @locationAllAreas.
   ///
   /// In en, this message translates to:
-  /// **'All of France'**
-  String get locationAllFrance;
+  /// **'All of Senegal'**
+  String get locationAllAreas;
 
   /// No description provided for @locationValidate.
   ///
@@ -821,8 +821,8 @@ abstract class AppLocalizations {
   /// No description provided for @profileErrorUpload.
   ///
   /// In en, this message translates to:
-  /// **'Error: {error}'**
-  String profileErrorUpload(String error);
+  /// **'Could not upload the photo. Please try again.'**
+  String get profileErrorUpload;
 
   /// No description provided for @profileSaved.
   ///
@@ -1346,6 +1346,24 @@ abstract class AppLocalizations {
   /// **'Phone number not yet shared'**
   String get bookingPhoneNotShared;
 
+  /// No description provided for @bookingCallAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get bookingCallAction;
+
+  /// No description provided for @bookingWhatsappAction.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get bookingWhatsappAction;
+
+  /// No description provided for @bookingPhoneCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Number copied'**
+  String get bookingPhoneCopied;
+
   /// No description provided for @bookingAddPhoneInProfile.
   ///
   /// In en, this message translates to:
@@ -1736,6 +1754,12 @@ abstract class AppLocalizations {
   /// **'Voice message'**
   String get bookingVoiceMessageLabel;
 
+  /// No description provided for @chatPhotoMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get chatPhotoMessageLabel;
+
   /// No description provided for @bookingRecordPrompt.
   ///
   /// In en, this message translates to:
@@ -1963,6 +1987,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All day'**
   String get calendarFullDay;
+
+  /// No description provided for @calendarLegendBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get calendarLegendBooking;
+
+  /// No description provided for @calendarLegendBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get calendarLegendBlocked;
+
+  /// No description provided for @calendarServiceFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Service'**
+  String get calendarServiceFallback;
 
   /// No description provided for @calendarDeleteSlotTitle.
   ///
@@ -2252,17 +2294,35 @@ abstract class AppLocalizations {
   /// **'Become a provider'**
   String get onboardingTitle;
 
+  /// No description provided for @onboardingEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit my profile'**
+  String get onboardingEditTitle;
+
   /// No description provided for @onboardingHeadline.
   ///
   /// In en, this message translates to:
   /// **'Offer your services'**
   String get onboardingHeadline;
 
+  /// No description provided for @onboardingEditHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your provider profile'**
+  String get onboardingEditHeadline;
+
   /// No description provided for @onboardingBody.
   ///
   /// In en, this message translates to:
   /// **'Create your provider profile in seconds. You can then publish your services and receive requests.'**
   String get onboardingBody;
+
+  /// No description provided for @onboardingEditBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Update your introduction and working hours.'**
+  String get onboardingEditBody;
 
   /// No description provided for @onboardingBio.
   ///
@@ -2273,7 +2333,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingBioHint.
   ///
   /// In en, this message translates to:
-  /// **'E.g. Plumber with 10 years of experience, available in the Paris area…'**
+  /// **'E.g. Plumber with 10 years of experience, available in Dakar…'**
   String get onboardingBioHint;
 
   /// No description provided for @onboardingActivate.
@@ -2281,6 +2341,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Activate my provider profile'**
   String get onboardingActivate;
+
+  /// No description provided for @onboardingSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get onboardingSave;
 
   /// No description provided for @onboardingHours.
   ///
@@ -3392,6 +3458,12 @@ abstract class AppLocalizations {
   /// **'Photo too blurry. Steady the device and move closer to the document.'**
   String get identityCaptureBlurry;
 
+  /// No description provided for @identityCaptureNoText.
+  ///
+  /// In en, this message translates to:
+  /// **'No readable text detected. Line up your ID card inside the frame.'**
+  String get identityCaptureNoText;
+
   /// No description provided for @identityCaptureSendAnyway.
   ///
   /// In en, this message translates to:
@@ -3859,6 +3931,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Get the « Verified profile » badge'**
   String get hubIdentityVerifySub;
+
+  /// No description provided for @hubIdentityActionRequiredSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Action required: restart verification'**
+  String get hubIdentityActionRequiredSub;
 
   /// No description provided for @profileIdentitySection.
   ///

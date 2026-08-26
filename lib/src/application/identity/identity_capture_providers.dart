@@ -10,10 +10,16 @@ import '../../data/services/identity_upload_service.dart';
 // web the stub is compiled instead and the entry is never offered (AC-C04).
 import '../../data/services/camera_capture_source_stub.dart'
     if (dart.library.io) '../../data/services/camera_capture_source.dart';
+// Web isolation (archi 5.3): `google_mlkit_text_recognition` has no web support,
+// so the real detector is imported only under dart.library.io; the stub compiles
+// on web where the capture entry is never offered.
+import '../../data/services/mlkit_document_text_detector_stub.dart'
+    if (dart.library.io) '../../data/services/mlkit_document_text_detector.dart';
 import '../../domain/identity/capture_selection.dart';
 import '../auth/auth_providers.dart';
 import 'capture_config.dart';
 import 'capture_source.dart';
+import 'document_text_detector.dart';
 import 'hex_batch_id_generator.dart';
 import 'identity_deposit_service.dart';
 import 'identity_ports.dart';
@@ -51,6 +57,15 @@ final identityCaptureSourceProvider = Provider<IdentityCaptureSource>((ref) {
     real: CameraCaptureSource.new,
     fake: FakeCaptureSource.new,
   );
+});
+
+/// The injectable readable-text detector (archi 5.3 extension). A widget test
+/// overrides this with a drivable [FakeDocumentTextDetector]; the real one wraps
+/// on-device ML Kit text recognition and is disposed when the provider drops.
+final documentTextDetectorProvider = Provider<DocumentTextDetector>((ref) {
+  final detector = MlkitDocumentTextDetector();
+  ref.onDispose(detector.dispose);
+  return detector;
 });
 
 final identityDepositServiceProvider = Provider<IdentityDepositService>((ref) {
