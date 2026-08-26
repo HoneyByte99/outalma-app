@@ -11,14 +11,14 @@ import '../../app/router.dart';
 import '../../data/services/callable_function_client.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
-import '../../application/identity/identity_trust_providers.dart';
+import '../../application/identity/identity_verification_providers.dart';
 import '../../application/locale/locale_provider.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../application/user/user_providers.dart';
 import '../../data/services/avatar_upload_service.dart';
 import '../../domain/enums/active_mode.dart';
-import '../../domain/enums/identity_trust_status.dart';
+import '../../domain/enums/identity_status.dart';
 import '../../domain/models/app_user.dart';
 import '../../domain/models/review.dart';
 import '../shared/user_avatar.dart';
@@ -70,7 +70,7 @@ class ProfilePage extends ConsumerWidget {
                 ref.watch(activeModeProvider) == ActiveMode.provider) ...[
               _SectionLabel(label: l10n.profileIdentitySection),
               const SizedBox(height: 12),
-              _IdentityVerificationCard(providerId: user.id),
+              const _IdentityVerificationCard(),
               const SizedBox(height: 28),
             ],
 
@@ -152,12 +152,15 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
             photoPath: url,
           );
     } catch (e) {
+      // Keep the technical detail in the logs, never on screen (m3): the target
+      // audience reads a generic localized message, not a raw exception string.
+      debugPrint('Profile photo upload failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.profileErrorUpload(e.toString())),
+            content: Text(l10n.profileErrorUpload),
             backgroundColor: context.oc.error,
-            duration: const Duration(seconds: 8),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -1596,32 +1599,44 @@ class _LanguageSelector extends ConsumerWidget {
 /// than a false "not verified" - the same fail-closed rule the trust signal
 /// uses: an unread state never publishes an untrue claim.
 class _IdentityVerificationCard extends ConsumerWidget {
-  const _IdentityVerificationCard({required this.providerId});
-
-  final String providerId;
+  const _IdentityVerificationCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final status = ref.watch(identityTrustProvider(providerId)).valueOrNull;
+    // Own private file, not the public projection (M7): a rejected/revoked file
+    // must surface "action required" on the provider's own profile, which the
+    // lossy public projection would hide as a neutral "verify" CTA.
+    final record = ref.watch(myIdentityVerificationProvider).valueOrNull;
+    final status = record?.status ?? IdentityStatus.none;
 
     final IconData icon;
     final Color accent;
     final String label;
     final String subtitle;
     switch (status) {
-      case IdentityTrustStatus.verified:
+      case IdentityStatus.approved:
         icon = Icons.verified_rounded;
         accent = oc.trustVerifiedText;
         label = l10n.trustVerifiedLabel;
         subtitle = l10n.hubIdentityVerifiedSub;
-      case IdentityTrustStatus.pending:
+      case IdentityStatus.pending:
         icon = Icons.schedule_rounded;
         accent = oc.trustPendingText;
         label = l10n.trustPendingLabel;
         subtitle = l10n.hubIdentityPendingSub;
-      case null:
+      case IdentityStatus.rejected:
+        icon = Icons.error_outline;
+        accent = oc.trustRejectedText;
+        label = l10n.identityStatusRejectedTitle;
+        subtitle = l10n.hubIdentityActionRequiredSub;
+      case IdentityStatus.revoked:
+        icon = Icons.error_outline;
+        accent = oc.trustRejectedText;
+        label = l10n.identityStatusRevokedTitle;
+        subtitle = l10n.hubIdentityActionRequiredSub;
+      case IdentityStatus.none:
         icon = Icons.shield_outlined;
         accent = oc.secondaryText;
         label = l10n.hubIdentityVerifyCta;

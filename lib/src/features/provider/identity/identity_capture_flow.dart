@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../../app/app_spacing.dart';
+import '../../../app/app_theme.dart';
 import '../../../application/auth/auth_providers.dart';
 import '../../../application/auth/auth_state.dart';
 import '../../../application/identity/capture_config.dart';
@@ -234,9 +235,9 @@ class _Thumb extends StatelessWidget {
         gaplessPlayback: true,
         // A still that cannot be decoded is shown as a neutral placeholder
         // rather than throwing: the bytes still go to Storage untouched.
-        errorBuilder: (context, error, stack) => const ColoredBox(
-          color: Color(0xFFEDF2F5),
-          child: Icon(Icons.image_outlined, color: Color(0xFF8AAAB8)),
+        errorBuilder: (context, error, stack) => ColoredBox(
+          color: context.oc.inputFill,
+          child: Icon(Icons.image_outlined, color: context.oc.icons),
         ),
       ),
     );
@@ -280,10 +281,10 @@ class _SuccessView extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.check_circle_outline,
                 size: 56,
-                color: Color(0xFF00A678),
+                color: context.oc.success,
               ),
               const SizedBox(height: AppSpacing.l),
               Text(
@@ -330,11 +331,7 @@ class _FailureView extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 56,
-                color: Color(0xFFE03D3A),
-              ),
+              Icon(Icons.error_outline, size: 56, color: context.oc.error),
               const SizedBox(height: AppSpacing.l),
               Text(
                 identitySubmitErrorMessage(l10n, error),

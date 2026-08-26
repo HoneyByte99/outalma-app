@@ -10,13 +10,14 @@ import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/application/auth/auth_notifier.dart';
 import 'package:outalma_app/src/application/auth/auth_providers.dart';
 import 'package:outalma_app/src/application/auth/auth_state.dart';
-import 'package:outalma_app/src/application/identity/identity_trust_providers.dart';
+import 'package:outalma_app/src/application/identity/identity_verification_providers.dart';
 import 'package:outalma_app/src/application/review/review_providers.dart';
 import 'package:outalma_app/src/application/theme/theme_provider.dart';
 import 'package:outalma_app/src/application/user/user_providers.dart';
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
-import 'package:outalma_app/src/domain/enums/identity_trust_status.dart';
+import 'package:outalma_app/src/domain/enums/identity_status.dart';
 import 'package:outalma_app/src/domain/models/app_user.dart';
+import 'package:outalma_app/src/domain/models/identity_verification_record.dart';
 import 'package:outalma_app/src/features/profile/profile_page.dart';
 
 class _FakeAuthNotifier extends AuthNotifier {
@@ -40,14 +41,26 @@ class _FakeThemeNotifier extends ThemeModeNotifier {
 
 Widget _wrap({
   required ActiveMode mode,
-  required IdentityTrustStatus? status,
+  required IdentityStatus? status,
 }) => ProviderScope(
   overrides: [
     authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
     activeModeProvider.overrideWith((_) => mode),
     themeModeProvider.overrideWith(_FakeThemeNotifier.new),
     reviewsForUserProvider('user_1').overrideWith((_) => Stream.value([])),
-    identityTrustProvider('user_1').overrideWith((_) => Stream.value(status)),
+    // The own-profile card now reads the private file (M7), so a null record is
+    // "no file" and a status drives the label.
+    myIdentityVerificationProvider.overrideWith(
+      (_) => Stream.value(
+        status == null
+            ? null
+            : IdentityVerificationRecord(
+                status: status,
+                attempt: 1,
+                priority: false,
+              ),
+      ),
+    ),
   ],
   child: MaterialApp(
     theme: AppTheme.light(),
@@ -61,7 +74,7 @@ void main() {
   group('ProfilePage identity verification block', () {
     testWidgets('hidden in client mode', (tester) async {
       await tester.pumpWidget(
-        _wrap(mode: ActiveMode.client, status: IdentityTrustStatus.verified),
+        _wrap(mode: ActiveMode.client, status: IdentityStatus.approved),
       );
       await tester.pump();
       await tester.pump();
@@ -82,7 +95,7 @@ void main() {
 
     testWidgets('provider mode, pending state', (tester) async {
       await tester.pumpWidget(
-        _wrap(mode: ActiveMode.provider, status: IdentityTrustStatus.pending),
+        _wrap(mode: ActiveMode.provider, status: IdentityStatus.pending),
       );
       await tester.pump();
       await tester.pump();
@@ -92,12 +105,27 @@ void main() {
 
     testWidgets('provider mode, verified state', (tester) async {
       await tester.pumpWidget(
-        _wrap(mode: ActiveMode.provider, status: IdentityTrustStatus.verified),
+        _wrap(mode: ActiveMode.provider, status: IdentityStatus.approved),
       );
       await tester.pump();
       await tester.pump();
       expect(find.text('IDENTITY VERIFICATION'), findsOneWidget);
       expect(find.text('Verified profile'), findsOneWidget);
+    });
+
+    testWidgets('provider mode, rejected state shows action required (M7)', (
+      tester,
+    ) async {
+      // A refused file must surface "action required" on the provider's own
+      // profile, not the neutral "verify" CTA the public projection would show.
+      await tester.pumpWidget(
+        _wrap(mode: ActiveMode.provider, status: IdentityStatus.rejected),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('IDENTITY VERIFICATION'), findsOneWidget);
+      expect(find.text('Verify my identity'), findsNothing);
+      expect(find.textContaining('Action required'), findsOneWidget);
     });
   });
 }

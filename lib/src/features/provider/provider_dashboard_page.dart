@@ -10,14 +10,14 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
-import '../../application/identity/identity_trust_providers.dart';
+import '../../application/identity/identity_verification_providers.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../shared/service_price_label.dart';
 import '../review/rating_summary.dart';
 import '../shared/mode_badge.dart';
 import '../../domain/enums/category_id.dart';
-import '../../domain/enums/identity_trust_status.dart';
+import '../../domain/enums/identity_status.dart';
 import '../../domain/models/provider_profile.dart';
 import '../shared/category_icon.dart';
 import '../shared/user_avatar.dart';
@@ -332,7 +332,6 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
               // Row 3: identity verification (E6). The whole row opens the
               // status/entry screen; it carries the current state at a glance.
               _IdentityHubLine(
-                providerId: widget.profile.uid,
                 onOpen: () =>
                     GoRouter.of(context).push(AppRoutes.identityStatus),
               ),
@@ -890,17 +889,14 @@ class _ProviderStatsRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final stats = ref.watch(providerStatsProvider);
-
-    String acceptanceLabel() {
-      final r = stats.acceptanceRate;
-      if (r == null) return '-';
-      return '${(r * 100).round()}%';
-    }
+    // Watch the AsyncValue (M3): while the history loads or if it errors, show a
+    // skeleton or an error+retry rather than "0 / 0 / -", which reads as a real
+    // "no activity" and is simply wrong when the numbers just have not arrived.
+    final statsAsync = ref.watch(providerStatsAsyncProvider);
 
     Widget tile({
       required IconData icon,
-      required String value,
+      required Widget value,
       required String label,
     }) {
       return Expanded(
@@ -916,11 +912,9 @@ class _ProviderStatsRow extends ConsumerWidget {
             children: [
               Icon(icon, size: 18, color: oc.primary),
               const SizedBox(height: 6),
-              Text(
-                value,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              SizedBox(
+                height: 28,
+                child: Align(alignment: Alignment.centerLeft, child: value),
               ),
               const SizedBox(height: 2),
               Text(
@@ -937,6 +931,99 @@ class _ProviderStatsRow extends ConsumerWidget {
       );
     }
 
+    Widget valueText(String v) => Text(
+      v,
+      style: Theme.of(
+        context,
+      ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+    );
+
+    // A muted placeholder bar for the loading state, so the tile has a shape but
+    // no misleading number.
+    Widget skeleton() => Container(
+      width: 32,
+      height: 18,
+      decoration: BoxDecoration(
+        color: oc.secondaryText.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+    );
+
+    final content = statsAsync.when(
+      loading: () => Row(
+        children: [
+          tile(
+            icon: Icons.event_available_rounded,
+            value: skeleton(),
+            label: l10n.dashboardStatsUpcomingWeek,
+          ),
+          const SizedBox(width: AppSpacing.s),
+          tile(
+            icon: Icons.calendar_today_outlined,
+            value: skeleton(),
+            label: l10n.dashboardStatsThisMonth,
+          ),
+          const SizedBox(width: AppSpacing.s),
+          tile(
+            icon: Icons.check_circle_outline_rounded,
+            value: skeleton(),
+            label: l10n.dashboardStatsAcceptanceRate,
+          ),
+        ],
+      ),
+      error: (_, __) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: oc.cardSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: oc.border),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline_rounded, size: 18, color: oc.icons),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l10n.errorGeneral,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+              ),
+            ),
+            TextButton(
+              onPressed: () => ref.invalidate(providerBookingHistoryProvider),
+              child: Text(l10n.retry),
+            ),
+          ],
+        ),
+      ),
+      data: (stats) {
+        final r = stats.acceptanceRate;
+        final acceptance = r == null ? '-' : '${(r * 100).round()}%';
+        return Row(
+          children: [
+            tile(
+              icon: Icons.event_available_rounded,
+              value: valueText('${stats.upcomingThisWeek}'),
+              label: l10n.dashboardStatsUpcomingWeek,
+            ),
+            const SizedBox(width: AppSpacing.s),
+            tile(
+              icon: Icons.calendar_today_outlined,
+              value: valueText('${stats.bookingsThisMonth}'),
+              label: l10n.dashboardStatsThisMonth,
+            ),
+            const SizedBox(width: AppSpacing.s),
+            tile(
+              icon: Icons.check_circle_outline_rounded,
+              value: valueText(acceptance),
+              label: l10n.dashboardStatsAcceptanceRate,
+            ),
+          ],
+        );
+      },
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
@@ -944,27 +1031,7 @@ class _ProviderStatsRow extends ConsumerWidget {
         AppSpacing.xl,
         0,
       ),
-      child: Row(
-        children: [
-          tile(
-            icon: Icons.event_available_rounded,
-            value: '${stats.upcomingThisWeek}',
-            label: l10n.dashboardStatsUpcomingWeek,
-          ),
-          const SizedBox(width: AppSpacing.s),
-          tile(
-            icon: Icons.calendar_today_outlined,
-            value: '${stats.bookingsThisMonth}',
-            label: l10n.dashboardStatsThisMonth,
-          ),
-          const SizedBox(width: AppSpacing.s),
-          tile(
-            icon: Icons.check_circle_outline_rounded,
-            value: acceptanceLabel(),
-            label: l10n.dashboardStatsAcceptanceRate,
-          ),
-        ],
-      ),
+      child: content,
     );
   }
 }
@@ -977,33 +1044,47 @@ class _ProviderStatsRow extends ConsumerWidget {
 /// neutral "verify" affordance rather than a false negative: the same failure
 /// mode the trust signal uses (design section 2).
 class _IdentityHubLine extends ConsumerWidget {
-  const _IdentityHubLine({required this.providerId, required this.onOpen});
+  const _IdentityHubLine({required this.onOpen});
 
-  final String providerId;
   final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final status = ref.watch(identityTrustProvider(providerId)).valueOrNull;
+    // Read the provider's OWN private file (M7), not the public trust projection:
+    // the projection collapses rejected/revoked to "not started", so on their own
+    // hub a refused provider would see the neutral "verify" CTA with no signal
+    // that action is required. The private record distinguishes those states.
+    final record = ref.watch(myIdentityVerificationProvider).valueOrNull;
+    final status = record?.status ?? IdentityStatus.none;
 
     final IconData icon;
     final Color accent;
     final String label;
     final String subtitle;
     switch (status) {
-      case IdentityTrustStatus.verified:
+      case IdentityStatus.approved:
         icon = Icons.verified_rounded;
         accent = oc.trustVerifiedText;
         label = l10n.trustVerifiedLabel;
         subtitle = l10n.hubIdentityVerifiedSub;
-      case IdentityTrustStatus.pending:
+      case IdentityStatus.pending:
         icon = Icons.schedule_rounded;
         accent = oc.trustPendingText;
         label = l10n.trustPendingLabel;
         subtitle = l10n.hubIdentityPendingSub;
-      case null:
+      case IdentityStatus.rejected:
+        icon = Icons.error_outline;
+        accent = oc.trustRejectedText;
+        label = l10n.identityStatusRejectedTitle;
+        subtitle = l10n.hubIdentityActionRequiredSub;
+      case IdentityStatus.revoked:
+        icon = Icons.error_outline;
+        accent = oc.trustRejectedText;
+        label = l10n.identityStatusRevokedTitle;
+        subtitle = l10n.hubIdentityActionRequiredSub;
+      case IdentityStatus.none:
         icon = Icons.shield_outlined;
         accent = oc.secondaryText;
         label = l10n.hubIdentityVerifyCta;

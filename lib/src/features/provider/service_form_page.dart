@@ -71,7 +71,11 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
         ? PriceType.hourly
         : (s.priceType == PriceType.fixed ? PriceType.daily : s.priceType);
     _extraTasks = {...?s?.extraTasks};
-    _published = s?.published ?? false;
+    // New services publish by default (M6): the empty-state promise is "create a
+    // service to start receiving requests", so a freshly created service must be
+    // visible unless the provider explicitly turns it off. Edits keep the stored
+    // value. Moderation still gates visibility via the pending/rejected badge.
+    _published = s?.published ?? true;
     _photos = List<String>.from(s?.photos ?? []);
     _zones = List<ServiceZone>.from(s?.serviceZones ?? []);
     _pendingServiceId = _isEdit

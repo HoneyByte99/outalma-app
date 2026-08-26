@@ -1,8 +1,10 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
@@ -127,7 +129,7 @@ class _DetailContent extends ConsumerWidget {
     final authState = ref.watch(authNotifierProvider).valueOrNull;
     final uid = authState is AuthAuthenticated ? authState.user.id : null;
 
-    // Bottom bar logic — mutually exclusive based on role + status.
+    // Bottom bar logic: mutually exclusive based on role + status.
     Widget? bottomBar;
     if (uid == booking.providerId) {
       if (booking.status == BookingStatus.requested) {
@@ -302,7 +304,7 @@ class _DetailContent extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Provider link — tappable card opening the public provider profile
+// Provider link: tappable card opening the public provider profile
 // ---------------------------------------------------------------------------
 
 class _ProviderLink extends ConsumerWidget {
@@ -339,7 +341,7 @@ class _ProviderLink extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    provider?.displayName ?? '—',
+                    provider?.displayName ?? '-',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -365,8 +367,9 @@ class _ProviderLink extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Client summary — read-only trust card shown to the provider. There is no
-// public client profile (by design), so this card is intentionally not tappable.
+// Client summary: trust card shown to the provider. There is no public client
+// profile (by design); the card is tappable and opens the client's received
+// reviews so the provider can judge them before accepting.
 // ---------------------------------------------------------------------------
 
 class _ClientSummary extends ConsumerWidget {
@@ -380,7 +383,7 @@ class _ClientSummary extends ConsumerWidget {
     final oc = context.oc;
     final client = ref.watch(userByIdProvider(clientId)).valueOrNull;
 
-    // Tappable trust card — opens the client's reviews so the provider can
+    // Tappable trust card: opens the client's reviews so the provider can
     // judge them (e.g. before accepting a request).
     return Material(
       color: oc.cardSurface,
@@ -407,7 +410,7 @@ class _ClientSummary extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      client?.displayName ?? '—',
+                      client?.displayName ?? '-',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -491,36 +494,36 @@ class _ContactSection extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // Other participant's phone
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: oc.primary.withValues(alpha: 0.08),
-                      shape: BoxShape.circle,
+              // Other participant's phone: once shared, it is tap-to-call and
+              // tap-to-WhatsApp (M4). For the target audience the call/WhatsApp
+              // is the main channel, so the number must never be inert text.
+              if (otherShare?.phone != null)
+                _CallablePhone(phone: otherShare!.phone)
+              else
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: oc.primary.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.phone_outlined,
+                        size: 18,
+                        color: oc.primary,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.phone_outlined,
-                      size: 18,
-                      color: oc.primary,
+                    const SizedBox(width: 12),
+                    Text(
+                      l10n.bookingPhoneNotShared,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    otherShare?.phone ?? l10n.bookingPhoneNotShared,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: otherShare != null
-                          ? oc.primaryText
-                          : oc.secondaryText,
-                      fontWeight: otherShare != null
-                          ? FontWeight.w500
-                          : FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
 
               // Share own phone CTA
               if (!hasShared && myPhone != null) ...[
@@ -565,6 +568,96 @@ class _ContactSection extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// A shared phone number rendered as a one-tap call plus a WhatsApp shortcut
+/// (M4). Tapping the number dials it; if no dialer can open, the number is
+/// copied to the clipboard so it is never a dead end.
+class _CallablePhone extends StatelessWidget {
+  const _CallablePhone({required this.phone});
+
+  final String phone;
+
+  /// WhatsApp wants digits only (no +, spaces or dashes) in a wa.me link.
+  String get _whatsappDigits => phone.replaceAll(RegExp(r'[^0-9]'), '');
+
+  Future<void> _call(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final launched = await launchUrl(Uri(scheme: 'tel', path: phone));
+      if (!launched) throw Exception('dialer unavailable');
+    } catch (_) {
+      await Clipboard.setData(ClipboardData(text: phone));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.bookingPhoneCopied)));
+    }
+  }
+
+  Future<void> _whatsapp(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final launched = await launchUrl(
+        Uri.parse('https://wa.me/$_whatsappDigits'),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) throw Exception('whatsapp unavailable');
+    } catch (_) {
+      await Clipboard.setData(ClipboardData(text: phone));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.bookingPhoneCopied)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+    return Row(
+      children: [
+        Expanded(
+          child: Semantics(
+            button: true,
+            label: l10n.bookingCallAction,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => _call(context),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: oc.primary.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.phone, size: 18, color: oc.primary),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        phone,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: oc.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: () => _whatsapp(context),
+          tooltip: l10n.bookingWhatsappAction,
+          icon: Icon(Icons.chat_outlined, color: oc.success),
+        ),
+      ],
     );
   }
 }
@@ -658,7 +751,7 @@ class _ChatButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Review section — shows form button if not yet reviewed, else confirmation
+// Review section: shows form button if not yet reviewed, else confirmation
 // ---------------------------------------------------------------------------
 
 class _ReviewSection extends ConsumerWidget {
