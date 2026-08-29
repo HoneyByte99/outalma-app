@@ -446,6 +446,18 @@ void main() {
       );
     }
     expect(source.captureCount, 1, reason: 'no re-fire during the refusal');
+
+    // And the preview is genuinely alive again, not merely frozen on the
+    // refusal: once the hold is over, a fresh gesture fires a second shot.
+    // Without this, the test would pass just as well on a stream that never
+    // came back, since with no frames the refusal message never changes.
+    await _presentCard(tester, source, fromMs: 4000, untilMs: 7000);
+    await tester.pumpAndSettle();
+    expect(
+      source.captureCount,
+      2,
+      reason: 'frames really came back after the resume',
+    );
   });
 
   testWidgets('a still scene after a refusal needs a NEW gesture to fire', (
