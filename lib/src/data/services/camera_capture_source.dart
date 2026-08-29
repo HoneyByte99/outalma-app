@@ -29,6 +29,10 @@ class CameraCaptureSource implements seam.IdentityCaptureSource {
   CameraController? _controller;
   FaceDetector? _faceDetector;
 
+  /// Kept so [resumeStream] can re-attach the frame handler without reopening
+  /// the camera; it is otherwise only a parameter of [start].
+  CameraDescription? _description;
+
   StreamController<seam.LumaFrame>? _luma;
   StreamController<seam.FaceObservation>? _faces;
 
@@ -118,6 +122,7 @@ class CameraCaptureSource implements seam.IdentityCaptureSource {
       throw seam.CaptureUnavailable(e.code);
     }
     _controller = controller;
+    _description = description;
     _luma = StreamController<seam.LumaFrame>.broadcast();
     _faces = StreamController<seam.FaceObservation>.broadcast();
     _frameClockMs = 0;
@@ -228,9 +233,29 @@ class CameraCaptureSource implements seam.IdentityCaptureSource {
   }
 
   @override
+  Future<void> resumeStream() async {
+    final controller = _controller;
+    final description = _description;
+    if (controller == null || description == null) {
+      throw const seam.CaptureUnavailable('not started');
+    }
+    if (controller.value.isStreamingImages) return;
+    try {
+      await controller.startImageStream(
+        (image) => _onFrame(image, description),
+      );
+    } on CameraException catch (e) {
+      // Restarting a stream after takePicture() is not universal on
+      // entry-level Android. The screen falls back rather than freezing.
+      throw seam.CaptureUnavailable(e.code);
+    }
+  }
+
+  @override
   Future<void> stop() async {
     final controller = _controller;
     _controller = null;
+    _description = null;
     if (controller != null) {
       try {
         if (controller.value.isStreamingImages) {

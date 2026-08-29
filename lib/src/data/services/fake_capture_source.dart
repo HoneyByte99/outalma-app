@@ -27,6 +27,10 @@ class FakeCaptureSource implements IdentityCaptureSource {
   /// usable camera.
   bool available;
 
+  /// When true, [resumeStream] throws, like the entry-level Android devices
+  /// where restarting a stream after takePicture() does not work.
+  bool failResume = false;
+
   /// The bytes [capture] returns.
   Uint8List captureBytes;
 
@@ -38,6 +42,7 @@ class FakeCaptureSource implements IdentityCaptureSource {
   bool _started = false;
   int captureCount = 0;
   int stopCount = 0;
+  int resumeCount = 0;
 
   @override
   Future<CameraPermissionState> requestPermission() async => permission;
@@ -62,6 +67,13 @@ class FakeCaptureSource implements IdentityCaptureSource {
   }
 
   @override
+  Future<void> resumeStream() async {
+    resumeCount++;
+    if (failResume) throw const CaptureUnavailable('resume refused');
+    _started = true;
+  }
+
+  @override
   Future<void> stop() async {
     stopCount++;
     _started = false;
@@ -74,13 +86,22 @@ class FakeCaptureSource implements IdentityCaptureSource {
   bool get isStreaming => _started;
 
   /// Pushes a luma frame to the sharpness channel.
+  ///
+  /// A STOPPED source emits nothing, exactly like the real one: [capture]
+  /// leaves the stream stopped until [resumeStream] restarts it. Without this
+  /// guard a test could not tell a working resume from an empty one, since
+  /// frames would keep arriving either way, and neutralising the resume would
+  /// turn no test red.
   void emitLuma(LumaFrame frame) {
-    if (!_luma.isClosed) _luma.add(frame);
+    if (!_started || _luma.isClosed) return;
+    _luma.add(frame);
   }
 
-  /// Pushes a face observation to the liveness channel.
+  /// Pushes a face observation to the liveness channel. Stopped means silent,
+  /// for the same reason as [emitLuma].
   void emitFace(FaceObservation observation) {
-    if (!_faces.isClosed) _faces.add(observation);
+    if (!_started || _faces.isClosed) return;
+    _faces.add(observation);
   }
 
   Future<void> dispose() async {

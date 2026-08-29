@@ -116,6 +116,23 @@ abstract interface class IdentityCaptureSource {
   /// returned bytes are the only copy the flow keeps.
   Future<CapturedImage> capture();
 
+  /// Restarts the frame stream after a [capture] whose still was REFUSED
+  /// downstream, without reopening the camera.
+  ///
+  /// [capture] leaves the stream stopped. That was harmless while a person had
+  /// to press the button again, but the automatic shutter would simply freeze
+  /// there: no frames, no sharpness, no way back. This is the way back, and it
+  /// is deliberately cheaper than [stop] plus [start], which reopens the device
+  /// and costs about a second.
+  ///
+  /// Only for the refused path. After an ACCEPTED still the screen is already
+  /// being torn down, and restarting a stream on a controller about to be
+  /// disposed is exactly what breaks on entry-level Android.
+  ///
+  /// Throws [CaptureUnavailable] when the stream cannot be restarted, so the
+  /// screen has a single failure contract to know.
+  Future<void> resumeStream();
+
   /// Releases the camera and both streams. Safe to call more than once.
   Future<void> stop();
 

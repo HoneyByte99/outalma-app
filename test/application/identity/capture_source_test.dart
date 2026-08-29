@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/src/application/identity/capture_source.dart';
+import 'package:outalma_app/src/data/services/fake_capture_source.dart';
 
 void main() {
   group('capture seam value types', () {
@@ -54,6 +55,67 @@ void main() {
     test('the permission and lens enums expose their full vocabulary', () {
       expect(CameraPermissionState.values, hasLength(4));
       expect(CameraLensDirection.values, hasLength(2));
+    });
+  });
+
+  group('FakeCaptureSource mirrors the real stream lifecycle', () {
+    LumaFrame frame() => LumaFrame(
+      luma: Uint8List(4),
+      width: 2,
+      height: 2,
+      rowStride: 2,
+      timestampMs: 0,
+    );
+
+    test('a stopped source emits nothing, like the real one after capture', () {
+      final source = FakeCaptureSource();
+      final seen = <LumaFrame>[];
+      source.lumaFrames().listen(seen.add);
+
+      // Never started: silent.
+      source.emitLuma(frame());
+      expect(seen, isEmpty);
+    });
+
+    test('capture stops the stream and resumeStream restarts it', () async {
+      final source = FakeCaptureSource();
+      final seen = <LumaFrame>[];
+      source.lumaFrames().listen(seen.add);
+
+      await source.start(CameraLensDirection.back);
+      source.emitLuma(frame());
+      await Future<void>.delayed(Duration.zero);
+      expect(seen, hasLength(1));
+
+      // capture() leaves the stream stopped: this is the freeze the automatic
+      // shutter would hit without a resume.
+      await source.capture();
+      source.emitLuma(frame());
+      await Future<void>.delayed(Duration.zero);
+      expect(seen, hasLength(1), reason: 'no frames while stopped');
+
+      await source.resumeStream();
+      source.emitLuma(frame());
+      await Future<void>.delayed(Duration.zero);
+      expect(seen, hasLength(2));
+      expect(source.resumeCount, 1);
+    });
+
+    test('a refused resume leaves the source stopped', () async {
+      final source = FakeCaptureSource()..failResume = true;
+      final seen = <LumaFrame>[];
+      source.lumaFrames().listen(seen.add);
+
+      await source.start(CameraLensDirection.back);
+      await source.capture();
+      await expectLater(
+        source.resumeStream(),
+        throwsA(isA<CaptureUnavailable>()),
+      );
+
+      source.emitLuma(frame());
+      await Future<void>.delayed(Duration.zero);
+      expect(seen, isEmpty);
     });
   });
 }

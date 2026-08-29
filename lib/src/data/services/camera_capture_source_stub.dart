@@ -33,6 +33,9 @@ class CameraCaptureSource implements IdentityCaptureSource {
   Future<CapturedImage> capture() async => _unsupported();
 
   @override
+  Future<void> resumeStream() async => _unsupported();
+
+  @override
   Future<void> stop() async {}
 
   @override
