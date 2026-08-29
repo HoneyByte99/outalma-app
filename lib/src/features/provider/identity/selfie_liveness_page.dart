@@ -12,6 +12,7 @@ import '../../../application/identity/liveness_capture.dart';
 import '../../../domain/identity/liveness_challenge.dart';
 import '../../shared/open_settings.dart';
 import 'identity_capture_widgets.dart';
+import 'liveness_face_guide.dart';
 
 /// The selfie step with a light liveness challenge (archi 5.3, slice 5,
 /// AC-C07/C08/C11/C34).
@@ -229,6 +230,13 @@ class _SelfieLivenessPageState extends ConsumerState<SelfieLivenessPage> {
             step: l10n.identityStepProgress(widget.stepIndex, widget.stepTotal),
             instruction: _instructionFor(l10n),
           ),
+        ),
+        // Below the oval, so the user's own face stays visible inside it. The
+        // guide demonstrates the gesture the banner describes, for the many
+        // providers who cannot read the sentence.
+        Align(
+          alignment: const Alignment(0, 0.82),
+          child: LivenessFaceGuide(state: _state),
         ),
       ],
     );
