@@ -185,13 +185,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       source.captureCount - beforeVerso,
-      lessThanOrEqualTo(1),
-      reason: 'the dead recto page must not shoot alongside the verso',
+      1,
+      reason: 'exactly the verso, and nothing from the dead recto page',
     );
-
-    if (source.captureCount == beforeVerso) {
-      await _captureDocument(tester, source);
-    }
 
     // Selfie.
     expect(find.text('Selfie de vérification'), findsOneWidget);

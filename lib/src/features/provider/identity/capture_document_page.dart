@@ -103,6 +103,11 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
   bool _fallbackDue = false;
   bool _capturing = false;
 
+  /// True once a shot has actually been taken. The hint has nothing left
+  /// to teach then, and three blocks of text at once is pure noise for
+  /// someone who cannot read.
+  bool _anyShotTaken = false;
+
   bool _showBlurHint = false;
   bool _showNoTextHint = false;
 
@@ -114,6 +119,11 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
   }
 
   Future<void> _bootstrap() async {
+    // Release whatever may still be open: this runs on the retry action too,
+    // and start() builds a fresh controller and stream without freeing the
+    // previous ones. Safe to call more than once by contract.
+    await _source.stop();
+    if (!mounted) return;
     final permission = await _source.requestPermission();
     if (!mounted) return;
     switch (permission) {
@@ -306,6 +316,7 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       // A photo was taken. Say so on two channels that need no reading, before
       // knowing whether it will be kept.
       _flashToken.value++;
+      _anyShotTaken = true;
       unawaited(HapticFeedback.mediumImpact());
 
       // Readable-text gate (AC-C06b): a sharp still is not necessarily a
@@ -461,7 +472,7 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
           child: CaptureInstructionBanner(
             step: l10n.identityStepProgress(widget.stepIndex, widget.stepTotal),
             instruction: instruction,
-            hint: l10n.identityCaptureAutoHint,
+            hint: _anyShotTaken ? null : l10n.identityCaptureAutoHint,
           ),
         ),
         Positioned(

@@ -127,7 +127,7 @@ class _LivenessFaceGuideState extends State<LivenessFaceGuide>
               animation: _controller,
               builder: (context, _) => CustomPaint(
                 size: Size.square(widget.size),
-                painter: _FacePainter(
+                painter: LivenessFacePainter(
                   yaw: -_maxYaw * _controller.value,
                   state: widget.state,
                 ),
@@ -145,8 +145,9 @@ class _LivenessFaceGuideState extends State<LivenessFaceGuide>
 /// The turn is faked rather than projected: the head narrows and the features
 /// slide with it, which reads as a head turning far better than rotating a flat
 /// picture would.
-class _FacePainter extends CustomPainter {
-  const _FacePainter({required this.yaw, required this.state});
+@visibleForTesting
+class LivenessFacePainter extends CustomPainter {
+  const LivenessFacePainter({required this.yaw, required this.state});
 
   /// Radians. Negative turns to the viewer's left.
   final double yaw;
@@ -256,5 +257,6 @@ class _FacePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_FacePainter old) => old.yaw != yaw || old.state != state;
+  bool shouldRepaint(LivenessFacePainter old) =>
+      old.yaw != yaw || old.state != state;
 }

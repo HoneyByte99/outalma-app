@@ -253,9 +253,22 @@ class CameraCaptureSource implements seam.IdentityCaptureSource {
 
   @override
   Future<void> stop() async {
+    // Everything this method owns is read and cleared SYNCHRONOUSLY, before
+    // the first await. A page's dispose() fires stop() without awaiting it
+    // while the next page is already bootstrapping, so a tail that still held
+    // these fields could close the stream the NEW epoch just opened, or stop
+    // its clock: the hold would then never elapse and the automatic shutter
+    // would silently degrade to the manual fallback.
     final controller = _controller;
+    final faceDetector = _faceDetector;
+    final luma = _luma;
+    final faces = _faces;
     _controller = null;
     _description = null;
+    _faceDetector = null;
+    _luma = null;
+    _faces = null;
+    _clock.stop();
     if (controller != null) {
       try {
         if (controller.value.isStreamingImages) {
@@ -266,13 +279,9 @@ class CameraCaptureSource implements seam.IdentityCaptureSource {
       }
       await controller.dispose();
     }
-    _clock.stop();
-    await _faceDetector?.close();
-    _faceDetector = null;
-    await _luma?.close();
-    await _faces?.close();
-    _luma = null;
-    _faces = null;
+    await faceDetector?.close();
+    await luma?.close();
+    await faces?.close();
   }
 
   @override

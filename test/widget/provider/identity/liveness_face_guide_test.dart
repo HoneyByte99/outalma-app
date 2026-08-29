@@ -15,7 +15,7 @@ Widget _wrap(LivenessState state) => MaterialApp(
 );
 
 /// The painter currently driving the drawn face.
-CustomPainter _painter(WidgetTester tester) {
+LivenessFacePainter _painter(WidgetTester tester) {
   final paint = tester.widget<CustomPaint>(
     find
         .descendant(
@@ -24,7 +24,7 @@ CustomPainter _painter(WidgetTester tester) {
         )
         .first,
   );
-  return paint.painter!;
+  return paint.painter! as LivenessFacePainter;
 }
 
 double _arrowOpacity(WidgetTester tester) => tester
@@ -71,16 +71,21 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(_wrap(LivenessState.turnHead));
-    await tester.pump(const Duration(milliseconds: 100));
-    final first = _painter(tester);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final turned = _painter(tester).yaw;
+    expect(
+      turned,
+      isNot(0),
+      reason: 'the head must actually be turned, not merely repainted',
+    );
+    expect(turned, lessThan(0), reason: 'the demonstration turns left');
 
     await tester.pump(const Duration(milliseconds: 300));
-    final later = _painter(tester);
-
     expect(
-      later,
-      isNot(same(first)),
-      reason: 'the face must keep moving while a turn is asked for',
+      _painter(tester).yaw,
+      isNot(turned),
+      reason: 'and it must keep moving while a turn is asked for',
     );
   });
 
@@ -88,9 +93,9 @@ void main() {
     await tester.pumpWidget(_wrap(LivenessState.ready));
     await tester.pump(const Duration(milliseconds: 100));
     final first = _painter(tester);
+    expect(first.yaw, 0, reason: 'a settled face looks straight ahead');
 
     await tester.pump(const Duration(milliseconds: 600));
-
     expect(
       _painter(tester),
       same(first),
