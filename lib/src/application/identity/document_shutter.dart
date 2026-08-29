@@ -108,20 +108,24 @@ DocumentShutterState evaluateDocumentShutter({
 }) {
   // A refusal owns the screen for its hold, anchored on the first frame that
   // arrives after the resume. Nothing can fire during it.
+  final moved = motion > motionThreshold;
+
   if (prev.reason == DocumentShutterReason.refused) {
     final since = prev.refusedSinceMs ?? nowMs;
     if (nowMs - since < refusedHoldMs) {
+      // Nothing fires during the hold, but movement still counts: someone who
+      // is already picking the card back up should not have to move it twice.
+      // The state starts disarmed, so a scene left untouched still never arms.
       return DocumentShutterState(
-        armed: false,
+        armed: prev.armed || moved,
         refusedSinceMs: since,
         reason: DocumentShutterReason.refused,
       );
     }
-    // The hold is over: fall through and read this frame normally, still
-    // disarmed, so a fresh gesture is required before anything can fire again.
+    // The hold is over: read this frame normally, carrying whatever arming the
+    // hold collected. A scene nobody touched is still disarmed.
   }
 
-  final moved = motion > motionThreshold;
   final armed = prev.armed || moved;
 
   // Disarmed: the scene has not moved since this screen was entered, so what is

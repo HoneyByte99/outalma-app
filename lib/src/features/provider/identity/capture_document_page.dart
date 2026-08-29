@@ -1,26 +1,42 @@
-import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../../app/app_spacing.dart';
 import '../../../application/identity/capture_config.dart';
 import '../../../application/identity/capture_source.dart';
+import '../../../application/identity/document_shutter.dart';
 import '../../../application/identity/identity_capture_providers.dart';
+import '../../../domain/identity/frame_motion.dart';
 import '../../../domain/identity/image_sharpness.dart';
 import '../../shared/open_settings.dart';
 import 'identity_capture_widgets.dart';
 
 /// One document side captured live (archi 5.3, slice 4, AC-C05/C06/C11).
 ///
-/// The sharpness gate runs on the luminance stream BEFORE anything is shot: the
-/// capture button only fires when the latest frame is sharp enough, or when the
-/// user takes the "send anyway" escape after two blur refusals on this same
-/// still (AC-C34, never offered on the liveness challenge). The recto threshold
-/// is strictly harder than the verso's (AC-C06).
+/// The photo is taken AUTOMATICALLY once the framing settles, so a provider who
+/// cannot read has nothing to read and no button to find: a ring fills as the
+/// hold runs, the shot flashes and buzzes, and an icon says what to do next.
 ///
-/// TO VERIFY ON DEVICE: the live preview render and the calibrated threshold.
+/// Two things guard that automation.
+///
+/// The shutter starts DISARMED and only arms once the scene has moved. Without
+/// it the verso screen would photograph the recto still lying there, sharp and
+/// motionless, the readable-text gate would accept it since a recto carries
+/// text, and the batch would ship two rectos.
+///
+/// The manual button stays as a FALLBACK, offered by a one-shot timer that runs
+/// whether or not frames arrive, so a dead stream never leaves the user without
+/// a command. When sharpness is unknown that button does not capture silently:
+/// each press is refused and counted, and the AC-C34 escape only appears past
+/// blurOverrideAfter, exactly as it does for a blurred frame.
+///
+/// TO VERIFY ON DEVICE: the calibrated thresholds (the analysis window is now
+/// the centre of the frame, so their meaning changed), and the delay between
+/// the decision and the shutter.
 class CaptureDocumentPage extends ConsumerStatefulWidget {
   const CaptureDocumentPage({
     super.key,
@@ -44,10 +60,50 @@ enum _Ui { loading, denied, permanentlyDenied, unavailable, ready }
 
 class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
   late final IdentityCaptureSource _source;
+
+  /// Kept so it can be cancelled: [stop] closes the luma controller, so a
+  /// resume that does not re-listen would leave a permanently dead screen, and
+  /// a subscription outliving this page could fire on a disposed widget.
+  StreamSubscription<LumaFrame>? _sub;
+
+  /// One-shot, latched, never restarted, cancelled on dispose.
+  Timer? _fallbackTimer;
+
+  /// Drives the overlay alone, so the camera preview never rebuilds (P5).
+  final ValueNotifier<DocumentShutterState> _shutter = ValueNotifier(
+    const DocumentShutterState.initial(),
+  );
+  final ValueNotifier<int> _flashToken = ValueNotifier(0);
+
   _Ui _ui = _Ui.loading;
+
+  Uint8List? _lastSignature;
+  int _frameIndex = 0;
   double _lastVariance = 0;
+
+  /// False whenever the stream is not delivering. Sharpness is then UNKNOWN,
+  /// never "the last value we saw", which would judge a scene nobody is
+  /// looking at any more.
+  bool _sharpnessKnown = false;
+
+  /// Set between a refusal and the first frame back, so the refusal is anchored
+  /// on that frame rather than on the moment of the refusal: a capture round
+  /// trip costs 500 to 1000 ms, which would already have expired the hold.
+  bool _awaitingResumeAnchor = false;
+
+  /// Timestamp of the last frame analysed before a shot. Frames emitted while
+  /// the shot was in flight are still queued behind it, and one of them would
+  /// otherwise anchor the refusal with its OWN stale timestamp, making the
+  /// refusal look older than its hold and vanish on the spot.
+  int _resumeFloorMs = 0;
+  int _lastFrameMs = 0;
+
   int _blurFails = 0;
+  int _autoRejects = 0;
+  bool _fallbackDue = false;
   bool _capturing = false;
+  bool _everCaptured = false;
+
   bool _showBlurHint = false;
   bool _showNoTextHint = false;
 
@@ -81,37 +137,166 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       return;
     }
     if (!mounted) return;
-    _source.lumaFrames().listen((frame) {
-      _lastVariance = ImageSharpness.laplacianVariance(
-        frame.luma,
-        frame.width,
-        frame.height,
-        rowStride: frame.rowStride,
-      );
-    });
+
+    // NOT awaited, deliberately. This can run inside the luma callback's own
+    // async chain (a refused shot restarts the preview from there), and a
+    // subscription cancelled from within its own delivery never completes its
+    // future: awaiting it deadlocks the capture, leaving the button spinning
+    // for ever. The old subscription stops on its own; a duplicate frame in
+    // the meantime is harmless, it carries the same timestamp.
+    unawaited(_sub?.cancel() ?? Future<void>.value());
+
+    _resetAnalysis();
+    _sub = _source.lumaFrames().listen(_onFrame);
+    _armFallback();
     setState(() => _ui = _Ui.ready);
   }
 
-  Future<void> _onCapturePressed({bool force = false}) async {
+  void _resetAnalysis() {
+    _frameIndex = 0;
+    _lastSignature = null;
+    _sharpnessKnown = false;
+    _awaitingResumeAnchor = false;
+    _shutter.value = const DocumentShutterState.initial();
+  }
+
+  /// The fallback clock is a wall clock, NOT the frame clock: a frame-fed clock
+  /// does not advance when nothing arrives, so a dead stream would leave the
+  /// user with no command at all. It is armed once and latched, so the button
+  /// never disappears after showing itself.
+  void _armFallback() {
+    if (_fallbackTimer != null || _fallbackDue) return;
+    final config = ref.read(captureConfigProvider);
+    _fallbackTimer = Timer(
+      Duration(milliseconds: config.manualFallbackAfterMs),
+      () {
+        if (mounted) setState(() => _fallbackDue = true);
+      },
+    );
+  }
+
+  void _onFrame(LumaFrame frame) {
+    if (!mounted) return;
+    // Every frame's clock is remembered, including the ones dropped just below:
+    // the resume floor has to exclude everything that was already in flight
+    // when the shot was taken, not just what happened to be analysed.
+    if (frame.timestampMs > _lastFrameMs) _lastFrameMs = frame.timestampMs;
+    if (_capturing) return;
+
+    final config = ref.read(captureConfigProvider);
+
+    // Drop whatever was in flight when the shot was taken: only a frame from
+    // AFTER the resume may anchor the refusal.
+    if (_awaitingResumeAnchor && frame.timestampMs <= _resumeFloorMs) return;
+
+    // One frame in N, but the first frame after every anchor is always read:
+    // a pre-incremented counter would drop the two frames that carry the
+    // arming and the start of the hold.
+    if (_frameIndex++ % config.analyzeEveryNthFrame != 0) return;
+
+    final signature = FrameMotion.sample(
+      frame.luma,
+      frame.width,
+      frame.height,
+      rowStride: frame.rowStride,
+      centerFraction: config.analysisCenterFraction,
+    );
+    final previous = _lastSignature;
+    _lastSignature = signature;
+    // The very first frame has nothing to compare against: no evidence of
+    // movement, so the shutter stays disarmed.
+    final motion = previous == null
+        ? 0.0
+        : FrameMotion.meanAbsoluteDifference(previous, signature);
+
+    _lastVariance = ImageSharpness.laplacianVariance(
+      frame.luma,
+      frame.width,
+      frame.height,
+      rowStride: frame.rowStride,
+      centerFraction: config.analysisCenterFraction,
+    );
+    _sharpnessKnown = true;
+
+    var previousState = _shutter.value;
+    if (_awaitingResumeAnchor) {
+      _awaitingResumeAnchor = false;
+      previousState = DocumentShutterState(
+        reason: DocumentShutterReason.refused,
+        refusedSinceMs: frame.timestampMs,
+      );
+    }
+
+    final next = evaluateDocumentShutter(
+      prev: previousState,
+      sharpness: _lastVariance,
+      motion: motion,
+      nowMs: frame.timestampMs,
+      sharpnessThreshold: config.sharpnessThresholdFor(widget.side),
+      motionThreshold: config.motionThreshold,
+      steadyHoldMs: config.steadyHoldMs,
+      refusedHoldMs: config.refusedHoldMs,
+    );
+    _shutter.value = next;
+
+    // Once the refusal has had its time on screen, drop its message too.
+    if (next.reason != DocumentShutterReason.refused &&
+        (_showNoTextHint || _showBlurHint)) {
+      setState(() {
+        _showNoTextHint = false;
+        _showBlurHint = false;
+      });
+    }
+
+    if (next.shouldCapture &&
+        autoShutterEnabled(
+          autoRejects: _autoRejects,
+          rejectLimit: config.autoRejectLimit,
+        )) {
+      unawaited(_capture(automatic: true));
+    }
+  }
+
+  /// [automatic] shots have already cleared the sharpness bar inside the
+  /// shutter selector. [force] is the AC-C34 escape, which skips the sharpness
+  /// bar but never the readable-text gate.
+  Future<void> _capture({required bool automatic, bool force = false}) async {
     if (_capturing) return;
     final config = ref.read(captureConfigProvider);
-    final threshold = config.sharpnessThresholdFor(widget.side);
 
-    if (!force && _lastVariance < threshold) {
-      setState(() {
-        _blurFails++;
-        _showBlurHint = true;
-      });
-      return;
+    if (!automatic && !force) {
+      // Unknown sharpness counts as NOT sharp. Capturing anyway would drop the
+      // AC-C06 barrier after zero refusals, which is a bypass wearing the
+      // escape's label rather than the escape itself.
+      final sharp =
+          _sharpnessKnown &&
+          _lastVariance >= config.sharpnessThresholdFor(widget.side);
+      if (!sharp) {
+        setState(() {
+          _blurFails++;
+          _showBlurHint = true;
+          _showNoTextHint = false;
+        });
+        return;
+      }
     }
 
     setState(() {
       _capturing = true;
       _showNoTextHint = false;
+      _showBlurHint = false;
     });
+    // The stream stops for the shot: nothing may be judged until it is back.
+    _sharpnessKnown = false;
+
     try {
       final image = await _source.capture();
       if (!mounted) return;
+
+      // A photo was taken. Say so on two channels that need no reading, before
+      // knowing whether it will be kept.
+      _flashToken.value++;
+      unawaited(HapticFeedback.mediumImpact());
 
       // Readable-text gate (AC-C06b): a sharp still is not necessarily a
       // document. Refuse any still on which no text at all was recognised, even
@@ -122,10 +307,13 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
           .detect(image.jpegBytes);
       if (!mounted) return;
       if (!textResult.hasText) {
+        _autoRejects++;
         setState(() => _showNoTextHint = true);
+        await _resumeAfterRefusal();
         return;
       }
 
+      _everCaptured = true;
       widget.onCaptured(image.jpegBytes);
     } on CaptureUnavailable {
       if (mounted) setState(() => _ui = _Ui.unavailable);
@@ -134,9 +322,39 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     }
   }
 
+  /// Brings the preview back after a REFUSED still, never after an accepted one
+  /// (the page is being torn down then, and restarting a stream on a controller
+  /// about to be disposed is what breaks on entry-level Android).
+  Future<void> _resumeAfterRefusal() async {
+    try {
+      await _source.resumeStream();
+    } on CaptureUnavailable {
+      // Restarting the stream is not universal. Reopen the camera outright
+      // before degrading anything: _startPreview cancels the old subscription
+      // and re-listens, which is required because stop() closed the stream.
+      await _source.stop();
+      if (!mounted) return;
+      await _startPreview();
+      return;
+    }
+    if (!mounted) return;
+    _frameIndex = 0;
+    _lastSignature = null;
+    // Everything up to here was in flight around the shot: only later frames
+    // may anchor the refusal.
+    _resumeFloorMs = _lastFrameMs;
+    _awaitingResumeAnchor = true;
+    _shutter.value = const DocumentShutterState.refused();
+  }
+
   @override
   void dispose() {
+    // Order matters: silence the inputs before disposing what they write to.
+    _fallbackTimer?.cancel();
+    _sub?.cancel();
     _source.stop();
+    _shutter.dispose();
+    _flashToken.dispose();
     super.dispose();
   }
 
@@ -169,10 +387,32 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
           canOpenSettings: true,
           onOpenSettings: openAppSettings,
         ),
-        _Ui.unavailable => const IdentityCameraUnavailableView(),
+        // Always reachable again (U1): this state can now be entered mid
+        // journey, after the recto is already in hand, so a terminal screen
+        // would strand the user.
+        _Ui.unavailable => IdentityCameraUnavailableView(onRetry: _bootstrap),
         _Ui.ready => _buildLive(context, l10n),
       },
     );
+  }
+
+  /// The one message the screen shows, rendered in a single place so the
+  /// refusal icon ADDS to the reason rather than replacing it.
+  String _message(AppLocalizations l10n, DocumentShutterState state) {
+    if (_showNoTextHint) return l10n.identityCaptureNoText;
+    if (_showBlurHint) return l10n.identityCaptureBlurry;
+    return switch (state.reason) {
+      DocumentShutterReason.noFrame => l10n.identityCaptureSearching,
+      DocumentShutterReason.waitingForMotion =>
+        widget.side == DocumentSide.verso
+            ? l10n.identityCaptureFlipCard
+            : l10n.identityCaptureSearching,
+      DocumentShutterReason.tooBlurred => l10n.identityCaptureBlurry,
+      DocumentShutterReason.moving => l10n.identityCaptureMoving,
+      DocumentShutterReason.steadying => l10n.identityCaptureHoldStill,
+      DocumentShutterReason.ready => l10n.identityCaptureHoldStill,
+      DocumentShutterReason.refused => l10n.identityCaptureRefused,
+    };
   }
 
   Widget _buildLive(BuildContext context, AppLocalizations l10n) {
@@ -185,7 +425,29 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       fit: StackFit.expand,
       children: [
         _source.buildPreview(),
-        const DocumentFrameOverlay(),
+        ValueListenableBuilder<DocumentShutterState>(
+          valueListenable: _shutter,
+          builder: (context, state, _) => DocumentFrameOverlay(
+            reason: state.reason,
+            progress: state.progress,
+            showFlipDemo: widget.side == DocumentSide.verso,
+          ),
+        ),
+        ValueListenableBuilder<int>(
+          valueListenable: _flashToken,
+          builder: (context, token, _) => token == 0
+              ? const SizedBox.shrink()
+              : TweenAnimationBuilder<double>(
+                  key: ValueKey(token),
+                  tween: Tween(begin: 0.85, end: 0),
+                  duration: const Duration(milliseconds: 240),
+                  builder: (context, opacity, _) => IgnorePointer(
+                    child: ColoredBox(
+                      color: Colors.white.withValues(alpha: opacity),
+                    ),
+                  ),
+                ),
+        ),
         Positioned(
           top: 0,
           left: 0,
@@ -193,23 +455,33 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
           child: CaptureInstructionBanner(
             step: l10n.identityStepProgress(widget.stepIndex, widget.stepTotal),
             instruction: instruction,
+            // Once a photo has actually been taken the hint has nothing left to
+            // teach, and three blocks of text at once is pure noise for someone
+            // who does not read.
+            hint: _everCaptured ? null : l10n.identityCaptureAutoHint,
           ),
         ),
         Positioned(
           left: 0,
           right: 0,
           bottom: 0,
-          child: _BottomBar(
-            capturing: _capturing,
-            showBlurHint: _showBlurHint,
-            blurMessage: l10n.identityCaptureBlurry,
-            showNoTextHint: _showNoTextHint,
-            noTextMessage: l10n.identityCaptureNoText,
-            captureLabel: l10n.identityCaptureButton,
-            sendAnywayLabel: l10n.identityCaptureSendAnyway,
-            offerSendAnyway: _blurFails >= config.blurOverrideAfter,
-            onCapture: () => _onCapturePressed(),
-            onSendAnyway: () => _onCapturePressed(force: true),
+          child: ValueListenableBuilder<DocumentShutterState>(
+            valueListenable: _shutter,
+            builder: (context, state, _) => _BottomBar(
+              capturing: _capturing,
+              message: _message(l10n, state),
+              captureLabel: l10n.identityCaptureButton,
+              manualHint: l10n.identityCaptureManualHint,
+              sendAnywayLabel: l10n.identityCaptureSendAnyway,
+              offerManual: offerManualShutter(
+                fallbackDue: _fallbackDue,
+                autoRejects: _autoRejects,
+                rejectLimit: config.autoRejectLimit,
+              ),
+              offerSendAnyway: _blurFails >= config.blurOverrideAfter,
+              onCapture: () => _capture(automatic: false),
+              onSendAnyway: () => _capture(automatic: false, force: true),
+            ),
           ),
         ),
       ],
@@ -220,24 +492,22 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
 class _BottomBar extends StatelessWidget {
   const _BottomBar({
     required this.capturing,
-    required this.showBlurHint,
-    required this.blurMessage,
-    required this.showNoTextHint,
-    required this.noTextMessage,
+    required this.message,
     required this.captureLabel,
+    required this.manualHint,
     required this.sendAnywayLabel,
+    required this.offerManual,
     required this.offerSendAnyway,
     required this.onCapture,
     required this.onSendAnyway,
   });
 
   final bool capturing;
-  final bool showBlurHint;
-  final String blurMessage;
-  final bool showNoTextHint;
-  final String noTextMessage;
+  final String message;
   final String captureLabel;
+  final String manualHint;
   final String sendAnywayLabel;
+  final bool offerManual;
   final bool offerSendAnyway;
   final VoidCallback onCapture;
   final VoidCallback onSendAnyway;
@@ -258,52 +528,48 @@ class _BottomBar extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (showNoTextHint)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.m),
-                child: Text(
-                  noTextMessage,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              )
-            else if (showBlurHint)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.m),
-                child: Text(
-                  blurMessage,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            Semantics(
-              button: true,
-              label: captureLabel,
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: capturing ? null : onCapture,
-                  child: capturing
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(captureLabel),
-                ),
-              ),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white),
             ),
-            if (offerSendAnyway)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.s),
-                child: TextButton(
-                  onPressed: capturing ? null : onSendAnyway,
-                  child: Text(
-                    sendAnywayLabel,
-                    style: const TextStyle(color: Colors.white),
+            if (offerManual) ...[
+              const SizedBox(height: AppSpacing.m),
+              Text(
+                manualHint,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: AppSpacing.s),
+              Semantics(
+                button: true,
+                label: captureLabel,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: capturing ? null : onCapture,
+                    child: capturing
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(captureLabel),
                   ),
                 ),
               ),
+              if (offerSendAnyway)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.s),
+                  child: TextButton(
+                    onPressed: capturing ? null : onSendAnyway,
+                    child: Text(
+                      sendAnywayLabel,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+            ],
           ],
         ),
       ),

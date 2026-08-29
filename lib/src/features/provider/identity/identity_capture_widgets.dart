@@ -1,35 +1,183 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../../app/app_spacing.dart';
+import '../../../app/app_theme.dart';
+import '../../../application/identity/document_shutter.dart';
 
 /// Shared pieces of the capture screens: the framing overlays, the instruction
 /// banner (on its A7 scrim), and the two error states (permission, no camera).
 
 /// A rounded rectangle framing hint for the ID card, drawn over the preview.
+///
+/// The frame is the main channel for people who do not read: its colour, the
+/// ring that fills as the hold runs, and the icon above it say what to do
+/// without a sentence. Meaning is never carried by colour alone (A3): every
+/// state also has an icon, and the screen prints the matching text beside it.
 class DocumentFrameOverlay extends StatelessWidget {
-  const DocumentFrameOverlay({super.key});
+  const DocumentFrameOverlay({
+    super.key,
+    this.reason = DocumentShutterReason.noFrame,
+    this.progress = 0,
+    this.showFlipDemo = false,
+  });
+
+  final DocumentShutterReason reason;
+
+  /// 0 to 1: how much of the hold has elapsed.
+  final double progress;
+
+  /// On the second side, show the card turning over while the shutter waits for
+  /// a gesture. It is the only way someone who does not read learns that the
+  /// card must be flipped rather than left where it is.
+  final bool showFlipDemo;
+
+  IconData get _icon => switch (reason) {
+    DocumentShutterReason.noFrame => Icons.center_focus_weak,
+    DocumentShutterReason.waitingForMotion => Icons.center_focus_weak,
+    DocumentShutterReason.tooBlurred => Icons.blur_on,
+    DocumentShutterReason.moving => Icons.pan_tool,
+    DocumentShutterReason.steadying => Icons.pan_tool,
+    DocumentShutterReason.ready => Icons.check_circle,
+    DocumentShutterReason.refused => Icons.flip_camera_android,
+  };
+
+  Color get _color => switch (reason) {
+    DocumentShutterReason.steadying => AppColors.accent,
+    DocumentShutterReason.ready => AppColors.accent,
+    DocumentShutterReason.refused => AppColors.warning,
+    _ => Colors.white,
+  };
 
   @override
   Widget build(BuildContext context) {
+    // A Stack, not a Column: the frame sizes itself from the available width,
+    // so stacking anything above it in a Column overflows on short surfaces.
     return IgnorePointer(
-      child: Center(
-        child: AspectRatio(
-          // ID-1 card ratio (85.6 x 54 mm), the shape a national ID card fills.
-          aspectRatio: 85.6 / 54,
-          child: FractionallySizedBox(
-            widthFactor: 0.86,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 3),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Center(
+            child: AspectRatio(
+              // ID-1 card ratio (85.6 x 54 mm), the shape a national ID card
+              // fills.
+              aspectRatio: 85.6 / 54,
+              child: FractionallySizedBox(
+                widthFactor: 0.86,
+                child: TweenAnimationBuilder<double>(
+                  // Implicit and one-shot: the ring must never be a repeating
+                  // animation, which would leave a frame permanently scheduled
+                  // and hang every pumpAndSettle on this screen.
+                  tween: Tween(begin: 0, end: progress.clamp(0.0, 1.0)),
+                  duration: const Duration(milliseconds: 180),
+                  builder: (context, value, _) => CustomPaint(
+                    painter: _DocumentFramePainter(
+                      color: _color,
+                      progress: value,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+          // The status icon sits above the frame, on its own scrim so it stays
+          // legible over a bright scene (A1: an interface element carrying
+          // meaning).
+          Align(
+            alignment: const Alignment(0, -0.78),
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.s),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                shape: BoxShape.circle,
+              ),
+              child:
+                  showFlipDemo &&
+                      reason == DocumentShutterReason.waitingForMotion
+                  ? _FlipCardDemo(color: _color)
+                  : Icon(_icon, color: _color, size: 32),
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+/// A card turning over, played a BOUNDED number of times.
+///
+/// Deliberately not a repeating animation: a `repeat()` keeps a frame scheduled
+/// for ever, which would hang every `pumpAndSettle` on this screen (there are
+/// seventeen of them across the capture tests). Three turns are enough to show
+/// what is expected, then it rests.
+class _FlipCardDemo extends StatelessWidget {
+  const _FlipCardDemo({required this.color});
+
+  final Color color;
+
+  static const _turns = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: _turns.toDouble()),
+      duration: const Duration(milliseconds: 1000 * _turns),
+      builder: (context, t, child) => Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.identity()
+          ..setEntry(3, 2, 0.0015)
+          ..rotateY(math.sin(t * 2 * math.pi) * 1.1),
+        child: child,
+      ),
+      child: Icon(Icons.badge_outlined, color: color, size: 32),
+    );
+  }
+}
+
+/// Draws the framing rectangle, and over it the portion of its outline that the
+/// hold has already earned. A ring filling up is the anticipation signal for a
+/// shot nobody asked for by pressing anything.
+class _DocumentFramePainter extends CustomPainter {
+  const _DocumentFramePainter({required this.color, required this.progress});
+
+  final Color color;
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(
+      rect,
+      const Radius.circular(AppSpacing.radiusLarge),
+    );
+
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..color = progress > 0 ? color.withValues(alpha: 0.35) : color,
+    );
+
+    if (progress <= 0) return;
+
+    final path = Path()..addRRect(rrect);
+    final metric = path.computeMetrics().first;
+    canvas.drawPath(
+      metric.extractPath(0, metric.length * progress),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5
+        ..strokeCap = StrokeCap.round
+        ..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DocumentFramePainter old) =>
+      old.progress != progress || old.color != color;
 }
 
 /// An oval framing hint for the selfie, drawn over the front preview.
@@ -62,10 +210,15 @@ class CaptureInstructionBanner extends StatelessWidget {
     super.key,
     required this.step,
     required this.instruction,
+    this.hint,
   });
 
   final String step;
   final String instruction;
+
+  /// Optional secondary line, e.g. "the photo is taken automatically". Null
+  /// once it has nothing left to teach.
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +250,13 @@ class CaptureInstructionBanner extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+            if (hint != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                hint!,
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+            ],
           ],
         ),
       ),
