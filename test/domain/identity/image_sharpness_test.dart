@@ -75,4 +75,67 @@ void main() {
       );
     });
   });
+
+  group('laplacianVariance centerFraction', () {
+    const size = 40;
+    bool isEdge(int x, int y) =>
+        x < 8 || y < 8 || x >= size - 8 || y >= size - 8;
+
+    test('defaults to the whole image, so existing callers are unchanged', () {
+      final checker = _plane(size, size, (x, y) => (x + y).isEven ? 0 : 255);
+      expect(
+        ImageSharpness.laplacianVariance(checker, size, size),
+        ImageSharpness.laplacianVariance(
+          checker,
+          size,
+          size,
+          centerFraction: 1.0,
+        ),
+      );
+    });
+
+    test('a sharp border is ignored when the centre is flat', () {
+      // Crisp checkerboard on the edges, dead flat in the middle.
+      final sharpEdges = _plane(
+        size,
+        size,
+        (x, y) => isEdge(x, y) ? ((x + y).isEven ? 0 : 255) : 128,
+      );
+      final cropped = ImageSharpness.laplacianVariance(
+        sharpEdges,
+        size,
+        size,
+        centerFraction: 0.4,
+      );
+      final whole = ImageSharpness.laplacianVariance(sharpEdges, size, size);
+
+      expect(cropped, 0, reason: 'the centre alone carries no detail');
+      expect(whole, greaterThan(0), reason: 'the edges do carry detail');
+    });
+
+    test('a sharp centre is still seen when the border is flat', () {
+      final sharpCentre = _plane(
+        size,
+        size,
+        (x, y) => isEdge(x, y) ? 128 : ((x + y).isEven ? 0 : 255),
+      );
+      expect(
+        ImageSharpness.laplacianVariance(
+          sharpCentre,
+          size,
+          size,
+          centerFraction: 0.4,
+        ),
+        greaterThan(0),
+      );
+    });
+
+    test('an image too small for the window falls back to the whole plane', () {
+      final tiny = _plane(3, 3, (x, y) => (x + y).isEven ? 0 : 255);
+      expect(
+        ImageSharpness.laplacianVariance(tiny, 3, 3, centerFraction: 0.5),
+        ImageSharpness.laplacianVariance(tiny, 3, 3),
+      );
+    });
+  });
 }

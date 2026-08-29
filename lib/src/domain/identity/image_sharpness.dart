@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'center_bounds.dart';
+
 /// Blur detection with no native dependency (archi 5.3, AC-C06).
 ///
 /// The variance of the Laplacian is the classic "is this photo in focus?"
@@ -29,11 +31,19 @@ class ImageSharpness {
   /// Returns 0 for a degenerate image (no interior pixels): a 1-pixel-wide
   /// strip has no neighbours to differentiate, and reporting 0 keeps such an
   /// image on the "too blurred" side rather than crashing.
+  ///
+  /// [centerFraction] restricts the measure to the centred window returned by
+  /// [centerBounds]. It defaults to the whole image ON PURPOSE: any other
+  /// default would silently change the region measured by the existing AC-C06
+  /// tests, which were written against the full plane. Only the capture screen
+  /// opts into cropping, so that a sharp background behind a blurred card stops
+  /// passing the gate.
   static double laplacianVariance(
     Uint8List luma,
     int width,
     int height, {
     int? rowStride,
+    double centerFraction = 1.0,
   }) {
     if (width < 3 || height < 3) return 0;
     final stride = rowStride ?? width;
@@ -43,17 +53,21 @@ class ImageSharpness {
       );
     }
 
+    final bounds = centerBounds(width, height, centerFraction);
+    final lastY = bounds.top + bounds.height - 1;
+    final lastX = bounds.left + bounds.width - 1;
+
     // Single pass over the interior pixels, accumulating sum and sum of
     // squares of the Laplacian response, so variance is one final division and
     // no second array is allocated.
     double sum = 0;
     double sumSq = 0;
     var count = 0;
-    for (var y = 1; y < height - 1; y++) {
+    for (var y = bounds.top + 1; y < lastY; y++) {
       final row = y * stride;
       final rowUp = (y - 1) * stride;
       final rowDown = (y + 1) * stride;
-      for (var x = 1; x < width - 1; x++) {
+      for (var x = bounds.left + 1; x < lastX; x++) {
         // 4-neighbour Laplacian kernel: centre * 4 minus its cross neighbours.
         final lap =
             (luma[row + x] * 4) -
