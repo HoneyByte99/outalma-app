@@ -76,6 +76,20 @@ Widget _wrap(
   );
 }
 
+/// Brings the screen to the state where the manual shutter is offered, by
+/// letting the one-shot fallback timer run out.
+///
+/// The button is no longer there from the first millisecond: the photo is meant
+/// to be taken automatically, and the button is the fallback for when that does
+/// not happen. No pumpAndSettle, and it tolerates a button that is already
+/// present, so the same helper is green before and after the shutter is wired.
+Future<void> revealManualShutter(
+  WidgetTester tester, {
+  Duration fallbackAfter = const Duration(seconds: 10),
+}) async {
+  await tester.pump(fallbackAfter);
+}
+
 void main() {
   testWidgets('shows the permission-denied state when denied (AC-C11)', (
     tester,
@@ -114,6 +128,7 @@ void main() {
     source.emitLuma(_blurryFrame());
     await tester.pump();
 
+    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pump();
 
@@ -139,6 +154,7 @@ void main() {
     source.emitLuma(_sharpFrame());
     await tester.pump();
 
+    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pumpAndSettle();
 
@@ -161,6 +177,7 @@ void main() {
     await tester.pump();
 
     // Two consecutive blur refusals on the same still.
+    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pump();
     expect(find.text('Envoyer quand même, un humain relira'), findsNothing);
@@ -194,6 +211,7 @@ void main() {
     source.emitLuma(_sharpFrame());
     await tester.pump();
 
+    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pumpAndSettle();
 
@@ -226,6 +244,7 @@ void main() {
     source.emitLuma(_blurryFrame());
     await tester.pump();
 
+    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pump();
     await tester.tap(find.text('Prendre la photo'));
@@ -260,6 +279,7 @@ void main() {
     source.emitLuma(_sharpFrame());
     await tester.pump();
 
+    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pumpAndSettle();
 

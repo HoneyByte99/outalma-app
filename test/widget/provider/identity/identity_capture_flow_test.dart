@@ -111,13 +111,19 @@ Widget _wrap({
   );
 }
 
-// Drives one document capture: sharp frame, then the capture button.
+// Drives one document capture through the MANUAL fallback: a sharp frame, then
+// the fallback timer runs out so the button is offered, then the button.
+//
+// This flow test is about the journey (recto, verso, selfie, recap, deposit),
+// not about the shutter, so it deliberately takes the deterministic manual
+// route rather than staging the movement and hold an automatic shot needs.
 Future<void> _captureDocument(
   WidgetTester tester,
   FakeCaptureSource source,
 ) async {
   source.emitLuma(_sharp());
   await tester.pump();
+  await tester.pump(const Duration(seconds: 10));
   await tester.tap(find.text('Prendre la photo'));
   await tester.pumpAndSettle();
 }
