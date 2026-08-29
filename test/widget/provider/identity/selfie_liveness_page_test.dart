@@ -10,6 +10,12 @@ import 'package:outalma_app/src/application/identity/identity_capture_providers.
 import 'package:outalma_app/src/data/services/fake_capture_source.dart';
 import 'package:outalma_app/src/features/provider/identity/selfie_liveness_page.dart';
 
+/// WARNING before adding a test here: the face guide LOOPS while the challenge
+/// is in `turnHead`, because the gesture has to keep being demonstrated. A
+/// `pumpAndSettle` reached in that state never converges and times out. The
+/// calls below are safe only because they land in `waitingFace` or
+/// `returnToFront`. In `turnHead`, pump a bounded duration instead.
+
 Widget _wrap(
   FakeCaptureSource source, {
   required ValueChanged<Uint8List> onCaptured,

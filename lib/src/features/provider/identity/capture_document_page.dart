@@ -102,7 +102,6 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
   int _autoRejects = 0;
   bool _fallbackDue = false;
   bool _capturing = false;
-  bool _everCaptured = false;
 
   bool _showBlurHint = false;
   bool _showNoTextHint = false;
@@ -138,12 +137,12 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     }
     if (!mounted) return;
 
-    // NOT awaited, deliberately. This can run inside the luma callback's own
-    // async chain (a refused shot restarts the preview from there), and a
-    // subscription cancelled from within its own delivery never completes its
-    // future: awaiting it deadlocks the capture, leaving the button spinning
-    // for ever. The old subscription stops on its own; a duplicate frame in
-    // the meantime is harmless, it carries the same timestamp.
+    // NOT awaited, deliberately: this can run inside the luma callback's own
+    // async chain (a refused shot restarts the preview from there), where
+    // awaiting the cancel deadlocks the capture and leaves the button spinning
+    // for ever. Dropping the await is safe because cancellation takes effect
+    // synchronously; the future only reports the onCancel callback, which a
+    // broadcast controller does not give us anything to wait for.
     unawaited(_sub?.cancel() ?? Future<void>.value());
 
     _resetAnalysis();
@@ -157,6 +156,11 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     _lastSignature = null;
     _sharpnessKnown = false;
     _awaitingResumeAnchor = false;
+    // Both frame clocks go with it: start() restarts the source's Stopwatch
+    // near zero, so a floor kept from the previous epoch would silently drop
+    // every incoming frame for as long as that epoch had lasted.
+    _lastFrameMs = 0;
+    _resumeFloorMs = 0;
     _shutter.value = const DocumentShutterState.initial();
   }
 
@@ -177,10 +181,11 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
 
   void _onFrame(LumaFrame frame) {
     if (!mounted) return;
-    // Every frame's clock is remembered, including the ones dropped just below:
-    // the resume floor has to exclude everything that was already in flight
-    // when the shot was taken, not just what happened to be analysed.
-    if (frame.timestampMs > _lastFrameMs) _lastFrameMs = frame.timestampMs;
+    // The clock of the most recent frame, kept for the resume floor. NOT a
+    // running maximum: start() restarts the source's Stopwatch near zero, and
+    // a maximum would carry the previous epoch's values across the restart and
+    // then drop every new frame as stale.
+    _lastFrameMs = frame.timestampMs;
     if (_capturing) return;
 
     final config = ref.read(captureConfigProvider);
@@ -288,6 +293,11 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     });
     // The stream stops for the shot: nothing may be judged until it is back.
     _sharpnessKnown = false;
+    // Pinned here, on the frame that triggered this shot, rather than at
+    // resume time: by then a straggler from a previous epoch could have moved
+    // it, and the screen would drop every new frame until the restarted clock
+    // caught up.
+    _resumeFloorMs = _lastFrameMs;
 
     try {
       final image = await _source.capture();
@@ -313,7 +323,6 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
         return;
       }
 
-      _everCaptured = true;
       widget.onCaptured(image.jpegBytes);
     } on CaptureUnavailable {
       if (mounted) setState(() => _ui = _Ui.unavailable);
@@ -340,9 +349,6 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     if (!mounted) return;
     _frameIndex = 0;
     _lastSignature = null;
-    // Everything up to here was in flight around the shot: only later frames
-    // may anchor the refusal.
-    _resumeFloorMs = _lastFrameMs;
     _awaitingResumeAnchor = true;
     _shutter.value = const DocumentShutterState.refused();
   }
@@ -455,10 +461,7 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
           child: CaptureInstructionBanner(
             step: l10n.identityStepProgress(widget.stepIndex, widget.stepTotal),
             instruction: instruction,
-            // Once a photo has actually been taken the hint has nothing left to
-            // teach, and three blocks of text at once is pure noise for someone
-            // who does not read.
-            hint: _everCaptured ? null : l10n.identityCaptureAutoHint,
+            hint: l10n.identityCaptureAutoHint,
           ),
         ),
         Positioned(

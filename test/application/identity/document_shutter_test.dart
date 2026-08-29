@@ -223,6 +223,35 @@ void main() {
       }
     });
 
+    test('movement DURING the hold is latched, so nobody moves twice', () {
+      var state = const DocumentShutterState.refused();
+      // The user is already picking the card back up while the refusal shows.
+      state = _step(state, sharpness: 500, motion: 40, nowMs: 0);
+      expect(state.reason, DocumentShutterReason.refused);
+      expect(state.shouldCapture, isFalse, reason: 'never during the hold');
+      expect(state.armed, isTrue, reason: 'the gesture still counts');
+
+      // Once the hold is over that gesture is enough: a steady stretch fires
+      // without demanding a second one.
+      const t = _refusedHoldMs + 100;
+      state = _step(state, sharpness: 500, motion: 0, nowMs: t);
+      final fired = _holdStill(
+        state,
+        fromMs: t + 100,
+        toMs: t + 3000,
+        frameIntervalMs: 100,
+      );
+      expect(fired.shouldCapture, isTrue);
+    });
+
+    test('a hold with no movement in it comes out DISARMED', () {
+      var state = const DocumentShutterState.refused();
+      for (var t = 0; t <= _refusedHoldMs; t += 100) {
+        state = _step(state, sharpness: 500, motion: 0, nowMs: t);
+      }
+      expect(state.armed, isFalse, reason: 'nobody touched anything');
+    });
+
     test(
       'an immediate re-fire is impossible however long the capture took',
       () {

@@ -48,6 +48,7 @@ Widget _wrap(
   required ValueChanged<Uint8List> onCaptured,
   FakeDocumentTextDetector? textDetector,
   DocumentSide side = DocumentSide.recto,
+  int rejectLimit = 3,
 }) {
   return ProviderScope(
     overrides: [
@@ -60,11 +61,12 @@ Widget _wrap(
       // left at the whole frame: these synthetic planes are uniform, so
       // cropping would only make the fixtures harder to read.
       captureConfigProvider.overrideWithValue(
-        const CaptureConfig(
+        CaptureConfig(
           rectoSharpnessThreshold: 10,
           versoSharpnessThreshold: 5,
           analysisCenterFraction: 1,
           analyzeEveryNthFrame: 1,
+          autoRejectLimit: rejectLimit,
         ),
       ),
     ],
@@ -457,6 +459,109 @@ void main() {
       source.captureCount,
       2,
       reason: 'frames really came back after the resume',
+    );
+  });
+
+  testWidgets('a frame from before the shot cannot anchor the refusal', (
+    tester,
+  ) async {
+    // Frames emitted while the shot was in flight are still queued. If one of
+    // them anchored the refusal with its own stale timestamp, the refusal
+    // would look older than its hold and vanish on the spot.
+    final source = FakeCaptureSource();
+    addTearDown(source.dispose);
+    final detector = FakeDocumentTextDetector(result: DocumentTextResult.none);
+
+    await tester.pumpWidget(
+      _wrap(source, onCaptured: (_) {}, textDetector: detector),
+    );
+    await tester.pumpAndSettle();
+
+    // The presentation ends exactly on the shot, so the resume anchor is still
+    // waiting when the straggler below arrives.
+    await _presentCard(tester, source, untilMs: 1000);
+    await tester.pumpAndSettle();
+    expect(source.captureCount, 1);
+    expect(find.textContaining('Aucun texte lisible'), findsOneWidget);
+
+    // A straggler from before the shot: it must be ignored outright.
+    source.emitLuma(_sharpFrame(atMs: 300));
+    await tester.pump();
+    expect(
+      find.textContaining('Aucun texte lisible'),
+      findsOneWidget,
+      reason: 'a stale frame neither anchors nor shortens the refusal',
+    );
+
+    // A fresh frame does anchor it, and the refusal then runs its full hold
+    // from THERE, not from the stale one.
+    source.emitLuma(_sharpFrame(atMs: 3000));
+    await tester.pump();
+    for (var t = 3100; t <= 4300; t += 100) {
+      source.emitLuma(_sharpFrame(atMs: t));
+      await tester.pump();
+      expect(
+        find.textContaining('Aucun texte lisible'),
+        findsOneWidget,
+        reason: 'still within the hold at t=$t',
+      );
+    }
+  });
+
+  testWidgets('a full camera restart does not freeze the next refusal', (
+    tester,
+  ) async {
+    // A failed resume reopens the camera outright, and start() restarts the
+    // source's clock near zero. A resume floor kept from the previous epoch
+    // would then silently drop every incoming frame for as long as that epoch
+    // had lasted: no arming, no ring, a screen frozen on its refusal.
+    final source = FakeCaptureSource()..failResume = true;
+    addTearDown(source.dispose);
+    final detector = FakeDocumentTextDetector(result: DocumentTextResult.none);
+
+    await tester.pumpWidget(
+      _wrap(
+        source,
+        onCaptured: (_) {},
+        textDetector: detector,
+        // Room for several attempts: the point here is the clock, not the limit.
+        rejectLimit: 9,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // A long first epoch, so its timestamps sit far ahead of a fresh clock.
+    for (var t = 0; t <= 25000; t += 500) {
+      source.emitLuma(_sharpFrame(atMs: t));
+      await tester.pump();
+    }
+
+    // A refusal whose resume fails: the page reopens the camera outright.
+    await _presentCard(tester, source, fromMs: 25500, untilMs: 28000);
+    await tester.pumpAndSettle();
+    expect(source.captureCount, 1);
+    expect(source.stopCount, greaterThanOrEqualTo(1), reason: 'it reopened');
+
+    // From here the camera behaves again, on a clock that restarted near zero.
+    source.failResume = false;
+
+    // A first shot on the new epoch, refused, whose resume now SUCCEEDS: this
+    // is where the resume floor is set, and where a clock kept from the old
+    // epoch would poison it.
+    await _presentCard(tester, source, fromMs: 0, untilMs: 1000);
+    await tester.pumpAndSettle();
+    expect(source.captureCount, 2, reason: 'the new epoch is analysed');
+
+    // And the screen is still alive afterwards, instead of dropping every
+    // frame until the new clock catches up with the old one. The window is
+    // generous because the refusal holds first, and only then can a new hold
+    // begin.
+    await _presentCard(tester, source, fromMs: 4000, untilMs: 12000);
+    await tester.pumpAndSettle();
+    expect(
+      source.captureCount,
+      3,
+      reason: 'frames are not dropped as stale against the previous epoch',
     );
   });
 

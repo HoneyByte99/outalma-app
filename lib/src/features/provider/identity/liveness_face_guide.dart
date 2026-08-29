@@ -188,7 +188,11 @@ class _FacePainter extends CustomPainter {
       canvas.drawLine(
         centre.translate(size.width * 0.10, -size.height * 0.28),
         centre.translate(size.width * 0.42, size.height * 0.28),
-        stroke..color = AppColors.warning,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..strokeCap = StrokeCap.round
+          ..color = AppColors.warning,
       );
       return;
     }

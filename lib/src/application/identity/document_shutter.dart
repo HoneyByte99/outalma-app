@@ -166,7 +166,7 @@ DocumentShutterState evaluateDocumentShutter({
     armed: true,
     steadySinceMs: since,
     reason: DocumentShutterReason.steadying,
-    progress: steadyHoldMs == 0 ? 1 : held / steadyHoldMs,
+    progress: held / steadyHoldMs,
   );
 }
 

@@ -172,7 +172,26 @@ void main() {
 
     // Verso.
     expect(find.text('Verso de la pièce'), findsOneWidget);
-    await _captureDocument(tester, source);
+
+    // The three pages share ONE capture source, and the architecture carries
+    // no ownership token: the destroyed recto page must simply stop reacting.
+    // Feed the shared source a stretch that WOULD fire, and check the count
+    // moves at most once, for the verso alone.
+    final beforeVerso = source.captureCount;
+    for (var t = 0; t <= 4000; t += 100) {
+      source.emitLuma(t == 0 ? _sharp(size: 12, atMs: t) : _sharp(atMs: t));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    expect(
+      source.captureCount - beforeVerso,
+      lessThanOrEqualTo(1),
+      reason: 'the dead recto page must not shoot alongside the verso',
+    );
+
+    if (source.captureCount == beforeVerso) {
+      await _captureDocument(tester, source);
+    }
 
     // Selfie.
     expect(find.text('Selfie de vérification'), findsOneWidget);
