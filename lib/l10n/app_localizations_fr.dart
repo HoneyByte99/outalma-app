@@ -1841,6 +1841,28 @@ class AppLocalizationsFr extends AppLocalizations {
       'Envoyer quand même, un humain relira';
 
   @override
+  String get identityCaptureAutoHint => 'La photo se prend toute seule.';
+
+  @override
+  String get identityCaptureSearching => 'Placez la carte dans le repère.';
+
+  @override
+  String get identityCaptureFlipCard => 'Retournez la carte.';
+
+  @override
+  String get identityCaptureMoving => 'Tenez la carte immobile.';
+
+  @override
+  String get identityCaptureHoldStill => 'Restez immobile, la photo arrive.';
+
+  @override
+  String get identityCaptureRefused => 'Photo non retenue. Recadrez la carte.';
+
+  @override
+  String get identityCaptureManualHint =>
+      'Vous pouvez aussi prendre la photo vous-même.';
+
+  @override
   String identityStepProgress(int current, int total) {
     return 'Étape $current sur $total';
   }
@@ -1892,7 +1914,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get identityLivenessRetryDifferent =>
-      'On recommence : tournez la tête de l\'autre côté, puis revenez de face.';
+      'On recommence : tournez lentement la tête sur le côté, puis revenez face à l\'objectif.';
+
+  @override
+  String get identityLivenessFaceGuideLabel =>
+      'Démonstration du mouvement à faire avec la tête.';
 
   @override
   String get identityLivenessSupportTitle => 'Besoin d\'aide ?';

@@ -3470,6 +3470,48 @@ abstract class AppLocalizations {
   /// **'Send anyway, a human will review it'**
   String get identityCaptureSendAnyway;
 
+  /// No description provided for @identityCaptureAutoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The photo is taken automatically.'**
+  String get identityCaptureAutoHint;
+
+  /// No description provided for @identityCaptureSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the card inside the frame.'**
+  String get identityCaptureSearching;
+
+  /// No description provided for @identityCaptureFlipCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the card over.'**
+  String get identityCaptureFlipCard;
+
+  /// No description provided for @identityCaptureMoving.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the card still.'**
+  String get identityCaptureMoving;
+
+  /// No description provided for @identityCaptureHoldStill.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay still, the photo is coming.'**
+  String get identityCaptureHoldStill;
+
+  /// No description provided for @identityCaptureRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo not kept. Frame the card again.'**
+  String get identityCaptureRefused;
+
+  /// No description provided for @identityCaptureManualHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can also take the photo yourself.'**
+  String get identityCaptureManualHint;
+
   /// No description provided for @identityStepProgress.
   ///
   /// In en, this message translates to:
@@ -3557,8 +3599,14 @@ abstract class AppLocalizations {
   /// No description provided for @identityLivenessRetryDifferent.
   ///
   /// In en, this message translates to:
-  /// **'Let\'s retry: turn your head the other way, then face the lens again.'**
+  /// **'Let\'s retry: slowly turn your head to the side, then face the lens again.'**
   String get identityLivenessRetryDifferent;
+
+  /// No description provided for @identityLivenessFaceGuideLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Demonstration of the head movement to perform.'**
+  String get identityLivenessFaceGuideLabel;
 
   /// No description provided for @identityLivenessSupportTitle.
   ///

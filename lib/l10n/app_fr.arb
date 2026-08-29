@@ -750,6 +750,13 @@
   "identityCaptureBlurry": "Photo trop floue. Stabilisez l'appareil et rapprochez le document.",
   "identityCaptureNoText": "Aucun texte lisible détecté. Cadrez bien votre carte d'identité dans le repère.",
   "identityCaptureSendAnyway": "Envoyer quand même, un humain relira",
+  "identityCaptureAutoHint": "La photo se prend toute seule.",
+  "identityCaptureSearching": "Placez la carte dans le repère.",
+  "identityCaptureFlipCard": "Retournez la carte.",
+  "identityCaptureMoving": "Tenez la carte immobile.",
+  "identityCaptureHoldStill": "Restez immobile, la photo arrive.",
+  "identityCaptureRefused": "Photo non retenue. Recadrez la carte.",
+  "identityCaptureManualHint": "Vous pouvez aussi prendre la photo vous-même.",
   "identityStepProgress": "Étape {current} sur {total}",
   "@identityStepProgress": {
     "placeholders": {
@@ -770,7 +777,8 @@
   "identityLivenessReturnToFront": "Revenez maintenant face à l'objectif.",
   "identityLivenessReady": "Ne bougez plus.",
   "identityLivenessExpired": "Le défi a expiré. On recommence.",
-  "identityLivenessRetryDifferent": "On recommence : tournez la tête de l'autre côté, puis revenez de face.",
+  "identityLivenessRetryDifferent": "On recommence : tournez lentement la tête sur le côté, puis revenez face à l'objectif.",
+  "identityLivenessFaceGuideLabel": "Démonstration du mouvement à faire avec la tête.",
   "identityLivenessSupportTitle": "Besoin d'aide ?",
   "identityLivenessSupportBody": "Le défi n'a pas abouti après plusieurs essais. Contactez le support pour finaliser votre vérification.",
   "identityContactSupport": "Contacter le support",

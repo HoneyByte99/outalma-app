@@ -756,6 +756,13 @@
   "identityCaptureBlurry": "Photo too blurry. Steady the device and move closer to the document.",
   "identityCaptureNoText": "No readable text detected. Line up your ID card inside the frame.",
   "identityCaptureSendAnyway": "Send anyway, a human will review it",
+  "identityCaptureAutoHint": "The photo is taken automatically.",
+  "identityCaptureSearching": "Place the card inside the frame.",
+  "identityCaptureFlipCard": "Turn the card over.",
+  "identityCaptureMoving": "Hold the card still.",
+  "identityCaptureHoldStill": "Stay still, the photo is coming.",
+  "identityCaptureRefused": "Photo not kept. Frame the card again.",
+  "identityCaptureManualHint": "You can also take the photo yourself.",
   "identityStepProgress": "Step {current} of {total}",
   "@identityStepProgress": {
     "placeholders": {
@@ -776,7 +783,8 @@
   "identityLivenessReturnToFront": "Now face the lens again.",
   "identityLivenessReady": "Hold still.",
   "identityLivenessExpired": "The challenge timed out. Let's start over.",
-  "identityLivenessRetryDifferent": "Let's retry: turn your head the other way, then face the lens again.",
+  "identityLivenessRetryDifferent": "Let's retry: slowly turn your head to the side, then face the lens again.",
+  "identityLivenessFaceGuideLabel": "Demonstration of the head movement to perform.",
   "identityLivenessSupportTitle": "Need a hand?",
   "identityLivenessSupportBody": "The challenge did not complete after several tries. Contact support to finish your verification.",
   "identityContactSupport": "Contact support",
