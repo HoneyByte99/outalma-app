@@ -58,14 +58,20 @@ class _StubSubmit implements IdentitySubmitPort {
   }
 }
 
-LumaFrame _sharp({int size = 8}) {
+LumaFrame _sharp({int size = 8, int atMs = 0}) {
   final bytes = Uint8List(size * size);
   for (var y = 0; y < size; y++) {
     for (var x = 0; x < size; x++) {
       bytes[y * size + x] = ((x + y) % 2 == 0) ? 0 : 255;
     }
   }
-  return LumaFrame(luma: bytes, width: size, height: size, rowStride: size);
+  return LumaFrame(
+    luma: bytes,
+    width: size,
+    height: size,
+    rowStride: size,
+    timestampMs: atMs,
+  );
 }
 
 Widget _wrap({

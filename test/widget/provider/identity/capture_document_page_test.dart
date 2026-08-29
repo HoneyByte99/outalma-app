@@ -14,20 +14,33 @@ import 'package:outalma_app/src/data/services/fake_document_text_detector.dart';
 import 'package:outalma_app/src/features/provider/identity/capture_document_page.dart';
 
 // A sharp luma plane: a 0/255 checkerboard has a large Laplacian variance.
-LumaFrame _sharpFrame({int size = 8}) {
+// [atMs] drives the frame clock the shutter measures its hold against.
+LumaFrame _sharpFrame({int size = 8, int atMs = 0}) {
   final bytes = Uint8List(size * size);
   for (var y = 0; y < size; y++) {
     for (var x = 0; x < size; x++) {
       bytes[y * size + x] = ((x + y) % 2 == 0) ? 0 : 255;
     }
   }
-  return LumaFrame(luma: bytes, width: size, height: size, rowStride: size);
+  return LumaFrame(
+    luma: bytes,
+    width: size,
+    height: size,
+    rowStride: size,
+    timestampMs: atMs,
+  );
 }
 
 // A flat luma plane: variance is zero, i.e. "too blurry".
-LumaFrame _blurryFrame({int size = 8}) {
-  final bytes = Uint8List(size * size)..fillRange(0, size * size, 128);
-  return LumaFrame(luma: bytes, width: size, height: size, rowStride: size);
+LumaFrame _blurryFrame({int size = 8, int atMs = 0, int level = 128}) {
+  final bytes = Uint8List(size * size)..fillRange(0, size * size, level);
+  return LumaFrame(
+    luma: bytes,
+    width: size,
+    height: size,
+    rowStride: size,
+    timestampMs: atMs,
+  );
 }
 
 Widget _wrap(

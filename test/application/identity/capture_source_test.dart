@@ -5,13 +5,20 @@ import 'package:outalma_app/src/application/identity/capture_source.dart';
 
 void main() {
   group('capture seam value types', () {
-    test('LumaFrame keeps its plane, dimensions and stride', () {
+    test('LumaFrame keeps its plane, dimensions, stride and clock', () {
       final bytes = Uint8List.fromList(const [1, 2, 3, 4]);
-      final frame = LumaFrame(luma: bytes, width: 2, height: 2, rowStride: 2);
+      final frame = LumaFrame(
+        luma: bytes,
+        width: 2,
+        height: 2,
+        rowStride: 2,
+        timestampMs: 640,
+      );
       expect(frame.luma, same(bytes));
       expect(frame.width, 2);
       expect(frame.height, 2);
       expect(frame.rowStride, 2);
+      expect(frame.timestampMs, 640);
     });
 
     test('FaceObservation keeps its count, yaw and timestamp', () {

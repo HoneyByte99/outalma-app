@@ -42,18 +42,27 @@ enum CameraLensDirection { back, front }
 /// The camera Y plane can be padded, so [rowStride] may exceed [width]; the
 /// sharpness routine reads rows with the stride. Bytes are one luma sample per
 /// pixel, row-major.
+///
+/// [timestampMs] is REAL elapsed time since the stream started, not a frame
+/// count. The automatic shutter holds the framing for a duration, and a frame
+/// counter would make that duration stretch exactly where it must not: on an
+/// entry-level phone whose frame rate collapses under the analysis, "800 ms"
+/// counted at an assumed 30 fps would really last well over two seconds. The
+/// fake drives this clock freely, so the hold is testable without a device.
 class LumaFrame {
   const LumaFrame({
     required this.luma,
     required this.width,
     required this.height,
     required this.rowStride,
+    required this.timestampMs,
   });
 
   final Uint8List luma;
   final int width;
   final int height;
   final int rowStride;
+  final int timestampMs;
 }
 
 /// One face-detection observation, the only thing the liveness machine needs.

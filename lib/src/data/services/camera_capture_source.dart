@@ -32,7 +32,16 @@ class CameraCaptureSource implements seam.IdentityCaptureSource {
   StreamController<seam.LumaFrame>? _luma;
   StreamController<seam.FaceObservation>? _faces;
 
+  /// Frame-count clock, kept ONLY for the liveness channel: its thresholds
+  /// (15 s challenge, 1 s shutter window) were calibrated against it. Moving
+  /// them to real time would tighten an anti-fraud path this increment does not
+  /// open. The two clocks never meet in one consumer: the document screen reads
+  /// only the luma channel, the selfie screen only the face channel.
   int _frameClockMs = 0;
+
+  /// Real elapsed time, feeding [seam.LumaFrame.timestampMs] for the shutter.
+  final Stopwatch _clock = Stopwatch();
+
   bool _detecting = false;
 
   @override
@@ -112,6 +121,9 @@ class CameraCaptureSource implements seam.IdentityCaptureSource {
     _luma = StreamController<seam.LumaFrame>.broadcast();
     _faces = StreamController<seam.FaceObservation>.broadcast();
     _frameClockMs = 0;
+    _clock
+      ..reset()
+      ..start();
 
     if (target == CameraLensDirection.front) {
       _faceDetector = FaceDetector(
@@ -133,6 +145,7 @@ class CameraCaptureSource implements seam.IdentityCaptureSource {
         width: image.width,
         height: image.height,
         rowStride: plane0.bytesPerRow,
+        timestampMs: _clock.elapsedMilliseconds,
       ),
     );
 
@@ -228,6 +241,7 @@ class CameraCaptureSource implements seam.IdentityCaptureSource {
       }
       await controller.dispose();
     }
+    _clock.stop();
     await _faceDetector?.close();
     _faceDetector = null;
     await _luma?.close();
