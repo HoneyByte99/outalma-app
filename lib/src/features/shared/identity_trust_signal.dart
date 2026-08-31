@@ -21,19 +21,26 @@ import '../../domain/enums/identity_trust_status.dart';
 /// person: a provider who did the three photos and waited 48 hours would be
 /// shown as unverified to a client every time the network coughs. Showing
 /// nothing costs the same code and says nothing untrue.
+/// How the signal renders.
+enum TrustSignalStyle {
+  /// Icon plus label, on its own line. The full three states.
+  pill,
+
+  /// A badge beside a name, on a listing card or a service header. Both
+  /// resolved states are shown, tinted when verified and muted otherwise, so a
+  /// client knows BEFORE opening a listing rather than after.
+  badge,
+}
+
 class IdentityTrustSignal extends ConsumerWidget {
   const IdentityTrustSignal({
     super.key,
     required this.providerId,
-    this.compact = false,
+    this.style = TrustSignalStyle.pill,
   });
 
   final String providerId;
-
-  /// Icon only, verified state only. Used on grid cards, where a negative
-  /// mention in icon form would be undecipherable. Never use it for a state
-  /// the reader has to guess.
-  final bool compact;
+  final TrustSignalStyle style;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,22 +50,56 @@ class IdentityTrustSignal extends ConsumerWidget {
     final status = async.hasValue ? async.value : null;
     if (!async.hasValue) return const SizedBox.shrink();
 
-    if (compact) {
-      if (status != IdentityTrustStatus.verified) {
-        return const SizedBox.shrink();
-      }
-      final l10n = AppLocalizations.of(context)!;
-      return Semantics(
-        label: l10n.trustVerifiedLabel,
-        child: Icon(
-          Icons.verified_rounded,
-          size: 16,
-          color: context.oc.trustVerifiedText,
-        ),
-      );
+    if (style == TrustSignalStyle.badge) {
+      return _TrustBadge(status: status);
     }
 
     return _TrustPill(status: status);
+  }
+}
+
+/// A badge beside a name. Both RESOLVED states render, because a client who
+/// cannot tell a verified provider from an unverified one without opening the
+/// listing has to open every listing.
+///
+/// `pending` folds into the muted state on purpose: sixteen pixels do not carry
+/// "verification under way", which the pill keeps. It still gets its OWN
+/// accessibility label, so a provider mid-verification is never announced as
+/// "not verified" — that would be the false claim about a real person this
+/// widget exists to avoid.
+///
+/// Contrast, measured on `cardSurface` (budget line A1, 3:1 for a meaning
+/// bearing interface element):
+///   verified, light  #0E7C5A on #FFFFFF -> 4.73:1
+///   verified, dark   #6FE8CC on #16242E -> 9.11:1
+///   muted,    light  #5C7A8A on #FFFFFF -> 4.62:1
+///   muted,    dark   #95A7B5 on #16242E -> 6.34:1
+/// Meaning never rides on the tint alone: the icon changes with the state (A3).
+class _TrustBadge extends StatelessWidget {
+  const _TrustBadge({required this.status});
+
+  final IdentityTrustStatus? status;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final verified = status == IdentityTrustStatus.verified;
+
+    final label = switch (status) {
+      IdentityTrustStatus.verified => l10n.trustVerifiedLabel,
+      IdentityTrustStatus.pending => l10n.trustPendingLabel,
+      null => l10n.trustUnverifiedLabel,
+    };
+
+    return Semantics(
+      label: label,
+      child: Icon(
+        verified ? Icons.verified_rounded : Icons.shield_outlined,
+        size: 15,
+        color: verified ? oc.trustVerifiedText : oc.secondaryText,
+      ),
+    );
   }
 }
 

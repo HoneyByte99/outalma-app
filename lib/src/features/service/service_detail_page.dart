@@ -17,6 +17,7 @@ import '../shared/service_price_label.dart';
 import '../booking/booking_request_sheet.dart';
 import '../shared/network_image.dart';
 import '../shared/marketplace_disclaimer.dart';
+import '../../application/review/review_providers.dart';
 import '../shared/identity_trust_signal.dart';
 import 'service_zones_map.dart';
 import '../shared/user_avatar.dart';
@@ -452,12 +453,22 @@ class _ProviderRow extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 4),
+                        // Beside the name, as a badge: the full mention used to
+                        // sit under it and read "Identite non verifiee" by
+                        // default, teaching every client that nobody is
+                        // trustworthy. A trust signal is only ever positive.
+                        IdentityTrustSignal(
+                          providerId: providerId,
+                          style: TrustSignalStyle.badge,
+                        ),
                       ],
                     ),
-                    // Own line under the name: measured at 375 px, the full
-                    // mention inline would leave two characters for the name.
                     const SizedBox(height: AppSpacing.xs),
-                    IdentityTrustSignal(providerId: providerId),
+                    // The rating was on the card and missing HERE, on the very
+                    // screen where the client decides. It is its own tap
+                    // target, 44 high, opening the reviews of this provider.
+                    _ProviderRatingLink(providerId: providerId),
                   ],
                 ),
               ),
@@ -772,6 +783,66 @@ class _ServiceDetailError extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(l10n.back),
                 ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The provider's rating, and a way into their reviews.
+///
+/// A tap target of its own (44 high, budget line A2) rather than a link nested
+/// inside the "see profile" row, which would swallow it into one announced
+/// button and leave the reviews unreachable to a screen reader.
+class _ProviderRatingLink extends ConsumerWidget {
+  const _ProviderRatingLink({required this.providerId});
+
+  final String providerId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final async = ref.watch(providerRatingProvider(providerId));
+    if (!async.hasValue) return const SizedBox(height: 44);
+    final rating = async.value!;
+
+    return Semantics(
+      button: true,
+      label: '${l10n.serviceSeeReviews}, ${l10n.reviewsCount(rating.count)}',
+      child: InkWell(
+        onTap: () =>
+            context.push(AppRoutes.userReviews(providerId, asProvider: true)),
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            children: [
+              Icon(
+                rating.isNew ? Icons.star_border_rounded : Icons.star_rounded,
+                size: 16,
+                color: rating.isNew ? oc.secondaryText : oc.star,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                rating.isNew
+                    ? l10n.ratingNew
+                    : '${rating.average!.toStringAsFixed(1)} '
+                          '(${rating.count})',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: oc.secondaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s),
+              Text(
+                l10n.serviceSeeReviews,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: oc.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),

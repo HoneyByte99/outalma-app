@@ -97,7 +97,9 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
             child: TableCalendar<Object>(
               locale: locale,
               calendarFormat: CalendarFormat.month,
-              availableCalendarFormats: const {CalendarFormat.month: 'Mois'},
+              availableCalendarFormats: {
+                CalendarFormat.month: l10n.calendarFormatMonth,
+              },
               firstDay: DateTime.now().subtract(const Duration(days: 365)),
               lastDay: DateTime.now().add(const Duration(days: 365)),
               focusedDay: _focusedDay,

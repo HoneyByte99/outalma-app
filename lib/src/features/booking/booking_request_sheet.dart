@@ -752,7 +752,6 @@ class _StepMessage extends StatelessWidget {
           TextFormField(
             controller: controller,
             focusNode: focus,
-            autofocus: true,
             maxLines: 5,
             maxLength: 500,
             textInputAction: TextInputAction.newline,

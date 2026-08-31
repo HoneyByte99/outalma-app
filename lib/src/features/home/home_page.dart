@@ -19,13 +19,13 @@ import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
-import '../../domain/models/review.dart';
 import '../auth/email_verification_banner.dart';
 import '../../domain/models/service.dart';
 import '../../domain/utils/distance.dart';
 import '../../app/app_spacing.dart';
 import '../shared/category_icon.dart';
 import '../shared/category_filter_bar.dart';
+import '../shared/identity_trust_signal.dart';
 import '../shared/empty_state_view.dart';
 import '../shared/mode_badge.dart';
 import '../shared/network_image.dart';
@@ -910,7 +910,10 @@ class _ServiceGrid extends ConsumerWidget {
             const hPad = AppSpacing.l;
             final cardWidth =
                 (width - hPad * 2 - (columns - 1) * spacing) / columns;
-            const infoHeight = 112.0;
+            // Title (2 lines) + price (up to 2 lines, a monthly range needs
+            // them) + the provider row. Sized for the worst case rather than
+            // for the common one, since the grid height is fixed.
+            const infoHeight = 134.0;
             final cardHeight = cardWidth + infoHeight;
             final ratio = cardWidth / cardHeight;
 
@@ -972,8 +975,6 @@ class _ServiceCard extends ConsumerWidget {
     final providerUser = ref
         .watch(userByIdProvider(service.providerId))
         .valueOrNull;
-    final reviews =
-        ref.watch(reviewsForUserProvider(service.providerId)).valueOrNull ?? [];
     final l10n = AppLocalizations.of(context)!;
     final priceLabel = servicePriceLabel(service, l10n);
 
@@ -1065,22 +1066,17 @@ class _ServiceCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            priceLabel,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: oc.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        _RatingRow(reviews: reviews),
-                      ],
+                    // The price gets the full width. Sharing a line with the
+                    // rating left about 85 px at 375 px on two columns, and a
+                    // monthly range needs roughly twice that: the label was
+                    // truncated mid-number, "500 000 F CF...".
+                    Text(
+                      priceLabel,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: oc.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 2,
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Row(
@@ -1091,7 +1087,7 @@ class _ServiceCard extends ConsumerWidget {
                           radius: 10,
                         ),
                         const SizedBox(width: AppSpacing.xs),
-                        Expanded(
+                        Flexible(
                           child: Text(
                             providerUser?.displayName.isNotEmpty == true
                                 ? providerUser!.displayName
@@ -1102,6 +1098,14 @@ class _ServiceCard extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 3),
+                        // Beside the name, so a client knows before opening.
+                        IdentityTrustSignal(
+                          providerId: service.providerId,
+                          style: TrustSignalStyle.badge,
+                        ),
+                        const Spacer(),
+                        _RatingRow(providerId: service.providerId),
                       ],
                     ),
                   ],
@@ -1132,17 +1136,24 @@ class _ServiceCard extends ConsumerWidget {
 // Rating row - stars + average or "Nouveau" badge
 // ---------------------------------------------------------------------------
 
-class _RatingRow extends StatelessWidget {
-  const _RatingRow({required this.reviews});
+class _RatingRow extends ConsumerWidget {
+  const _RatingRow({required this.providerId});
 
-  final List<Review> reviews;
+  final String providerId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
 
-    if (reviews.isEmpty) {
+    final async = ref.watch(providerRatingProvider(providerId));
+    // An unresolved read says nothing. Rendering "Nouveau" while it is in
+    // flight would flash a false claim on a provider rated 4.8, on every
+    // scroll (budget line U1).
+    if (!async.hasValue) return const SizedBox.shrink();
+    final rating = async.value!;
+
+    if (rating.isNew) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1162,15 +1173,13 @@ class _RatingRow extends StatelessWidget {
       );
     }
 
-    final avg = reviews.fold<int>(0, (s, r) => s + r.rating) / reviews.length;
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.star_rounded, size: 12, color: oc.star),
         const SizedBox(width: 2),
         Text(
-          '${avg.toStringAsFixed(1)} (${reviews.length})',
+          '${rating.average!.toStringAsFixed(1)} (${rating.count})',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: oc.secondaryText,
             fontWeight: FontWeight.w500,
@@ -1227,7 +1236,7 @@ class _ServiceGridLoadingState extends State<_ServiceGridLoading>
         final cardWidth =
             (constraints.maxWidth - hPad * 2 - (columns - 1) * spacing) /
             columns;
-        const infoHeight = 112.0;
+        const infoHeight = 134.0;
         final ratio = cardWidth / (cardWidth + infoHeight);
 
         return AnimatedBuilder(

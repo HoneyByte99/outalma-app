@@ -16,7 +16,10 @@ import 'package:outalma_app/src/features/shared/identity_trust_signal.dart';
 
 const _uid = 'provider-1';
 
-Widget _wrap(Stream<IdentityTrustStatus?> stream, {bool compact = false}) {
+Widget _wrap(
+  Stream<IdentityTrustStatus?> stream, {
+  TrustSignalStyle style = TrustSignalStyle.pill,
+}) {
   return ProviderScope(
     overrides: [identityTrustProvider(_uid).overrideWith((ref) => stream)],
     child: MaterialApp(
@@ -29,7 +32,7 @@ Widget _wrap(Stream<IdentityTrustStatus?> stream, {bool compact = false}) {
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: Center(
-          child: IdentityTrustSignal(providerId: _uid, compact: compact),
+          child: IdentityTrustSignal(providerId: _uid, style: style),
         ),
       ),
     ),
@@ -107,24 +110,56 @@ void main() {
     });
   });
 
-  group('compact form, list cards', () {
-    testWidgets('shows the icon only when verified', (tester) async {
+  group('badge form, beside a name', () {
+    testWidgets('a verified provider gets the tinted check', (tester) async {
       await tester.pumpWidget(
-        _wrap(Stream.value(IdentityTrustStatus.verified), compact: true),
+        _wrap(
+          Stream.value(IdentityTrustStatus.verified),
+          style: TrustSignalStyle.badge,
+        ),
       );
       await tester.pump();
       expect(find.byIcon(Icons.verified_rounded), findsOneWidget);
-      expect(find.byType(Text), findsNothing);
+      expect(find.byType(Text), findsNothing, reason: 'a badge, not a label');
     });
 
-    testWidgets('shows nothing for pending, absent or unread', (tester) async {
-      // A negative state as a bare icon would be undecipherable, so the compact
-      // form carries exactly one state and never has to be guessed.
-      for (final status in [null, IdentityTrustStatus.pending]) {
-        await tester.pumpWidget(_wrap(Stream.value(status), compact: true));
-        await tester.pump();
-        expect(find.byType(Icon), findsNothing, reason: 'state $status');
-      }
+    testWidgets('an unverified provider gets the muted shield', (tester) async {
+      // Both resolved states render: a client who cannot tell them apart
+      // without opening the listing has to open every listing.
+      await tester.pumpWidget(
+        _wrap(Stream.value(null), style: TrustSignalStyle.badge),
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
+    });
+
+    testWidgets('pending renders muted but is NOT announced as unverified', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          Stream.value(IdentityTrustStatus.pending),
+          style: TrustSignalStyle.badge,
+        ),
+      );
+      await tester.pump();
+      expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Vérification en cours'),
+        findsOneWidget,
+        reason: 'announcing "non vérifiée" here would be a false claim',
+      );
+    });
+
+    testWidgets('an unresolved read shows nothing at all', (tester) async {
+      // No icon, no label: claiming anything while the read is in flight
+      // publishes a false statement about a real person.
+      await tester.pumpWidget(
+        _wrap(const Stream.empty(), style: TrustSignalStyle.badge),
+      );
+      await tester.pump();
+      expect(find.byType(Icon), findsNothing);
+      expect(find.byType(Semantics), findsWidgets);
     });
   });
 }
