@@ -160,6 +160,22 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ---------- PROVIDER RATINGS (public aggregate, CF only) ----------
+    // `{ ratingSum, ratingCount }` for a provider, maintained by the review
+    // trigger and by the moderation callables. Public, because a client reads
+    // it before choosing and must be able to do so; `write: if false` for
+    // everyone including the provider it describes, because a reputation the
+    // subject can type is not a reputation (budget line S1).
+    //
+    // Deliberately NOT merged into `provider_trust`: that document is owned by
+    // the identity subsystem, which DELETES it on reject and on revoke, and a
+    // shared document would lose a provider's whole reputation the day a
+    // moderator refuses a blurry photo.
+    match /provider_ratings/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ---------- SERVICE TYPES (reference collection) ----------
     match /service_types/{typeId} {
       allow read: if true;
@@ -581,6 +597,17 @@ service cloud.firestore {
     // Used by stat-increment triggers to prevent double-counting on Firebase retries.
     // Should be purged after 7 days via a Firestore TTL policy on the `processedAt` field.
     match /processed_events/{eventId} {
+      allow read, write: if false; // CF only via Admin SDK
+    }
+
+    // ---------- RATING EVENTS (aggregate idempotency register, CF only) ----------
+    // One document per review, holding whether that review is currently counted
+    // in the public aggregate. NEVER purge it: unlike `processed_events` above,
+    // the backfill's safety depends on this register being permanent, and a TTL
+    // would make the next run recount every review older than the window.
+    // Holds no personal data beyond a review id, which already survives account
+    // deletion by design (reviews are retained and de-referenced).
+    match /rating_events/{reviewId} {
       allow read, write: if false; // CF only via Admin SDK
     }
 
