@@ -7,9 +7,9 @@ import 'package:outalma_app/src/features/review/rating_summary.dart';
 /// source shows "Nouveau" for every client for ever on one side, or a
 /// floorless average on the other. So the route carries the answer.
 ///
-/// It calls the router's OWN parser on the strings the router's OWN builder
-/// produces. A test that re-derived the parsing would stay green while the
-/// builder inverted it, which is exactly the failure it must catch.
+/// It calls the router's OWN parser on the strings its OWN builder produces,
+/// so inverting the parser fails here. It does NOT drive the GoRoute builder
+/// itself: that wiring is covered by the page test, not by this one.
 
 void main() {
   group('the reviews route carries which reputation it shows', () {

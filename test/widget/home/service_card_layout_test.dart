@@ -46,18 +46,6 @@ void main() {
       }
     });
 
-    test('sharing the line with the rating is what used to break it', () {
-      // Before the fix the price had roughly 85 px, one line, ellipsised. The
-      // same label on one line at that width still does not fit, which is why
-      // the price now owns its row.
-      final cramped = TextPainter(
-        text: TextSpan(text: '500 000 F CFA/mois', style: priceStyle()),
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-      )..layout(maxWidth: 85);
-      expect(cramped.didExceedMaxLines, isTrue, reason: 'the old layout');
-    });
-
     test('the widest range degrades gracefully instead of cutting a number', () {
       // Two six-digit bounds plus a period is the widest label
       // servicePriceLabel can build. It needs a third line, so it ellipsises at
