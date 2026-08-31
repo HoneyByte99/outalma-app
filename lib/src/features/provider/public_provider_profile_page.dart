@@ -82,10 +82,7 @@ class PublicProviderProfilePage extends ConsumerWidget {
             ),
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.pin,
-              background: _ProfileHeader(
-                providerId: providerId,
-                reviewsAsync: reviewsAsync,
-              ),
+              background: ProfileHeader(providerId: providerId),
             ),
           ),
 
@@ -191,23 +188,27 @@ class PublicProviderProfilePage extends ConsumerWidget {
 // Profile header
 // ---------------------------------------------------------------------------
 
-class _ProfileHeader extends ConsumerWidget {
-  const _ProfileHeader({required this.providerId, required this.reviewsAsync});
+@visibleForTesting
+class ProfileHeader extends ConsumerWidget {
+  const ProfileHeader({super.key, required this.providerId});
 
   final String providerId;
-  final AsyncValue<List<Review>> reviewsAsync;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
     final providerProfile = ref
         .watch(providerProfileByIdProvider(providerId))
         .valueOrNull;
-    final reviews = reviewsAsync.valueOrNull ?? [];
-    final avgRating = reviews.isEmpty
-        ? null
-        : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
+    // The SAME source and the same floor as the card and the service detail.
+    // Computing an average here from the review list showed "5.0 (2)" on the
+    // screen where a client decides while the card said "Nouveau", and kept
+    // counting reviews a moderator had hidden.
+    final rating = ref.watch(providerRatingProvider(providerId)).valueOrNull;
+    final avgRating = (rating != null && !rating.isNew) ? rating.average : null;
+    final ratingCount = rating?.count ?? 0;
     // D6-a/E7: the trust badge now reflects a server-owned identity verdict,
     // rendered by IdentityTrustSignal below (no client-side phone heuristic).
 
@@ -249,6 +250,16 @@ class _ProfileHeader extends ConsumerWidget {
                 const SizedBox(height: 6),
                 IdentityTrustSignal(providerId: providerId),
                 const SizedBox(height: 6),
+                if (rating != null && rating.isNew) ...[
+                  Text(
+                    l10n.ratingNew,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: oc.secondaryText,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 if (avgRating != null) ...[
                   Row(
                     children: [
@@ -264,7 +275,7 @@ class _ProfileHeader extends ConsumerWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '${avgRating.toStringAsFixed(1)} (${reviews.length})',
+                        '${avgRating.toStringAsFixed(1)} ($ratingCount)',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: oc.secondaryText,
                         ),

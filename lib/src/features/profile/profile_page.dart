@@ -1,6 +1,8 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../domain/review/rating_display.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -1257,10 +1259,12 @@ class _MyReviewsTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
     final l10n = AppLocalizations.of(context)!;
-    final reviews = ref.watch(reviewsForUserProvider(uid)).valueOrNull ?? [];
-    final avg = reviews.isEmpty
-        ? null
-        : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
+    // "Mes avis" is a self view over every review received, both roles, so it
+    // reads the review-derived reputation and not the provider aggregate. Same
+    // floor as everywhere else, so the tile cannot contradict the page it opens.
+    final display = ref.watch(clientReputationProvider(uid)).valueOrNull;
+    final avg = (display != null && !display.isNew) ? display.average : null;
+    final reviewsCount = display?.count ?? 0;
 
     return Container(
       decoration: BoxDecoration(
@@ -1285,7 +1289,7 @@ class _MyReviewsTile extends ConsumerWidget {
               ),
               if (avg != null)
                 Text(
-                  '${avg.toStringAsFixed(1)} (${reviews.length})',
+                  '${avg.toStringAsFixed(1)} ($reviewsCount)',
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
@@ -1321,14 +1325,15 @@ class MyReviewsPage extends ConsumerWidget {
           ? const SizedBox.shrink()
           : SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-              child: _MyReviewsSection(uid: uid),
+              child: MyReviewsSection(uid: uid),
             ),
     );
   }
 }
 
-class _MyReviewsSection extends ConsumerWidget {
-  const _MyReviewsSection({required this.uid});
+@visibleForTesting
+class MyReviewsSection extends ConsumerWidget {
+  const MyReviewsSection({super.key, required this.uid});
 
   final String uid;
 
@@ -1370,9 +1375,16 @@ class _MyReviewsSection extends ConsumerWidget {
           );
         }
 
-        final avg =
-            reviews.map((r) => r.rating).reduce((a, b) => a + b) /
-            reviews.length;
+        // The same rule as the tile above, so a user never sees two different
+        // numbers one tap apart for the same account.
+        final display = ratingDisplay(
+          sum: reviews.map((r) => r.rating).reduce((a, b) => a + b),
+          count: reviews.length,
+        );
+        // Below the floor there is no average to state. Printing 0.0 with
+        // five empty stars, right above the user's own five-star reviews, is
+        // worse than saying nothing.
+        final avg = display.average;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1388,29 +1400,34 @@ class _MyReviewsSection extends ConsumerWidget {
               child: Row(
                 children: [
                   Text(
-                    avg.toStringAsFixed(1),
+                    avg?.toStringAsFixed(1) ?? l10n.ratingNew,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: oc.primaryText,
+                      color: avg == null ? oc.secondaryText : oc.primaryText,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: List.generate(
-                          5,
-                          (i) => Icon(
-                            i < avg.round()
-                                ? Icons.star_rounded
-                                : Icons.star_outline_rounded,
-                            size: 18,
-                            color: context.oc.star,
+                      // No stars at all below the floor: five empty ones read
+                      // as a rating of zero, which is a claim we are not
+                      // making.
+                      if (avg != null) ...[
+                        Row(
+                          children: List.generate(
+                            5,
+                            (i) => Icon(
+                              i < avg.round()
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              size: 18,
+                              color: context.oc.star,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
+                        const SizedBox(height: 2),
+                      ],
                       Text(
                         l10n.reviewsCount(reviews.length),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(

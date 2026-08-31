@@ -236,3 +236,57 @@ describe('the review trigger', () => {
     expect(await agg()).toMatchObject({ ratingSum: 4, ratingCount: 1 });
   });
 });
+
+describe('the moderation callables, through the callable itself', () => {
+  // Calling discountReview directly proves the module. It does NOT prove the
+  // callable is wired to it: a mutation removing the call inside hideReview
+  // left every test green until these were written.
+  const ADMIN = { uid: 'boss', token: { admin: true, moderator: true } };
+
+  async function seedCountedReview() {
+    await seedBooking('b1');
+    await db().collection('reviews').doc('r1').set({
+      reviewerId: CLIENT,
+      revieweeId: PROVIDER,
+      bookingId: 'b1',
+      rating: 4,
+      hidden: false,
+    });
+    await countReview('r1', {
+      reviewerId: CLIENT,
+      bookingId: 'b1',
+      rating: 4,
+    });
+  }
+
+  it('hideReview lowers the public rating', async () => {
+    await seedCountedReview();
+    await tfWrap(fns.hideReview)({
+      data: { reviewId: 'r1' },
+      auth: ADMIN,
+    } as never);
+    expect(await agg()).toMatchObject({ ratingSum: 0, ratingCount: 0 });
+  });
+
+  it('unhideReview restores it', async () => {
+    await seedCountedReview();
+    await tfWrap(fns.hideReview)({
+      data: { reviewId: 'r1' },
+      auth: ADMIN,
+    } as never);
+    await tfWrap(fns.unhideReview)({
+      data: { reviewId: 'r1' },
+      auth: ADMIN,
+    } as never);
+    expect(await agg()).toMatchObject({ ratingSum: 4, ratingCount: 1 });
+  });
+
+  it('deleteReview lowers the public rating', async () => {
+    await seedCountedReview();
+    await tfWrap(fns.deleteReview)({
+      data: { reviewId: 'r1' },
+      auth: { uid: 'boss', token: { admin: true } },
+    } as never);
+    expect(await agg()).toMatchObject({ ratingSum: 0, ratingCount: 0 });
+  });
+});

@@ -7,6 +7,17 @@ import '../../app/app_theme.dart';
 import '../../application/identity/identity_trust_providers.dart';
 import '../../domain/enums/identity_trust_status.dart';
 
+/// How the signal renders.
+enum TrustSignalStyle {
+  /// Icon plus label, on its own line. The full three states.
+  pill,
+
+  /// A badge beside a name, on a listing card or a service header. Both
+  /// resolved states are shown, tinted when verified and muted otherwise, so a
+  /// client knows BEFORE opening a listing rather than after.
+  badge,
+}
+
 /// The public trust signal of a provider: verified, under way, or not verified.
 ///
 /// Four display situations, not three, and the distinction matters:
@@ -21,17 +32,6 @@ import '../../domain/enums/identity_trust_status.dart';
 /// person: a provider who did the three photos and waited 48 hours would be
 /// shown as unverified to a client every time the network coughs. Showing
 /// nothing costs the same code and says nothing untrue.
-/// How the signal renders.
-enum TrustSignalStyle {
-  /// Icon plus label, on its own line. The full three states.
-  pill,
-
-  /// A badge beside a name, on a listing card or a service header. Both
-  /// resolved states are shown, tinted when verified and muted otherwise, so a
-  /// client knows BEFORE opening a listing rather than after.
-  badge,
-}
-
 class IdentityTrustSignal extends ConsumerWidget {
   const IdentityTrustSignal({
     super.key,
@@ -70,10 +70,10 @@ class IdentityTrustSignal extends ConsumerWidget {
 ///
 /// Contrast, measured on `cardSurface` (budget line A1, 3:1 for a meaning
 /// bearing interface element):
-///   verified, light  #0E7C5A on #FFFFFF -> 4.73:1
-///   verified, dark   #6FE8CC on #16242E -> 9.11:1
-///   muted,    light  #5C7A8A on #FFFFFF -> 4.62:1
-///   muted,    dark   #95A7B5 on #16242E -> 6.34:1
+///   verified, light  trustVerifiedText #00795A on cardSurface #FFFFFF -> 5.41:1
+///   verified, dark   trustVerifiedText #2DD17A on cardSurface #1F252F -> 7.71:1
+///   muted,    light  secondaryText     #5C7A8A on cardSurface #FFFFFF -> 4.56:1
+///   muted,    dark   secondaryText     #95A7B5 on cardSurface #1F252F -> 6.21:1
 /// Meaning never rides on the tint alone: the icon changes with the state (A3).
 class _TrustBadge extends StatelessWidget {
   const _TrustBadge({required this.status});

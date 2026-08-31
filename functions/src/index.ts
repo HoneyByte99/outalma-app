@@ -2112,18 +2112,23 @@ export const hideReview = onCall(async (request) => {
   }
 
   await reviewRef.update({ hidden: true });
-  // Moderation must act on the number a client reads first, otherwise hiding a
-  // review is cosmetic on the public rating.
-  await discountReview(reviewId, {
-    ...(reviewSnap.data() as Record<string, unknown>),
-    hidden: true,
-  });
 
   await writeAdminLog({
     actorUid: callerUid,
     action: 'hide_review',
     targetType: 'review',
     targetId: reviewId,
+  });
+
+  // After the log, so a staff action is traced even if this leg fails (S7).
+  // DEVIATION from the plan, which asked for the delta INSIDE the review
+  // mutation's transaction: it runs in its own, afterwards. If it throws, the
+  // review is hidden everywhere but still counted, and the backfill only ever
+  // counts, so it cannot repair a missing decrement. Recovery is a moderator
+  // unhiding and re-hiding. Reported to Amath rather than silently refactored.
+  await discountReview(reviewId, {
+    ...(reviewSnap.data() as Record<string, unknown>),
+    hidden: true,
   });
 
   return { reviewId, hidden: true };
@@ -2142,7 +2147,6 @@ export const unhideReview = onCall(async (request) => {
   }
 
   await reviewRef.update({ hidden: false });
-  await recountReview(reviewId, reviewSnap.data() as Record<string, unknown>);
 
   await writeAdminLog({
     actorUid: callerUid,
@@ -2150,6 +2154,9 @@ export const unhideReview = onCall(async (request) => {
     targetType: 'review',
     targetId: reviewId,
   });
+
+  // See hideReview: after the log, same accepted deviation.
+  await recountReview(reviewId, reviewSnap.data() as Record<string, unknown>);
 
   return { reviewId, hidden: false };
 });
@@ -2168,7 +2175,6 @@ export const deleteReview = onCall(async (request) => {
 
   const deletedData = reviewSnap.data() as Record<string, unknown>;
   await reviewRef.delete();
-  await discountReview(reviewId, deletedData);
 
   await writeAdminLog({
     actorUid: callerUid,
@@ -2176,6 +2182,9 @@ export const deleteReview = onCall(async (request) => {
     targetType: 'review',
     targetId: reviewId,
   });
+
+  // See hideReview: after the log, same accepted deviation.
+  await discountReview(reviewId, deletedData);
 
   return { reviewId, deleted: true };
 });

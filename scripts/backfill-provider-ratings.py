@@ -80,7 +80,23 @@ def counts(review, booking):
 
 
 def usable(rating):
-    return isinstance(rating, int) and not isinstance(rating, bool) and 1 <= rating <= 5
+    """Returns the normalised int rating, or None. Returning the value rather
+    than a boolean keeps a float 4.0 from reaching Increment() as a double."""
+    # Firestore may hand back an integer as a float. The TypeScript side uses
+    # Number.isInteger, which accepts 4.0; this must accept it too, or the two
+    # implementations disagree on the same document.
+    if isinstance(rating, bool):
+        # A bool is an int in Python. Returning False here would pass the
+        # caller's `is None` guard and reach Increment(False): +1 on the count,
+        # +0 on the sum, marked counted, and no re-run could repair it.
+        return None
+    if isinstance(rating, float):
+        if not rating.is_integer():
+            return None
+        rating = int(rating)
+    if isinstance(rating, int) and 1 <= rating <= 5:
+        return rating
+    return None
 
 
 @firestore.transactional
@@ -108,8 +124,8 @@ def main():
 
     for snap in db.collection("reviews").stream():
         review = snap.to_dict() or {}
-        rating = review.get("rating")
-        if not usable(rating):
+        rating = usable(review.get("rating"))
+        if rating is None:
             skipped_rating += 1
             continue
         booking = booking_of(review.get("bookingId"))

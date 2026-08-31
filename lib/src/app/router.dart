@@ -90,6 +90,12 @@ abstract final class AppRoutes {
   static String chat(String chatId) => '/chat/$chatId';
   static String review(String bookingId) => '/review/$bookingId';
 
+  /// Reads back what [userReviews] wrote. Exported so the route builder and
+  /// its test share ONE implementation: a test that re-derives the parsing
+  /// stays green when the builder changes.
+  static RatingSource ratingSourceFromQuery(String? as) =>
+      as == 'provider' ? RatingSource.provider : RatingSource.client;
+
   /// Reviews received by [uid]. [asProvider] tells the page WHICH reputation
   /// it is showing: a provider's public rating comes from the server-owned
   /// aggregate, a client's from their recent reviews. The page cannot guess,
@@ -488,9 +494,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'user-reviews',
         builder: (_, state) => UserReviewsPage(
           userId: state.pathParameters['uid']!,
-          source: state.uri.queryParameters['as'] == 'provider'
-              ? RatingSource.provider
-              : RatingSource.client,
+          source: AppRoutes.ratingSourceFromQuery(
+            state.uri.queryParameters['as'],
+          ),
         ),
       ),
 

@@ -58,7 +58,12 @@ class RatingSummary extends ConsumerWidget {
     }
 
     final average = stats.average!;
-    final countLabel = stats.count >= kClientReputationWindow
+    // The cap belongs to the client WINDOW only. A provider count comes from
+    // the exact server aggregate, and showing "50+" here while the card and
+    // the service detail show "(60)" would be the cross-surface disagreement
+    // this increment exists to close.
+    final countLabel =
+        source == RatingSource.client && stats.count >= kClientReputationWindow
         ? '$kClientReputationWindow+'
         : l10n.reviewsCount(stats.count);
 

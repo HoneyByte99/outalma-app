@@ -1250,7 +1250,6 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
         TextFormField(
           controller: widget.controller,
           focusNode: widget.focus,
-          autofocus: true,
           textInputAction: TextInputAction.done,
           decoration: InputDecoration(
             hintText: l10n.bookingStep3Hint,

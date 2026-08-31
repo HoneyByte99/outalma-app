@@ -133,9 +133,12 @@ export async function applyRatingDelta(params: {
   });
 }
 
-/// Counts a review, resolving its role from the booking. Used by the trigger
-/// and, unchanged, by the backfill script: one implementation, so the aggregate
-/// can never diverge from what a replay would compute.
+/// Counts a review, resolving its role from the booking.
+///
+/// Mirrored in Python by scripts/backfill-provider-ratings.py, which replays
+/// the same deduplicated transaction. The two must stay aligned: they are two
+/// implementations of one predicate, and a divergence would make the aggregate
+/// disagree with what a replay computes, silently.
 export async function countReview(
   reviewId: string,
   review: ReviewLike,
@@ -197,5 +200,25 @@ export async function recountReview(
   reviewId: string,
   review: ReviewLike,
 ): Promise<boolean> {
-  return countReview(reviewId, { ...review, hidden: false });
+  if (!review.bookingId) return false;
+  const bookingSnap = await db()
+    .collection('bookings')
+    .doc(review.bookingId)
+    .get();
+  if (!bookingSnap.exists) return false;
+  const booking = bookingSnap.data() as BookingLike;
+  if (!countsTowardProviderRating({ ...review, hidden: false }, booking)) {
+    return false;
+  }
+
+  return applyRatingDelta({
+    reviewId,
+    providerUid: booking.providerId as string,
+    rating: review.rating as number,
+    transition: 'count',
+    // NOT createIfMissing: unhiding a review whose provider has since deleted
+    // their account would otherwise recreate a world-readable document behind
+    // a deleted account, the mirror of the case the discount path guards.
+    createIfMissing: false,
+  });
 }

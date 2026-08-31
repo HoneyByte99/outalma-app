@@ -411,6 +411,10 @@ class _ProviderRow extends ConsumerWidget {
     return Semantics(
       label: '${user?.displayName ?? ''} - ${l10n.serviceViewProfile}',
       button: true,
+      // The rating link inside is its own target. Without this the two can
+      // merge into a single announced button, and the reviews become
+      // unreachable to a screen reader (budget line A5).
+      explicitChildNodes: true,
       child: InkWell(
         onTap: () => context.push(AppRoutes.providerProfile(providerId)),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
@@ -468,7 +472,7 @@ class _ProviderRow extends ConsumerWidget {
                     // The rating was on the card and missing HERE, on the very
                     // screen where the client decides. It is its own tap
                     // target, 44 high, opening the reviews of this provider.
-                    _ProviderRatingLink(providerId: providerId),
+                    ProviderRatingLink(providerId: providerId),
                   ],
                 ),
               ),
@@ -796,8 +800,9 @@ class _ServiceDetailError extends StatelessWidget {
 /// A tap target of its own (44 high, budget line A2) rather than a link nested
 /// inside the "see profile" row, which would swallow it into one announced
 /// button and leave the reviews unreachable to a screen reader.
-class _ProviderRatingLink extends ConsumerWidget {
-  const _ProviderRatingLink({required this.providerId});
+@visibleForTesting
+class ProviderRatingLink extends ConsumerWidget {
+  const ProviderRatingLink({super.key, required this.providerId});
 
   final String providerId;
 
@@ -811,7 +816,9 @@ class _ProviderRatingLink extends ConsumerWidget {
 
     return Semantics(
       button: true,
-      label: '${l10n.serviceSeeReviews}, ${l10n.reviewsCount(rating.count)}',
+      label: rating.isNew
+          ? '${l10n.serviceSeeReviews}, ${l10n.ratingNew}'
+          : '${l10n.serviceSeeReviews}, ${l10n.reviewsCount(rating.count)}',
       child: InkWell(
         onTap: () =>
             context.push(AppRoutes.userReviews(providerId, asProvider: true)),
@@ -836,11 +843,17 @@ class _ProviderRatingLink extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.s),
-              Text(
-                l10n.serviceSeeReviews,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: oc.primary,
-                  fontWeight: FontWeight.w600,
+              // Flexible: at 375 px the row shares its width with "Voir le
+              // profil", and at a raised text scale it would overflow outright.
+              Flexible(
+                child: Text(
+                  l10n.serviceSeeReviews,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: oc.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

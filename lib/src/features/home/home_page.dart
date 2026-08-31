@@ -1077,6 +1077,7 @@ class _ServiceCard extends ConsumerWidget {
                         fontWeight: FontWeight.w700,
                       ),
                       maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Row(
@@ -1087,7 +1088,7 @@ class _ServiceCard extends ConsumerWidget {
                           radius: 10,
                         ),
                         const SizedBox(width: AppSpacing.xs),
-                        Flexible(
+                        Expanded(
                           child: Text(
                             providerUser?.displayName.isNotEmpty == true
                                 ? providerUser!.displayName
@@ -1104,8 +1105,7 @@ class _ServiceCard extends ConsumerWidget {
                           providerId: service.providerId,
                           style: TrustSignalStyle.badge,
                         ),
-                        const Spacer(),
-                        _RatingRow(providerId: service.providerId),
+                        RatingRow(providerId: service.providerId),
                       ],
                     ),
                   ],
@@ -1136,8 +1136,9 @@ class _ServiceCard extends ConsumerWidget {
 // Rating row - stars + average or "Nouveau" badge
 // ---------------------------------------------------------------------------
 
-class _RatingRow extends ConsumerWidget {
-  const _RatingRow({required this.providerId});
+@visibleForTesting
+class RatingRow extends ConsumerWidget {
+  const RatingRow({super.key, required this.providerId});
 
   final String providerId;
 
@@ -1179,7 +1180,10 @@ class _RatingRow extends ConsumerWidget {
         Icon(Icons.star_rounded, size: 12, color: oc.star),
         const SizedBox(width: 2),
         Text(
-          '${rating.average!.toStringAsFixed(1)} (${rating.count})',
+          // The number alone on the card: the count lives on the detail and on
+          // the reviews page, and every character it takes here is taken from
+          // the provider's name, which has about forty pixels to begin with.
+          rating.average!.toStringAsFixed(1),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: oc.secondaryText,
             fontWeight: FontWeight.w500,

@@ -77,3 +77,12 @@ android/key.properties
 
 # Forge cycle state, ephemeral and per-worktree, never committed
 .claude/forge/
+
+# Production ops scripts, kept out of the repository on purpose.
+# ops_seed_and_claims.py grants admin+moderator claims on the named production
+# project AT IMPORT, with no __main__ guard and no --apply. It was swept into a
+# commit twice by a broad `git add`, hence this entry rather than vigilance.
+scripts/ops_seed_and_claims.py
+scripts/reseed_clean_mvp.py
+scripts/fix_locations_mvp.py
+outalma_beta_invite.html
