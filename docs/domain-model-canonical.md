@@ -211,6 +211,44 @@ One review per (bookingId, reviewerRole) pair — enforced by rules.
 
 ---
 
+## ProviderTrust — `provider_trust/{uid}`
+
+Public projection of a provider's identity verification. World-readable,
+`write: if false` for every client including the provider it describes: it is
+derived by the decision transaction (Admin SDK) and never typed by hand.
+
+| Field | Type | Notes |
+|---|---|---|
+| `identityStatus` | `'verified' \| 'pending'` | Absent document = not verified. A refusal is publicly indistinguishable from never having submitted |
+| `updatedAt` | timestamp | |
+
+Owned end to end by the identity subsystem, which DELETES the document on
+reject and on revoke. Nothing whose lifecycle is the ACCOUNT's may live here.
+
+## ProviderRating — `provider_ratings/{uid}`
+
+Public rating aggregate of a provider. World-readable, because a client reads
+it before choosing; `write: if false` for everyone, because a reputation the
+subject can type is not a reputation.
+
+| Field | Type | Notes |
+|---|---|---|
+| `ratingSum` | int | Sum of the ratings that count |
+| `ratingCount` | int | How many. Below 3 the app shows "Nouveau" rather than an average |
+| `updatedAt` | timestamp | |
+
+A review counts only when its author is the CUSTOMER of the booking, which the
+BOOKING establishes: `reviewerRole` is written by the client, no rule
+constrains it, and it is absent from historical reviews. Hidden reviews do not
+count, and moderation moves the aggregate in real time.
+
+Deliberately separate from `provider_trust`: that document is deleted on an
+identity refusal, which would take a provider's whole reputation with it.
+
+Companion register `rating_events/{reviewId}` holds `{ counted }` for
+idempotency. Closed to every client and NEVER purged: unlike
+`processed_events`, the backfill's safety depends on it being permanent.
+
 ## PhoneShare
 
 Firestore collection: `bookings/{bookingId}/phoneShares/{uid}`
