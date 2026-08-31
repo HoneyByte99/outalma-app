@@ -19,7 +19,10 @@ import {
   discountReview,
   recountReview,
 } from '../src/provider_rating';
-import { clearFirestore } from './helpers';
+import * as fns from '../src/index';
+import { clearFirestore, createAuthUser } from './helpers';
+
+const tfWrap = tf.wrap;
 
 const db = () => admin.firestore();
 
@@ -174,5 +177,62 @@ describe('moderation transitions', () => {
     // And the state is recorded, so a replay cannot bring it back either.
     const ev = await db().collection(RATING_EVENTS).doc('r1').get();
     expect(ev.data()?.counted).toBe(false);
+  });
+});
+
+describe('wiring into the account lifecycle', () => {
+  const review = { reviewerId: CLIENT, bookingId: 'b1', rating: 4 };
+
+  it('deleteMyAccount removes the aggregate, even with no identity file', async () => {
+    await createAuthUser(PROVIDER);
+    await seedBooking('b1');
+    await countReview('r1', review);
+    expect(await agg()).not.toBeNull();
+
+    await tfWrap(fns.deleteMyAccount)({
+      data: {},
+      auth: { uid: PROVIDER },
+    } as never);
+
+    expect(await agg()).toBeNull();
+  });
+
+  it('exportMyData carries the aggregate (S10: erasure AND export)', async () => {
+    await createAuthUser(PROVIDER);
+    await seedBooking('b1');
+    await countReview('r1', review);
+
+    const out = (await tfWrap(fns.exportMyData)({
+      data: {},
+      auth: { uid: PROVIDER },
+    } as never)) as Record<string, unknown>;
+
+    expect(out.providerRating).toMatchObject({ ratingSum: 4, ratingCount: 1 });
+  });
+});
+
+describe('the review trigger', () => {
+  it('keeps the rating when the push fails', async () => {
+    // The push is the one leg allowed to fail: the rating and the in-app
+    // notification must both survive it.
+    await createAuthUser(PROVIDER);
+    await seedBooking('b1');
+    const messaging = jest
+      .spyOn(admin.messaging(), 'sendEachForMulticast')
+      .mockRejectedValue(new Error('push down'));
+
+    try {
+      await tfWrap(fns.onReviewCreated)({
+        data: tf.firestore.makeDocumentSnapshot(
+          { reviewerId: CLIENT, revieweeId: PROVIDER, bookingId: 'b1', rating: 4 },
+          'reviews/r1',
+        ),
+        params: { reviewId: 'r1' },
+      } as never);
+    } finally {
+      messaging.mockRestore();
+    }
+
+    expect(await agg()).toMatchObject({ ratingSum: 4, ratingCount: 1 });
   });
 });

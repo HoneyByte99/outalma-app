@@ -11,6 +11,13 @@ import { createNotification, sendPushToUsers } from './notify';
 admin.initializeApp();
 const db = admin.firestore();
 
+import {
+  RATINGS,
+  countReview,
+  discountReview,
+  recountReview,
+} from './provider_rating';
+
 // ---------------------------------------------------------------------------
 // IP geolocation cache (ipapi.co has 1 000 req/day on free tier)
 // ---------------------------------------------------------------------------
@@ -928,6 +935,10 @@ export const deleteMyAccount = onCall(async (request) => {
   services.forEach((d) => batch.delete(d.ref));
   batch.delete(db.collection('providers').doc(uid));
   batch.delete(db.collection('users').doc(uid));
+  // In the HARD batch, not in the identity purge: that pass is best effort for
+  // an account that never filed identity data, and a public rating document
+  // left behind a deleted account is not something to leave to best effort.
+  batch.delete(db.collection(RATINGS).doc(uid));
   await batch.commit();
 
   // Second pass, see above. Hard for accounts that held identity data, best
@@ -1012,6 +1023,8 @@ export const exportMyData = onCall(async (request) => {
   // precedent of writing down what is excluded and why (see the guard document
   // above), so here is the symmetric note for what is included.
   const trust = await db.collection('provider_trust').doc(uid).get();
+  // Same S10 precedent as provider_trust just above: erasure AND export.
+  const rating = await db.collection(RATINGS).doc(uid).get();
 
   const one = (s: admin.firestore.DocumentSnapshot) =>
     s.exists ? { id: s.id, ...s.data() } : null;
@@ -1029,6 +1042,7 @@ export const exportMyData = onCall(async (request) => {
     reviewsReceived: many(revReceived),
     identityVerifications,
     identityTrust: one(trust),
+    providerRating: one(rating),
   };
 });
 
@@ -2098,6 +2112,12 @@ export const hideReview = onCall(async (request) => {
   }
 
   await reviewRef.update({ hidden: true });
+  // Moderation must act on the number a client reads first, otherwise hiding a
+  // review is cosmetic on the public rating.
+  await discountReview(reviewId, {
+    ...(reviewSnap.data() as Record<string, unknown>),
+    hidden: true,
+  });
 
   await writeAdminLog({
     actorUid: callerUid,
@@ -2122,6 +2142,7 @@ export const unhideReview = onCall(async (request) => {
   }
 
   await reviewRef.update({ hidden: false });
+  await recountReview(reviewId, reviewSnap.data() as Record<string, unknown>);
 
   await writeAdminLog({
     actorUid: callerUid,
@@ -2145,7 +2166,9 @@ export const deleteReview = onCall(async (request) => {
     throw new HttpsError('not-found', 'Review not found.');
   }
 
+  const deletedData = reviewSnap.data() as Record<string, unknown>;
   await reviewRef.delete();
+  await discountReview(reviewId, deletedData);
 
   await writeAdminLog({
     actorUid: callerUid,
@@ -2623,16 +2646,15 @@ export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (ev
   // the right Client/Provider notification tab accordingly.
   const audience: 'client' | 'provider' =
     review?.reviewerRole === 'client' ? 'provider' : 'client';
+
+  // The rating goes FIRST, and it is deduplicated. A trigger retry is free and
+  // the dedup absorbs the second pass, so nothing is ever double counted; but
+  // a push failure raised before the increment would lose the rating for good,
+  // with no decrement and no repair path other than the backfill.
+  await countReview(event.params.reviewId, review as Record<string, unknown>);
+
   const title = 'Nouvel avis';
   const body = 'Vous avez reçu un nouvel avis.';
-  await sendPushToUsers(
-    [revieweeId],
-    { title, body },
-    {
-      type: 'review_received',
-      ...(review?.bookingId ? { bookingId: review.bookingId } : {}),
-    }
-  );
   await createNotification(revieweeId, {
     type: 'review_received',
     title,
@@ -2640,6 +2662,23 @@ export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (ev
     bookingId: review?.bookingId,
     audience,
   });
+  // Only the push is swallowed: it is the one leg whose failure must not undo
+  // the rest, and a retry would re-deliver a notification the user already has.
+  try {
+    await sendPushToUsers(
+      [revieweeId],
+      { title, body },
+      {
+        type: 'review_received',
+        ...(review?.bookingId ? { bookingId: review.bookingId } : {}),
+      }
+    );
+  } catch (e) {
+    logger.warn('review push failed, rating and in-app notification kept', {
+      reviewId: event.params.reviewId,
+      error: String(e),
+    });
+  }
 });
 
 export const onBookingUpdatedStats = onDocumentUpdated('bookings/{bookingId}', async (event) => {
