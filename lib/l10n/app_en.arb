@@ -109,7 +109,9 @@
   "homeCategoryEmpty": "No « {category} » listings\nyet",
   "@homeCategoryEmpty": {
     "placeholders": {
-      "category": { "type": "String" }
+      "category": {
+        "type": "String"
+      }
     }
   },
   "clearFilters": "Clear filters",
@@ -576,11 +578,25 @@
   "serviceFormExtraTasksMax": "Three additional tasks at most.",
   "serviceFormPriceRange": "Allowed range: {min} to {max} F CFA",
   "@serviceFormPriceRange": {
-    "placeholders": { "min": { "type": "String" }, "max": { "type": "String" } }
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
   },
   "serviceFormPriceOutOfRange": "The price must be between {min} and {max} F CFA.",
   "@serviceFormPriceOutOfRange": {
-    "placeholders": { "min": { "type": "String" }, "max": { "type": "String" } }
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
   },
   "serviceFormPriceMonthlyMin": "Monthly minimum",
   "serviceFormPriceMonthlyMax": "Monthly maximum",
@@ -766,8 +782,12 @@
   "identityStepProgress": "Step {current} of {total}",
   "@identityStepProgress": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "identityPermissionDeniedTitle": "Camera not allowed",
@@ -806,7 +826,9 @@
   "identityErrorRateLimitedWithDelay": "Too many recent submissions. Try again in {duration}.",
   "@identityErrorRateLimitedWithDelay": {
     "placeholders": {
-      "duration": { "type": "String" }
+      "duration": {
+        "type": "String"
+      }
     }
   },
   "identityErrorStorageDenied": "The upload was refused. Retake your photos.",
@@ -815,13 +837,17 @@
   "identityDurationHours": "{hours} h",
   "@identityDurationHours": {
     "placeholders": {
-      "hours": { "type": "int" }
+      "hours": {
+        "type": "int"
+      }
     }
   },
   "identityDurationMinutes": "{minutes} min",
   "@identityDurationMinutes": {
     "placeholders": {
-      "minutes": { "type": "int" }
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "identityDone": "Done",
@@ -847,10 +873,22 @@
   "identityStatusStartCta": "Verify my identity",
   "identityStatusRestartCta": "Start again",
   "identityStatusPendingBody": "Submitted on {date}, reply within 48 hours. You will be notified of the decision.",
-  "@identityStatusPendingBody": {"placeholders": {"date": {"type": "String"}}},
+  "@identityStatusPendingBody": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "identityStatusPendingBodyNoDate": "Your file is under review, reply within 48 hours. You will be notified of the decision.",
   "identityStatusVerifiedBody": "Verified since {date}.",
-  "@identityStatusVerifiedBody": {"placeholders": {"date": {"type": "String"}}},
+  "@identityStatusVerifiedBody": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "identityStatusVerifiedBodyNoDate": "Your profile is verified.",
   "identityStatusRejectedTitle": "Verification refused",
   "identityStatusRevokedTitle": "Verification withdrawn",
@@ -860,11 +898,20 @@
   "identityWebOnlyMobile": "Identity verification is done from the Outalma mobile app.",
   "identityWebBack": "Back",
   "identitySupportReference": "Your reference: {reference}",
-  "@identitySupportReference": {"placeholders": {"reference": {"type": "String"}}},
+  "@identitySupportReference": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
   "hubIdentityVerifiedSub": "Your profile is verified",
   "hubIdentityPendingSub": "Reply within 48 hours",
   "hubIdentityVerifyCta": "Verify my identity",
   "hubIdentityVerifySub": "Get the « Verified profile » badge",
   "hubIdentityActionRequiredSub": "Action required: restart verification",
-  "profileIdentitySection": "Identity verification"
+  "profileIdentitySection": "Identity verification",
+  "calendarFormatMonth": "Month",
+  "calendarFormatTwoWeeks": "2 weeks",
+  "serviceSeeReviews": "See reviews"
 }

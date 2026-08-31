@@ -109,7 +109,9 @@
   "homeCategoryEmpty": "Aucune fiche « {category} »\npour le moment",
   "@homeCategoryEmpty": {
     "placeholders": {
-      "category": { "type": "String" }
+      "category": {
+        "type": "String"
+      }
     }
   },
   "clearFilters": "Effacer les filtres",
@@ -760,8 +762,12 @@
   "identityStepProgress": "Étape {current} sur {total}",
   "@identityStepProgress": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "identityPermissionDeniedTitle": "Caméra non autorisée",
@@ -800,7 +806,9 @@
   "identityErrorRateLimitedWithDelay": "Trop de dépôts récents. Réessayez dans {duration}.",
   "@identityErrorRateLimitedWithDelay": {
     "placeholders": {
-      "duration": { "type": "String" }
+      "duration": {
+        "type": "String"
+      }
     }
   },
   "identityErrorStorageDenied": "L'envoi a été refusé. Reprenez vos photos.",
@@ -809,13 +817,17 @@
   "identityDurationHours": "{hours} h",
   "@identityDurationHours": {
     "placeholders": {
-      "hours": { "type": "int" }
+      "hours": {
+        "type": "int"
+      }
     }
   },
   "identityDurationMinutes": "{minutes} min",
   "@identityDurationMinutes": {
     "placeholders": {
-      "minutes": { "type": "int" }
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "identityDone": "Terminé",
@@ -857,5 +869,8 @@
   "hubIdentityVerifyCta": "Vérifier mon identité",
   "hubIdentityVerifySub": "Obtenez le badge « Profil vérifié »",
   "hubIdentityActionRequiredSub": "Action requise : recommencez la vérification",
-  "profileIdentitySection": "Vérification d'identité"
+  "profileIdentitySection": "Vérification d'identité",
+  "calendarFormatMonth": "Mois",
+  "calendarFormatTwoWeeks": "2 sem.",
+  "serviceSeeReviews": "Voir les avis"
 }

@@ -2152,4 +2152,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileIdentitySection => 'Vérification d\'identité';
+
+  @override
+  String get calendarFormatMonth => 'Mois';
+
+  @override
+  String get calendarFormatTwoWeeks => '2 sem.';
+
+  @override
+  String get serviceSeeReviews => 'Voir les avis';
 }

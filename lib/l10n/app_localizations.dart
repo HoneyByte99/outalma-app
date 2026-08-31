@@ -3991,6 +3991,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Identity verification'**
   String get profileIdentitySection;
+
+  /// No description provided for @calendarFormatMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get calendarFormatMonth;
+
+  /// No description provided for @calendarFormatTwoWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'2 weeks'**
+  String get calendarFormatTwoWeeks;
+
+  /// No description provided for @serviceSeeReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'See reviews'**
+  String get serviceSeeReviews;
 }
 
 class _AppLocalizationsDelegate

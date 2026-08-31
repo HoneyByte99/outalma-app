@@ -2127,4 +2127,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileIdentitySection => 'Identity verification';
+
+  @override
+  String get calendarFormatMonth => 'Month';
+
+  @override
+  String get calendarFormatTwoWeeks => '2 weeks';
+
+  @override
+  String get serviceSeeReviews => 'See reviews';
 }
