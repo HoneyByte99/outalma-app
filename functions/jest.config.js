@@ -26,6 +26,12 @@ module.exports = {
       functions: 80,
       statements: 80,
     },
+    './src/provider_rating.ts': {
+      lines: 80,
+      branches: 80,
+      functions: 80,
+      statements: 80,
+    },
     './src/identity_extraction.ts': {
       lines: 80,
       branches: 80,
