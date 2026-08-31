@@ -35,6 +35,7 @@ import '../features/notifications/notifications_page.dart';
 import '../features/profile/blocked_users_page.dart';
 import '../features/report/report_page.dart';
 import '../features/review/review_form_page.dart';
+import '../features/review/rating_summary.dart';
 import '../features/review/user_reviews_page.dart';
 import '../features/service/service_detail_page.dart';
 import 'app_shell.dart';
@@ -88,7 +89,14 @@ abstract final class AppRoutes {
 
   static String chat(String chatId) => '/chat/$chatId';
   static String review(String bookingId) => '/review/$bookingId';
-  static String userReviews(String uid) => '/reviews/$uid';
+
+  /// Reviews received by [uid]. [asProvider] tells the page WHICH reputation
+  /// it is showing: a provider's public rating comes from the server-owned
+  /// aggregate, a client's from their recent reviews. The page cannot guess,
+  /// and guessing wrong shows "Nouveau" for ever on one side or a floorless
+  /// average on the other.
+  static String userReviews(String uid, {required bool asProvider}) =>
+      '/reviews/$uid?as=${asProvider ? 'provider' : 'client'}';
   static String report({required String type, required String id}) =>
       '/report/$type/$id';
   static String providerProfile(String uid) => '/provider-profile/$uid';
@@ -478,8 +486,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/reviews/:uid',
         name: 'user-reviews',
-        builder: (_, state) =>
-            UserReviewsPage(userId: state.pathParameters['uid']!),
+        builder: (_, state) => UserReviewsPage(
+          userId: state.pathParameters['uid']!,
+          source: state.uri.queryParameters['as'] == 'provider'
+              ? RatingSource.provider
+              : RatingSource.client,
+        ),
       ),
 
       // ---- Public provider profile ----

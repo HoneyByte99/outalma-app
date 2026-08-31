@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:outalma_app/src/domain/review/rating_display.dart';
 import 'package:outalma_app/l10n/app_localizations.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/application/auth/auth_notifier.dart';
@@ -73,9 +74,11 @@ Widget _wrap(List<Service> services) => ProviderScope(
         upcomingThisWeek: 0,
       ),
     ),
-    ratingSummaryProvider(
+    // The dashboard shows the provider their OWN public rating, so it reads
+    // the server-owned aggregate, not a review-derived summary.
+    providerRatingProvider(
       'prov_1',
-    ).overrideWith((_) => Stream.value((average: 0.0, count: 0))),
+    ).overrideWith((_) => Stream.value(const RatingDisplay.fresh())),
     identityTrustProvider('prov_1').overrideWith((_) => Stream.value(null)),
     unreadNotificationsCountProvider.overrideWithValue(0),
   ],

@@ -390,7 +390,8 @@ class _ClientSummary extends ConsumerWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push(AppRoutes.userReviews(clientId)),
+        onTap: () =>
+            context.push(AppRoutes.userReviews(clientId, asProvider: false)),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -425,7 +426,10 @@ class _ClientSummary extends ConsumerWidget {
                       ).textTheme.bodySmall?.copyWith(color: oc.primary),
                     ),
                     const SizedBox(height: 6),
-                    RatingSummary(userId: clientId),
+                    RatingSummary(
+                      userId: clientId,
+                      source: RatingSource.client,
+                    ),
                   ],
                 ),
               ),

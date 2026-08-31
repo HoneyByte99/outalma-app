@@ -5,23 +5,37 @@ import '../../app/app_theme.dart';
 import '../../application/review/review_providers.dart';
 import '../../../l10n/app_localizations.dart';
 
+/// Which reputation a surface is showing. There is no default on purpose.
+///
+/// The same widget serves two different things, and no call site can guess
+/// which: a PROVIDER's public rating comes from the server-owned aggregate,
+/// while a CLIENT's reputation is derived from their recent reviews. Reading
+/// the aggregate for a client would show "Nouveau" for every client for ever,
+/// since no aggregate is ever written for them.
+enum RatingSource { provider, client }
+
 /// Compact, read-only trust signal: average rating + review count for a user.
-/// Shows a neutral "New" label when the user has no reviews yet. Used to
-/// surface a client's reputation to the provider (incoming requests + booking
-/// detail) without exposing a full client profile.
+/// Shows a neutral "New" label below the review floor.
 class RatingSummary extends ConsumerWidget {
-  const RatingSummary({super.key, required this.userId});
+  const RatingSummary({super.key, required this.userId, required this.source});
 
   final String userId;
+  final RatingSource source;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final stats = ref.watch(ratingSummaryProvider(userId)).valueOrNull;
-    if (stats == null) return const SizedBox.shrink();
+    final async = switch (source) {
+      RatingSource.provider => ref.watch(providerRatingProvider(userId)),
+      RatingSource.client => ref.watch(clientReputationProvider(userId)),
+    };
+    // Unresolved reads say nothing: claiming "Nouveau" while the read is in
+    // flight would flash a false statement about a real person on every scroll.
+    if (!async.hasValue) return const SizedBox.shrink();
+    final stats = async.value!;
 
-    if (stats.count == 0) {
+    if (stats.isNew) {
       // No reviews yet — keep a star shape (outlined) so non-readers still
       // recognise this as a rating slot, paired with the localized label.
       return Semantics(
@@ -43,23 +57,27 @@ class RatingSummary extends ConsumerWidget {
       );
     }
 
+    final average = stats.average!;
+    final countLabel = stats.count >= kClientReputationWindow
+        ? '$kClientReputationWindow+'
+        : l10n.reviewsCount(stats.count);
+
     return Semantics(
-      label:
-          '${stats.average.toStringAsFixed(1)} ${l10n.reviewsCount(stats.count)}',
+      label: '${average.toStringAsFixed(1)} $countLabel',
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.star_rounded, size: 15, color: oc.star),
           const SizedBox(width: 3),
           Text(
-            stats.average.toStringAsFixed(1),
+            average.toStringAsFixed(1),
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(width: 4),
           Text(
-            l10n.reviewsCount(stats.count),
+            countLabel,
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),

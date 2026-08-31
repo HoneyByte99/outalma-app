@@ -254,7 +254,10 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                                 ],
                               ),
                               const SizedBox(height: 2),
-                              RatingSummary(userId: widget.profile.uid),
+                              RatingSummary(
+                                userId: widget.profile.uid,
+                                source: RatingSource.provider,
+                              ),
                             ],
                           ),
                         ),

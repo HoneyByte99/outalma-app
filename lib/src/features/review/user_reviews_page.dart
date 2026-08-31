@@ -14,9 +14,18 @@ import '../../../l10n/app_localizations.dart';
 /// Opened from the client summary on a booking so a provider can judge a client
 /// before accepting, and reusable anywhere a reputation needs inspecting.
 class UserReviewsPage extends ConsumerWidget {
-  const UserReviewsPage({super.key, required this.userId});
+  const UserReviewsPage({
+    super.key,
+    required this.userId,
+    required this.source,
+  });
 
   final String userId;
+
+  /// Which reputation this page is showing. Carried by the route because the
+  /// same screen is opened for a client from a booking and for a provider from
+  /// a service listing, and it cannot tell them apart on its own.
+  final RatingSource source;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -72,7 +81,7 @@ class UserReviewsPage extends ConsumerWidget {
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 2),
-                        RatingSummary(userId: userId),
+                        RatingSummary(userId: userId, source: source),
                       ],
                     ),
                   ),

@@ -11,6 +11,8 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:outalma_app/src/domain/repositories/provider_rating_repository.dart';
+import 'package:outalma_app/src/domain/models/provider_rating.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:outalma_app/src/application/auth/auth_notifier.dart';
 import 'package:outalma_app/src/application/auth/auth_providers.dart';
@@ -96,9 +98,43 @@ void main() {
     expect(list, hasLength(1));
   });
 
-  group('ratingSummaryProvider', () {
-    test('averages ratings and counts reviews', () async {
-      when(() => repo.watchForUser('target')).thenAnswer(
+  group('providerRatingProvider', () {
+    test('maps the server aggregate through the shared display rule', () async {
+      final c = ProviderContainer(
+        overrides: [
+          providerRatingRepositoryProvider.overrideWithValue(
+            _StubRatingRepo(const ProviderRating(sum: 12, count: 3)),
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      final d = await c.read(providerRatingProvider('prov_1').future);
+      expect(d.isNew, isFalse);
+      expect(d.average, closeTo(4.0, 0.0001));
+      expect(d.count, 3);
+    });
+
+    test('applies the same floor as everywhere else', () async {
+      final c = ProviderContainer(
+        overrides: [
+          providerRatingRepositoryProvider.overrideWithValue(
+            _StubRatingRepo(const ProviderRating(sum: 2, count: 1)),
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      expect(
+        (await c.read(providerRatingProvider('prov_1').future)).isNew,
+        isTrue,
+      );
+    });
+  });
+
+  group('clientReputationProvider', () {
+    test('averages the bounded window of recent reviews', () async {
+      when(
+        () => repo.watchRecentForUser('target', limit: kClientReputationWindow),
+      ).thenAnswer(
         (_) => Stream.value([
           _r('a', rating: 5),
           _r('b', rating: 4),
@@ -107,20 +143,33 @@ void main() {
       );
       final c = makeContainer();
       addTearDown(c.dispose);
-      final stats = await c.read(ratingSummaryProvider('target').future);
+      final stats = await c.read(clientReputationProvider('target').future);
+      expect(stats.isNew, isFalse);
       expect(stats.count, 3);
       expect(stats.average, closeTo(4.0, 0.0001));
     });
 
-    test('returns (0, 0) when there are no reviews', () async {
+    test('stays "Nouveau" below the review floor', () async {
       when(
-        () => repo.watchForUser('target'),
+        () => repo.watchRecentForUser('target', limit: kClientReputationWindow),
+      ).thenAnswer((_) => Stream.value([_r('a', rating: 2)]));
+      final c = makeContainer();
+      addTearDown(c.dispose);
+      final stats = await c.read(clientReputationProvider('target').future);
+      expect(stats.isNew, isTrue, reason: 'one review is not a verdict');
+      expect(stats.average, isNull);
+    });
+
+    test('reads the BOUNDED query, never the unbounded one', () async {
+      // The whole point of the separate method: the card path must not reopen
+      // the unbounded stream this increment removed.
+      when(
+        () => repo.watchRecentForUser('target', limit: kClientReputationWindow),
       ).thenAnswer((_) => Stream.value(<Review>[]));
       final c = makeContainer();
       addTearDown(c.dispose);
-      final stats = await c.read(ratingSummaryProvider('target').future);
-      expect(stats.count, 0);
-      expect(stats.average, 0.0);
+      await c.read(clientReputationProvider('target').future);
+      verifyNever(() => repo.watchForUser('target'));
     });
   });
 
@@ -158,4 +207,12 @@ void main() {
     addTearDown(c.dispose);
     expect(c.read(createReviewUseCaseProvider), isA<CreateReviewUseCase>());
   });
+}
+
+class _StubRatingRepo implements ProviderRatingRepository {
+  _StubRatingRepo(this._value);
+  final ProviderRating _value;
+
+  @override
+  Stream<ProviderRating> watch(String uid) => Stream.value(_value);
 }

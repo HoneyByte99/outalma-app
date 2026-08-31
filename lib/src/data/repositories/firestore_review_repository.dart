@@ -26,6 +26,19 @@ class FirestoreReviewRepository implements ReviewRepository {
   }
 
   @override
+  Stream<List<Review>> watchRecentForUser(String userId, {required int limit}) {
+    // Ordered AND bounded: without the order the average would cover an
+    // arbitrary slice ordered by document id, which is worse than unbounded.
+    // The composite index (revieweeId ASC, createdAt DESC) already exists.
+    return FirestoreCollections.reviews(_db)
+        .where('revieweeId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((qs) => qs.docs.map((d) => d.data()).toList());
+  }
+
+  @override
   Future<Review> create(Review review) async {
     final col = FirestoreCollections.reviews(_db);
     // Deterministic id enforces one review per (booking, reviewer): a second

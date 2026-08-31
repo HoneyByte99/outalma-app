@@ -270,7 +270,10 @@ class _InboxCard extends ConsumerWidget {
                         ),
                       // Client trust signal (rating + review count).
                       const SizedBox(height: 4),
-                      RatingSummary(userId: booking.customerId),
+                      RatingSummary(
+                        userId: booking.customerId,
+                        source: RatingSource.client,
+                      ),
                     ],
                   ),
                 ),
