@@ -691,6 +691,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String serviceZoneWithDistance(String label, String km) {
+    return '$label · $km km';
+  }
+
+  @override
+  String serviceZoneWithMore(String label, int count) {
+    return '$label +$count';
+  }
+
+  @override
   String get bookingOpenDirections => 'Directions';
 
   @override

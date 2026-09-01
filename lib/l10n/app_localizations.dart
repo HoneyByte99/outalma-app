@@ -1352,6 +1352,18 @@ abstract class AppLocalizations {
   /// **'Estimated distance: ~{km} km'**
   String bookingDistanceEstimate(String km);
 
+  /// Service card: the closest intervention zone and its distance from the active location filter.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} · {km} km'**
+  String serviceZoneWithDistance(String label, String km);
+
+  /// Service card: the first intervention zone plus how many others the service covers.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} +{count}'**
+  String serviceZoneWithMore(String label, int count);
+
   /// No description provided for @bookingOpenDirections.
   ///
   /// In en, this message translates to:
