@@ -31,6 +31,7 @@ import '../shared/mode_badge.dart';
 import '../shared/network_image.dart';
 import '../shared/user_avatar.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../domain/utils/text_search.dart';
 
 // ---------------------------------------------------------------------------
 // Filter state - local to this page subtree
@@ -862,7 +863,11 @@ class _ServiceGrid extends ConsumerWidget {
     final selectedCategory = ref.watch(_selectedCategoryProvider);
     final locationFilter = ref.watch(locationFilterProvider);
     final rawQuery = ref.watch(_searchQueryProvider);
-    final searchQuery = rawQuery.toLowerCase();
+    // Folded, not just lowercased: on a phone keyboard in Senegal, typing
+    // without accents is the common case, so "menage" has to find "Ménage
+    // complet appartement". BOTH sides are folded below, or the mirror case
+    // (accented query, unaccented title) stays broken.
+    final searchQuery = foldForSearch(rawQuery);
     final servicesAsync = ref.watch(discoverableServicesProvider);
 
     // In client mode, a user must not discover their own provider listings.
@@ -894,7 +899,7 @@ class _ServiceGrid extends ConsumerWidget {
 
         if (searchQuery.isNotEmpty) {
           filtered = filtered
-              .where((s) => s.title.toLowerCase().contains(searchQuery))
+              .where((s) => foldForSearch(s.title).contains(searchQuery))
               .toList();
         }
 

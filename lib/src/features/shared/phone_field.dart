@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../app/app_theme.dart';
+import '../../domain/utils/text_search.dart';
 
 // ---------------------------------------------------------------------------
 // Country model + curated list (Francophone + major EU countries)
@@ -285,14 +286,17 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
   }
 
   void _onSearch() {
-    final q = _searchCtrl.text.toLowerCase();
+    // Folded on BOTH sides: the country list carries accents ("Sénégal"), and
+    // someone signing up on a phone in Dakar types "senegal". Folding only the
+    // name would leave the mirror case broken.
+    final q = foldForSearch(_searchCtrl.text);
     setState(() {
       _filtered = q.isEmpty
           ? _kCountries
           : _kCountries
                 .where(
                   (c) =>
-                      c.name.toLowerCase().contains(q) ||
+                      foldForSearch(c.name).contains(q) ||
                       c.dialCode.contains(q),
                 )
                 .toList();
