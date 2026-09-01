@@ -37,6 +37,13 @@ import sys
 import firebase_admin
 from firebase_admin import credentials, firestore
 
+# The predicate is NOT redefined here. It lives in rating_predicate.py, which
+# imports nothing beyond the standard library so a test can exercise it without
+# a service account, and it is checked against the TypeScript on every run of
+# the functions test suite.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from rating_predicate import counts, usable  # noqa: E402
+
 APPLY = "--apply" in sys.argv[1:]
 
 
@@ -64,39 +71,6 @@ def booking_of(booking_id):
         snap = db.collection("bookings").document(booking_id).get()
         _bookings[booking_id] = snap.to_dict() if snap.exists else None
     return _bookings[booking_id]
-
-
-def counts(review, booking):
-    """Mirror of countsTowardProviderRating in functions/src/provider_rating.ts."""
-    if not booking:
-        return False
-    customer = booking.get("customerId")
-    provider = booking.get("providerId")
-    if not customer or not provider or customer == provider:
-        return False
-    if review.get("hidden") is True:
-        return False
-    return review.get("reviewerId") == customer
-
-
-def usable(rating):
-    """Returns the normalised int rating, or None. Returning the value rather
-    than a boolean keeps a float 4.0 from reaching Increment() as a double."""
-    # Firestore may hand back an integer as a float. The TypeScript side uses
-    # Number.isInteger, which accepts 4.0; this must accept it too, or the two
-    # implementations disagree on the same document.
-    if isinstance(rating, bool):
-        # A bool is an int in Python. Returning False here would pass the
-        # caller's `is None` guard and reach Increment(False): +1 on the count,
-        # +0 on the sum, marked counted, and no re-run could repair it.
-        return None
-    if isinstance(rating, float):
-        if not rating.is_integer():
-            return None
-        rating = int(rating)
-    if isinstance(rating, int) and 1 <= rating <= 5:
-        return rating
-    return None
 
 
 @firestore.transactional
