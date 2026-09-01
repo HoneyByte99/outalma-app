@@ -18,6 +18,7 @@ import {
   recountReview,
   type RatingTx,
 } from './provider_rating';
+import { PUBLIC_PROFILES } from './public_profiles';
 
 // ---------------------------------------------------------------------------
 // IP geolocation cache (ipapi.co has 1 000 req/day on free tier)
@@ -115,6 +116,11 @@ export {
 // pipeline's surface area but lack the hardening done in `auth_phone.ts`
 // (Auth-side uniqueness, displayName sanitisation, race protection).
 // Re-enable behind a feature flag only if a future benchmark needs them.
+
+// ---------------------------------------------------------------------------
+// Public profile projection : PII-free mirror of `users`, readable by a guest
+// ---------------------------------------------------------------------------
+export { mirrorPublicProfile, backfillPublicProfiles } from './public_profiles';
 
 type BookingStatus =
   | 'requested'
@@ -940,6 +946,11 @@ export const deleteMyAccount = onCall(async (request) => {
   // an account that never filed identity data, and a public rating document
   // left behind a deleted account is not something to leave to best effort.
   batch.delete(db.collection(RATINGS).doc(uid));
+  // Same batch, and deliberately redundant with mirrorPublicProfile, which also
+  // deletes this document when `users/{uid}` disappears. The projection is the
+  // one place a deleted account's NAME stays world readable, so its erasure
+  // must not depend on a trigger firing. Both paths are idempotent.
+  batch.delete(db.collection(PUBLIC_PROFILES).doc(uid));
   await batch.commit();
 
   // Second pass, see above. Hard for accounts that held identity data, best
@@ -1026,6 +1037,10 @@ export const exportMyData = onCall(async (request) => {
   const trust = await db.collection('provider_trust').doc(uid).get();
   // Same S10 precedent as provider_trust just above: erasure AND export.
   const rating = await db.collection(RATINGS).doc(uid).get();
+  // Same precedent again. Holds no PII by construction, but it is a document
+  // ABOUT the user that the whole internet can read, which is exactly the kind
+  // of thing a portability request expects to find in the archive.
+  const publicProfile = await db.collection(PUBLIC_PROFILES).doc(uid).get();
 
   const one = (s: admin.firestore.DocumentSnapshot) =>
     s.exists ? { id: s.id, ...s.data() } : null;
@@ -1044,6 +1059,7 @@ export const exportMyData = onCall(async (request) => {
     identityVerifications,
     identityTrust: one(trust),
     providerRating: one(rating),
+    publicProfile: one(publicProfile),
   };
 });
 

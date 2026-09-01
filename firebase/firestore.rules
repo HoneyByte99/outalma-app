@@ -72,6 +72,40 @@ service cloud.firestore {
       }
     }
 
+    // ---------- PUBLIC PROFILES (PII-free mirror of users) ----------
+    //
+    // World readable, because a visitor with no account browses the catalogue
+    // and every card, service detail and review carries a name and an avatar.
+    // Those used to be read from `users/{uid}`, which is gated on signedIn()
+    // and holds `email` and `phoneE164`: a guest got PERMISSION_DENIED, and the
+    // fix of opening `users` would have published every address and number.
+    //
+    // Opening THIS collection was checked field by field against production
+    // before the rule was written, not assumed from the projection code. The
+    // 50 documents carry exactly four keys and nothing else:
+    //
+    //   displayName    50/50    the name the user chose to be called
+    //   photoPath      50/50    public Storage avatar URL, already world
+    //                           readable through its download token
+    //   phoneVerified  50/50    boolean, whether a number is on file, never
+    //                           the number
+    //   country        42/50    ISO code, self-declared, country granularity
+    //
+    // `providers/{uid}` was the alternative, being public already. It was
+    // rejected on evidence: 23 documents, no `displayName` at all and a
+    // `photoUrl` on 12 of them. It cannot name a reviewer either, and reviewers
+    // are not providers.
+    //
+    // `write: if false` for every client including admin: the document is
+    // derived from `users/{uid}` by mirrorPublicProfile (Admin SDK, which
+    // bypasses these rules). A client-writable projection would let anyone
+    // publish any name next to any service, which is the whole reason the
+    // display name is not simply denormalised onto `services`.
+    match /public_profiles/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ---------- PROVIDERS (public read, owner write) ----------
     match /providers/{uid} {
       allow read: if true;

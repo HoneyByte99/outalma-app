@@ -341,6 +341,82 @@ describe('reviews block gating', () => {
 // look equivalent and are not, because each fails in a way no reading of the
 // rule file would reveal.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// public_profiles: the PII-free display projection a visitor reads instead of
+// `users`. Opening it is only defensible while `users` stays shut AND while the
+// document itself carries nothing sensitive, so both are asserted here.
+// ---------------------------------------------------------------------------
+describe('public_profiles guest read', () => {
+  beforeEach(async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'public_profiles/bob'), {
+        displayName: 'Bob Ndiaye',
+        photoPath: 'https://storage.example/avatars/bob.png',
+        country: 'SN',
+        phoneVerified: true,
+      });
+      // The source document, carrying the PII the projection exists to keep out.
+      await setDoc(doc(db, 'users/bob'), {
+        displayName: 'Bob Ndiaye',
+        email: 'bob@example.com',
+        phoneE164: '+221770000000',
+        country: 'SN',
+      });
+    });
+  });
+
+  test('a VISITOR can read a public profile', async () => {
+    // The reason the collection exists: without it a service card shown to
+    // someone with no account has no provider name and no avatar.
+    await assertSucceeds(getDoc(doc(anon(), 'public_profiles/bob')));
+  });
+
+  test('a VISITOR still CANNOT read the users doc behind it', async () => {
+    // The other half of the same decision. Opening `public_profiles` is only
+    // acceptable while `users` stays shut: that is where email and phone live.
+    await assertFails(getDoc(doc(anon(), 'users/bob')));
+  });
+
+  test('what a VISITOR reads carries no email and no phone number', async () => {
+    // Rules authorise a DOCUMENT, never a field, so the guarantee is only as
+    // good as what the document contains. This asserts the content a visitor
+    // actually receives, not the intent of the function that wrote it.
+    const snap = await getDoc(doc(anon(), 'public_profiles/bob'));
+    expect(Object.keys(snap.data() ?? {}).sort()).toEqual([
+      'country',
+      'displayName',
+      'phoneVerified',
+      'photoPath',
+    ]);
+  });
+
+  test('a VISITOR cannot write a public profile', async () => {
+    await assertFails(
+      setDoc(doc(anon(), 'public_profiles/bob'), { displayName: 'Impostor' })
+    );
+  });
+
+  test('the SUBJECT cannot write their own public profile', async () => {
+    // A self-writable projection would hand the display name shown next to
+    // every listing back to the client, which is what denormalising the name
+    // onto `services` would have done and why it was not done.
+    await assertFails(
+      setDoc(doc(asUser('bob'), 'public_profiles/bob'), {
+        displayName: 'Bob the Verified',
+        phoneVerified: true,
+      })
+    );
+  });
+
+  test('even an ADMIN cannot write it from a client', async () => {
+    // `write: if false` with no exemption, like provider_trust and
+    // provider_ratings: derived from `users` by the Admin SDK, never typed.
+    await assertFails(
+      setDoc(doc(asAdmin(), 'public_profiles/bob'), { displayName: 'x' })
+    );
+  });
+});
+
 describe('reviews public read', () => {
   beforeEach(async () => {
     await seed(async (db) => {

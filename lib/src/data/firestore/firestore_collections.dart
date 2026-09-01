@@ -14,6 +14,7 @@ import '../../domain/models/chat_message.dart';
 import '../../domain/models/app_notification.dart';
 import '../../domain/models/phone_share.dart';
 import '../../domain/models/provider_profile.dart';
+import '../../domain/models/public_profile.dart';
 import '../../domain/models/report.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
@@ -32,6 +33,26 @@ class FirestoreCollections {
         .withConverter<AppUser>(
           fromFirestore: (snap, _) => _userFromFirestore(snap),
           toFirestore: (user, _) => _userToFirestore(user),
+        );
+  }
+
+  /// The world-readable, PII-free mirror of `users`. Public surfaces resolve
+  /// display names and avatars here so a signed-out visitor can read them:
+  /// `users` is gated on `signedIn()` because it holds email and phone.
+  static CollectionReference<PublicProfile> publicProfiles(
+    FirebaseFirestore db,
+  ) {
+    return db
+        .collection('public_profiles')
+        .withConverter<PublicProfile>(
+          fromFirestore: (snap, _) => _publicProfileFromFirestore(snap),
+          // Read-only from the client. The projection is written exclusively by
+          // the mirrorPublicProfile Cloud Function and every client write is
+          // denied by the rules, so a working serialiser here would advertise a
+          // path that does not exist and would fail at the network layer.
+          toFirestore: (_, __) => throw UnsupportedError(
+            'public_profiles is server-owned: client writes are denied',
+          ),
         );
   }
 
@@ -190,6 +211,28 @@ class FirestoreCollections {
         'termsAcceptedAt': dateTimeToFirestore(user.termsAcceptedAt!),
       'createdAt': dateTimeToFirestore(user.createdAt),
     };
+  }
+
+  // ---- PublicProfile ----
+
+  /// Deliberately tolerant of every absent field. The projection is produced by
+  /// a Cloud Function from whatever `users/{uid}` holds, and a document written
+  /// before a field existed must degrade to a blank name rather than throw on a
+  /// public surface a visitor is looking at.
+  static PublicProfile _publicProfileFromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> snap,
+  ) {
+    final data = snap.data() ?? const <String, dynamic>{};
+    return PublicProfile(
+      id: snap.id,
+      displayName: (data['displayName'] as String?) ?? '',
+      photoPath: data['photoPath'] as String?,
+      // Left null when absent, NOT defaulted to 'FR' like AppUser does: this
+      // document feeds a public profile, and a default here would display a
+      // country the user never declared.
+      country: data['country'] as String?,
+      phoneVerified: (data['phoneVerified'] as bool?) ?? false,
+    );
   }
 
   // ---- Service ----
