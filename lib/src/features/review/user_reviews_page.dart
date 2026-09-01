@@ -81,7 +81,14 @@ class UserReviewsPage extends ConsumerWidget {
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 2),
-                        RatingSummary(userId: userId, source: source),
+                        // explainBasis: this screen shows the list right
+                        // underneath, so the header has to say what its number
+                        // counts. Without it, "3 avis" sits above six tiles.
+                        RatingSummary(
+                          userId: userId,
+                          source: source,
+                          explainBasis: true,
+                        ),
                       ],
                     ),
                   ),
@@ -100,8 +107,23 @@ class UserReviewsPage extends ConsumerWidget {
                     ),
                   ),
                 )
-              else
+              else ...[
+                // The list has its own title, so the two measures on this
+                // screen are named rather than left to look like one another:
+                // the header counts a filtered basis, this counts everything
+                // received. Only in the data branch: loading and error replace
+                // the whole body here, and hoisting the identity row out of the
+                // `when` would change this screen's loading state, which is a
+                // rework this lot does not carry.
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    l10n.reviewsAllReceived,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
                 ...sorted.map((r) => _ReviewTile(review: r)),
+              ],
             ],
           );
         },
