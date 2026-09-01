@@ -49,9 +49,9 @@ Firestore collection: `users/{uid}`
 | `displayName` | String | Public display name |
 | `photoPath` | String? | Firebase Storage path (not URL) |
 | `email` | String | From Firebase Auth |
-| `phoneE164` | String? | Private — never exposed publicly |
+| `phoneE164` | String? | Private : never exposed publicly |
 | `country` | String | "FR" or "SN" |
-| `activeMode` | String | "client" or "provider" — the current UI switch state |
+| `activeMode` | String | "client" or "provider", the current UI switch state |
 | `pushToken` | String? | FCM token for notifications |
 | `createdAt` | Timestamp | UTC |
 
@@ -71,7 +71,7 @@ Firestore collection: `providers/{uid}` (same UID as users/{uid})
 | `bio` | String? | Short description of the provider |
 | `serviceArea` | String? | City or zone description |
 | `active` | bool | Whether provider profile is active |
-| `suspended` | bool | Set by admin — overrides active |
+| `suspended` | bool | Set by admin : overrides active |
 | `createdAt` | Timestamp | When provider profile was activated |
 
 ---
@@ -105,11 +105,11 @@ Firestore collection: `services/{serviceId}` (public read)
 | `priceType` | String | "hourly" or "fixed" |
 | `price` | int | Price in smallest currency unit (centimes) |
 | `published` | bool | Only published services are discoverable |
-| `serviceZones` | List\<Map\> | `[{label, lat, lng, radiusKm}]` — intervention zones |
+| `serviceZones` | List\<Map\> | `[{label, lat, lng, radiusKm}]` : intervention zones |
 | `createdAt` | Timestamp | UTC |
 | `updatedAt` | Timestamp | UTC |
 
-`ownerId` is NOT used — the field is `providerId` for consistency with bookings.
+`ownerId` is NOT used, the field is `providerId` for consistency with bookings.
 
 ### ServiceZone (value object, not a Firestore collection)
 
@@ -136,19 +136,19 @@ Firestore collection: `bookings/{bookingId}` (top-level, not subcollection)
 | `requestMessage` | String | Free-text message from client |
 | `scheduledAt` | Timestamp? | Structured date/time for the appointment (preferred) |
 | `schedule` | Map? | Legacy slot info (freeform, kept for backwards compat) |
-| `addressSnapshot` | Map? | Client address at time of booking. Shape: `{address: string, lat?: number, lng?: number}` — coordinates come from Google Places when the user picks an autocomplete suggestion and power the distance estimate + directions button on the booking detail page. |
+| `addressSnapshot` | Map? | Client address at time of booking. Shape: `{address: string, lat?: number, lng?: number}` : coordinates come from Google Places when the user picks an autocomplete suggestion and power the distance estimate + directions button on the booking detail page. |
 | `chatId` | String? | Set by `acceptBooking()` Cloud Function |
 | `reminded24h` | bool | Flag for 24h reminder (set by sendBookingReminders) |
 | `reminded1h` | bool | Flag for 1h reminder (set by sendBookingReminders) |
 | `createdAt` | Timestamp | UTC |
-| `acceptedAt` | Timestamp? | UTC — set by acceptBooking() |
-| `rejectedAt` | Timestamp? | UTC — set by rejectBooking() |
-| `cancelledAt` | Timestamp? | UTC — set by cancelBooking() |
-| `startedAt` | Timestamp? | UTC — set by markInProgress() |
-| `doneAt` | Timestamp? | UTC — set by confirmDone() |
+| `acceptedAt` | Timestamp? | UTC : set by acceptBooking() |
+| `rejectedAt` | Timestamp? | UTC : set by rejectBooking() |
+| `cancelledAt` | Timestamp? | UTC : set by cancelBooking() |
+| `startedAt` | Timestamp? | UTC : set by markInProgress() |
+| `doneAt` | Timestamp? | UTC : set by confirmDone() |
 
-`userId` is NOT used — fields are `customerId` and `providerId`.
-`updatedAt` is NOT used — individual transition timestamps are used instead.
+`userId` is NOT used, fields are `customerId` and `providerId`.
+`updatedAt` is NOT used, individual transition timestamps are used instead.
 
 ---
 
@@ -183,11 +183,11 @@ Firestore collection: `chats/{chatId}/messages/{messageId}`
 | `type` | String | "text", "image", or "voice" |
 | `text` | String? | Present when type=text, or as caption for images |
 | `mediaUrl` | String? | Present when type=image or type=voice (Storage URL) |
-| `createdAt` | Timestamp | UTC — use `createdAt` not `sentAt` |
+| `createdAt` | Timestamp | UTC, use `createdAt` not `sentAt` |
 
 Firestore rules: message create requires `text OR mediaUrl` (not both mandatory).
 
-Field name is `createdAt` (not `sentAt`) — aligns with all other collections.
+Field name is `createdAt` (not `sentAt`), aligns with all other collections.
 
 ---
 
@@ -228,7 +228,7 @@ resolves the author's role from the BOOKING (see `provider_rating.ts`).
 
 ---
 
-## ProviderTrust — `provider_trust/{uid}`
+## ProviderTrust : `provider_trust/{uid}`
 
 Public projection of a provider's identity verification. World-readable,
 `write: if false` for every client including the provider it describes: it is
@@ -242,7 +242,7 @@ derived by the decision transaction (Admin SDK) and never typed by hand.
 Owned end to end by the identity subsystem, which DELETES the document on
 reject and on revoke. Nothing whose lifecycle is the ACCOUNT's may live here.
 
-## ProviderRating — `provider_ratings/{uid}`
+## ProviderRating : `provider_ratings/{uid}`
 
 Public rating aggregate of a provider. World-readable, because a client reads
 it before choosing; `write: if false` for everyone, because a reputation the
@@ -319,7 +319,7 @@ Notification types: `new_message`, `booking_accepted`, `booking_rejected`, `book
 ```
 BookingStatus : requested | accepted | in_progress | done | rejected | cancelled
 UserRole      : customer | provider | admin   (technical auth role, not UI mode)
-ActiveMode    : client | provider              (UI switch — stored on AppUser)
+ActiveMode    : client | provider              (UI switch, stored on AppUser)
 MessageType   : text | image | voice | system
 PriceType     : hourly | fixed
 Country       : FR | SN
