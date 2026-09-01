@@ -10,7 +10,7 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/review/review_providers.dart';
-import '../../application/user/user_providers.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../shared/service_price_label.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
@@ -27,14 +27,16 @@ class PublicProviderProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final userAsync = ref.watch(userByIdProvider(providerId));
+    final userAsync = ref.watch(publicProfileByIdProvider(providerId));
     final reviewsAsync = ref.watch(reviewsForUserProvider(providerId));
     final servicesAsync = ref.watch(publicProviderServicesProvider(providerId));
 
-    // The page hinges on the USER document. The providers/{uid} doc is optional
-    // (it only adds bio / serviceArea / verified badge). While the user doc is
-    // still loading we show a spinner; if it resolves to null the provider does
-    // not exist and we show a graceful unavailable state.
+    // The page hinges on the PUBLIC PROJECTION, not on users/{uid}: it is
+    // reachable without an account and `users` is gated on signedIn(), which
+    // made the whole screen resolve to "provider unavailable" for a visitor.
+    // The providers/{uid} doc stays optional (it only adds the bio). While the
+    // projection is still loading we show a spinner; if it resolves to null the
+    // provider does not exist and we show a graceful unavailable state.
     if (userAsync.isLoading && !userAsync.hasValue) {
       return Scaffold(
         backgroundColor: oc.background,
@@ -212,7 +214,7 @@ class ProfileHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
-    final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
+    final user = ref.watch(publicProfileByIdProvider(providerId)).valueOrNull;
     final providerProfile = ref
         .watch(providerProfileByIdProvider(providerId))
         .valueOrNull;
@@ -281,7 +283,11 @@ class ProfileHeader extends ConsumerWidget {
                   explainBasis: true,
                 ),
                 const SizedBox(height: 4),
-                if (user?.country != null && user!.country.isNotEmpty)
+                // Nullable on the projection, unlike AppUser.country which
+                // defaults to 'FR': the public document omits the field when
+                // the user declared no country, so a flag is shown only when
+                // there is one to show rather than defaulted to France.
+                if (user?.country != null && user!.country!.isNotEmpty)
                   Row(
                     children: [
                       Icon(
@@ -296,7 +302,7 @@ class ProfileHeader extends ConsumerWidget {
                       // this column gets at 375 px once the text scale rises.
                       Flexible(
                         child: Text(
-                          CountryUtils.flagAndName(user.country),
+                          CountryUtils.flagAndName(user.country!),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: oc.secondaryText),
                         ),
@@ -335,7 +341,12 @@ class _ReviewTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
     final l10n = AppLocalizations.of(context)!;
-    final reviewer = ref.watch(userByIdProvider(review.reviewerId)).valueOrNull;
+    // The reviewer is resolved from the public projection too. A reviewer is
+    // usually a CLIENT, not a provider, so providers/{uid} could never have
+    // named them even if it carried a display name.
+    final reviewer = ref
+        .watch(publicProfileByIdProvider(review.reviewerId))
+        .valueOrNull;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

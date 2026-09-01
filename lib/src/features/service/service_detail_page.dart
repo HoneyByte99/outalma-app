@@ -9,7 +9,7 @@ import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/service/service_providers.dart';
-import '../../application/user/user_providers.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../../domain/enums/category_id.dart';
 import '../../domain/models/service.dart';
 import '../shared/category_icon.dart';
@@ -403,10 +403,11 @@ class _ProviderRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
-    // The provider profile is no longer read here: since E1 the trust state
-    // comes from provider_trust, and nothing else on this card needs the
-    // profile. One document read less per provider shown.
+    // The public projection, NOT users/{uid}: this screen is reachable without
+    // an account, and `users` is gated on signedIn(). The trust state still
+    // comes from provider_trust (E1), and nothing else on this card needs the
+    // provider profile: one document read less per provider shown.
+    final user = ref.watch(publicProfileByIdProvider(providerId)).valueOrNull;
 
     return Semantics(
       label: '${user?.displayName ?? ''} - ${l10n.serviceViewProfile}',

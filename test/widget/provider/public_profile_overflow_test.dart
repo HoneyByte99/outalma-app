@@ -6,9 +6,8 @@ import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/application/identity/identity_trust_providers.dart';
 import 'package:outalma_app/src/application/provider/provider_providers.dart';
 import 'package:outalma_app/src/application/review/review_providers.dart';
-import 'package:outalma_app/src/application/user/user_providers.dart';
-import 'package:outalma_app/src/domain/enums/active_mode.dart';
-import 'package:outalma_app/src/domain/models/app_user.dart';
+import 'package:outalma_app/src/application/user/public_profile_providers.dart';
+import 'package:outalma_app/src/domain/models/public_profile.dart';
 import 'package:outalma_app/src/domain/enums/reviewer_role.dart';
 import 'package:outalma_app/src/domain/models/provider_profile.dart';
 import 'package:outalma_app/src/domain/models/review.dart';
@@ -47,17 +46,14 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
-        userByIdProvider('p1').overrideWith(
+        publicProfileByIdProvider('p1').overrideWith(
           (_) => Stream.value(
-            AppUser(
+            const PublicProfile(
               id: 'p1',
               displayName: 'Moussa Diallo',
-              email: 'm@example.com',
               // A long country name: the row that carries it is the other
               // horizontal overflow this page had.
               country: 'AE',
-              activeMode: ActiveMode.provider,
-              createdAt: DateTime.utc(2026, 1, 1),
             ),
           ),
         ),
@@ -79,15 +75,12 @@ void main() {
         // the widget whose own horizontal overflow used to mask this one.
         reviewsForUserProvider('p1').overrideWith((_) => Stream.value(reviews)),
         for (final r in reviews)
-          userByIdProvider(r.reviewerId).overrideWith(
+          publicProfileByIdProvider(r.reviewerId).overrideWith(
             (_) => Stream.value(
-              AppUser(
+              PublicProfile(
                 id: r.reviewerId,
                 displayName: 'Client ${r.reviewerId}',
-                email: 'c@example.com',
                 country: 'SN',
-                activeMode: ActiveMode.client,
-                createdAt: DateTime.utc(2026, 1, 1),
               ),
             ),
           ),
@@ -203,9 +196,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          // Resolves to null: the user document does not exist. Distinct from
+          // Resolves to null: no public projection for that uid. Distinct from
           // still loading, which the branch above this one handles.
-          userByIdProvider('ghost').overrideWith((_) => Stream.value(null)),
+          publicProfileByIdProvider(
+            'ghost',
+          ).overrideWith((_) => Stream.value(null)),
         ],
         child: MaterialApp(
           theme: AppTheme.light(),

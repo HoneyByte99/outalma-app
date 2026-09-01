@@ -6,7 +6,7 @@ import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/application/review/review_providers.dart';
 import 'package:outalma_app/src/application/identity/identity_trust_providers.dart';
 import 'package:outalma_app/src/application/provider/provider_providers.dart';
-import 'package:outalma_app/src/application/user/user_providers.dart';
+import 'package:outalma_app/src/application/user/public_profile_providers.dart';
 import 'package:outalma_app/src/domain/review/rating_display.dart';
 import 'package:outalma_app/src/features/provider/public_provider_profile_page.dart';
 
@@ -17,7 +17,7 @@ import 'package:outalma_app/src/features/provider/public_provider_profile_page.d
 void main() {
   Widget wrap(int sum, int count) => ProviderScope(
     overrides: [
-      userByIdProvider('p1').overrideWith((_) => Stream.value(null)),
+      publicProfileByIdProvider('p1').overrideWith((_) => Stream.value(null)),
       providerProfileByIdProvider('p1').overrideWith((_) => Stream.value(null)),
       providerRatingProvider('p1').overrideWith(
         (_) => Stream.value(ratingDisplay(sum: sum, count: count)),

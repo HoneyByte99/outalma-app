@@ -4,11 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/l10n/app_localizations.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/application/review/review_providers.dart';
-import 'package:outalma_app/src/application/user/user_providers.dart';
+import 'package:outalma_app/src/application/user/public_profile_providers.dart';
 import 'package:outalma_app/src/domain/enums/reviewer_role.dart';
 import 'package:outalma_app/src/domain/models/review.dart';
-import 'package:outalma_app/src/domain/enums/active_mode.dart';
-import 'package:outalma_app/src/domain/models/app_user.dart';
+import 'package:outalma_app/src/domain/models/public_profile.dart';
 import 'package:outalma_app/src/domain/review/rating_display.dart';
 import 'package:outalma_app/src/features/review/rating_summary.dart';
 import 'package:outalma_app/src/features/review/user_reviews_page.dart';
@@ -41,31 +40,25 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
-        userByIdProvider('target').overrideWith(
+        publicProfileByIdProvider('target').overrideWith(
           (_) => Stream.value(
-            AppUser(
+            const PublicProfile(
               id: 'target',
               displayName: 'Ibrahima Sow',
-              email: 'x@example.com',
               country: 'SN',
-              activeMode: ActiveMode.client,
-              createdAt: DateTime.utc(2026, 1, 1),
             ),
           ),
         ),
-        // _ReviewTile re-watches userByIdProvider per review, and that provider
-        // reaches the real firestoreProvider, so it throws unless every
-        // reviewerId is overridden too.
+        // _ReviewTile re-watches publicProfileByIdProvider per review, and that
+        // provider reaches the real firestoreProvider, so it throws unless
+        // every reviewerId is overridden too.
         for (final r in reviews)
-          userByIdProvider(r.reviewerId).overrideWith(
+          publicProfileByIdProvider(r.reviewerId).overrideWith(
             (_) => Stream.value(
-              AppUser(
+              PublicProfile(
                 id: r.reviewerId,
                 displayName: 'Client ${r.reviewerId}',
-                email: 'c@example.com',
                 country: 'SN',
-                activeMode: ActiveMode.client,
-                createdAt: DateTime.utc(2026, 1, 1),
               ),
             ),
           ),

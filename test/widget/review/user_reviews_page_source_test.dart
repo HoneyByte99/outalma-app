@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/l10n/app_localizations.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/application/review/review_providers.dart';
-import 'package:outalma_app/src/application/user/user_providers.dart';
+import 'package:outalma_app/src/application/user/public_profile_providers.dart';
 import 'package:outalma_app/src/domain/models/review.dart';
 import 'package:outalma_app/src/domain/review/rating_display.dart';
 import 'package:outalma_app/src/features/review/rating_summary.dart';
@@ -17,7 +17,7 @@ import 'package:outalma_app/src/features/review/user_reviews_page.dart';
 void main() {
   Widget wrap(RatingSource source) => ProviderScope(
     overrides: [
-      userByIdProvider('u1').overrideWith((_) => Stream.value(null)),
+      publicProfileByIdProvider('u1').overrideWith((_) => Stream.value(null)),
       reviewsForUserProvider(
         'u1',
       ).overrideWith((_) => Stream.value(<Review>[])),

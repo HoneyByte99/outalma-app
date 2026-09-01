@@ -13,6 +13,7 @@ import '../../application/auth/auth_state.dart';
 import '../../application/home/location_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../../application/user/user_providers.dart';
 import '../shared/service_location_label.dart';
 import '../shared/service_price_label.dart';
@@ -985,8 +986,11 @@ class _ServiceCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    // The public projection, NOT users/{uid}: this card is the first thing a
+    // visitor with no account sees, and `users` is gated on signedIn(). Reading
+    // it here is what left every card nameless and avatarless for a guest.
     final providerUser = ref
-        .watch(userByIdProvider(service.providerId))
+        .watch(publicProfileByIdProvider(service.providerId))
         .valueOrNull;
     final l10n = AppLocalizations.of(context)!;
     final priceLabel = servicePriceLabel(service, l10n);
