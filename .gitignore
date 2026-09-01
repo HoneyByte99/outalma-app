@@ -77,6 +77,11 @@ android/key.properties
 
 # Forge cycle state, ephemeral and per-worktree, never committed
 .claude/forge/
+# Transient command files written by the skill-creator triggering harness
+# (<skill>-skill-<uuid>.md). NOT the whole directory: .claude/commands/ holds
+# ten real project commands that ARE tracked, and ignoring it would silence
+# every future change to them.
+.claude/commands/*-skill-*.md
 
 # Production ops scripts, kept out of the repository on purpose.
 # ops_seed_and_claims.py grants admin+moderator claims on the named production
