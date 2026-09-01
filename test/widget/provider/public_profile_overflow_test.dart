@@ -188,4 +188,44 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('a provider that does not exist gets a real screen, not a blank', (
+    tester,
+  ) async {
+    // Found by measuring patch coverage: the single uncovered added line was
+    // not isolated, the WHOLE "provider unavailable" branch had zero hits. The
+    // `if` was evaluated on every run and never taken, and nothing in the suite
+    // mentioned providerProfileUnavailable. T5b passed either way, but this is
+    // one of the four states U1 asks for and nothing proved it rendered.
+    await tester.binding.setSurfaceSize(const Size(375, 812));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          // Resolves to null: the user document does not exist. Distinct from
+          // still loading, which the branch above this one handles.
+          userByIdProvider('ghost').overrideWith((_) => Stream.value(null)),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          locale: const Locale('fr'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const PublicProviderProfilePage(providerId: 'ghost'),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Profil indisponible'), findsOneWidget);
+    expect(find.byIcon(Icons.person_off_outlined), findsOneWidget);
+    expect(
+      find.byType(CircularProgressIndicator),
+      findsNothing,
+      reason: 'a missing provider is a resolved answer, not a pending one',
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
