@@ -42,7 +42,7 @@ from firebase_admin import credentials, firestore
 # a service account, and it is checked against the TypeScript on every run of
 # the functions test suite.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from rating_predicate import counts, usable  # noqa: E402
+from rating_predicate import classify_review, is_counted, usable  # noqa: E402
 
 APPLY = "--apply" in sys.argv[1:]
 
@@ -73,11 +73,22 @@ def booking_of(booking_id):
     return _bookings[booking_id]
 
 
+def _registry_data(snap):
+    """The registry document as a dict, or None when it does not exist."""
+    return snap.to_dict() if snap.exists else None
+
+
 @firestore.transactional
 def count_once(tx, event_ref, agg_ref, rating):
     """The trigger's transaction, verbatim in intent: count exactly once."""
     event = event_ref.get(transaction=tx)
-    if event.exists and event.to_dict().get("counted") is True:
+    # is_counted, not classify_review: inside the transaction the only open
+    # question is the RECORDED STATE. The rest of the classification was settled
+    # before we got here, and feeding a synthetic review back through the full
+    # predicate would answer a different question (it has no reviewerId, so it
+    # would classify as not_by_customer and this would never return False,
+    # double counting every review).
+    if is_counted(_registry_data(event)):
         return False
     tx.set(
         agg_ref,
@@ -98,27 +109,58 @@ def main():
 
     for snap in db.collection("reviews").stream():
         review = snap.to_dict() or {}
-        rating = usable(review.get("rating"))
-        if rating is None:
+        event_ref = db.collection("rating_events").document(snap.id)
+
+        # The registry is read for EVERY candidate review, in BOTH modes.
+        #
+        # This is the correction. The dry run used to `continue` before this
+        # point, so it never consulted rating_events: already_counted was
+        # structurally always 0, it could not tell whether the backfill had
+        # already run, and it presented reviews already counted as work still to
+        # do. A dry run that cannot answer that question is worse than none,
+        # because it reads as an answer.
+        #
+        # classify_review takes the registry state as a VALUE, so it has to be
+        # in hand before the verdict. The rating gate is repeated here only to
+        # keep the cheapest rejection free of a read; a review that clears the
+        # rating but fails on its booking or its author does now cost one read
+        # it did not cost before. Measured against the real corpus that is about
+        # 60 extra reads on a one-off operational script, which is not a price
+        # worth an extra code path.
+        registry = None
+        if usable(review.get("rating")) is not None:
+            registry = _registry_data(event_ref.get())
+
+        verdict = classify_review(
+            review, booking_of(review.get("bookingId")), registry
+        )
+        if verdict == "unusable_rating":
             skipped_rating += 1
             continue
-        booking = booking_of(review.get("bookingId"))
-        if booking is None:
+        if verdict == "booking_missing":
             skipped_booking += 1
             continue
-        if review.get("hidden") is True:
+        if verdict == "hidden":
             skipped_hidden += 1
             continue
-        if not counts(review, booking):
+        if verdict == "not_by_customer":
             skipped_role += 1
             continue
 
         if not APPLY:
-            counted += 1
+            # Same verdict the write path would reach, because it is the same
+            # function reading the same registry document.
+            if verdict == "already_counted":
+                already += 1
+            else:
+                counted += 1
             continue
 
-        event_ref = db.collection("rating_events").document(snap.id)
+        booking = booking_of(review.get("bookingId"))
+        rating = usable(review.get("rating"))
         agg_ref = db.collection("provider_ratings").document(booking["providerId"])
+        # The transaction remains authoritative: the classification above is
+        # taken outside it and can be stale by the time the write lands.
         if count_once(db.transaction(), event_ref, agg_ref, rating):
             counted += 1
         else:
@@ -131,7 +173,12 @@ def main():
         f"booking_missing={skipped_booking} unusable_rating={skipped_rating}"
     )
     if not APPLY:
-        print("  re-run with --apply to write")
+        if counted:
+            print(f"  re-run with --apply to count {counted} review(s)")
+        else:
+            print(
+                "  nothing to count: every eligible review is already in the registry"
+            )
 
 
 if __name__ == "__main__":

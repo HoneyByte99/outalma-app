@@ -120,3 +120,50 @@ describe('TypeScript and Python agree, case by case', () => {
     expect(out).toContain(`matches all ${cases.length} shared cases`);
   });
 });
+
+// The registry decision, `is_counted`, is now shared by the backfill's
+// transaction AND by its dry run. Before that, the dry run returned before ever
+// reading rating_events: already_counted was structurally always 0, so the dry
+// run could not tell whether the backfill had already run, and reported reviews
+// already counted as work still to do.
+//
+// Sharing one definition is what makes the dry run's answer the same answer the
+// write path would give. This pins the Python side; the TypeScript side of the
+// same decision is pinned behaviourally against the emulator in
+// provider_rating.test.ts, because there it is one line inside
+// ratingDeltaWithin rather than an exported function.
+describe('the registry decision, shared by the backfill write path and dry run', () => {
+  it('matches its table, malformed entries included', () => {
+    const out = execFileSync('python3', [RUNNER, '--check-registry'], {
+      encoding: 'utf8',
+      cwd: REPO_ROOT,
+    });
+    expect(out).toContain('registry predicate matches all');
+    // The backfill's whole verdict, not just the registry line. Its cases
+    // include the one the broken dry run got wrong: an already-counted review
+    // reported as work still to do.
+    expect(out).toContain('backfill classifier matches all');
+  });
+
+  it('exits non-zero when the predicate drifts', () => {
+    // A self-check that cannot fail proves nothing. This drives the runner with
+    // a deliberately broken predicate and requires a non-zero exit, so the
+    // green above is known to mean something.
+    const broken = `
+import sys, os
+sys.path.insert(0, ${JSON.stringify(path.join(REPO_ROOT, 'scripts'))})
+import rating_predicate
+rating_predicate.is_counted = lambda d: True
+import rating_parity_runner
+rating_parity_runner.is_counted = rating_predicate.is_counted
+sys.exit(rating_parity_runner.check_registry())
+`;
+    let code = 0;
+    try {
+      execFileSync('python3', ['-c', broken], { encoding: 'utf8', cwd: REPO_ROOT, stdio: 'pipe' });
+    } catch (e) {
+      code = (e as { status?: number }).status ?? 0;
+    }
+    expect(code).toBe(1);
+  });
+});

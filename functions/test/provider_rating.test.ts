@@ -443,3 +443,55 @@ describe('the moderation callables are ATOMIC', () => {
     ).rejects.toThrow(/not found/i);
   });
 });
+
+// The registry decision on the SERVER side of the shared rule.
+//
+// `const counted = eventSnap.exists && eventSnap.data()?.counted === true;` is
+// one line inside ratingDeltaWithin, not an exported function, so it is pinned
+// behaviourally here rather than by the parity table. Its Python mirror,
+// `is_counted` in scripts/rating_predicate.py, is pinned in rating_parity.test
+// against the same case list.
+//
+// The strictness is the subtle part. Anything other than the boolean true must
+// read as NOT counted: a malformed registry entry treated as counted would
+// suppress a legitimate count for ever, and no re-run could repair it, because
+// every path decides on the recorded state and never re-evaluates.
+describe('the registry decision is strict about `counted`', () => {
+  async function attemptCount(registry: Record<string, unknown> | null) {
+    await seedBooking('b1');
+    if (registry) {
+      await db().collection(RATING_EVENTS).doc('r1').set(registry);
+    }
+    await countReview('r1', { reviewerId: CLIENT, bookingId: 'b1', rating: 4 });
+    return agg();
+  }
+
+  it('counts when the registry document is ABSENT', async () => {
+    expect(await attemptCount(null)).toMatchObject({ ratingCount: 1, ratingSum: 4 });
+  });
+
+  it('SKIPS when counted is the boolean true', async () => {
+    expect(await attemptCount({ counted: true })).toBeNull();
+  });
+
+  it('counts when counted is the boolean false', async () => {
+    expect(await attemptCount({ counted: false })).toMatchObject({ ratingCount: 1 });
+  });
+
+  it('counts when counted is absent from an existing document', async () => {
+    expect(await attemptCount({ updatedAt: 1 })).toMatchObject({ ratingCount: 1 });
+  });
+
+  it('counts when counted is the NUMBER 1, not the boolean', async () => {
+    // Truthiness would skip here and lose the rating with no repair path.
+    expect(await attemptCount({ counted: 1 })).toMatchObject({ ratingCount: 1 });
+  });
+
+  it('counts when counted is the STRING "true"', async () => {
+    expect(await attemptCount({ counted: 'true' })).toMatchObject({ ratingCount: 1 });
+  });
+
+  it('counts when counted is null', async () => {
+    expect(await attemptCount({ counted: null })).toMatchObject({ ratingCount: 1 });
+  });
+});

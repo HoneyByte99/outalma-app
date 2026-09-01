@@ -38,6 +38,64 @@ def counts(review, booking):
     return review.get("reviewerId") == customer
 
 
+def classify_review(review, booking, registry_data):
+    """What the backfill should do with one review. Returns one of:
+
+        "unusable_rating" | "booking_missing" | "hidden" | "not_by_customer"
+        "already_counted" | "to_count"
+
+    ONE decision function for BOTH modes, and `registry_data` is a required
+    argument rather than something the caller may look up when it feels like it.
+    That signature is the fix for the defect this replaced: the dry run used to
+    return before ever reading `rating_events`, so it reported
+    already_counted=0 always and presented reviews already counted as work
+    still to do. A mode cannot now reach a verdict without supplying the
+    registry state, so "the dry run forgot to look" is no longer expressible.
+
+    Order of the checks is deliberately the order the script already used, so
+    the counters it prints keep their historical meaning. It differs from the
+    server's order (which tests the booking before the rating); that changes
+    only which bucket an ignored review is reported under, never whether it
+    counts.
+    """
+    if usable(review.get("rating")) is None:
+        return "unusable_rating"
+    if not booking:
+        return "booking_missing"
+    if review.get("hidden") is True:
+        return "hidden"
+    if not counts(review, booking):
+        return "not_by_customer"
+    if is_counted(registry_data):
+        return "already_counted"
+    return "to_count"
+
+
+def is_counted(event_data):
+    """Whether the registry says this review is already counted.
+
+    Mirror of the one line the server decides on:
+
+        const counted = eventSnap.exists && eventSnap.data()?.counted === true;
+
+    Takes the registry document as a dict, or None when it does not exist, so
+    the decision can be exercised without a Firestore snapshot.
+
+    Strictly `is True`, never truthiness. `counted: 1` or `counted: "yes"` are
+    not states this system writes, and treating them as counted would let a
+    malformed registry entry suppress a legitimate count for ever, which no
+    re-run could repair. The TypeScript uses `=== true` for the same reason.
+
+    Shared by the backfill's transaction AND by its dry run. That sharing is
+    the point: the dry run used to skip the registry entirely, so it always
+    reported already_counted=0 and presented reviews already counted as work
+    still to do.
+    """
+    if not event_data:
+        return False
+    return event_data.get("counted") is True
+
+
 def usable(rating):
     """Returns the normalised int rating, or None. Returning the value rather
     than a boolean keeps a float 4.0 from reaching Increment() as a double."""
