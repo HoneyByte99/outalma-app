@@ -243,17 +243,45 @@ class RouterNotifier extends ChangeNotifier {
     ).toString();
   }
 
+  /// Tab, LF and CR: the three characters the WHATWG URL parser removes from a
+  /// URL before it parses anything. Hoisted so [postAuthTarget], which runs on
+  /// every redirect decision, does not rebuild the pattern each time.
+  static final _urlStrippedChars = RegExp(r'[\t\n\r]');
+
   /// Where to land after signing in, read back from `?redirect=`.
   ///
-  /// Only in-app paths are honoured. A single leading slash is not enough: on
-  /// web `//evil.example` is a protocol-relative URL, so it is rejected too.
-  /// Returns null when there is nothing to resume.
+  /// Only in-app paths are honoured: the target must start with exactly one
+  /// slash, so `//evil.example` (protocol-relative, i.e. an absolute URL to a
+  /// host an attacker chose) is refused.
+  ///
+  /// The target is normalised BEFORE that decision, and the normalisation is
+  /// part of the guard, not cosmetics: a browser rewrites a URL before parsing
+  /// it, so a raw string that reads as internal can still reach the network as
+  /// somebody else's host. Two spellings did exactly that, and both are folded
+  /// away here:
+  ///   `/\evil.example`       a backslash IS a slash in a special-scheme URL
+  ///   `/<tab>/evil.example`  tab, LF and CR are removed before parsing
+  /// Both are `//evil.example` by the time the browser resolves them. Deciding
+  /// on the raw string accepted them; deciding on the normalised one does not.
+  ///
+  /// Returns the NORMALISED target rather than the string that arrived. Handing
+  /// back the original would mean approving a value on one spelling of itself
+  /// and then shipping another, and would leave native (which folds nothing)
+  /// and web (which folds everything) resolving one redirect to two different
+  /// places. Returns null when there is nothing safe to resume.
   @visibleForTesting
   static String? postAuthTarget(Uri uri) {
     final target = uri.queryParameters['redirect'];
     if (target == null) return null;
-    if (!target.startsWith('/') || target.startsWith('//')) return null;
-    return target;
+    // Folding backslashes across the whole string is stricter than WHATWG,
+    // which stops folding at the `?`. Deliberate: no in-app redirect this app
+    // writes carries a backslash, and one rule over the whole value is one
+    // rule to audit.
+    final normalised = target
+        .replaceAll(_urlStrippedChars, '')
+        .replaceAll(r'\', '/');
+    if (!normalised.startsWith('/') || normalised.startsWith('//')) return null;
+    return normalised;
   }
 }
 

@@ -351,54 +351,156 @@ void main() {
       );
     });
 
-    // ---- Known gaps, deliberately failing and skipped ----
+    // ---- The two spellings a browser rewrites before it parses ----
     //
-    // Both of these DO pass the guard today. They are written so that the day
-    // the guard is tightened they go green by deleting the skip, and reported
-    // as findings rather than silently patched here: this increment writes
-    // tests, it does not change lib/.
+    // Both used to walk through the guard: it compared the raw string while the
+    // browser had already folded it. postAuthTarget now normalises first, so
+    // these two are the same attack as `a protocol-relative target is rejected`
+    // above, written the way an attacker would write it.
 
-    test(
-      'a slash-backslash target is rejected',
-      () {
-        // FAILING: postAuthTarget returns '/\evil.example'.
-        // Per the WHATWG URL spec a browser treats a backslash as a slash in a
-        // special-scheme URL, so /\evil.example parses as //evil.example: the
-        // very protocol-relative URL the line above rejects. The guard tests
-        // startsWith('//') only, so the backslash form walks through. The
-        // percent-encoded %5C form is identical, since queryParameters decodes
-        // before the guard runs.
-        expect(
-          RouterNotifier.postAuthTarget(
-            Uri.parse('${AppRoutes.signIn}?redirect=%2F%5Cevil.example'),
-          ),
-          isNull,
-        );
-      },
-      skip: 'known gap: /\\evil.example passes the guard, see report',
-    );
+    test('a slash-backslash target is rejected', () {
+      // Per the WHATWG URL spec a browser treats a backslash as a slash in a
+      // special-scheme URL, so /\evil.example parses as //evil.example: the
+      // very protocol-relative URL the tests above reject. The percent-encoded
+      // %5C form is identical, since queryParameters decodes before the guard.
+      expect(
+        RouterNotifier.postAuthTarget(
+          Uri.parse('${AppRoutes.signIn}?redirect=%2F%5Cevil.example'),
+        ),
+        isNull,
+      );
+    });
 
-    test(
-      'a target with a control character before the second slash is rejected',
-      () {
-        // FAILING: postAuthTarget returns '/\t/evil.example'.
-        // Browsers strip tab, LF and CR from a URL before parsing it, so
-        // /<tab>/evil.example becomes //evil.example. Same bypass class as the
-        // backslash: the guard compares the raw string, the browser does not.
+    test('a target with a control character before the second slash is '
+        'rejected', () {
+      // Browsers strip tab, LF and CR from a URL before parsing it, so
+      // /<tab>/evil.example becomes //evil.example. Same bypass class as the
+      // backslash: the guard compares a string, the browser compares another.
+      expect(
+        RouterNotifier.postAuthTarget(
+          Uri.parse('${AppRoutes.signIn}?redirect=%2F%09%2Fevil.example'),
+        ),
+        isNull,
+      );
+      expect(
+        RouterNotifier.postAuthTarget(
+          Uri.parse('${AppRoutes.signIn}?redirect=%2F%0A%2Fevil.example'),
+        ),
+        isNull,
+      );
+    });
+
+    test('the backslash fold does not depend on where the backslash sits', () {
+      // Every arrangement of slash and backslash that a browser resolves to
+      // //evil.example. Folding before the decision covers them all at once;
+      // enumerating them in the guard would have missed one.
+      for (final target in <String>[
+        '%5C%2Fevil.example', // \/evil.example
+        '%5C%5Cevil.example', // \\evil.example
+        '%2F%5C%5Cevil.example', // /\\evil.example
+        '%2F%5C%2Fevil.example', // /\/evil.example
+        '%2F%5cevil.example', // lowercase escape, same character
+      ]) {
         expect(
           RouterNotifier.postAuthTarget(
-            Uri.parse('${AppRoutes.signIn}?redirect=%2F%09%2Fevil.example'),
+            Uri.parse('${AppRoutes.signIn}?redirect=$target'),
           ),
           isNull,
+          reason: '$target reaches the browser as //evil.example',
         );
+      }
+    });
+
+    test('every character a browser strips is stripped before the check', () {
+      // The strip set is a set, not one character: CR alone, CRLF, a repeated
+      // tab, and a control character sitting BEFORE the leading slash all end
+      // up as //evil.example once the browser has removed them.
+      for (final target in <String>[
+        '%2F%0D%2Fevil.example', // /<CR>/evil.example
+        '%2F%0D%0A%2Fevil.example', // /<CR><LF>/evil.example
+        '%2F%09%09%2Fevil.example', // /<TAB><TAB>/evil.example
+        '%09%2F%2Fevil.example', // <TAB>//evil.example
+        '%0D%0A%2F%2Fevil.example', // <CR><LF>//evil.example
+      ]) {
         expect(
           RouterNotifier.postAuthTarget(
-            Uri.parse('${AppRoutes.signIn}?redirect=%2F%0A%2Fevil.example'),
+            Uri.parse('${AppRoutes.signIn}?redirect=$target'),
           ),
           isNull,
+          reason: '$target reaches the browser as //evil.example',
         );
-      },
-      skip: 'known gap: /<tab>/evil.example passes the guard, see report',
-    );
+      }
+    });
+
+    test('the two rewrites combined are still one attack', () {
+      // A stripped character and a folded one in the same target: handling one
+      // family and not the other would let this through.
+      for (final target in <String>[
+        '%2F%09%5Cevil.example', // /<TAB>\evil.example
+        '%2F%5C%09evil.example', // /\<TAB>evil.example
+      ]) {
+        expect(
+          RouterNotifier.postAuthTarget(
+            Uri.parse('${AppRoutes.signIn}?redirect=$target'),
+          ),
+          isNull,
+          reason: '$target reaches the browser as //evil.example',
+        );
+      }
+    });
+
+    test('what is returned is the target that was judged', () {
+      // An accepted target comes back normalised, never in the spelling that
+      // arrived: returning the raw string would approve a value on one form of
+      // itself and hand the router another, and would send native (which folds
+      // nothing) and web (which folds everything) to two different places.
+      expect(
+        RouterNotifier.postAuthTarget(
+          Uri.parse('${AppRoutes.signIn}?redirect=%2Fservice%2Fsvc%5C1'),
+        ),
+        '/service/svc/1',
+      );
+    });
+
+    test('the strip set is exactly the one a browser applies', () {
+      // Vertical tab, form feed, space and NUL are NOT removed by the WHATWG
+      // parser: they are percent-encoded inside the path, so the host stays
+      // ours and these targets are internal, however ugly. Stripping them too
+      // would be guessing at the spec rather than following it, so the guard
+      // keeps them and this test says so out loud.
+      for (final target in <String>[
+        '%2F%0B%2Fevil.example', // vertical tab
+        '%2F%0C%2Fevil.example', // form feed
+        '%2F%20%2Fevil.example', // space
+        '%2F%00%2Fevil.example', // NUL
+      ]) {
+        final resolved = RouterNotifier.postAuthTarget(
+          Uri.parse('${AppRoutes.signIn}?redirect=$target'),
+        );
+        expect(
+          resolved,
+          isNotNull,
+          reason: '$target stays on our host, so it is not this guard\'s job',
+        );
+        expect(
+          resolved!.startsWith('//'),
+          isFalse,
+          reason: 'whatever comes back must still be a single-slash path',
+        );
+      }
+    });
+
+    test('a percent-encoded backslash stays encoded and stays internal', () {
+      // Double encoding: %255C arrives as the three characters %5C, which a
+      // browser leaves percent-encoded in the path instead of decoding to a
+      // backslash. So it is a path segment on our host, not a fold, and the
+      // guard has nothing to reject.
+      expect(
+        RouterNotifier.postAuthTarget(
+          Uri.parse('${AppRoutes.signIn}?redirect=%2F%255Cevil.example'),
+        ),
+        '/%5Cevil.example',
+      );
+    });
   });
 }
