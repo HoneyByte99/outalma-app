@@ -243,6 +243,31 @@
   "serviceDeleteBody": "Cette annonce sera définitivement supprimée.",
   "serviceDeleted": "Service supprimé",
   "ratingNew": "Nouveau",
+  "ratingFromClients": "{count, plural, =1{\u00b7 1 avis de client} other{\u00b7 {count} avis de clients}}",
+  "@ratingFromClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingFloorHintClients": "\u00b7 moins de {count} avis de clients",
+  "@ratingFloorHintClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingFloorHint": "\u00b7 moins de {count} avis",
+  "@ratingFloorHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsAllReceived": "Tous les avis re\u00e7us",
   "tooltipProviderProfile": "Mon profil prestataire",
   "bookingsTitle": "Mes réservations",
   "tabActive": "En cours",

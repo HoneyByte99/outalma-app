@@ -243,6 +243,31 @@
   "serviceDeleteBody": "This listing will be permanently removed.",
   "serviceDeleted": "Service deleted",
   "ratingNew": "New",
+  "ratingFromClients": "{count, plural, =1{\u00b7 1 client review} other{\u00b7 {count} client reviews}}",
+  "@ratingFromClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingFloorHintClients": "\u00b7 fewer than {count} client reviews",
+  "@ratingFloorHintClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingFloorHint": "\u00b7 fewer than {count} reviews",
+  "@ratingFloorHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsAllReceived": "All reviews received",
   "tooltipProviderProfile": "My provider profile",
   "bookingsTitle": "My bookings",
   "tabActive": "In progress",

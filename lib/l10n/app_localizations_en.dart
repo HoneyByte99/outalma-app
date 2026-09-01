@@ -586,6 +586,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ratingNew => 'New';
 
   @override
+  String ratingFromClients(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '· $count client reviews',
+      one: '· 1 client review',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ratingFloorHintClients(int count) {
+    return '· fewer than $count client reviews';
+  }
+
+  @override
+  String ratingFloorHint(int count) {
+    return '· fewer than $count reviews';
+  }
+
+  @override
+  String get reviewsAllReceived => 'All reviews received';
+
+  @override
   String get tooltipProviderProfile => 'My provider profile';
 
   @override

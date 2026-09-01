@@ -1178,6 +1178,30 @@ abstract class AppLocalizations {
   /// **'New'**
   String get ratingNew;
 
+  /// No description provided for @ratingFromClients.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{· 1 client review} other{· {count} client reviews}}'**
+  String ratingFromClients(int count);
+
+  /// No description provided for @ratingFloorHintClients.
+  ///
+  /// In en, this message translates to:
+  /// **'· fewer than {count} client reviews'**
+  String ratingFloorHintClients(int count);
+
+  /// No description provided for @ratingFloorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'· fewer than {count} reviews'**
+  String ratingFloorHint(int count);
+
+  /// No description provided for @reviewsAllReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'All reviews received'**
+  String get reviewsAllReceived;
+
   /// No description provided for @tooltipProviderProfile.
   ///
   /// In en, this message translates to:
