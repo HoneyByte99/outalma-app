@@ -9,7 +9,9 @@ import 'package:outalma_app/src/application/review/review_providers.dart';
 import 'package:outalma_app/src/application/user/user_providers.dart';
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
 import 'package:outalma_app/src/domain/models/app_user.dart';
+import 'package:outalma_app/src/domain/enums/reviewer_role.dart';
 import 'package:outalma_app/src/domain/models/provider_profile.dart';
+import 'package:outalma_app/src/domain/models/review.dart';
 import 'package:outalma_app/src/domain/review/rating_display.dart';
 import 'package:outalma_app/src/features/provider/public_provider_profile_page.dart';
 
@@ -38,7 +40,11 @@ void main() {
       'de repas senegalais. Disponible en semaine comme le week-end, avec dix '
       'ans de metier et des references verifiables sur demande.';
 
-  Widget wrap({double textScale = 1.0, required RatingDisplay rating}) {
+  Widget wrap({
+    double textScale = 1.0,
+    required RatingDisplay rating,
+    List<Review> reviews = const [],
+  }) {
     return ProviderScope(
       overrides: [
         userByIdProvider('p1').overrideWith(
@@ -71,7 +77,20 @@ void main() {
         // Empty on purpose: the defect comes from the bio and the country row,
         // not from review tiles. It also renders _EmptySection twice, which is
         // the widget whose own horizontal overflow used to mask this one.
-        reviewsForUserProvider('p1').overrideWith((_) => Stream.value([])),
+        reviewsForUserProvider('p1').overrideWith((_) => Stream.value(reviews)),
+        for (final r in reviews)
+          userByIdProvider(r.reviewerId).overrideWith(
+            (_) => Stream.value(
+              AppUser(
+                id: r.reviewerId,
+                displayName: 'Client ${r.reviewerId}',
+                email: 'c@example.com',
+                country: 'SN',
+                activeMode: ActiveMode.client,
+                createdAt: DateTime.utc(2026, 1, 1),
+              ),
+            ),
+          ),
         publicProviderServicesProvider(
           'p1',
         ).overrideWith((_) => Stream.value([])),
@@ -129,6 +148,44 @@ void main() {
     await tester.pump();
     await tester.pump();
 
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('with reviews listed, the section says it lists ALL of them', (
+    tester,
+  ) async {
+    // The worst case from the register lived on THIS page: "Nouveau" in the
+    // header directly above five four- and five-star reviews. The header now
+    // names its basis and the section names what it lists.
+    await tester.binding.setSurfaceSize(const Size(375, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final reviews = [
+      for (var i = 1; i <= 5; i++)
+        Review(
+          id: 'r$i',
+          bookingId: 'b$i',
+          reviewerId: 'reviewer_$i',
+          revieweeId: 'p1',
+          reviewerRole: ReviewerRole.client,
+          rating: 5,
+          createdAt: DateTime.utc(2026, 8, i),
+        ),
+    ];
+
+    await tester.pumpWidget(
+      wrap(rating: ratingDisplay(sum: 8, count: 2), reviews: reviews),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Nouveau'), findsOneWidget);
+    expect(find.textContaining('moins de 3 avis de clients'), findsOneWidget);
+    expect(
+      find.text('Tous les avis reçus'),
+      findsOneWidget,
+      reason: 'the section must say it counts something else than the header',
+    );
     expect(tester.takeException(), isNull);
   });
 }
