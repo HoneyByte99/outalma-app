@@ -14,6 +14,7 @@ import '../../application/home/location_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/user_providers.dart';
+import '../shared/service_location_label.dart';
 import '../shared/service_price_label.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
@@ -916,9 +917,16 @@ class _ServiceGrid extends ConsumerWidget {
             final cardWidth =
                 (width - hPad * 2 - (columns - 1) * spacing) / columns;
             // Title (2 lines) + price (up to 2 lines, a monthly range needs
-            // them) + the provider row. Sized for the worst case rather than
-            // for the common one, since the grid height is fixed.
-            const infoHeight = 134.0;
+            // them) + the location line + the provider row. Sized for the worst
+            // case rather than for the common one, since the grid height is
+            // fixed.
+            //
+            // 17 of these belong to the location line (a 15 px labelSmall row
+            // plus its 2 px gap). Without that share the row would not overflow
+            // (the image above is Expanded and simply gives up the space) but
+            // every photo in the catalogue would lose 17 px of height to a line
+            // of text, which is a worse trade than a slightly taller card.
+            const infoHeight = 151.0;
             final cardHeight = cardWidth + infoHeight;
             final ratio = cardWidth / cardHeight;
 
@@ -982,6 +990,16 @@ class _ServiceCard extends ConsumerWidget {
         .valueOrNull;
     final l10n = AppLocalizations.of(context)!;
     final priceLabel = servicePriceLabel(service, l10n);
+
+    // The same filter the grid used to decide this card belongs here. Passing
+    // it on is what turns a silently filtered list into an explained one: the
+    // distance was already computed above, and thrown away.
+    final filter = ref.watch(locationFilterProvider);
+    final locationLabel = serviceLocationLabel(
+      service,
+      l10n,
+      origin: filter == null ? null : (lat: filter.lat, lng: filter.lng),
+    );
 
     return Semantics(
       label: service.title,
@@ -1084,6 +1102,33 @@ class _ServiceCard extends ConsumerWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    // Where the service operates, under the price rather than
+                    // beside the provider: location is a decision factor of the
+                    // same kind as price, not part of the provider's identity.
+                    // A pin icon carries the meaning for a client who does not
+                    // read the label, which is a real part of this audience.
+                    if (locationLabel != null) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.place_outlined,
+                            size: 12,
+                            color: oc.secondaryText,
+                          ),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              locationLabel,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(color: oc.secondaryText),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.xs),
                     Row(
                       children: [

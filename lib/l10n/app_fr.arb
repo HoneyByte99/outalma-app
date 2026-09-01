@@ -314,6 +314,30 @@
       }
     }
   },
+  "serviceZoneWithDistance": "{label} \u00b7 {km} km",
+  "@serviceZoneWithDistance": {
+    "description": "Service card: the closest intervention zone and its distance from the active location filter.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceZoneWithMore": "{label} +{count}",
+  "@serviceZoneWithMore": {
+    "description": "Service card: the first intervention zone plus how many others the service covers.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "bookingOpenDirections": "Itinéraire",
   "bookingContact": "Contact",
   "bookingPhoneNotShared": "Numéro non encore partagé",

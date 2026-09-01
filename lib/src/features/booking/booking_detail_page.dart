@@ -1035,11 +1035,11 @@ class _AddressSection extends StatelessWidget {
     if (hasCoords && service != null && service!.serviceZones.isNotEmpty) {
       final closest = closestZoneKm(service!.serviceZones, lat, lng);
       if (closest != null) {
-        final km = closest.km;
-        final formatted = km < 10
-            ? km.toStringAsFixed(1)
-            : km.round().toString();
-        distanceLabel = l10n.bookingDistanceEstimate(formatted);
+        // Rounded by the shared helper, so this screen and the service card
+        // cannot drift apart on how a distance reads.
+        distanceLabel = l10n.bookingDistanceEstimate(
+          formatDistanceKm(closest.km),
+        );
       }
     }
 
