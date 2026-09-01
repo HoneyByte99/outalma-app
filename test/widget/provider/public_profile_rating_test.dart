@@ -57,4 +57,37 @@ void main() {
       reason: 'the four surfaces must say the same thing for the same uid',
     );
   });
+
+  testWidgets('the header names its basis and drops the negative sentence', (
+    tester,
+  ) async {
+    // Two things at once, because they land on the same line of the header:
+    // the rating now says what it counted, and the full pill with its
+    // "Identite non verifiee" sentence is gone, replaced by a badge.
+    await tester.pumpWidget(wrap(13, 3));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('4.3'), findsOneWidget);
+    expect(find.textContaining('3 avis de clients'), findsOneWidget);
+    expect(
+      find.text('Identité non vérifiée'),
+      findsNothing,
+      reason: 'the sentence taught every client that nobody is trustworthy',
+    );
+    expect(
+      find.bySemanticsLabel('Identité non vérifiée'),
+      findsOneWidget,
+      reason: 'a screen reader still gets the full state (A5)',
+    );
+  });
+
+  testWidgets('below the floor the header explains itself', (tester) async {
+    await tester.pumpWidget(wrap(8, 2));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Nouveau'), findsOneWidget);
+    expect(find.textContaining('moins de 3 avis de clients'), findsOneWidget);
+  });
 }

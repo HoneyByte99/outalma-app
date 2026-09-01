@@ -254,9 +254,15 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                                 ],
                               ),
                               const SizedBox(height: 2),
+                              // explainBasis, even with no list underneath: on
+                              // the current catalogue 13 of the 15 rated
+                              // providers read "Nouveau" about THEMSELVES here,
+                              // and a bare floor on your own dashboard reads as
+                              // a verdict with no explanation.
                               RatingSummary(
                                 userId: widget.profile.uid,
                                 source: RatingSource.provider,
+                                explainBasis: true,
                               ),
                             ],
                           ),

@@ -12,8 +12,8 @@ enum TrustSignalStyle {
   /// Icon plus label, on its own line. The full three states.
   pill,
 
-  /// A badge beside a name, on a listing card or a service header. Both
-  /// resolved states are shown, tinted when verified and muted otherwise, so a
+  /// A badge beside a name, on a listing card, a service header or the public
+  /// profile. All THREE resolved states render, each with its own glyph, so a
   /// client knows BEFORE opening a listing rather than after.
   badge,
 }
@@ -62,11 +62,12 @@ class IdentityTrustSignal extends ConsumerWidget {
 /// cannot tell a verified provider from an unverified one without opening the
 /// listing has to open every listing.
 ///
-/// `pending` folds into the muted state on purpose: sixteen pixels do not carry
-/// "verification under way", which the pill keeps. It still gets its OWN
-/// accessibility label, so a provider mid-verification is never announced as
-/// "not verified" — that would be the false claim about a real person this
-/// widget exists to avoid.
+/// `pending` has its OWN glyph, not the muted one. It used to fold in, on the
+/// argument that sixteen pixels cannot carry "verification under way" while the
+/// pill could. That stopped holding the day the badge became the only trust
+/// signal on the public profile: a provider halfway through verification would
+/// have looked exactly like one who never tried. Each state also keeps its own
+/// accessibility label, so none is ever announced as another.
 ///
 /// Contrast, measured on `cardSurface` (budget line A1, 3:1 for a meaning
 /// bearing interface element):
@@ -92,10 +93,23 @@ class _TrustBadge extends StatelessWidget {
       null => l10n.trustUnverifiedLabel,
     };
 
+    // Three states, three glyphs. `pending` used to fold into the muted state,
+    // which left two visual states for three accessibility labels: a provider
+    // halfway through verification looked exactly like one who never tried.
+    // Now that the badge is the ONLY trust signal on the public profile, the
+    // pill having been retired from it, that fold would have been a real loss.
+    // No new colour pair: `secondaryText` on `cardSurface` is already measured
+    // for A1, and meaning still rides on the shape, never on the tint alone.
+    final icon = switch (status) {
+      IdentityTrustStatus.verified => Icons.verified_rounded,
+      IdentityTrustStatus.pending => Icons.schedule_rounded,
+      null => Icons.shield_outlined,
+    };
+
     return Semantics(
       label: label,
       child: Icon(
-        verified ? Icons.verified_rounded : Icons.shield_outlined,
+        icon,
         size: 15,
         color: verified ? oc.trustVerifiedText : oc.secondaryText,
       ),

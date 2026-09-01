@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 import '../shared/network_image.dart';
 import '../shared/identity_trust_signal.dart';
+import '../review/rating_summary.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
@@ -98,8 +99,14 @@ class PublicProviderProfilePage extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+              // The label varies, the title itself is always rendered: making
+              // it conditional would leave the empty and error states floating
+              // with no heading just above "Services proposes". "Tous les avis
+              // recus" says the list counts something other than the header.
               child: Text(
-                l10n.reviewsLabel,
+                (reviewsAsync.valueOrNull?.isNotEmpty ?? false)
+                    ? l10n.reviewsAllReceived
+                    : l10n.reviewsLabel,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -205,19 +212,11 @@ class ProfileHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
-    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
     final providerProfile = ref
         .watch(providerProfileByIdProvider(providerId))
         .valueOrNull;
-    // The SAME source and the same floor as the card and the service detail.
-    // Computing an average here from the review list showed "5.0 (2)" on the
-    // screen where a client decides while the card said "Nouveau", and kept
-    // counting reviews a moderator had hidden.
-    final rating = ref.watch(providerRatingProvider(providerId)).valueOrNull;
-    final avgRating = (rating != null && !rating.isNew) ? rating.average : null;
-    final ratingCount = rating?.count ?? 0;
-    // D6-a/E7: the trust badge now reflects a server-owned identity verdict,
+    // D6-a/E7: the trust badge reflects a server-owned identity verdict,
     // rendered by IdentityTrustSignal below (no client-side phone heuristic).
 
     return Container(
@@ -253,49 +252,32 @@ class ProfileHeader extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    // Inline beside the name, like the service detail, and no
+                    // longer a full pill on its own line. The comment that used
+                    // to justify the dedicated line was about the PILL, which
+                    // carries text and would eat the name at 375 px; a 16 px
+                    // badge read together with the name does not.
+                    //
+                    // It also drops the sentence "Identite non verifiee", which
+                    // taught every client that nobody here is trustworthy.
+                    IdentityTrustSignal(
+                      providerId: providerId,
+                      style: TrustSignalStyle.badge,
+                    ),
                   ],
                 ),
-                // Own line, right under the name and BEFORE the rating: it
-                // answers the question a client asks first, and inline next to
-                // the name it would leave two characters for the name itself at
-                // 375 px.
                 const SizedBox(height: 6),
-                IdentityTrustSignal(providerId: providerId),
-                const SizedBox(height: 6),
-                if (rating != null && rating.isNew) ...[
-                  Text(
-                    l10n.ratingNew,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: oc.secondaryText,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                ],
-                if (avgRating != null) ...[
-                  Row(
-                    children: [
-                      ...List.generate(
-                        5,
-                        (i) => Icon(
-                          i < avgRating.round()
-                              ? Icons.star_rounded
-                              : Icons.star_outline_rounded,
-                          size: 16,
-                          color: context.oc.star,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${avgRating.toStringAsFixed(1)} ($ratingCount)',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.secondaryText,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                ],
+                // One display rule, in one place. This header used to compute
+                // its own five-star row, which is how it once showed "5.0 (2)"
+                // while the card said "Nouveau". explainBasis because the list
+                // of every review received sits right below.
+                RatingSummary(
+                  userId: providerId,
+                  source: RatingSource.provider,
+                  explainBasis: true,
+                ),
+                const SizedBox(height: 4),
                 if (user?.country != null && user!.country.isNotEmpty)
                   Row(
                     children: [

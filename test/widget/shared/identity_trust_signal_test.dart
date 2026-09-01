@@ -40,6 +40,8 @@ Widget _wrap(
 }
 
 void main() {
+  _threeStateBadgeTests();
+
   group('full form', () {
     testWidgets('shows nothing while the projection has not been read', (
       tester,
@@ -133,23 +135,27 @@ void main() {
       expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
     });
 
-    testWidgets('pending renders muted but is NOT announced as unverified', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _wrap(
-          Stream.value(IdentityTrustStatus.pending),
-          style: TrustSignalStyle.badge,
-        ),
-      );
-      await tester.pump();
-      expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
-      expect(
-        find.bySemanticsLabel('Vérification en cours'),
-        findsOneWidget,
-        reason: 'announcing "non vérifiée" here would be a false claim',
-      );
-    });
+    testWidgets(
+      'pending has its OWN glyph and is NOT announced as unverified',
+      (tester) async {
+        // It used to fold onto the muted shield. That stopped being acceptable
+        // when the badge became the only trust signal on the public profile.
+        await tester.pumpWidget(
+          _wrap(
+            Stream.value(IdentityTrustStatus.pending),
+            style: TrustSignalStyle.badge,
+          ),
+        );
+        await tester.pump();
+        expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.shield_outlined), findsNothing);
+        expect(
+          find.bySemanticsLabel('Vérification en cours'),
+          findsOneWidget,
+          reason: 'announcing "non vérifiée" here would be a false claim',
+        );
+      },
+    );
 
     testWidgets('an unresolved read shows nothing at all', (tester) async {
       // No icon, no label: claiming anything while the read is in flight
@@ -160,6 +166,102 @@ void main() {
       await tester.pump();
       expect(find.byType(Icon), findsNothing);
       expect(find.byType(Semantics), findsWidgets);
+    });
+  });
+}
+
+// The badge became the ONLY trust signal on the public profile, the pill having
+// been retired from it. Three states must therefore be distinguishable by
+// SHAPE, not by tint alone (A3), and each must keep its own label (A5).
+void _threeStateBadgeTests() {
+  // The three states are mounted SIDE BY SIDE in one scope. Looping with
+  // pumpWidget reuses the ProviderScope element, so the override never changes
+  // and all three reads return the same status: the test would compare an icon
+  // to itself and pass with one glyph for three states.
+  Widget wrapAllThree() => ProviderScope(
+    overrides: [
+      identityTrustProvider(
+        'verified',
+      ).overrideWith((_) => Stream.value(IdentityTrustStatus.verified)),
+      identityTrustProvider(
+        'pending',
+      ).overrideWith((_) => Stream.value(IdentityTrustStatus.pending)),
+      identityTrustProvider('absent').overrideWith((_) => Stream.value(null)),
+    ],
+    child: MaterialApp(
+      theme: AppTheme.light(),
+      locale: const Locale('fr'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const Scaffold(
+        body: Column(
+          children: [
+            IdentityTrustSignal(
+              providerId: 'verified',
+              style: TrustSignalStyle.badge,
+            ),
+            IdentityTrustSignal(
+              providerId: 'pending',
+              style: TrustSignalStyle.badge,
+            ),
+            IdentityTrustSignal(
+              providerId: 'absent',
+              style: TrustSignalStyle.badge,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  group('badge: three distinct glyphs', () {
+    testWidgets('verified, pending and absent each get their OWN icon', (
+      tester,
+    ) async {
+      await tester.pumpWidget(wrapAllThree());
+      await tester.pump();
+      await tester.pump();
+
+      final icons = tester
+          .widgetList<Icon>(find.byType(Icon))
+          .map((i) => i.icon)
+          .toSet();
+
+      expect(
+        icons,
+        hasLength(3),
+        reason:
+            'pending must not look like unverified: a provider halfway '
+            'through would be indistinguishable from one who never tried',
+      );
+    });
+
+    testWidgets('each state keeps its own accessibility label', (tester) async {
+      await tester.pumpWidget(wrapAllThree());
+      await tester.pump();
+      await tester.pump();
+
+      for (final label in [
+        'Profil vérifié',
+        'Vérification en cours',
+        'Identité non vérifiée',
+      ]) {
+        expect(
+          find.bySemanticsLabel(label),
+          findsOneWidget,
+          reason: 'each resolved state must announce itself, never another',
+        );
+      }
+    });
+
+    testWidgets('the badge shows NO visible text, unlike the pill', (
+      tester,
+    ) async {
+      // This is what removes "Identite non verifiee" from the public profile.
+      await tester.pumpWidget(wrapAllThree());
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(Text), findsNothing);
     });
   });
 }
