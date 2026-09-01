@@ -5,7 +5,7 @@ import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from 'firebas
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as logger from 'firebase-functions/logger';
 import { assertAdminClaim, assertAdminOrModeratorClaim, assertMinSupportClaim, assertAuthenticated, requireBoolean, requireString } from './common';
-import { writeAdminLog } from './audit';
+import { writeAdminLog, writeAdminLogTx } from './audit';
 import { createNotification, sendPushToUsers } from './notify';
 
 admin.initializeApp();
@@ -16,6 +16,7 @@ import {
   countReview,
   discountReview,
   recountReview,
+  type RatingTx,
 } from './provider_rating';
 
 // ---------------------------------------------------------------------------
@@ -2099,36 +2100,73 @@ export const suspendUser = onCall(async (request) => {
 // Review moderation : hide / unhide / delete
 // ---------------------------------------------------------------------------
 
+/// Runs one moderation action on a review as a SINGLE Firestore transaction:
+/// the delta on the public aggregate, the register that makes it idempotent,
+/// the mutation of the review itself, and the staff log. All four commit, or
+/// none of them do.
+///
+/// This closes a real hole. When the delta ran in its own transaction after the
+/// mutation, a delta that threw left the review hidden everywhere while it was
+/// still counted in the provider's public rating. The backfill only ever
+/// COUNTS, so it could not repair a missing decrement: the only recovery was a
+/// moderator noticing, then unhiding and re-hiding.
+///
+/// The order inside the callback is not a preference, Firestore forces it. A
+/// transaction rejects any read issued after its first write, and the delta
+/// still has to read the booking, the register and the aggregate. So the delta
+/// runs BEFORE the review is mutated, and every read of the whole unit happens
+/// before every write.
+async function moderateReviewAtomically(opts: {
+  reviewId: string;
+  callerUid: string;
+  action: string;
+  /// Applies the aggregate delta through the caller's transaction. Reads first,
+  /// writes after, so it stays legal ahead of `mutate`.
+  delta: (tx: RatingTx, review: Record<string, unknown>) => Promise<boolean>;
+  /// Mutates the review document itself. Writes only.
+  mutate: (tx: RatingTx, reviewRef: admin.firestore.DocumentReference) => void;
+}): Promise<void> {
+  const reviewRef = db.collection('reviews').doc(opts.reviewId);
+
+  await db.runTransaction(async (tx) => {
+    const reviewSnap = await tx.get(reviewRef);
+    if (!reviewSnap.exists) {
+      throw new HttpsError('not-found', 'Review not found.');
+    }
+
+    await opts.delta(tx, reviewSnap.data() as Record<string, unknown>);
+    opts.mutate(tx, reviewRef);
+
+    // Inside the transaction, and no longer before it. The log used to be
+    // written first precisely BECAUSE the delta was a separate transaction
+    // that could fail on its own: writing it early kept the staff action
+    // traced (S7) when the second leg died. That reason is gone. Now the log
+    // shares the fate of the action it describes, so a log written outside
+    // would sometimes record a hiding that never happened, and for an audit
+    // trail a false entry is worse than an absent one. Same call and same
+    // reasoning the identity decisions already use.
+    writeAdminLogTx(tx, {
+      actorUid: opts.callerUid,
+      action: opts.action,
+      targetType: 'review',
+      targetId: opts.reviewId,
+    });
+  });
+}
+
 export const hideReview = onCall(async (request) => {
   const callerUid = request.auth?.uid;
   assertAuthenticated(callerUid);
   assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
 
   const reviewId = requireString(request.data?.reviewId, 'reviewId');
-  const reviewRef = db.collection('reviews').doc(reviewId);
-  const reviewSnap = await reviewRef.get();
-  if (!reviewSnap.exists) {
-    throw new HttpsError('not-found', 'Review not found.');
-  }
 
-  await reviewRef.update({ hidden: true });
-
-  await writeAdminLog({
-    actorUid: callerUid,
+  await moderateReviewAtomically({
+    reviewId,
+    callerUid: callerUid as string,
     action: 'hide_review',
-    targetType: 'review',
-    targetId: reviewId,
-  });
-
-  // After the log, so a staff action is traced even if this leg fails (S7).
-  // DEVIATION from the plan, which asked for the delta INSIDE the review
-  // mutation's transaction: it runs in its own, afterwards. If it throws, the
-  // review is hidden everywhere but still counted, and the backfill only ever
-  // counts, so it cannot repair a missing decrement. Recovery is a moderator
-  // unhiding and re-hiding. Reported to Amath rather than silently refactored.
-  await discountReview(reviewId, {
-    ...(reviewSnap.data() as Record<string, unknown>),
-    hidden: true,
+    delta: (tx, review) => discountReview(reviewId, { ...review, hidden: true }, tx),
+    mutate: (tx, ref) => tx.update(ref, { hidden: true }),
   });
 
   return { reviewId, hidden: true };
@@ -2140,23 +2178,16 @@ export const unhideReview = onCall(async (request) => {
   assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
 
   const reviewId = requireString(request.data?.reviewId, 'reviewId');
-  const reviewRef = db.collection('reviews').doc(reviewId);
-  const reviewSnap = await reviewRef.get();
-  if (!reviewSnap.exists) {
-    throw new HttpsError('not-found', 'Review not found.');
-  }
 
-  await reviewRef.update({ hidden: false });
-
-  await writeAdminLog({
-    actorUid: callerUid,
+  await moderateReviewAtomically({
+    reviewId,
+    callerUid: callerUid as string,
     action: 'unhide_review',
-    targetType: 'review',
-    targetId: reviewId,
+    // The review read here is still `hidden: true`; recountReview neutralises
+    // that flag itself, because the decision belongs to the recorded state.
+    delta: (tx, review) => recountReview(reviewId, review, tx),
+    mutate: (tx, ref) => tx.update(ref, { hidden: false }),
   });
-
-  // See hideReview: after the log, same accepted deviation.
-  await recountReview(reviewId, reviewSnap.data() as Record<string, unknown>);
 
   return { reviewId, hidden: false };
 });
@@ -2167,24 +2198,14 @@ export const deleteReview = onCall(async (request) => {
   assertAdminClaim(request.auth?.token?.admin);
 
   const reviewId = requireString(request.data?.reviewId, 'reviewId');
-  const reviewRef = db.collection('reviews').doc(reviewId);
-  const reviewSnap = await reviewRef.get();
-  if (!reviewSnap.exists) {
-    throw new HttpsError('not-found', 'Review not found.');
-  }
 
-  const deletedData = reviewSnap.data() as Record<string, unknown>;
-  await reviewRef.delete();
-
-  await writeAdminLog({
-    actorUid: callerUid,
+  await moderateReviewAtomically({
+    reviewId,
+    callerUid: callerUid as string,
     action: 'delete_review',
-    targetType: 'review',
-    targetId: reviewId,
+    delta: (tx, review) => discountReview(reviewId, review, tx),
+    mutate: (tx, ref) => tx.delete(ref),
   });
-
-  // See hideReview: after the log, same accepted deviation.
-  await discountReview(reviewId, deletedData);
 
   return { reviewId, deleted: true };
 });

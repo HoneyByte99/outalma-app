@@ -38,6 +38,20 @@ async function agg(uid = PROVIDER) {
   return snap.exists ? snap.data() : null;
 }
 
+const ADMIN = { uid: 'boss', token: { admin: true, moderator: true } };
+
+async function seedCountedReview() {
+  await seedBooking('b1');
+  await db().collection('reviews').doc('r1').set({
+    reviewerId: CLIENT,
+    revieweeId: PROVIDER,
+    bookingId: 'b1',
+    rating: 4,
+    hidden: false,
+  });
+  await countReview('r1', { reviewerId: CLIENT, bookingId: 'b1', rating: 4 });
+}
+
 afterAll(() => tf.cleanup());
 beforeEach(clearFirestore);
 
@@ -241,23 +255,6 @@ describe('the moderation callables, through the callable itself', () => {
   // Calling discountReview directly proves the module. It does NOT prove the
   // callable is wired to it: a mutation removing the call inside hideReview
   // left every test green until these were written.
-  const ADMIN = { uid: 'boss', token: { admin: true, moderator: true } };
-
-  async function seedCountedReview() {
-    await seedBooking('b1');
-    await db().collection('reviews').doc('r1').set({
-      reviewerId: CLIENT,
-      revieweeId: PROVIDER,
-      bookingId: 'b1',
-      rating: 4,
-      hidden: false,
-    });
-    await countReview('r1', {
-      reviewerId: CLIENT,
-      bookingId: 'b1',
-      rating: 4,
-    });
-  }
 
   it('hideReview lowers the public rating', async () => {
     await seedCountedReview();
@@ -288,5 +285,161 @@ describe('the moderation callables, through the callable itself', () => {
       auth: { uid: 'boss', token: { admin: true } },
     } as never);
     expect(await agg()).toMatchObject({ ratingSum: 0, ratingCount: 0 });
+  });
+
+  it('records the staff action in admin_logs', async () => {
+    await seedCountedReview();
+    await tfWrap(fns.hideReview)({
+      data: { reviewId: 'r1' },
+      auth: ADMIN,
+    } as never);
+    const logs = await db()
+      .collection('admin_logs')
+      .where('action', '==', 'hide_review')
+      .get();
+    expect(logs.size).toBe(1);
+    expect(logs.docs[0]?.data()).toMatchObject({
+      actorUid: 'boss',
+      targetType: 'review',
+      targetId: 'r1',
+    });
+  });
+});
+
+describe('the moderation callables are ATOMIC', () => {
+  // The regression these exist for: the delta on the aggregate used to run in
+  // its OWN transaction, after the review had already been mutated. A delta
+  // that threw left the review hidden everywhere while it was still counted in
+  // the public rating, and the backfill only ever COUNTS, so no replay could
+  // repair the missing decrement.
+  //
+  // Each test below breaks exactly that leg. If any of the other legs survives
+  // the failure, the transaction was not one transaction.
+
+  /// Makes every write to `provider_ratings/*` throw, and nothing else.
+  /// Returns the undo.
+  function breakAggregateWrites(): () => void {
+    const proto = admin.firestore.Transaction.prototype as unknown as Record<
+      string,
+      unknown
+    >;
+    const realSet = proto.set as (...args: unknown[]) => unknown;
+    proto.set = function (this: unknown, ...args: unknown[]) {
+      const ref = args[0] as { path?: string } | undefined;
+      if (typeof ref?.path === 'string' && ref.path.startsWith(`${RATINGS}/`)) {
+        throw new Error('aggregate write down');
+      }
+      return realSet.apply(this, args);
+    };
+    return () => {
+      proto.set = realSet;
+    };
+  }
+
+  async function reviewDoc(id = 'r1') {
+    return db().collection('reviews').doc(id).get();
+  }
+
+  async function ratingEvent(id = 'r1') {
+    const snap = await db().collection(RATING_EVENTS).doc(id).get();
+    return snap.exists ? snap.data() : null;
+  }
+
+  async function adminLogsFor(action: string) {
+    return db().collection('admin_logs').where('action', '==', action).get();
+  }
+
+  it('hideReview applies NOTHING when the aggregate write fails', async () => {
+    await seedCountedReview();
+    const restore = breakAggregateWrites();
+    try {
+      await expect(
+        tfWrap(fns.hideReview)({ data: { reviewId: 'r1' }, auth: ADMIN } as never),
+      ).rejects.toThrow('aggregate write down');
+    } finally {
+      restore();
+    }
+
+    // The review is NOT hidden. Under the old split, it would be: this single
+    // assertion is the bug, expressed.
+    expect((await reviewDoc()).data()?.hidden).toBe(false);
+    // The aggregate still holds the review, consistent with a visible review.
+    expect(await agg()).toMatchObject({ ratingSum: 4, ratingCount: 1 });
+    // The register still says counted, so nothing has drifted out of step.
+    expect(await ratingEvent()).toMatchObject({ counted: true });
+    // And no staff log claims a hiding that never happened.
+    expect((await adminLogsFor('hide_review')).empty).toBe(true);
+  });
+
+  it('hideReview succeeds fully once the aggregate write recovers', async () => {
+    // The point of the atomicity: recovery is now a plain retry, instead of a
+    // moderator unhiding and re-hiding to repair the aggregate by hand.
+    await seedCountedReview();
+    const restore = breakAggregateWrites();
+    try {
+      await expect(
+        tfWrap(fns.hideReview)({ data: { reviewId: 'r1' }, auth: ADMIN } as never),
+      ).rejects.toThrow('aggregate write down');
+    } finally {
+      restore();
+    }
+
+    await tfWrap(fns.hideReview)({ data: { reviewId: 'r1' }, auth: ADMIN } as never);
+
+    expect((await reviewDoc()).data()?.hidden).toBe(true);
+    expect(await agg()).toMatchObject({ ratingSum: 0, ratingCount: 0 });
+    expect(await ratingEvent()).toMatchObject({ counted: false });
+    expect((await adminLogsFor('hide_review')).size).toBe(1);
+  });
+
+  it('unhideReview applies NOTHING when the aggregate write fails', async () => {
+    await seedCountedReview();
+    await tfWrap(fns.hideReview)({ data: { reviewId: 'r1' }, auth: ADMIN } as never);
+    expect(await agg()).toMatchObject({ ratingSum: 0, ratingCount: 0 });
+
+    const restore = breakAggregateWrites();
+    try {
+      await expect(
+        tfWrap(fns.unhideReview)({ data: { reviewId: 'r1' }, auth: ADMIN } as never),
+      ).rejects.toThrow('aggregate write down');
+    } finally {
+      restore();
+    }
+
+    // Still hidden, still discounted, still marked uncounted: coherent.
+    expect((await reviewDoc()).data()?.hidden).toBe(true);
+    expect(await agg()).toMatchObject({ ratingSum: 0, ratingCount: 0 });
+    expect(await ratingEvent()).toMatchObject({ counted: false });
+    expect((await adminLogsFor('unhide_review')).empty).toBe(true);
+  });
+
+  it('deleteReview does not delete the review when the delta fails', async () => {
+    // The worst of the three under the old split: the review was already gone,
+    // so its rating could never be subtracted from anything afterwards.
+    await seedCountedReview();
+    const restore = breakAggregateWrites();
+    try {
+      await expect(
+        tfWrap(fns.deleteReview)({
+          data: { reviewId: 'r1' },
+          auth: { uid: 'boss', token: { admin: true } },
+        } as never),
+      ).rejects.toThrow('aggregate write down');
+    } finally {
+      restore();
+    }
+
+    expect((await reviewDoc()).exists).toBe(true);
+    expect(await agg()).toMatchObject({ ratingSum: 4, ratingCount: 1 });
+    expect(await ratingEvent()).toMatchObject({ counted: true });
+    expect((await adminLogsFor('delete_review')).empty).toBe(true);
+  });
+
+  it('still reports a missing review as not-found', async () => {
+    // The existence check moved inside the transaction; it must still surface
+    // as the callable error clients handle, not as an internal failure.
+    await expect(
+      tfWrap(fns.hideReview)({ data: { reviewId: 'ghost' }, auth: ADMIN } as never),
+    ).rejects.toThrow(/not found/i);
   });
 });

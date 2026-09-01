@@ -70,6 +70,83 @@ export function isUsableRating(rating: unknown): rating is number {
 
 export type RatingTransition = 'count' | 'discount';
 
+/// A transaction the CALLER already owns.
+///
+/// Every entry point below takes one optionally. Passing it lets a caller put
+/// the review's own mutation and this delta in ONE transaction, so the two can
+/// no longer disagree; omitting it keeps the trigger path (`countReview` from
+/// `onReviewCreated`) running in a transaction of its own, as before.
+export type RatingTx = admin.firestore.Transaction;
+
+/// Reads a document through the caller's transaction when there is one, so the
+/// read is part of the same atomic unit rather than a snapshot taken beside it.
+function readDoc(
+  ref: admin.firestore.DocumentReference,
+  tx?: RatingTx,
+): Promise<admin.firestore.DocumentSnapshot> {
+  return tx ? tx.get(ref) : ref.get();
+}
+
+interface RatingDeltaParams {
+  reviewId: string;
+  providerUid: string;
+  rating: number;
+  transition: RatingTransition;
+  /// Only for 'count': the aggregate is created if missing. For 'discount' a
+  /// missing aggregate means the account was deleted, and writing would
+  /// resurrect a public document holding negative values behind it.
+  createIfMissing: boolean;
+}
+
+/// The delta itself, always inside SOME transaction.
+///
+/// All of its reads happen before any of its writes, which is what lets a
+/// caller run it inside a wider transaction: Firestore rejects a read issued
+/// after a write, so a caller only has to call this BEFORE mutating the review.
+async function ratingDeltaWithin(
+  tx: RatingTx,
+  params: RatingDeltaParams,
+): Promise<boolean> {
+  const { reviewId, providerUid, rating, transition, createIfMissing } = params;
+  const eventRef = db().collection(RATING_EVENTS).doc(reviewId);
+  const aggRef = db().collection(RATINGS).doc(providerUid);
+  const wantCounted = transition === 'count';
+
+  const [eventSnap, aggSnap] = await Promise.all([
+    tx.get(eventRef),
+    tx.get(aggRef),
+  ]);
+  const counted = eventSnap.exists && eventSnap.data()?.counted === true;
+  if (counted === wantCounted) return false; // already in the wanted state
+
+  if (!wantCounted && !aggSnap.exists) {
+    // Deleted account: leave nothing behind, but record the state so a later
+    // replay cannot resurrect it either.
+    tx.set(eventRef, {
+      counted: false,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return false;
+  }
+  if (wantCounted && !aggSnap.exists && !createIfMissing) return false;
+
+  const sign = wantCounted ? 1 : -1;
+  tx.set(
+    aggRef,
+    {
+      ratingSum: admin.firestore.FieldValue.increment(sign * rating),
+      ratingCount: admin.firestore.FieldValue.increment(sign),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+  tx.set(eventRef, {
+    counted: wantCounted,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return true;
+}
+
 /// Applies one rating transition, exactly once, whatever the caller.
 ///
 /// The decision is taken on the RECORDED STATE (`counted`), never by
@@ -79,58 +156,12 @@ export type RatingTransition = 'count' | 'discount';
 /// that never held the review.
 ///
 /// Returns true when the aggregate actually moved.
-export async function applyRatingDelta(params: {
-  reviewId: string;
-  providerUid: string;
-  rating: number;
-  transition: RatingTransition;
-  /// Only for 'count': the aggregate is created if missing. For 'discount' a
-  /// missing aggregate means the account was deleted, and writing would
-  /// resurrect a public document holding negative values behind it.
-  createIfMissing: boolean;
-}): Promise<boolean> {
-  const { reviewId, providerUid, rating, transition, createIfMissing } = params;
-  if (!isUsableRating(rating) || !providerUid) return false;
-
-  const eventRef = db().collection(RATING_EVENTS).doc(reviewId);
-  const aggRef = db().collection(RATINGS).doc(providerUid);
-  const wantCounted = transition === 'count';
-
-  return db().runTransaction(async (tx) => {
-    const [eventSnap, aggSnap] = await Promise.all([
-      tx.get(eventRef),
-      tx.get(aggRef),
-    ]);
-    const counted = eventSnap.exists && eventSnap.data()?.counted === true;
-    if (counted === wantCounted) return false; // already in the wanted state
-
-    if (!wantCounted && !aggSnap.exists) {
-      // Deleted account: leave nothing behind, but record the state so a later
-      // replay cannot resurrect it either.
-      tx.set(eventRef, {
-        counted: false,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-      return false;
-    }
-    if (wantCounted && !aggSnap.exists && !createIfMissing) return false;
-
-    const sign = wantCounted ? 1 : -1;
-    tx.set(
-      aggRef,
-      {
-        ratingSum: admin.firestore.FieldValue.increment(sign * rating),
-        ratingCount: admin.firestore.FieldValue.increment(sign),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
-    tx.set(eventRef, {
-      counted: wantCounted,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    return true;
-  });
+export async function applyRatingDelta(
+  params: RatingDeltaParams & { tx?: RatingTx },
+): Promise<boolean> {
+  if (!isUsableRating(params.rating) || !params.providerUid) return false;
+  if (params.tx) return ratingDeltaWithin(params.tx, params);
+  return db().runTransaction((tx) => ratingDeltaWithin(tx, params));
 }
 
 /// Counts a review, resolving its role from the booking.
@@ -142,15 +173,16 @@ export async function applyRatingDelta(params: {
 export async function countReview(
   reviewId: string,
   review: ReviewLike,
+  tx?: RatingTx,
 ): Promise<boolean> {
   if (!review.bookingId) {
     logger.warn('rating: review without bookingId, ignored', { reviewId });
     return false;
   }
-  const bookingSnap = await db()
-    .collection('bookings')
-    .doc(review.bookingId)
-    .get();
+  const bookingSnap = await readDoc(
+    db().collection('bookings').doc(review.bookingId),
+    tx,
+  );
   if (!bookingSnap.exists) {
     logger.warn('rating: booking not found, review ignored', {
       reviewId,
@@ -167,6 +199,7 @@ export async function countReview(
     rating: review.rating as number,
     transition: 'count',
     createIfMissing: true,
+    tx,
   });
 }
 
@@ -175,12 +208,13 @@ export async function countReview(
 export async function discountReview(
   reviewId: string,
   review: ReviewLike,
+  tx?: RatingTx,
 ): Promise<boolean> {
   if (!review.bookingId) return false;
-  const bookingSnap = await db()
-    .collection('bookings')
-    .doc(review.bookingId)
-    .get();
+  const bookingSnap = await readDoc(
+    db().collection('bookings').doc(review.bookingId),
+    tx,
+  );
   if (!bookingSnap.exists) return false;
   const booking = bookingSnap.data() as BookingLike;
   if (!booking.providerId) return false;
@@ -191,6 +225,7 @@ export async function discountReview(
     rating: review.rating as number,
     transition: 'discount',
     createIfMissing: false,
+    tx,
   });
 }
 
@@ -199,12 +234,13 @@ export async function discountReview(
 export async function recountReview(
   reviewId: string,
   review: ReviewLike,
+  tx?: RatingTx,
 ): Promise<boolean> {
   if (!review.bookingId) return false;
-  const bookingSnap = await db()
-    .collection('bookings')
-    .doc(review.bookingId)
-    .get();
+  const bookingSnap = await readDoc(
+    db().collection('bookings').doc(review.bookingId),
+    tx,
+  );
   if (!bookingSnap.exists) return false;
   const booking = bookingSnap.data() as BookingLike;
   if (!countsTowardProviderRating({ ...review, hidden: false }, booking)) {
@@ -220,5 +256,6 @@ export async function recountReview(
     // their account would otherwise recreate a world-readable document behind
     // a deleted account, the mirror of the case the discount path guards.
     createIfMissing: false,
+    tx,
   });
 }

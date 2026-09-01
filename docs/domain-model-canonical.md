@@ -266,6 +266,19 @@ Companion register `rating_events/{reviewId}` holds `{ counted }` for
 idempotency. Closed to every client and NEVER purged: unlike
 `processed_events`, the backfill's safety depends on it being permanent.
 
+Moderation (`hideReview`, `unhideReview`, `deleteReview`) writes the review, the
+aggregate, the register and the `admin_logs` entry in ONE transaction. It has
+to: the backfill only ever COUNTS, so a decrement lost between two transactions
+is a drift no replay can repair. Every transition is decided on the recorded
+`counted` state, never by re-evaluating the predicate, because an unhide reads a
+review that is still `hidden`, and a hide landing before the backfill would
+subtract from an aggregate that never held the review.
+
+The predicate itself exists twice, in `functions/src/provider_rating.ts` and in
+`scripts/rating_predicate.py`. `shared/rating-parity-cases.json` is the single
+table of cases both are tested against, so a divergence fails a test instead of
+silently making the aggregate disagree with what a replay computes.
+
 ## PhoneShare
 
 Firestore collection: `bookings/{bookingId}/phoneShares/{uid}`
