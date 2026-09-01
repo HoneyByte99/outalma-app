@@ -85,6 +85,11 @@ class RatingSummary extends ConsumerWidget {
             : '${l10n.ratingNew} $floorHint',
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          // start, not the default center. Once the basis wraps, which it does
+          // at a 200% text scale, centering the star against a three-line block
+          // reads as "moins de / Nouveau 3 avis de / clients": the reading order
+          // breaks for exactly the person who needed the larger type.
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(Icons.star_border_rounded, size: 15, color: oc.secondaryText),
             const SizedBox(width: 3),
@@ -138,6 +143,9 @@ class RatingSummary extends ConsumerWidget {
       label: '${average.toStringAsFixed(1)} $trailing',
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        // Same reason as the branch above: the basis wraps at a large text
+        // scale, and a centered star scrambles the reading order.
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(Icons.star_rounded, size: 15, color: oc.star),
           const SizedBox(width: 3),

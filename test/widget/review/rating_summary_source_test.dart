@@ -259,6 +259,48 @@ void _basisTests() {
       expect(find.textContaining('de clients'), findsNothing);
     });
 
+    // Found by the smoke on the real app at a 200 per cent text scale: the
+    // basis wraps to three lines, and with the star centered against that block
+    // the screen read "moins de / Nouveau 3 avis de / clients". No overflow, so
+    // no exception, and no test would have caught it. This one does: the star
+    // must sit level with the FIRST line of the wrapped basis, not halfway down.
+    testWidgets('at scale 2.0 the star stays level with the first line', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrapBasis(
+          source: RatingSource.provider,
+          uid: 'p',
+          sum: 10,
+          count: 2,
+          textScale: 2.0,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final starTop = tester
+          .getTopLeft(find.byIcon(Icons.star_border_rounded))
+          .dy;
+      final basisTop = tester
+          .getTopLeft(find.textContaining('moins de 3 avis de clients'))
+          .dy;
+      final basisHeight = tester
+          .getSize(find.textContaining('moins de 3 avis de clients'))
+          .height;
+
+      expect(
+        basisHeight,
+        greaterThan(40),
+        reason: 'the basis must actually be wrapping, or this proves nothing',
+      );
+      expect(
+        (starTop - basisTop).abs(),
+        lessThan(12),
+        reason: 'top aligned: a centered star would sit a whole line lower',
+      );
+    });
+
     // Both branches must wrap rather than overflow. A Row child that is not
     // flexible gets maxWidth: infinity and runs off to the RIGHT.
     for (final scale in [1.0, 2.0]) {
