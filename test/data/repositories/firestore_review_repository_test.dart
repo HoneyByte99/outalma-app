@@ -13,11 +13,18 @@ void main() {
     repo = FirestoreReviewRepository(db);
   });
 
+  /// [hidden] null means the key is ABSENT from the document.
+  ///
+  /// The default is `false`, not null, and that matters: every write path in
+  /// production puts the key there (the client serializer writes the literal
+  /// false, `onReviewCreated` backfills), so a seed without it describes a
+  /// document that no longer exists. Defaulting to absent made most of the
+  /// cases below pass on a corpus shape the app cannot produce.
   Future<void> seed(
     String id, {
     required int rating,
     required int day,
-    bool? hidden,
+    bool? hidden = false,
   }) => db.collection('reviews').doc(id).set({
     'id': id,
     'bookingId': 'b_$id',
@@ -26,7 +33,6 @@ void main() {
     'reviewerRole': 'client',
     'rating': rating,
     'comment': '',
-    // null means the key is ABSENT, which is the historical corpus.
     if (hidden != null) 'hidden': hidden,
     'createdAt': DateTime.utc(2026, 8, day),
   });
@@ -123,13 +129,50 @@ void main() {
       expect(await repo.watchForUser('target').first, hasLength(1));
     });
 
-    test('a review with NO hidden key is visible (historical corpus)', () async {
-      // 85 reviews in production carry no such key. Treating absence as hidden
-      // would empty the whole catalogue.
-      await seed('legacy', rating: 4, day: 1);
-      final all = await repo.watchForUser('target').first;
-      expect(all, hasLength(1));
-      expect(all.single.hidden, isFalse);
+    test('a review with NO hidden key is INVISIBLE to these two queries', () async {
+      // This test asserted the opposite until the filter moved from Dart into
+      // the query, and the reversal is deliberate rather than a regression that
+      // slipped through.
+      //
+      // A visitor with no account cannot list this collection at all without
+      // `where('hidden', '==', false)`: the public rule is
+      // `resource.data.hidden == false`, and for a `list` Firestore evaluates
+      // rules against the fields the QUERY constrains. So the filter has to be
+      // in the query, and an equality query matches no document that LACKS the
+      // field. The cost is exactly this case.
+      //
+      // Accepted on measurement, not on hope. All 36 production reviews carry
+      // `hidden` (checked 2026-09-01, 0 missing): scripts/normalize-review-hidden.py
+      // cleared the corpus the old comment described, the client serializer
+      // writes the literal `false` on every create, and `onReviewCreated`
+      // backfills the field for clients already in the wild. The remedy if one
+      // ever reappears is to re-run that script, not to drop the filter, which
+      // would make every reviews list unreadable to visitors again.
+      //
+      // Note this was ALREADY the truth for a guest before this change: the rule
+      // refuses a `get` on such a document too (emulator test "a review with NO
+      // hidden field is UNREADABLE by a visitor"). The change aligns the
+      // signed-in path with it instead of leaving the two divergent.
+      //
+      // Keep this case: it is also the only assertion that can tell a QUERY
+      // filter from a Dart filter. `Review.hidden` defaults to false when the
+      // key is absent, so a list filtered in Dart would KEEP this document.
+      // Moving the filter back out of the query turns this test red, which is
+      // what protects the guest read path from a well-meaning simplification.
+      await seed('legacy', rating: 4, day: 1, hidden: null);
+
+      expect(await repo.watchForUser('target').first, isEmpty);
+      expect(await repo.watchRecentForUser('target', limit: 50).first, isEmpty);
+    });
+
+    test('watchForBooking still sees a review with no hidden key', () async {
+      // The one query that must NOT filter also must not lose the corpus: it
+      // drives hasReviewedProvider, and a false "you have not reviewed yet"
+      // sends the user to a form whose write the rules refuse.
+      await seed('legacy', rating: 4, day: 1, hidden: null);
+      expect((await repo.watchForBooking('b_legacy').first).map((r) => r.id), [
+        'legacy',
+      ]);
     });
 
     test('create() writes hidden FALSE, and only ever false', () async {

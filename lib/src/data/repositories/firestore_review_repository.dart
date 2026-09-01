@@ -24,49 +24,59 @@ class FirestoreReviewRepository implements ReviewRepository {
         .map((qs) => qs.docs.map((d) => d.data()).toList());
   }
 
-  /// Reviews received by [userId], moderated ones EXCLUDED.
+  /// Reviews received by [userId], moderated ones EXCLUDED **by the query**.
   ///
-  /// `hideReview` sets `hidden: true` server-side and the aggregate already
-  /// skips those, but nothing on this side did: a moderated review stayed fully
-  /// visible on the profile, on the reviews page and on the author's own "my
-  /// reviews" screen, which made moderation cosmetic on every list.
+  /// `hidden == false` is in the WHERE clause, not in a `.where()` on the Dart
+  /// list, and that is a hard requirement rather than an optimisation. The
+  /// public read rule is `signedIn() || resource.data.hidden == false`, and for
+  /// a `list` Firestore evaluates rules against the fields the QUERY constrains,
+  /// not against each returned document. An unconstrained list from a visitor
+  /// with no account is therefore refused outright: PERMISSION_DENIED, an empty
+  /// reviews section, and a red error state on the very screen where the client
+  /// decides. Filtering afterwards in Dart cannot fix that, because the
+  /// response never arrives.
   ///
-  /// Filtered here in the data layer rather than per screen, so a surface added
-  /// later cannot forget it. Client-side filtering is not a security boundary:
-  /// the rule still allows any signed-in account to read the documents, and
-  /// tightening it needs a moderator exemption plus emulator tests.
+  /// It also promotes moderation from cosmetic to enforced: before, the rule let
+  /// any signed-in account read a hidden review and only the UI hid it.
+  ///
+  /// Hard prerequisite, same one the rule file states: every review document must
+  /// CARRY `hidden`. A document lacking the field matches no equality query and
+  /// would become invisible for ever. The client serializer always writes the
+  /// literal `false`, `onReviewCreated` backfills clients already in the wild,
+  /// and scripts/normalize-review-hidden.py cleared the historical corpus
+  /// (verified: 36/36 production reviews carry the field).
   @override
   Stream<List<Review>> watchForUser(String userId) {
     return FirestoreCollections.reviews(_db)
         .where('revieweeId', isEqualTo: userId)
+        .where('hidden', isEqualTo: false)
         .snapshots()
-        .map(
-          (qs) => qs.docs.map((d) => d.data()).where((r) => !r.hidden).toList(),
-        );
+        .map((qs) => qs.docs.map((d) => d.data()).toList());
   }
 
   @override
   Stream<List<Review>> watchRecentForUser(String userId, {required int limit}) {
     // Ordered AND bounded: without the order the average would cover an
     // arbitrary slice ordered by document id, which is worse than unbounded.
-    // The composite index (revieweeId ASC, createdAt DESC) already exists.
     //
-    // Moderated reviews are excluded, like watchForUser above: a hidden review
-    // must not keep counting in a client's reputation on the screen where a
-    // provider decides whether to accept.
+    // `hidden == false` is server-side here for the same reason as
+    // watchForUser: a visitor cannot list this collection without it.
     //
-    // The filter runs AFTER the limit, so a window of 50 documents can yield
-    // fewer than 50 kept reviews. Accepted: filtering server-side would need an
-    // index and a rule change, and this reputation is a bounded sample by
-    // design, not an exact count.
+    // Side benefit worth recording, since the previous note said the opposite:
+    // the filter now runs BEFORE the limit, so the window really is the 50 most
+    // recent VISIBLE reviews. It used to be the 50 most recent documents minus
+    // whatever was hidden among them, which quietly shrank a client's
+    // reputation sample every time a review was moderated.
+    //
+    // Needs the composite index (revieweeId ASC, hidden ASC, createdAt DESC),
+    // declared in firebase/firestore.indexes.json.
     return FirestoreCollections.reviews(_db)
         .where('revieweeId', isEqualTo: userId)
+        .where('hidden', isEqualTo: false)
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
-        .map(
-          (qs) => qs.docs.map((d) => d.data()).where((r) => !r.hidden).toList(),
-        );
+        .map((qs) => qs.docs.map((d) => d.data()).toList());
   }
 
   @override
