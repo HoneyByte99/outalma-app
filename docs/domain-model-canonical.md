@@ -204,10 +204,27 @@ Firestore collection: `reviews/{reviewId}`
 | `reviewerRole` | String | "client" or "provider" |
 | `rating` | int | 1 to 5 |
 | `comment` | String? | Free text |
+| `categoryId` | String? | Service category, captured from the booking at review time. Null on legacy reviews |
+| `hidden` | bool? | Moderation verdict, written ONLY by `hideReview` / `unhideReview`. **Absent means visible**, which is how the historical corpus reads |
 | `createdAt` | Timestamp | UTC |
 
 Reviews are bilateral: after `done`, both the client and provider can leave a review.
-One review per (bookingId, reviewerRole) pair — enforced by rules.
+One review per (bookingId, reviewerRole) pair, enforced by rules.
+
+**`hidden` is read-only on the client.** It is deliberately absent from the Dart
+serializer: the `create` rule on `reviews` carries no field allowlist, so a client
+able to write the key could stamp or clear its own moderation flag. The app reads
+it and filters `watchForUser` and `watchRecentForUser`; `watchForBooking` is NOT
+filtered, because `hasReviewedProvider` uses it to know whether a review already
+exists and hiding one there would offer the form again into a refused write.
+
+**Not a security boundary.** `firestore.rules` still allows any signed-in account
+to read a hidden review directly. Tightening that needs a moderator exemption plus
+emulator tests, and is tracked separately.
+
+`reviewerRole` is written by the client and constrained by no rule. It is fine for
+choosing a notification audience, and must never decide a publication: the server
+resolves the author's role from the BOOKING (see `provider_rating.ts`).
 
 ---
 
