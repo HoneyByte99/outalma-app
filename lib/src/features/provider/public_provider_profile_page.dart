@@ -65,26 +65,34 @@ class PublicProviderProfilePage extends ConsumerWidget {
       backgroundColor: oc.background,
       body: CustomScrollView(
         slivers: [
+          // The header used to live in a FlexibleSpaceBar under a fixed
+          // expandedHeight of 200, and it overflowed the moment a provider's
+          // bio ran to three lines: the yellow "BOTTOM OVERFLOWED" banner was
+          // visible on the real app. Growing the fixed height only postpones
+          // the same trap, and clipping the bio cuts the text a provider sells
+          // themselves with, so the header now sizes to its own content and
+          // survives a 200% text scale (budget line A6).
           SliverAppBar(
-            expandedHeight: 200,
             pinned: true,
-            backgroundColor: oc.surface,
-            leading: Padding(
-              padding: const EdgeInsets.all(8),
-              child: CircleAvatar(
-                backgroundColor: oc.surface.withValues(alpha: 0.9),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                  color: oc.primaryText,
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.pin,
-              background: ProfileHeader(providerId: providerId),
-            ),
+            // cardSurface, NOT surface: the two are the same white in light
+            // mode but differ in dark (#1A2029 against #1F252F), and the
+            // FlexibleSpaceBar used to hide that. Without this a band appears
+            // between the bar and the header in dark mode.
+            backgroundColor: oc.cardSurface,
+            // AppTheme.light() sets no surfaceTintColor, unlike dark(), so M3
+            // would tint the bar on scroll now that nothing covers it.
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0,
+            // No title on purpose. Without a flexibleSpace a pinned title is
+            // visible AT REST, 56 px above the same name in the header: the lot
+            // would fix one rendering defect by introducing a duplicated name
+            // on the screen where a client decides. A pinned bar carrying only
+            // a back button is ordinary mobile behaviour; driving the title
+            // from scroll offset is the complete answer and the complexity the
+            // MVP rule declines.
+            leading: const BackButton(),
           ),
+          SliverToBoxAdapter(child: ProfileHeader(providerId: providerId)),
 
           // ---- Reviews ----
           SliverToBoxAdapter(
@@ -214,9 +222,13 @@ class ProfileHeader extends ConsumerWidget {
 
     return Container(
       color: oc.cardSurface,
-      padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
+      // 20 at the top, not 80: the 80 existed only to clear the app bar the
+      // header used to sit behind. It sits below it now.
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        // start, not center: at a variable height, an avatar centred against a
+        // four-line bio floats far from the name it belongs to.
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           UserAvatar(
             displayName: user?.displayName ?? '',
@@ -293,10 +305,15 @@ class ProfileHeader extends ConsumerWidget {
                         color: oc.secondaryText,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        CountryUtils.flagAndName(user.country),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.secondaryText,
+                      // Flexible: a Row child that is not flexible receives
+                      // maxWidth: infinity and overflows to the RIGHT rather
+                      // than wrapping. "Emirats arabes unis" exceeds the 227 px
+                      // this column gets at 375 px once the text scale rises.
+                      Flexible(
+                        child: Text(
+                          CountryUtils.flagAndName(user.country),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: oc.secondaryText),
                         ),
                       ),
                     ],
@@ -563,11 +580,20 @@ class _EmptySection extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: oc.icons),
           const SizedBox(width: 10),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+          // Expanded, like _ErrorSection just above already had. Without it
+          // "Aucun avis recu pour le moment" overflows about 83 px to the RIGHT
+          // at 375 px, which is a real defect on a phone at a raised text scale
+          // AND the reason an overflow regression test on this page could never
+          // reach green: viewport slivers paint last-to-first, so this error was
+          // reported before the header's and takeException() returns only the
+          // first one.
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+            ),
           ),
         ],
       ),
