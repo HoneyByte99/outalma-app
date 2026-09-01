@@ -38,14 +38,14 @@ class PublicProviderProfilePage extends ConsumerWidget {
     if (userAsync.isLoading && !userAsync.hasValue) {
       return Scaffold(
         backgroundColor: oc.background,
-        appBar: AppBar(backgroundColor: oc.surface),
+        appBar: AppBar(backgroundColor: oc.cardSurface),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (userAsync.valueOrNull == null) {
       return Scaffold(
         backgroundColor: oc.background,
-        appBar: AppBar(backgroundColor: oc.surface),
+        appBar: AppBar(backgroundColor: oc.cardSurface),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,

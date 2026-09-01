@@ -33,10 +33,14 @@ enum TrustSignalStyle {
 /// shown as unverified to a client every time the network coughs. Showing
 /// nothing costs the same code and says nothing untrue.
 class IdentityTrustSignal extends ConsumerWidget {
+  /// [style] is REQUIRED, with no default. `pill` has no production caller
+  /// since the public profile moved to the badge, so a default would hand the
+  /// full-width pill to any future site that forgot to choose, on a screen that
+  /// never allowed for it.
   const IdentityTrustSignal({
     super.key,
     required this.providerId,
-    this.style = TrustSignalStyle.pill,
+    required this.style,
   });
 
   final String providerId;

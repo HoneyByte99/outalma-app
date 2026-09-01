@@ -17,6 +17,12 @@ enum RatingSource { provider, client }
 
 /// Compact, read-only trust signal: average rating + review count for a user.
 /// Shows a neutral "New" label below the review floor.
+///
+/// MUST be mounted inside a BOUNDED width. Both branches carry a `Flexible`, so
+/// an unbounded incoming width (a column of a `Row` with no `Expanded`, a
+/// horizontal list) raises "RenderFlex children have non-zero flex but incoming
+/// width constraints are unbounded". Every current call site sits under an
+/// `Expanded`; the older code merely overflowed there, this one asserts.
 class RatingSummary extends ConsumerWidget {
   const RatingSummary({
     super.key,

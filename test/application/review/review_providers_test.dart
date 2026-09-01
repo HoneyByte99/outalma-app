@@ -184,6 +184,24 @@ void main() {
       expect(await c.read(hasReviewedProvider('b1').future), isTrue);
     });
 
+    test('true even when the review has been HIDDEN by a moderator', () async {
+      // The other half of the deliberate asymmetry: watchForUser filters
+      // hidden reviews, watchForBooking does not, precisely so this stays true.
+      // Filtering it would offer the form a second time and the write would be
+      // refused, the document id being deterministic and the rule create-only.
+      when(() => repo.watchForBooking('b1')).thenAnswer(
+        (_) => Stream.value([_r('a', reviewerId: 'me').copyWith(hidden: true)]),
+      );
+      final c = makeContainer(auth: () => _AuthedNotifier(_user('me')));
+      addTearDown(c.dispose);
+      await c.read(authNotifierProvider.future);
+      expect(
+        await c.read(hasReviewedProvider('b1').future),
+        isTrue,
+        reason: 'moderating a review must not reopen the review form',
+      );
+    });
+
     test('false when only the counterparty reviewed', () async {
       when(
         () => repo.watchForBooking('b1'),
