@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/app_theme.dart';
 import '../../application/review/review_providers.dart';
+import '../../domain/review/rating_display.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// Which reputation a surface is showing. There is no default on purpose.
@@ -17,10 +18,31 @@ enum RatingSource { provider, client }
 /// Compact, read-only trust signal: average rating + review count for a user.
 /// Shows a neutral "New" label below the review floor.
 class RatingSummary extends ConsumerWidget {
-  const RatingSummary({super.key, required this.userId, required this.source});
+  const RatingSummary({
+    super.key,
+    required this.userId,
+    required this.source,
+    this.explainBasis = false,
+  });
 
   final String userId;
   final RatingSource source;
+
+  /// Say what the number is computed FROM, not just what it is.
+  ///
+  /// The two measures on these screens genuinely differ: a provider's public
+  /// rating counts only reviews written by the client of a completed booking,
+  /// while the list underneath shows every review received, in both roles.
+  /// Left unnamed, the screen reads as a contradiction a user can falsify by
+  /// counting: "3 avis" above six tiles, or "Nouveau" above five four- and
+  /// five-star reviews.
+  ///
+  /// Turn it on wherever the floor can be read as a judgement with no
+  /// explanation: the two surfaces that show a list below, and the provider's
+  /// own dashboard. The card and the service detail keep the short form, where
+  /// space is counted and the reader compares offers rather than judging one
+  /// reputation in isolation.
+  final bool explainBasis;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,15 +58,32 @@ class RatingSummary extends ConsumerWidget {
     final stats = async.value!;
 
     if (stats.isNew) {
-      // No reviews yet — keep a star shape (outlined) so non-readers still
+      // No reviews yet: keep a star shape (outlined) so non-readers still
       // recognise this as a rating slot, paired with the localized label.
+      //
+      // This is the MAJORITY case on the current catalogue: 13 of the 15 rated
+      // providers sit below the floor, so the branch that needs the explanation
+      // most is this one, not the resolved one.
+      final floorHint = explainBasis
+          ? (source == RatingSource.provider
+                // Two values, not one: on a provider the basis is specifically
+                // the reviews written by clients; on a client it is every review
+                // received, which IS what the list below shows.
+                ? l10n.ratingFloorHintClients(kMinReviewsForAverage)
+                : l10n.ratingFloorHint(kMinReviewsForAverage))
+          : null;
+
       return Semantics(
-        label: l10n.ratingNew,
+        label: floorHint == null
+            ? l10n.ratingNew
+            : '${l10n.ratingNew} $floorHint',
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.star_border_rounded, size: 15, color: oc.secondaryText),
             const SizedBox(width: 3),
+            // Standalone Text on purpose: the four surfaces show the same word
+            // for the same uid, and two existing tests match it exactly.
             Text(
               l10n.ratingNew,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -52,6 +91,21 @@ class RatingSummary extends ConsumerWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
+            if (floorHint != null) ...[
+              const SizedBox(width: 4),
+              // Flexible, because a Row child that is not flexible receives
+              // maxWidth: infinity and overflows to the RIGHT instead of
+              // wrapping. The header column of the public profile is 227 px at
+              // 375 px, less than this label needs at a 200% text scale.
+              Flexible(
+                child: Text(
+                  floorHint,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -67,13 +121,22 @@ class RatingSummary extends ConsumerWidget {
         ? '$kClientReputationWindow+'
         : l10n.reviewsCount(stats.count);
 
+    // Above the floor, only a provider needs its basis named: a client's
+    // reputation is derived from the very list shown underneath, so the header
+    // and the list already agree there.
+    final trailing = explainBasis && source == RatingSource.provider
+        ? l10n.ratingFromClients(stats.count)
+        : countLabel;
+
     return Semantics(
-      label: '${average.toStringAsFixed(1)} $countLabel',
+      label: '${average.toStringAsFixed(1)} $trailing',
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.star_rounded, size: 15, color: oc.star),
           const SizedBox(width: 3),
+          // Standalone, and never concatenated with the basis: two existing
+          // tests match this exact string.
           Text(
             average.toStringAsFixed(1),
             style: Theme.of(
@@ -81,11 +144,13 @@ class RatingSummary extends ConsumerWidget {
             ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(width: 4),
-          Text(
-            countLabel,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+          Flexible(
+            child: Text(
+              trailing,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+            ),
           ),
         ],
       ),
