@@ -67,18 +67,22 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final authAsync = ref.watch(authNotifierProvider);
-
-    final displayName = authAsync.valueOrNull is AuthAuthenticated
-        ? (authAsync.valueOrNull as AuthAuthenticated).user.displayName
-        : '';
+    final authState = ref.watch(authNotifierProvider).valueOrNull;
+    final isAuthenticated = authState is AuthAuthenticated;
+    final displayName = isAuthenticated ? authState.user.displayName : '';
 
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
         titleSpacing: 0,
         title: const _LocationPill(),
-        actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
+        // A visitor with no account has no mode to switch and no notifications
+        // to read. Offering the client/provider toggle would advertise a
+        // provider mode they cannot enter, and the bell would badge a private
+        // collection they cannot query: a sign-in entry replaces both.
+        actions: isAuthenticated
+            ? const [ModeBadge(), BellIconButton(), SizedBox(width: 4)]
+            : const [_GuestSignInAction(), SizedBox(width: 4)],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,9 +96,13 @@ class HomePage extends ConsumerWidget {
               AppSpacing.s,
             ),
             child: Text(
-              displayName.isNotEmpty
-                  ? l10n.homeGreeting(displayName)
-                  : l10n.homeGreetingNoName,
+              isAuthenticated
+                  ? (displayName.isNotEmpty
+                        ? l10n.homeGreeting(displayName)
+                        : l10n.homeGreetingNoName)
+                  // "Bonjour" to nobody in particular reads like a bug. Say
+                  // what the screen is for instead.
+                  : l10n.homeGuestGreeting,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -112,6 +120,34 @@ class HomePage extends ConsumerWidget {
           // Service grid
           const Expanded(child: _ServiceGrid()),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Guest sign-in action - replaces the mode badge + bell in the AppBar
+// ---------------------------------------------------------------------------
+
+class _GuestSignInAction extends StatelessWidget {
+  const _GuestSignInAction();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+      child: TextButton.icon(
+        // push, not go: the visitor keeps the catalogue behind the sign-in and
+        // can back out of it without losing their place.
+        onPressed: () => context.push(AppRoutes.signIn),
+        icon: const Icon(Icons.login_rounded, size: 18),
+        label: Text(l10n.guestSignIn),
+        style: TextButton.styleFrom(
+          foregroundColor: oc.primary,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }

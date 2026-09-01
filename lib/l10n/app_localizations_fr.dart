@@ -2195,4 +2195,31 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get serviceSeeReviews => 'Voir les avis';
+
+  @override
+  String get homeGuestGreeting =>
+      'Trouvez un prestataire de confiance près de chez vous';
+
+  @override
+  String get guestSignIn => 'Se connecter';
+
+  @override
+  String get authPromptBenefits =>
+      'Un compte vous permet de réserver, d\'échanger avec votre prestataire et de suivre vos demandes.';
+
+  @override
+  String get authPromptKeepBrowsing => 'Continuer sans compte';
+
+  @override
+  String get bookingRequiresLogin => 'Créez un compte pour réserver ce service';
+
+  @override
+  String get guestLockedSectionLogin =>
+      'Connectez-vous pour ouvrir cette section';
+
+  @override
+  String get introContinueAsGuest => 'Explorer sans compte';
+
+  @override
+  String get introAlreadyHaveAccount => 'J\'ai déjà un compte';
 }

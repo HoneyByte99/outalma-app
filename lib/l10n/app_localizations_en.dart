@@ -2170,4 +2170,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serviceSeeReviews => 'See reviews';
+
+  @override
+  String get homeGuestGreeting => 'Find a trusted provider near you';
+
+  @override
+  String get guestSignIn => 'Sign in';
+
+  @override
+  String get authPromptBenefits =>
+      'An account lets you book, exchange messages with your provider and follow your requests.';
+
+  @override
+  String get authPromptKeepBrowsing => 'Keep browsing without an account';
+
+  @override
+  String get bookingRequiresLogin =>
+      'Create an account to request this service';
+
+  @override
+  String get guestLockedSectionLogin => 'Sign in to open this section';
+
+  @override
+  String get introContinueAsGuest => 'Browse without an account';
+
+  @override
+  String get introAlreadyHaveAccount => 'I already have an account';
 }

@@ -148,16 +148,31 @@ class RouterNotifier extends ChangeNotifier {
           return isOnboardingRoute ? null : AppRoutes.onboarding;
         }
 
-        // ---- Unauthenticated ----
+        // ---- Unauthenticated: guest browsing ----
+        //
+        // A visitor with no account explores the public surface: the discovery
+        // home with its search and filters, a service detail, a public provider
+        // profile, and a user's received reviews. Everything else is gated at
+        // its entry point, and the gate carries the visitor's intention with it
+        // so signing in resumes what they were doing.
         if (authState is AuthUnauthenticated) {
-          if (isOnboardingRoute) return AppRoutes.signIn; // already consented
-          return isAuthRoute ? null : AppRoutes.signIn;
+          if (isAuthRoute) return null;
+          // Consent already collected: leaving onboarding lands on public home,
+          // not on sign-in. This is the "continue without an account" door.
+          if (isOnboardingRoute) return AppRoutes.home;
+          if (isGuestAllowed(loc)) return null;
+          return signInWithReturnTo(state.uri);
         }
 
         // ---- Authenticated ----
         if (authState is AuthAuthenticated) {
           if (isOnboardingRoute) return AppRoutes.home;
-          if (isAuthRoute) return AppRoutes.home;
+          if (isAuthRoute) {
+            // Return to intention: a gated route or action sent the visitor
+            // here with ?redirect=<internal path>, which may carry its own
+            // intent (e.g. /service/:id?book=1). Resume there.
+            return postAuthTarget(state.uri) ?? AppRoutes.home;
+          }
 
           // When switching modes, redirect to the right home tab.
           // Uses startsWith to catch sub-routes (e.g. /bookings/:id,
@@ -192,6 +207,53 @@ class RouterNotifier extends ChangeNotifier {
         return null;
       },
     );
+  }
+
+  /// The routes a signed-out visitor may view.
+  ///
+  /// An ALLOWLIST, deliberately: a deny list would open every route added later
+  /// by default, and the ones added later are the private ones. `/legal` is
+  /// handled earlier in [redirect], before auth is even consulted.
+  ///
+  /// Each entry must be backed by a publicly readable Firestore rule, or the
+  /// screen opens onto an error state, which is worse than a sign-in prompt:
+  ///   /home             services, providers, provider_ratings, public_profiles
+  ///   /service/:id      the same
+  ///   /provider-profile the same
+  ///   /reviews/:uid     reviews, filtered on `hidden == false` by the query
+  @visibleForTesting
+  static bool isGuestAllowed(String loc) {
+    return loc == AppRoutes.home ||
+        loc.startsWith('/service/') ||
+        loc.startsWith('/provider-profile/') ||
+        loc.startsWith('/reviews/');
+  }
+
+  /// Sign-in, carrying where the visitor was trying to go.
+  ///
+  /// Takes the full [uri] rather than the matched path so a deep link's own
+  /// query survives the round trip.
+  @visibleForTesting
+  static String signInWithReturnTo(Uri uri) {
+    final target = uri.hasQuery ? '${uri.path}?${uri.query}' : uri.path;
+    if (target.isEmpty || target == AppRoutes.home) return AppRoutes.signIn;
+    return Uri(
+      path: AppRoutes.signIn,
+      queryParameters: {'redirect': target},
+    ).toString();
+  }
+
+  /// Where to land after signing in, read back from `?redirect=`.
+  ///
+  /// Only in-app paths are honoured. A single leading slash is not enough: on
+  /// web `//evil.example` is a protocol-relative URL, so it is rejected too.
+  /// Returns null when there is nothing to resume.
+  @visibleForTesting
+  static String? postAuthTarget(Uri uri) {
+    final target = uri.queryParameters['redirect'];
+    if (target == null) return null;
+    if (!target.startsWith('/') || target.startsWith('//')) return null;
+    return target;
   }
 }
 
@@ -441,8 +503,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/service/:serviceId',
         name: 'service-detail',
-        builder: (_, state) =>
-            ServiceDetailPage(serviceId: state.pathParameters['serviceId']!),
+        builder: (_, state) => ServiceDetailPage(
+          serviceId: state.pathParameters['serviceId']!,
+          // Return to intention: a visitor who signed in from the booking gate
+          // comes back here with ?book=1, and the sheet reopens by itself.
+          autoOpenBooking: state.uri.queryParameters['book'] == '1',
+        ),
       ),
 
       // ---- Booking detail deep-link (notifications, external links) ----

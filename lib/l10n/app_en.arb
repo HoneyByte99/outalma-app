@@ -962,5 +962,13 @@
   "profileIdentitySection": "Identity verification",
   "calendarFormatMonth": "Month",
   "calendarFormatTwoWeeks": "2 weeks",
-  "serviceSeeReviews": "See reviews"
+  "serviceSeeReviews": "See reviews",
+  "homeGuestGreeting": "Find a trusted provider near you",
+  "guestSignIn": "Sign in",
+  "authPromptBenefits": "An account lets you book, exchange messages with your provider and follow your requests.",
+  "authPromptKeepBrowsing": "Keep browsing without an account",
+  "bookingRequiresLogin": "Create an account to request this service",
+  "guestLockedSectionLogin": "Sign in to open this section",
+  "introContinueAsGuest": "Browse without an account",
+  "introAlreadyHaveAccount": "I already have an account"
 }

@@ -921,5 +921,13 @@
   "profileIdentitySection": "Vérification d'identité",
   "calendarFormatMonth": "Mois",
   "calendarFormatTwoWeeks": "2 sem.",
-  "serviceSeeReviews": "Voir les avis"
+  "serviceSeeReviews": "Voir les avis",
+  "homeGuestGreeting": "Trouvez un prestataire de confiance près de chez vous",
+  "guestSignIn": "Se connecter",
+  "authPromptBenefits": "Un compte vous permet de réserver, d'échanger avec votre prestataire et de suivre vos demandes.",
+  "authPromptKeepBrowsing": "Continuer sans compte",
+  "bookingRequiresLogin": "Créez un compte pour réserver ce service",
+  "guestLockedSectionLogin": "Connectez-vous pour ouvrir cette section",
+  "introContinueAsGuest": "Explorer sans compte",
+  "introAlreadyHaveAccount": "J'ai déjà un compte"
 }

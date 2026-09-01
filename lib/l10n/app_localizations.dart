@@ -4045,6 +4045,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'See reviews'**
   String get serviceSeeReviews;
+
+  /// No description provided for @homeGuestGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a trusted provider near you'**
+  String get homeGuestGreeting;
+
+  /// No description provided for @guestSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get guestSignIn;
+
+  /// No description provided for @authPromptBenefits.
+  ///
+  /// In en, this message translates to:
+  /// **'An account lets you book, exchange messages with your provider and follow your requests.'**
+  String get authPromptBenefits;
+
+  /// No description provided for @authPromptKeepBrowsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep browsing without an account'**
+  String get authPromptKeepBrowsing;
+
+  /// No description provided for @bookingRequiresLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account to request this service'**
+  String get bookingRequiresLogin;
+
+  /// No description provided for @guestLockedSectionLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to open this section'**
+  String get guestLockedSectionLogin;
+
+  /// No description provided for @introContinueAsGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse without an account'**
+  String get introContinueAsGuest;
+
+  /// No description provided for @introAlreadyHaveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'I already have an account'**
+  String get introAlreadyHaveAccount;
 }
 
 class _AppLocalizationsDelegate
