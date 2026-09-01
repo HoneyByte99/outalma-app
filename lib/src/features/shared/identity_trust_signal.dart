@@ -13,25 +13,28 @@ enum TrustSignalStyle {
   pill,
 
   /// A badge beside a name, on a listing card, a service header or the public
-  /// profile. All THREE resolved states render, each with its own glyph, so a
-  /// client knows BEFORE opening a listing rather than after.
+  /// profile. CLIENT surfaces only, and it renders ONLY when the provider is
+  /// verified: see [_TrustBadge] for why the two other states render nothing.
   badge,
 }
 
 /// The public trust signal of a provider: verified, under way, or not verified.
 ///
-/// Four display situations, not three, and the distinction matters:
+/// The two styles answer two different questions, so they do NOT show the same
+/// thing, and that asymmetry is deliberate:
 ///
-///  - projection not read yet, or read failed  -> NOTHING. An empty slot.
-///  - read, document absent                    -> "Identity not verified"
-///  - read, pending                            -> "Verification under way"
-///  - read, verified                           -> "Verified profile"
+///  - [TrustSignalStyle.badge], on a CLIENT surface, answers "can I trust this
+///    provider". Only `verified` says anything useful there, so only `verified`
+///    renders. The rest is an empty slot.
+///  - [TrustSignalStyle.pill] answers "where do I stand", which is a PROVIDER
+///    question, so it keeps the three states.
 ///
-/// The first line is the one that is easy to get wrong. Showing "not verified"
-/// while the read is still in flight publishes a false claim about a real
-/// person: a provider who did the three photos and waited 48 hours would be
-/// shown as unverified to a client every time the network coughs. Showing
-/// nothing costs the same code and says nothing untrue.
+/// One rule holds for both: while the projection has not been read, or if the
+/// read failed, the slot is EMPTY. Showing "not verified" while the read is
+/// still in flight publishes a false claim about a real person: a provider who
+/// did the three photos and waited 48 hours would be shown as unverified to a
+/// client every time the network coughs. Showing nothing costs the same code
+/// and says nothing untrue.
 class IdentityTrustSignal extends ConsumerWidget {
   /// [style] is REQUIRED, with no default. `pill` has no production caller
   /// since the public profile moved to the badge, so a default would hand the
@@ -62,24 +65,37 @@ class IdentityTrustSignal extends ConsumerWidget {
   }
 }
 
-/// A badge beside a name. Both RESOLVED states render, because a client who
-/// cannot tell a verified provider from an unverified one without opening the
-/// listing has to open every listing.
+/// A badge beside a name, on a CLIENT surface. Renders ONLY when the provider
+/// is verified; `pending` and `absent` render nothing at all.
 ///
-/// `pending` has its OWN glyph, not the muted one. It used to fold in, on the
-/// argument that sixteen pixels cannot carry "verification under way" while the
-/// pill could. That stopped holding the day the badge became the only trust
-/// signal on the public profile: a provider halfway through verification would
-/// have looked exactly like one who never tried. Each state also keeps its own
-/// accessibility label, so none is ever announced as another.
+/// This used to show three glyphs, one per state, on the argument that a client
+/// who cannot tell a verified provider from an unverified one has to open every
+/// listing. Two measurements killed that argument:
+///
+///  - The two extra glyphs were 15 px and label-less. At that size a clock and
+///    a shield are not readable as "verification under way" and "not verified";
+///    they read as decoration, so they did not in fact let a client tell the
+///    states apart.
+///  - Almost nobody is verified at launch. A muted glyph on every single card
+///    is therefore the BACKGROUND, and the green check is one variation inside
+///    a wall of grey. Removing the noise is what makes the check visible, which
+///    is the entire point of a trust signal.
+///
+/// A trust signal is only ever positive. The absence of a badge says nothing
+/// about the person, which is exactly right: `absent` means "we have no claim
+/// to make", and `pending` is an internal state a client cannot act on. Neither
+/// belongs on a surface where a client is choosing.
+///
+/// The provider still needs to know where they stand, and they do: their own
+/// dashboard, their profile and the identity status screen each render that
+/// state themselves. None of them goes through this widget.
 ///
 /// Contrast, measured on `cardSurface` (budget line A1, 3:1 for a meaning
 /// bearing interface element):
 ///   verified, light  trustVerifiedText #00795A on cardSurface #FFFFFF -> 5.41:1
 ///   verified, dark   trustVerifiedText #2DD17A on cardSurface #1F252F -> 7.71:1
-///   muted,    light  secondaryText     #5C7A8A on cardSurface #FFFFFF -> 4.56:1
-///   muted,    dark   secondaryText     #95A7B5 on cardSurface #1F252F -> 6.21:1
-/// Meaning never rides on the tint alone: the icon changes with the state (A3).
+/// Meaning does not ride on the tint alone (A3): the badge carries its own
+/// accessibility label, and its presence, not its colour, is the message.
 class _TrustBadge extends StatelessWidget {
   const _TrustBadge({required this.status});
 
@@ -87,35 +103,19 @@ class _TrustBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (status != IdentityTrustStatus.verified) {
+      return const SizedBox.shrink();
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final verified = status == IdentityTrustStatus.verified;
-
-    final label = switch (status) {
-      IdentityTrustStatus.verified => l10n.trustVerifiedLabel,
-      IdentityTrustStatus.pending => l10n.trustPendingLabel,
-      null => l10n.trustUnverifiedLabel,
-    };
-
-    // Three states, three glyphs. `pending` used to fold into the muted state,
-    // which left two visual states for three accessibility labels: a provider
-    // halfway through verification looked exactly like one who never tried.
-    // Now that the badge is the ONLY trust signal on the public profile, the
-    // pill having been retired from it, that fold would have been a real loss.
-    // No new colour pair: `secondaryText` on `cardSurface` is already measured
-    // for A1, and meaning still rides on the shape, never on the tint alone.
-    final icon = switch (status) {
-      IdentityTrustStatus.verified => Icons.verified_rounded,
-      IdentityTrustStatus.pending => Icons.schedule_rounded,
-      null => Icons.shield_outlined,
-    };
 
     return Semantics(
-      label: label,
+      label: l10n.trustVerifiedLabel,
       child: Icon(
-        icon,
+        Icons.verified_rounded,
         size: 15,
-        color: verified ? oc.trustVerifiedText : oc.secondaryText,
+        color: oc.trustVerifiedText,
       ),
     );
   }

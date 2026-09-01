@@ -461,7 +461,9 @@ class _ProviderRow extends ConsumerWidget {
                         // Beside the name, as a badge: the full mention used to
                         // sit under it and read "Identite non verifiee" by
                         // default, teaching every client that nobody is
-                        // trustworthy. A trust signal is only ever positive.
+                        // trustworthy. A trust signal is only ever positive, so
+                        // this renders for a VERIFIED provider and for nobody
+                        // else: no muted glyph stands in for the other states.
                         IdentityTrustSignal(
                           providerId: providerId,
                           style: TrustSignalStyle.badge,

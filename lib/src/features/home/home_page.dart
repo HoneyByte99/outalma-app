@@ -1106,6 +1106,9 @@ class _ServiceCard extends ConsumerWidget {
                         ),
                         const SizedBox(width: 3),
                         // Beside the name, so a client knows before opening.
+                        // Renders only when the provider is verified, which is
+                        // what makes it readable at all in a catalogue where
+                        // almost nobody is: see IdentityTrustSignal.
                         IdentityTrustSignal(
                           providerId: service.providerId,
                           style: TrustSignalStyle.badge,

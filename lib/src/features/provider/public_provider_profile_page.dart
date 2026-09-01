@@ -256,11 +256,14 @@ class ProfileHeader extends ConsumerWidget {
                     // Inline beside the name, like the service detail, and no
                     // longer a full pill on its own line. The comment that used
                     // to justify the dedicated line was about the PILL, which
-                    // carries text and would eat the name at 375 px; a 16 px
+                    // carries text and would eat the name at 375 px; a 15 px
                     // badge read together with the name does not.
                     //
-                    // It also drops the sentence "Identite non verifiee", which
-                    // taught every client that nobody here is trustworthy.
+                    // Renders ONLY for a verified provider. This is a client
+                    // surface, so it makes no claim about anyone else: it drops
+                    // the sentence "Identite non verifiee", which taught every
+                    // client that nobody here is trustworthy, and it no longer
+                    // leaves a muted glyph in its place either.
                     IdentityTrustSignal(
                       providerId: providerId,
                       style: TrustSignalStyle.badge,

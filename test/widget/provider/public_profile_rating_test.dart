@@ -62,8 +62,8 @@ void main() {
     tester,
   ) async {
     // Two things at once, because they land on the same line of the header:
-    // the rating now says what it counted, and the full pill with its
-    // "Identite non verifiee" sentence is gone, replaced by a badge.
+    // the rating now says what it counted, and every trace of "Identite non
+    // verifiee" is gone from this CLIENT surface.
     await tester.pumpWidget(wrap(13, 3));
     await tester.pump();
     await tester.pump();
@@ -75,10 +75,15 @@ void main() {
       findsNothing,
       reason: 'the sentence taught every client that nobody is trustworthy',
     );
+    // The badge used to keep the sentence as an accessibility label while
+    // hiding it visually. It no longer renders at all for an unverified
+    // provider, so the label goes with it: announcing "identite non verifiee"
+    // to a screen reader is the same negative claim, just louder. A sighted
+    // client and a screen reader user now get the SAME message, which is none.
     expect(
       find.bySemanticsLabel('Identité non vérifiée'),
-      findsOneWidget,
-      reason: 'a screen reader still gets the full state (A5)',
+      findsNothing,
+      reason: 'a client surface makes no claim about an unverified provider',
     );
   });
 
