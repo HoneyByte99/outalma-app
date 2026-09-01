@@ -132,9 +132,22 @@ void main() {
       expect(all.single.hidden, isFalse);
     });
 
-    test('create() writes NO hidden key', () async {
-      // `hidden` is a moderation verdict. The create rule carries no field
-      // allowlist, so a client able to write it could unhide its own bad review.
+    test('create() writes hidden FALSE, and only ever false', () async {
+      // This test used to assert the opposite, that no `hidden` key was
+      // written, on the grounds that the create rule carried no field allowlist
+      // and a client able to write the field could stamp its own verdict.
+      //
+      // Two things changed together. The rule now carries an allowlist of one
+      // value: `hidden` is accepted on create only when it equals false. And
+      // reviews became publicly readable through `resource.data.hidden ==
+      // false`, a rule an ABSENT field cannot satisfy and a query cannot match,
+      // so a review written without the key would be invisible to every visitor
+      // for ever.
+      //
+      // What the original test protected is protected still, one layer down:
+      // the serializer writes the LITERAL false, never review.hidden, so a
+      // Review built with hidden: true cannot smuggle a verdict through. That
+      // is asserted in test/data/review_hidden_serialization_test.dart.
       final written = await repo.create(
         Review(
           id: '',
@@ -149,9 +162,11 @@ void main() {
 
       final raw = await db.collection('reviews').doc(written.id).get();
       expect(
-        raw.data()!.containsKey('hidden'),
-        isFalse,
-        reason: 'the client must never write its own moderation flag',
+        raw.data()!['hidden'],
+        false,
+        reason:
+            'an absent key cannot satisfy the public read rule, and a value '
+            'other than false would be the client owning a moderation verdict',
       );
     });
   });

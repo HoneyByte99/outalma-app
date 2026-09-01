@@ -15,6 +15,11 @@ import {
   serverTimestamp,
   Timestamp,
   Firestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
 } from 'firebase/firestore';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
@@ -320,6 +325,181 @@ describe('reviews block gating', () => {
       setDoc(doc(db, 'users/bob/blockedUsers/alice'), { at: Timestamp.now() })
     );
     await assertFails(review(asUser('alice')));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reviews are PUBLICLY readable, but a moderated review never is.
+//
+// A visitor must be able to read the reviews of a provider before creating an
+// account. `reviews` used to be `allow read: if signedIn()`, so a visitor got
+// PERMISSION_DENIED and any public surface showed an error block that could
+// never succeed.
+//
+// The rule is `signedIn() || resource.data.hidden == false`, and the shape is
+// load bearing. These tests pin down BOTH directions plus the two forms that
+// look equivalent and are not, because each fails in a way no reading of the
+// rule file would reveal.
+// ---------------------------------------------------------------------------
+describe('reviews public read', () => {
+  beforeEach(async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'reviews/visible'), {
+        bookingId: 'b1',
+        reviewerId: 'alice',
+        revieweeId: 'bob',
+        rating: 5,
+        hidden: false,
+      });
+      await setDoc(doc(db, 'reviews/masked'), {
+        bookingId: 'b2',
+        reviewerId: 'carol',
+        revieweeId: 'bob',
+        rating: 1,
+        hidden: true,
+      });
+      // The historical corpus: 85 documents with NO `hidden` field at all.
+      await setDoc(doc(db, 'reviews/legacy'), {
+        bookingId: 'b3',
+        reviewerId: 'dave',
+        revieweeId: 'bob',
+        rating: 4,
+      });
+    });
+  });
+
+  const visibleQuery = (db: Firestore) =>
+    query(
+      collection(db, 'reviews'),
+      where('revieweeId', '==', 'bob'),
+      where('hidden', '==', false)
+    );
+
+  test('a VISITOR can read a visible review', async () => {
+    await assertSucceeds(getDoc(doc(anon(), 'reviews/visible')));
+  });
+
+  test('a VISITOR CANNOT read a moderated review', async () => {
+    // The whole point of moderation. If this passes, hiding a review became
+    // cosmetic for exactly the audience that has no account.
+    await assertFails(getDoc(doc(anon(), 'reviews/masked')));
+  });
+
+  test('a VISITOR can LIST visible reviews of a provider', async () => {
+    const snap = await assertSucceeds(getDocs(visibleQuery(anon())));
+    expect(snap.docs.map((d) => d.id)).toEqual(['visible']);
+  });
+
+  test('a VISITOR listing WITHOUT the hidden filter is DENIED', async () => {
+    // Not a limitation, the mechanism. For a `list`, rules are evaluated
+    // against the fields the QUERY constrains, so an unconstrained query cannot
+    // satisfy `resource.data.hidden == false` and is refused outright. That
+    // refusal is what makes it impossible to reach a masked review by simply
+    // dropping the filter.
+    await assertFails(
+      getDocs(query(collection(anon(), 'reviews'), where('revieweeId', '==', 'bob')))
+    );
+  });
+
+  test('the masked review is absent from a VISITOR list even by id order', async () => {
+    // A second angle on the same guarantee: the filtered list is the only list
+    // a visitor can run, and it cannot contain the masked document.
+    const snap = await getDocs(visibleQuery(anon()));
+    expect(snap.docs.map((d) => d.id)).not.toContain('masked');
+  });
+
+  test('a SIGNED-IN account keeps its unfiltered read', async () => {
+    // The already shipped client lists reviews with no `hidden` filter and
+    // filters in Dart. Breaking this would blank every profile in the app.
+    const snap = await assertSucceeds(
+      getDocs(query(collection(asUser('zoe'), 'reviews'), where('revieweeId', '==', 'bob')))
+    );
+    expect(snap.docs).toHaveLength(3);
+  });
+
+  test('a SIGNED-IN account can still read a masked review', async () => {
+    // Unchanged on purpose: `watchForBooking` reads a booking's reviews
+    // INCLUDING moderated ones, so the review form is not offered twice.
+    await assertSucceeds(getDoc(doc(asUser('zoe'), 'reviews/masked')));
+  });
+
+  // ---- the field is a hard prerequisite, not a nicety ----
+
+  test('a review with NO hidden field is UNREADABLE by a visitor', async () => {
+    // This is why scripts/normalize-review-hidden.py has to run BEFORE this
+    // rule is deployed. Absent is not false: the rule cannot evaluate, and the
+    // read is refused.
+    await assertFails(getDoc(doc(anon(), 'reviews/legacy')));
+  });
+
+  test('a review with NO hidden field is missed by the visitor QUERY', async () => {
+    // The trap in its second form. A Firestore query on an absent field
+    // matches nothing, so even the correct filtered query silently drops the
+    // legacy corpus rather than failing loudly.
+    const snap = await getDocs(visibleQuery(anon()));
+    expect(snap.docs.map((d) => d.id)).not.toContain('legacy');
+  });
+
+  test('normalising the legacy document makes it publicly readable', async () => {
+    // The other end of the same statement: the script's single-field write is
+    // all that stands between the corpus and public visibility.
+    await seed((db) => setDoc(doc(db, 'reviews/legacy'), { hidden: false }, { merge: true }));
+    await assertSucceeds(getDoc(doc(anon(), 'reviews/legacy')));
+    const snap = await getDocs(visibleQuery(anon()));
+    expect(snap.docs.map((d) => d.id).sort()).toEqual(['legacy', 'visible']);
+  });
+
+  // ---- hidden stays a server-owned verdict ----
+
+  describe('a client cannot own the hidden flag', () => {
+    beforeEach(async () => {
+      await seed((db) =>
+        setDoc(doc(db, 'bookings/b9'), {
+          customerId: 'alice',
+          providerId: 'bob',
+          status: 'done',
+        })
+      );
+    });
+
+    const write = (db: Firestore, extra: Record<string, unknown>) =>
+      setDoc(doc(db, 'reviews/b9_alice'), {
+        bookingId: 'b9',
+        reviewerId: 'alice',
+        revieweeId: 'bob',
+        rating: 5,
+        ...extra,
+      });
+
+    test('CAN create with hidden false, which the client now always writes', async () => {
+      await assertSucceeds(write(asUser('alice'), { hidden: false }));
+    });
+
+    test('CAN still create with hidden absent, for clients in the wild', async () => {
+      await assertSucceeds(write(asUser('alice'), {}));
+    });
+
+    test('CANNOT create with hidden TRUE', async () => {
+      // An allowlist of one value, not a denylist (S4). Without it, opening the
+      // read would have handed the moderation flag to the author.
+      await assertFails(write(asUser('alice'), { hidden: true }));
+    });
+
+    test('CANNOT unhide a moderated review', async () => {
+      await assertFails(
+        updateDoc(doc(asUser('carol'), 'reviews/masked'), { hidden: false })
+      );
+    });
+
+    test('CANNOT delete a review', async () => {
+      await assertFails(deleteDoc(doc(asUser('alice'), 'reviews/visible')));
+    });
+
+    test('an ADMIN can still moderate', async () => {
+      await assertSucceeds(
+        updateDoc(doc(asAdmin(), 'reviews/visible'), { hidden: true })
+      );
+    });
   });
 });
 

@@ -513,10 +513,24 @@ class FirestoreCollections {
     );
   }
 
-  /// `hidden` is deliberately NOT written here. It is a moderation verdict, set
-  /// by the `hideReview` callable through the Admin SDK, and the `create` rule
-  /// on `reviews` carries no field allowlist: adding the key out of a reflex for
-  /// symmetry would let a client stamp its own review as hidden, or unhide one.
+  /// `hidden` IS written here, and always as the literal `false`, never as
+  /// `review.hidden`.
+  ///
+  /// It used to be omitted, on the argument that a moderation verdict must not
+  /// be client-writable while the `create` rule carried no field allowlist. The
+  /// rule now carries one: `hidden` is accepted on create only when it equals
+  /// false (see firebase/firestore.rules), so the field can be written without
+  /// handing the verdict to the client.
+  ///
+  /// Omitting it stopped being an option once reviews became publicly readable.
+  /// That rule is `resource.data.hidden == false`, which a document lacking the
+  /// field cannot satisfy and a query cannot match: a review created without
+  /// the field would be invisible to every visitor, for ever.
+  ///
+  /// The literal, not the model field: `create` is the only path through here,
+  /// and a future caller passing a Review built with `hidden: true` must not be
+  /// able to smuggle it in. The rule would refuse the write anyway; this makes
+  /// the client refuse to build it in the first place.
   static Map<String, Object?> _reviewToFirestore(Review review) {
     return {
       'bookingId': review.bookingId,
@@ -526,6 +540,7 @@ class FirestoreCollections {
       'rating': review.rating,
       'comment': review.comment,
       if (review.categoryId != null) 'categoryId': review.categoryId!.name,
+      'hidden': false,
       'createdAt': dateTimeToFirestore(review.createdAt),
     };
   }

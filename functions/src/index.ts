@@ -2667,9 +2667,33 @@ export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (ev
     revieweeId?: string;
     reviewerRole?: string;
     bookingId?: string;
+    hidden?: boolean;
   } | undefined;
   const revieweeId = review?.revieweeId;
   if (!revieweeId) return;
+
+  // Safety net for clients already in the wild. The public read rule on
+  // `reviews` is `resource.data.hidden == false`, which a document lacking the
+  // field can neither satisfy nor be matched by a query: a review written by a
+  // build that predates the serializer change would be invisible to every
+  // visitor, for ever. The current client writes the field itself, so this
+  // normally does nothing.
+  //
+  // Idempotent by construction: it writes only when the field is absent, and a
+  // trigger replay finds it present the second time. Not merged into any other
+  // write, and deliberately not a transaction: it touches a field no other
+  // writer on this path touches, and losing it costs public visibility of one
+  // review, never a rating.
+  if (review.hidden === undefined && event.data) {
+    try {
+      await event.data.ref.update({ hidden: false });
+    } catch (e) {
+      logger.warn('review hidden normalisation failed, review stays private', {
+        reviewId: event.params.reviewId,
+        error: String(e),
+      });
+    }
+  }
 
   // The reviewee is the opposite role of the reviewer: a client-authored review
   // lands on the provider, a provider-authored review lands on the client. Drive

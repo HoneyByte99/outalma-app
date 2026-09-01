@@ -461,7 +461,32 @@ service cloud.firestore {
     // Reviews are only allowed after a booking reaches "done" status.
     // Reviewer must be a participant of the referenced booking.
     match /reviews/{reviewId} {
-      allow read: if signedIn();
+      // Public read, so a visitor can read the reviews before creating an
+      // account. A signed-in account keeps the unrestricted read it had, which
+      // is what lets an already shipped client keep listing reviews without a
+      // `hidden` filter in its query.
+      //
+      // A visitor gets ONLY reviews explicitly flagged as not hidden, and the
+      // exact form below matters. Two things a future edit must not "simplify":
+      //
+      // 1. NEVER `resource.data.get('hidden', false) == false`. Measured on the
+      //    emulator: for a `list`, rules are evaluated against the fields the
+      //    QUERY constrains, not against each document. With a default value,
+      //    an unconstrained query satisfies the rule and Firestore then returns
+      //    every document, moderated ones included. That is a silent hole, and
+      //    it is the tempting shape because it makes `get` work on legacy docs.
+      //    The plain field access below cannot be satisfied unless the query
+      //    itself carries `where('hidden', '==', false)`.
+      // 2. NEVER `resource.data.hidden != true`. A Firestore query on a field
+      //    that is ABSENT matches nothing, so a `!=` form silently drops every
+      //    document written before the field existed.
+      //
+      // Consequence, and it is a hard prerequisite: every review document must
+      // carry `hidden`. The historical corpus did not, hence
+      // scripts/normalize-review-hidden.py, and every new review gets the field
+      // from the client serializer plus `onReviewCreated` as a safety net for
+      // clients already in the wild.
+      allow read: if signedIn() || resource.data.hidden == false;
 
       // Create-only (no non-admin update) + deterministic doc id
       // "{bookingId}_{reviewerId}" guarantees one review per (booking, reviewer):
@@ -484,7 +509,15 @@ service cloud.firestore {
         )
         // Coupure totale: no review between a blocked pair (either direction).
         && !exists(/databases/$(database)/documents/users/$(request.auth.uid)/blockedUsers/$(request.resource.data.revieweeId))
-        && !exists(/databases/$(database)/documents/users/$(request.resource.data.revieweeId)/blockedUsers/$(request.auth.uid));
+        && !exists(/databases/$(database)/documents/users/$(request.resource.data.revieweeId)/blockedUsers/$(request.auth.uid))
+        // `hidden` is a moderation verdict owned by the server, and the public
+        // read above now depends on it. The client may carry the field, because
+        // it MUST for the review to be publicly readable, but only ever as
+        // false: an allowlist of one value rather than a denylist (S4). Absent
+        // is still accepted, so a client already in the wild keeps working;
+        // `onReviewCreated` fills the field in for those.
+        && (!('hidden' in request.resource.data)
+            || request.resource.data.hidden == false);
 
       allow update, delete: if isAdmin();
     }

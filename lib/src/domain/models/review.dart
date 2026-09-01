@@ -25,7 +25,7 @@ class Review {
   final int rating;
   final String? comment;
 
-  /// Service category the review concerns — captured from the booking's service
+  /// Service category the review concerns, captured from the booking's service
   /// at review time. Lets a rating be read in context (a provider may be great
   /// at one category and weak at another). Null for legacy reviews.
   final CategoryId? categoryId;
@@ -33,9 +33,13 @@ class Review {
   /// Set by the `hideReview` moderation callable, never by a client. Absent on
   /// the historical corpus, which is why it defaults to visible.
   ///
-  /// READ ONLY on this side: it is deliberately absent from
-  /// `_reviewToFirestore`, because the `create` rule carries no field allowlist
-  /// and a client writing its own moderation flag would be a hole.
+  /// The VERDICT stays server-owned, but the field is no longer absent from
+  /// `_reviewToFirestore`: reviews are publicly readable through
+  /// `resource.data.hidden == false`, which a document lacking the field can
+  /// neither satisfy nor be matched by, so omitting it made a review invisible
+  /// to every visitor. The serializer writes the literal `false` and never this
+  /// property, and the `create` rule accepts `hidden` only when it equals
+  /// false, so a Review built with `hidden: true` still cannot be persisted.
   final bool hidden;
 
   final DateTime createdAt;
