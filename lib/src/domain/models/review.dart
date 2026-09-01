@@ -12,6 +12,7 @@ class Review {
     required this.createdAt,
     this.comment,
     this.categoryId,
+    this.hidden = false,
   });
 
   final String id;
@@ -29,6 +30,14 @@ class Review {
   /// at one category and weak at another). Null for legacy reviews.
   final CategoryId? categoryId;
 
+  /// Set by the `hideReview` moderation callable, never by a client. Absent on
+  /// the historical corpus, which is why it defaults to visible.
+  ///
+  /// READ ONLY on this side: it is deliberately absent from
+  /// `_reviewToFirestore`, because the `create` rule carries no field allowlist
+  /// and a client writing its own moderation flag would be a hole.
+  final bool hidden;
+
   final DateTime createdAt;
 
   Review copyWith({
@@ -39,6 +48,7 @@ class Review {
     int? rating,
     String? comment,
     CategoryId? categoryId,
+    bool? hidden,
     DateTime? createdAt,
   }) {
     return Review(
@@ -50,6 +60,7 @@ class Review {
       rating: rating ?? this.rating,
       comment: comment ?? this.comment,
       categoryId: categoryId ?? this.categoryId,
+      hidden: hidden ?? this.hidden,
       createdAt: createdAt ?? this.createdAt,
     );
   }

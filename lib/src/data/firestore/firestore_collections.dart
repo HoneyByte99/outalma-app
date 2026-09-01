@@ -507,10 +507,16 @@ class FirestoreCollections {
       categoryId: data['categoryId'] != null
           ? CategoryId.fromString(data['categoryId'] as String)
           : null,
+      // Absent on the historical corpus, so absence means visible.
+      hidden: (data['hidden'] as bool?) ?? false,
       createdAt: dateTimeFromFirestore(data['createdAt']),
     );
   }
 
+  /// `hidden` is deliberately NOT written here. It is a moderation verdict, set
+  /// by the `hideReview` callable through the Admin SDK, and the `create` rule
+  /// on `reviews` carries no field allowlist: adding the key out of a reflex for
+  /// symmetry would let a client stamp its own review as hidden, or unhide one.
   static Map<String, Object?> _reviewToFirestore(Review review) {
     return {
       'bookingId': review.bookingId,
