@@ -23,6 +23,7 @@ import '../../domain/models/service.dart';
 import '../../core/utils/date_utils.dart' as date_utils;
 import '../../domain/utils/distance.dart';
 import '../review/rating_summary.dart';
+import '../shared/gender_icon.dart';
 import '../shared/maps_launcher.dart';
 import '../shared/user_avatar.dart';
 import '../shared/voice_message_player.dart';
@@ -340,13 +341,22 @@ class _ProviderLink extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    provider?.displayName ?? '-',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          provider?.displayName ?? '-',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // Same pictogram as the catalogue card and the service
+                      // detail, same rule: nothing at all for an unknown gender.
+                      GenderIcon(gender: provider?.gender, size: 14),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../shared/network_image.dart';
+import '../shared/gender_icon.dart';
 import '../shared/identity_trust_signal.dart';
 import '../review/rating_summary.dart';
 import '../../app/app_theme.dart';
@@ -254,6 +255,10 @@ class ProfileHeader extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    // Same pictogram as the catalogue card and the service
+                    // detail, same rule: nothing at all for an unknown gender.
+                    GenderIcon(gender: user?.gender, size: 16),
                     const SizedBox(width: 6),
                     // Inline beside the name, like the service detail, and no
                     // longer a full pill on its own line. The comment that used
