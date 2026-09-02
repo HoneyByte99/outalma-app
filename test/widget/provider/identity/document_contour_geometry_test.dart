@@ -364,4 +364,70 @@ void main() {
       expect(await runJourney(tester, contourFramingEnabled: true), isFalse);
     });
   });
+
+  group('the framing copy on screen', () {
+    // The other half of the A3 pair. The unit tests prove the shutter REACHES
+    // tooClose; this proves the screen can say something about it, in French,
+    // through l10n. Coverage of the increment named this line as reached by
+    // nothing, and a state with no words is a blank circle for a provider who
+    // cannot read.
+    testWidgets('a card overflowing the frame says so, in French', (
+      tester,
+    ) async {
+      final source = FakeCaptureSource()
+        ..previewAspectRatio = 9 / 16
+        ..geometry = const PreviewGeometry(
+          previewWidth: 1920,
+          previewHeight: 1080,
+          sensorOrientation: 90,
+          isIOS: false,
+        );
+      addTearDown(source.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            identityCaptureSourceProvider.overrideWithValue(source),
+            documentTextDetectorProvider.overrideWithValue(
+              FakeDocumentTextDetector(),
+            ),
+            captureConfigProvider.overrideWithValue(
+              const CaptureConfig(
+                rectoSharpnessThreshold: 10,
+                versoSharpnessThreshold: 5,
+                analysisCenterFraction: 1,
+                analyzeEveryNthFrame: 1,
+                contourOverlayEnabled: true,
+                contourFramingEnabled: true,
+                contourGridLongSide: 48,
+                edgeThreshold: 20,
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            locale: const Locale('fr'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: AppTheme.light(),
+            home: CaptureDocumentPage(
+              side: DocumentSide.recto,
+              onCaptured: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Arm on one scene, then present a card that spills past the frame.
+      source.emitLuma(_cardFrame(atMs: 0, scale: 0.3));
+      await tester.pump();
+      for (var t = 100; t <= 900; t += 100) {
+        source.emitLuma(_cardFrame(atMs: t, scale: 1.6));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.text('Éloignez un peu la carte.'), findsOneWidget);
+    });
+  });
 }
