@@ -40,4 +40,7 @@ class CameraCaptureSource implements IdentityCaptureSource {
 
   @override
   Widget buildPreview() => const SizedBox.expand();
+
+  @override
+  PreviewGeometry? get previewGeometry => null;
 }

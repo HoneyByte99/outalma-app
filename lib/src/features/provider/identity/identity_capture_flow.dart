@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/app_localizations.dart';
@@ -46,6 +45,45 @@ class IdentityCaptureFlow extends ConsumerStatefulWidget {
 enum _Step { recto, verso, selfie, recap, depositing, success, failure }
 
 class _IdentityCaptureFlowState extends ConsumerState<IdentityCaptureFlow> {
+  /// Whether this state actually applied the orientation lock, so it is only
+  /// ever undone by the widget that set it.
+  bool _lockedOrientation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // The lock lives on the FLOW, not on the capture page, and that placement
+    // is the whole point.
+    //
+    // The two document pages have different ValueKeys, so swapping recto for
+    // verso makes Flutter inflate the new element (running its initState)
+    // BEFORE unmounting the old one at finalizeTree. A lock taken per page
+    // would therefore be RELEASED by the outgoing recto right after the verso
+    // took it, leaving the second half of the journey unlocked. That is the
+    // half where the shutter starts disarmed and the orientation matters most.
+    //
+    // It is only taken when the contour is actually drawn: without it the
+    // increment would ship a visible behaviour change (Android and iPad rotate
+    // freely today, nothing in AndroidManifest.xml pins them) while claiming to
+    // be inert.
+    if (ref.read(captureConfigProvider).contourOverlayEnabled) {
+      _lockedOrientation = true;
+      SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.portraitUp,
+      ]);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_lockedOrientation) {
+      // Restores the platform default, which is what Info.plist and the Android
+      // manifest declare. A global side effect, so the restore is explicit.
+      SystemChrome.setPreferredOrientations(const []);
+    }
+    super.dispose();
+  }
+
   _Step _step = _Step.recto;
   Uint8List? _recto;
   Uint8List? _verso;

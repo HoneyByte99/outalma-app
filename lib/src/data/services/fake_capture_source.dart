@@ -79,9 +79,42 @@ class FakeCaptureSource implements IdentityCaptureSource {
     _started = false;
   }
 
+  /// The geometry [previewGeometry] reports. Null by default, so a test that
+  /// says nothing about geometry gets a screen that draws no contour, exactly
+  /// like a source that has not started yet.
+  PreviewGeometry? geometry;
+
   @override
-  Widget buildPreview() =>
-      const ColoredBox(color: Color(0xFF000000), child: SizedBox.expand());
+  PreviewGeometry? get previewGeometry => geometry;
+
+  /// A preview of the SAME SHAPE as the real one, not a bare box.
+  ///
+  /// This is load-bearing for the contour tests. `CameraPreview` wraps itself in
+  /// an `AspectRatio` around a `Stack(fit: StackFit.expand)`, and the whole
+  /// projection rests on that `AspectRatio` being INERT under the page's own
+  /// expanded Stack, so the texture is stretched full-bleed. A fake that
+  /// returned a bare `SizedBox.expand()` would make "the contour rect equals
+  /// the preview rect" true by construction and the test would prove nothing,
+  /// whatever a future version of `camera` did to that tree.
+  ///
+  /// Encodes the layout tree of camera 0.12.0+2. The opaque ground is kept:
+  /// other tests screenshot this screen.
+  @override
+  Widget buildPreview() {
+    return AspectRatio(
+      aspectRatio: previewAspectRatio,
+      child: const Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(color: Color(0xFF000000), child: SizedBox.expand()),
+        ],
+      ),
+    );
+  }
+
+  /// The ratio the faked `CameraPreview` imposes. 9/16 is what a portrait
+  /// preview of a 16:9 stream reports.
+  double previewAspectRatio = 9 / 16;
 
   bool get isStreaming => _started;
 

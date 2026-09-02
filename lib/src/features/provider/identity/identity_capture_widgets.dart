@@ -6,6 +6,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../app/app_spacing.dart';
 import '../../../app/app_theme.dart';
 import '../../../application/identity/document_shutter.dart';
+import '../../../domain/identity/document_quad.dart';
 
 /// Shared pieces of the capture screens: the framing overlays, the instruction
 /// banner (on its A7 scrim), and the two error states (permission, no camera).
@@ -22,6 +23,7 @@ class DocumentFrameOverlay extends StatelessWidget {
     this.reason = DocumentShutterReason.noFrame,
     this.progress = 0,
     this.showFlipDemo = false,
+    this.contourVisible = false,
   });
 
   final DocumentShutterReason reason;
@@ -33,6 +35,14 @@ class DocumentFrameOverlay extends StatelessWidget {
   /// a gesture. It is the only way someone who does not read learns that the
   /// card must be flipped rather than left where it is.
   final bool showFlipDemo;
+
+  /// True once the detected contour is on screen.
+  ///
+  /// Two rectangles saying different things disorient someone who cannot read,
+  /// so the template YIELDS THE FLOOR: it fades and stops carrying the state
+  /// colour, which moves onto the contour. It is not removed, it just stops
+  /// speaking, so the framing hint is still there when detection drops out.
+  final bool contourVisible;
 
   IconData get _icon => switch (reason) {
     DocumentShutterReason.noFrame => Icons.center_focus_weak,
@@ -74,8 +84,10 @@ class DocumentFrameOverlay extends StatelessWidget {
                   duration: const Duration(milliseconds: 180),
                   builder: (context, value, _) => CustomPaint(
                     painter: _DocumentFramePainter(
-                      color: _color,
-                      progress: value,
+                      color: contourVisible
+                          ? Colors.white.withValues(alpha: 0.35)
+                          : _color,
+                      progress: contourVisible ? 0 : value,
                     ),
                   ),
                 ),
@@ -178,6 +190,96 @@ class _DocumentFramePainter extends CustomPainter {
   @override
   bool shouldRepaint(_DocumentFramePainter old) =>
       old.progress != progress || old.color != color;
+}
+
+/// The detected card outline, drawn FULL-BLEED over the preview.
+///
+/// Full-bleed, with no `Center` and no `AspectRatio` of its own, and that is the
+/// design rather than an oversight. The page stacks this and the preview as
+/// non-positioned siblings of a `Stack(fit: StackFit.expand)`, which hands both
+/// tight constraints, and `RenderAspectRatio` returns `constraints.smallest` on
+/// a tight constraint. So the `AspectRatio` that `CameraPreview` wraps itself in
+/// is INERT, the texture is stretched over the whole rectangle, and normalised
+/// plane coordinates map linearly onto this canvas. Wrapping this widget to
+/// "recover the letterbox" would INTRODUCE one and offset the contour by about
+/// 140 logical pixels on a 1080x2400 body.
+///
+/// The quad arriving here is already in preview space: `projectQuadToPreview`
+/// has applied the rotation, and the page has already refused to draw when the
+/// preview and the plane disagree about their field of view.
+class DocumentContourOverlay extends StatelessWidget {
+  const DocumentContourOverlay({super.key, required this.quad, this.color});
+
+  /// The smoothed outline in normalised preview coordinates, or null to draw
+  /// nothing at all.
+  final DocumentQuad? quad;
+
+  /// The state colour. Defaults to white, which is what carries A1 over an
+  /// unknown scene together with the dark under-stroke.
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final outline = quad;
+    if (outline == null) return const SizedBox.shrink();
+    return IgnorePointer(
+      child: CustomPaint(
+        size: Size.infinite,
+        painter: _DocumentContourPainter(
+          quad: outline,
+          color: color ?? Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+class _DocumentContourPainter extends CustomPainter {
+  const _DocumentContourPainter({required this.quad, required this.color});
+
+  final DocumentQuad quad;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Offset at(NormPoint p) => Offset(p.x * size.width, p.y * size.height);
+
+    final path = Path()
+      ..moveTo(at(quad.topLeft).dx, at(quad.topLeft).dy)
+      ..lineTo(at(quad.topRight).dx, at(quad.topRight).dy)
+      ..lineTo(at(quad.bottomRight).dx, at(quad.bottomRight).dy)
+      ..lineTo(at(quad.bottomLeft).dx, at(quad.bottomLeft).dy)
+      ..close();
+
+    // TWO strokes, and this is the A1/A7 answer rather than a decoration. The
+    // line sits on a live camera feed, so its contrast cannot depend on the
+    // scene: a dark under-stroke guarantees the 3:1 floor for a meaningful
+    // interface element against any ground, including the brightest one.
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeJoin = StrokeJoin.round
+        ..color = Colors.black.withValues(alpha: 0.6),
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeJoin = StrokeJoin.round
+        ..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DocumentContourPainter old) =>
+      old.color != color ||
+      old.quad.topLeft != quad.topLeft ||
+      old.quad.topRight != quad.topRight ||
+      old.quad.bottomRight != quad.bottomRight ||
+      old.quad.bottomLeft != quad.bottomLeft;
 }
 
 /// An oval framing hint for the selfie, drawn over the front preview.
