@@ -416,6 +416,30 @@ abstract class AppLocalizations {
   /// **'Password must be at least 6 characters.'**
   String get signUpErrorPasswordTooShort;
 
+  /// Label above the mandatory two-option gender control on the sign-up screen.
+  ///
+  /// In en, this message translates to:
+  /// **'You are'**
+  String get signUpGenderLabel;
+
+  /// Error shown when the sign-up form is submitted without a gender.
+  ///
+  /// In en, this message translates to:
+  /// **'Please indicate whether you are a man or a woman.'**
+  String get signUpGenderRequired;
+
+  /// The male value of the declared gender. Also the accessibility label and tooltip of the pictogram, which shows no text of its own.
+  ///
+  /// In en, this message translates to:
+  /// **'Man'**
+  String get genderMale;
+
+  /// The female value of the declared gender. Also the accessibility label and tooltip of the pictogram, which shows no text of its own.
+  ///
+  /// In en, this message translates to:
+  /// **'Woman'**
+  String get genderFemale;
+
   /// No description provided for @authErrorEmailAlreadyInUse.
   ///
   /// In en, this message translates to:

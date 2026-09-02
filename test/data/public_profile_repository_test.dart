@@ -9,6 +9,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/src/data/firestore/firestore_collections.dart';
 import 'package:outalma_app/src/data/repositories/firestore_public_profile_repository.dart';
+import 'package:outalma_app/src/domain/enums/gender.dart';
 import 'package:outalma_app/src/domain/models/public_profile.dart';
 
 Future<void> _write(
@@ -88,6 +89,48 @@ void main() {
         ).watchById('u1').first;
 
         expect(profile!.country, isNull);
+      },
+    );
+
+    // The declared gender, projected here because the catalogue card and the
+    // service detail resolve their provider through THIS document, never
+    // through `users/{uid}`, which a guest cannot read.
+    test('reads both canonical gender values', () async {
+      final db = FakeFirebaseFirestore();
+      await _write(db, 'm', {'displayName': 'Moussa', 'gender': 'male'});
+      await _write(db, 'f', {'displayName': 'Awa', 'gender': 'female'});
+      final repo = FirestorePublicProfileRepository(db);
+
+      expect((await repo.watchById('m').first)!.gender, Gender.male);
+      expect((await repo.watchById('f').first)!.gender, Gender.female);
+    });
+
+    test(
+      'leaves gender null when absent, which is all 50 documents today',
+      () async {
+        final db = FakeFirebaseFirestore();
+        await _write(db, 'u1', {'displayName': 'Awa', 'phoneVerified': false});
+        final profile = await FirestorePublicProfileRepository(
+          db,
+        ).watchById('u1').first;
+
+        expect(profile!.gender, isNull);
+      },
+    );
+
+    test(
+      'leaves gender null for a value outside the two canonical ones',
+      () async {
+        // Defence in depth. projectPublicProfile already drops anything else, so
+        // this asserts the client would not draw a pictogram even if a document
+        // slipped through with the legacy FlutterFlow vocabulary.
+        final db = FakeFirebaseFirestore();
+        await _write(db, 'u1', {'displayName': 'Awa', 'gender': 'Homme'});
+        final profile = await FirestorePublicProfileRepository(
+          db,
+        ).watchById('u1').first;
+
+        expect(profile!.gender, isNull);
       },
     );
 

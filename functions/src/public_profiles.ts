@@ -9,7 +9,8 @@
 // publish the PII. So a PII-free projection is mirrored into a world-readable
 // collection:
 //
-//   public_profiles/{uid} = { displayName, photoPath?, country?, phoneVerified }
+//   public_profiles/{uid} =
+//     { displayName, photoPath?, country?, phoneVerified, gender? }
 //
 // Written EXCLUSIVELY here (the Firestore rule denies every client write), so
 // the projection can never be poisoned and cannot drift into holding PII.
@@ -27,6 +28,13 @@ const db = () => admin.firestore();
 
 export const PUBLIC_PROFILES = 'public_profiles';
 
+/// The two values a declared gender can take. Stated here as well as in the
+/// Dart enum and in firestore.rules, on purpose: the projection is a security
+/// boundary and must not widen just because a client wrote something else into
+/// `users`. Anything outside this list is dropped, not passed through.
+export const GENDERS = ['male', 'female'] as const;
+export type Gender = (typeof GENDERS)[number];
+
 export interface PublicProfile {
   displayName: string;
   photoPath?: string;
@@ -35,6 +43,15 @@ export interface PublicProfile {
   /// crosses into the public document, so the trust badge on a public profile
   /// can be rendered without exposing the number behind it.
   phoneVerified: boolean;
+  /// The gender the person declared at sign-up. Public because the catalogue
+  /// card and the service detail are GUEST surfaces and resolve the provider
+  /// through this document. Not PII in the sense this collection guards
+  /// against: it is not a contact route and not an identifier, and it is shown
+  /// deliberately, by a product decision, on the very card it is projected for.
+  ///
+  /// Omitted, never null, when the source has no value: 50 of the 50 accounts
+  /// in production predate the field, and the client renders nothing for them.
+  gender?: Gender;
 }
 
 /**
@@ -64,6 +81,14 @@ export function projectPublicProfile(
   if (typeof user.country === 'string' && user.country.length > 0) {
     profile.country = user.country;
   }
+  // Value-checked, not merely type-checked, unlike the two fields above. Those
+  // are free text the user owns; this one is an enum the interface turns into a
+  // pictogram, and the legacy FlutterFlow export used the same key name with
+  // another vocabulary. Anything but the two canonical values is dropped, so an
+  // unknown string shows nothing rather than a wrong glyph.
+  if (GENDERS.includes(user.gender as Gender)) {
+    profile.gender = user.gender as Gender;
+  }
   return profile;
 }
 
@@ -81,6 +106,7 @@ export function projectionsEqual(
     a.displayName === b.displayName &&
     (a.photoPath ?? null) === (b.photoPath ?? null) &&
     (a.country ?? null) === (b.country ?? null) &&
+    (a.gender ?? null) === (b.gender ?? null) &&
     a.phoneVerified === b.phoneVerified
   );
 }

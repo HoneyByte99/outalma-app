@@ -1,4 +1,5 @@
 import '../enums/active_mode.dart';
+import '../enums/gender.dart';
 
 class AppUser {
   const AppUser({
@@ -12,6 +13,7 @@ class AppUser {
     this.phoneE164,
     this.pushToken,
     this.termsAcceptedAt,
+    this.gender,
   });
 
   final String id;
@@ -27,6 +29,12 @@ class AppUser {
   /// When the user accepted the terms + privacy policy (consent proof, RGPD).
   final DateTime? termsAcceptedAt;
 
+  /// The gender the person declared at sign-up. Mandatory on both sign-up
+  /// paths since this field shipped, so NULL means one thing only: an account
+  /// created before it existed. Every surface treats that as "unknown" and
+  /// displays nothing, never a default.
+  final Gender? gender;
+
   AppUser copyWith({
     String? displayName,
     String? email,
@@ -37,6 +45,7 @@ class AppUser {
     String? pushToken,
     DateTime? createdAt,
     DateTime? termsAcceptedAt,
+    Gender? gender,
   }) {
     return AppUser(
       id: id,
@@ -49,6 +58,7 @@ class AppUser {
       pushToken: pushToken ?? this.pushToken,
       createdAt: createdAt ?? this.createdAt,
       termsAcceptedAt: termsAcceptedAt ?? this.termsAcceptedAt,
+      gender: gender ?? this.gender,
     );
   }
 }

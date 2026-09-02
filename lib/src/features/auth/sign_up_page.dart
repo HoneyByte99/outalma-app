@@ -10,6 +10,7 @@ import '../../app/router.dart';
 import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
+import '../../domain/enums/gender.dart';
 import '../../../l10n/app_localizations.dart';
 import 'auth_prompt.dart';
 import '../shared/phone_field.dart';
@@ -58,11 +59,26 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   bool _loading = false;
   bool _termsAccepted = false;
 
+  /// Declared gender. Mandatory on BOTH sign-up paths, so it starts null and
+  /// no value is pre-selected: a pre-selected control collects the default,
+  /// not a declaration.
+  Gender? _gender;
+
   /// Consent must precede account creation (legal/RGPD). Returns false (and
   /// shows an error) when the user hasn't accepted the terms.
   bool _ensureTermsAccepted() {
     if (_termsAccepted) return true;
     _showError(AppLocalizations.of(context)!.introTermsRequired);
+    return false;
+  }
+
+  /// The gender is mandatory. Returns false (and shows an error) when the user
+  /// submitted without choosing. Its own message rather than the generic
+  /// "fill in all required fields": a segmented control is not a field the eye
+  /// reads as empty, so the error has to name what is missing.
+  bool _ensureGenderChosen() {
+    if (_gender != null) return true;
+    _showError(AppLocalizations.of(context)!.signUpGenderRequired);
     return false;
   }
 
@@ -98,6 +114,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       _showError(l10n.signUpErrorPasswordMismatch);
       return;
     }
+    if (!_ensureGenderChosen()) return;
     if (!_ensureTermsAccepted()) return;
 
     setState(() => _loading = true);
@@ -108,6 +125,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
             displayName: name,
             email: email,
             password: password,
+            gender: _gender!,
           );
       // authStateChanges fires; router redirects to /home. The verification
       // mail has been dispatched and can be re-sent from the profile screen.
@@ -139,6 +157,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       _showError(phoneError);
       return;
     }
+    // Gated HERE, on the details step, not on the OTP step: the control is on
+    // this screen, and letting an SMS go out before the form is complete would
+    // spend a Twilio message on a sign-up that cannot conclude.
+    if (!_ensureGenderChosen()) return;
     if (!_ensureTermsAccepted()) return;
 
     setState(() => _loading = true);
@@ -170,6 +192,16 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
       _showError(l10n.signUpErrorEmptyFields);
       return;
     }
+    // Belt and braces. _requestOtp already refused to send a code without a
+    // gender, so this can only fire if that gate is ever removed. It sends the
+    // user back to the step that carries the control rather than failing on a
+    // screen where the missing field is not even visible.
+    final gender = _gender;
+    if (gender == null) {
+      _showError(l10n.signUpGenderRequired);
+      _editDetails();
+      return;
+    }
 
     setState(() => _loading = true);
     try {
@@ -180,6 +212,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
             code: code,
             displayName: name,
             country: _countryFromPhone(phone),
+            gender: gender,
           );
       // authStateChanges handles redirect.
     } on InvalidOtpException {
@@ -315,6 +348,14 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  // Mandatory, and on THIS path as well as the phone one: a
+                  // field collected on a single path leaves half the corpus
+                  // without an answer, which is the hole this closes.
+                  GenderSelector(
+                    value: _gender,
+                    onChanged: (g) => setState(() => _gender = g),
+                  ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -421,6 +462,14 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                         size: 20,
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  // The same control, on the phone path. Step 1, because the
+                  // OTP step has no room for a form and because _requestOtp
+                  // refuses to spend an SMS on an incomplete sign-up.
+                  GenderSelector(
+                    value: _gender,
+                    onChanged: (g) => setState(() => _gender = g),
                   ),
                   const SizedBox(height: 12),
                   PhoneField(
@@ -575,6 +624,124 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Gender control - mandatory, two values, one tap
+// ---------------------------------------------------------------------------
+
+/// The declared gender, as a segmented control rather than a text input.
+///
+/// A typed field would collect "H", "homme", "F", "Femme", "masculin" and a
+/// dozen spellings for the same two answers, and every one of them would have
+/// to be normalised before the pictogram could be drawn. Two buttons collect
+/// the enum directly.
+///
+/// [value] starts null and NOTHING is preselected. Preselecting one of the two
+/// would harvest a default from everybody who did not look, which is not a
+/// declaration, and the pictogram this feeds is shown publicly beside a real
+/// person's name.
+@visibleForTesting
+class GenderSelector extends StatelessWidget {
+  const GenderSelector({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final Gender? value;
+  final ValueChanged<Gender> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.signUpGenderLabel,
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(color: oc.secondaryText),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: oc.inputFill,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: oc.border),
+          ),
+          padding: const EdgeInsets.all(4),
+          child: Row(
+            children: [
+              _option(context, Gender.male, Icons.man, l10n.genderMale),
+              _option(context, Gender.female, Icons.woman, l10n.genderFemale),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _option(
+    BuildContext context,
+    Gender gender,
+    IconData icon,
+    String label,
+  ) {
+    final oc = context.oc;
+    final isActive = value == gender;
+
+    return Expanded(
+      // inMutuallyExclusiveGroup + selected is what makes a screen reader
+      // announce "selected"/"not selected" on a pair of plain containers; a
+      // GestureDetector alone announces neither, and the control carries a
+      // mandatory answer.
+      child: Semantics(
+        button: true,
+        inMutuallyExclusiveGroup: true,
+        selected: isActive,
+        label: label,
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: () => onChanged(gender),
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: isActive ? oc.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isActive ? Colors.white : oc.secondaryText,
+                ),
+                const SizedBox(width: 8),
+                // The word IS printed here, unlike on the catalogue card: this
+                // is the moment the person answers, and an answer must not be
+                // guessed from a glyph.
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isActive ? Colors.white : oc.secondaryText,
+                  ),
+                ),
               ],
             ),
           ),

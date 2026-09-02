@@ -27,6 +27,7 @@ import '../../domain/utils/distance.dart';
 import '../../app/app_spacing.dart';
 import '../shared/category_icon.dart';
 import '../shared/category_filter_bar.dart';
+import '../shared/gender_icon.dart';
 import '../shared/identity_trust_signal.dart';
 import '../shared/empty_state_view.dart';
 import '../shared/mode_badge.dart';
@@ -999,7 +1000,7 @@ class _ServiceGrid extends ConsumerWidget {
                 ),
                 itemCount: filtered.length,
                 itemBuilder: (context, i) {
-                  return _ServiceCard(service: filtered[i]);
+                  return ServiceCard(service: filtered[i]);
                 },
               ),
             );
@@ -1014,8 +1015,13 @@ class _ServiceGrid extends ConsumerWidget {
 // Service card
 // ---------------------------------------------------------------------------
 
-class _ServiceCard extends ConsumerWidget {
-  const _ServiceCard({required this.service});
+/// Exposed for tests, like [RatingRow] below and for the same reason: what the
+/// card decides to show about a provider (a name, a trust badge, a gender
+/// pictogram) is only provable on the card itself, and driving the whole
+/// HomePage to reach it would test the grid instead.
+@visibleForTesting
+class ServiceCard extends ConsumerWidget {
+  const ServiceCard({super.key, required this.service});
 
   final Service service;
 
@@ -1189,7 +1195,14 @@ class _ServiceCard extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 3),
+                        const SizedBox(width: 2),
+                        // The provider's declared gender, on the line that
+                        // already carries their identity. Renders nothing at
+                        // all when unknown, which is every account created
+                        // before the field shipped, so the line is unchanged
+                        // for them and no width is reserved.
+                        GenderIcon(gender: providerUser?.gender),
+                        const SizedBox(width: 2),
                         // Beside the name, so a client knows before opening.
                         // Renders only when the provider is verified, which is
                         // what makes it readable at all in a catalogue where

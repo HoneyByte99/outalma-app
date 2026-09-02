@@ -342,6 +342,89 @@ describe('reviews block gating', () => {
 // rule file would reveal.
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
+// users.gender: written by its owner and nobody else, and only ever one of the
+// two canonical values.
+//
+// The value check is the part worth pinning. This field is projected into the
+// world-readable `public_profiles` and drawn as a pictogram beside a person's
+// name, so a patched client writing an arbitrary string must be refused at the
+// door rather than filtered downstream. Absence stays legal: every account
+// created before the field existed must still be able to change its avatar.
+// ---------------------------------------------------------------------------
+describe('users declared gender', () => {
+  const base = {
+    displayName: 'Awa',
+    email: 'awa@example.com',
+    country: 'SN',
+    activeMode: 'client',
+  };
+
+  beforeEach(async () => {
+    await seed((db) => setDoc(doc(db, 'users/alice'), base));
+  });
+
+  test('the owner CAN declare male', async () => {
+    await assertSucceeds(
+      updateDoc(doc(asUser('alice'), 'users/alice'), { gender: 'male' })
+    );
+  });
+
+  test('the owner CAN declare female', async () => {
+    await assertSucceeds(
+      updateDoc(doc(asUser('alice'), 'users/alice'), { gender: 'female' })
+    );
+  });
+
+  test('the owner CANNOT write a value outside the two', async () => {
+    for (const bad of ['Male', 'homme', 'other', '', 1, true]) {
+      await assertFails(
+        updateDoc(doc(asUser('alice'), 'users/alice'), { gender: bad })
+      );
+    }
+  });
+
+  test('a THIRD PARTY cannot write anyone else gender', async () => {
+    await assertFails(
+      updateDoc(doc(asUser('bob'), 'users/alice'), { gender: 'male' })
+    );
+  });
+
+  test('an account with NO gender can still be updated', async () => {
+    // The 50 accounts in production. A rule demanding the field would freeze
+    // every one of them out of a mode switch or an avatar change.
+    await assertSucceeds(
+      updateDoc(doc(asUser('alice'), 'users/alice'), { country: 'FR' })
+    );
+  });
+
+  test('a create carrying a valid gender is accepted', async () => {
+    await assertSucceeds(
+      setDoc(doc(asUser('carol'), 'users/carol'), {
+        displayName: 'Carol',
+        email: 'carol@example.com',
+        country: 'SN',
+        activeMode: 'client',
+        gender: 'female',
+        createdAt: serverTimestamp(),
+      })
+    );
+  });
+
+  test('a create carrying a bogus gender is refused', async () => {
+    await assertFails(
+      setDoc(doc(asUser('dave'), 'users/dave'), {
+        displayName: 'Dave',
+        email: 'dave@example.com',
+        country: 'SN',
+        activeMode: 'client',
+        gender: 'M',
+        createdAt: serverTimestamp(),
+      })
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // public_profiles: the PII-free display projection a visitor reads instead of
 // `users`. Opening it is only defensible while `users` stays shut AND while the
 // document itself carries nothing sensitive, so both are asserted here.

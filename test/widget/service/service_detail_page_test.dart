@@ -16,7 +16,9 @@ import 'package:outalma_app/src/application/user/public_profile_providers.dart';
 import 'package:outalma_app/src/application/user/user_providers.dart';
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
 import 'package:outalma_app/src/domain/enums/category_id.dart';
+import 'package:outalma_app/src/domain/enums/gender.dart';
 import 'package:outalma_app/src/domain/enums/price_type.dart';
+import 'package:outalma_app/src/domain/models/public_profile.dart';
 import 'package:outalma_app/src/domain/models/service.dart';
 import 'package:outalma_app/src/features/service/service_detail_page.dart';
 
@@ -39,16 +41,16 @@ final _fakeService = Service(
   updatedAt: DateTime(2024, 1, 1),
 );
 
-Widget _wrap({Service? service}) => ProviderScope(
+Widget _wrap({Service? service, PublicProfile? provider}) => ProviderScope(
   overrides: [
     authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
     activeModeProvider.overrideWith((_) => ActiveMode.client),
     serviceDetailProvider(
       'svc_test',
     ).overrideWith((_) => Stream.value(service ?? _fakeService)),
-    publicProfileByIdProvider(
-      'prov_1',
-    ).overrideWith((_) => const Stream.empty()),
+    publicProfileByIdProvider('prov_1').overrideWith(
+      (_) => provider == null ? const Stream.empty() : Stream.value(provider),
+    ),
     reviewsForUserProvider('prov_1').overrideWith((_) => Stream.value([])),
   ],
   child: MaterialApp(
@@ -61,7 +63,7 @@ Widget _wrap({Service? service}) => ProviderScope(
 
 void main() {
   group('ServiceDetailPage', () {
-    testWidgets('smoke — renders without throwing', (tester) async {
+    testWidgets('smoke - renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       await tester.pump();
@@ -145,6 +147,47 @@ void main() {
       await tester.drag(find.byType(PageView), const Offset(-400, 0));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(PageView), findsOneWidget);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // The provider's declared gender, on the second surface that shows it
+  // ---------------------------------------------------------------------------
+  group('ServiceDetailPage gender pictogram', () {
+    Future<void> pumpWith(WidgetTester tester, PublicProfile? provider) async {
+      await tester.pumpWidget(_wrap(provider: provider));
+      await tester.pump();
+      await tester.pump();
+    }
+
+    testWidgets('renders the pictogram of the declared gender', (tester) async {
+      await pumpWith(
+        tester,
+        const PublicProfile(
+          id: 'prov_1',
+          displayName: 'Awa Cisse',
+          gender: Gender.female,
+        ),
+      );
+
+      expect(find.byIcon(Icons.woman), findsOneWidget);
+      expect(find.byIcon(Icons.man), findsNothing);
+      // Icon alone here too. The word lives in the semantics label and in the
+      // tooltip, never on the screen.
+      expect(find.text('Femme'), findsNothing);
+    });
+
+    testWidgets('renders NOTHING when the provider declared no gender', (
+      tester,
+    ) async {
+      await pumpWith(
+        tester,
+        const PublicProfile(id: 'prov_1', displayName: 'Moussa Diallo'),
+      );
+
+      expect(find.byIcon(Icons.man), findsNothing);
+      expect(find.byIcon(Icons.woman), findsNothing);
+      expect(find.text('Moussa Diallo'), findsWidgets);
     });
   });
 }

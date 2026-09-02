@@ -61,9 +61,23 @@ service cloud.firestore {
         return !('phoneE164' in request.resource.data);
       }
 
+      // The declared gender: absent, or exactly one of the two canonical
+      // values. The owner writes their own, which `isSelf(uid)` already
+      // guarantees, but the VALUE is checked here too, and that is the point:
+      // this field is projected into the world-readable `public_profiles` and
+      // drawn as a pictogram beside a person's name, so an arbitrary string
+      // written by a patched client must be refused at the door rather than
+      // filtered later. Absence stays legal: every account created before this
+      // field existed must remain writable (a mode switch, an avatar change)
+      // without being forced to invent a declaration.
+      function isGenderSafe() {
+        return !('gender' in request.resource.data)
+          || request.resource.data.gender in ['male', 'female'];
+      }
+
       allow read: if signedIn();
-      allow create: if isAdmin() || (isSelf(uid) && isUserCreateSafe());
-      allow update: if isAdmin() || (isSelf(uid) && isUserUpdateSafe());
+      allow create: if isAdmin() || (isSelf(uid) && isUserCreateSafe() && isGenderSafe());
+      allow update: if isAdmin() || (isSelf(uid) && isUserUpdateSafe() && isGenderSafe());
       allow delete: if isAdmin();
 
       // Users a person has blocked, private to that person.
@@ -82,7 +96,7 @@ service cloud.firestore {
     //
     // Opening THIS collection was checked field by field against production
     // before the rule was written, not assumed from the projection code. The
-    // 50 documents carry exactly four keys and nothing else:
+    // 50 documents carried exactly four keys and nothing else:
     //
     //   displayName    50/50    the name the user chose to be called
     //   photoPath      50/50    public Storage avatar URL, already world
@@ -90,6 +104,24 @@ service cloud.firestore {
     //   phoneVerified  50/50    boolean, whether a number is on file, never
     //                           the number
     //   country        42/50    ISO code, self-declared, country granularity
+    //
+    // A FIFTH key was added deliberately, and it is the only one so far:
+    //
+    //   gender          0/50    'male' or 'female', declared by the person at
+    //                           sign-up, projected here because the catalogue
+    //                           card and the service detail are guest surfaces
+    //                           and resolve their provider through this
+    //                           document. 0/50 because every account predates
+    //                           the field; the client renders nothing for them
+    //                           and never a default glyph.
+    //
+    // It widens what the collection publishes, so it was weighed rather than
+    // waved through: it is not a contact route, not an identifier, and it is
+    // shown to every visitor by an explicit product decision, on the very card
+    // it is projected for. Publishing it here publishes nothing the card was
+    // not already going to show. The projection is still an ALLOWLIST and the
+    // value is still checked against the two canonical strings on both sides,
+    // in `projectPublicProfile` and in the `users` rule above.
     //
     // `providers/{uid}` was the alternative, being public already. It was
     // rejected on evidence: 23 documents, no `displayName` at all and a

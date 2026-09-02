@@ -53,6 +53,22 @@
   "signUpSignIn": "Se connecter",
   "signUpErrorEmptyFields": "Veuillez remplir tous les champs obligatoires.",
   "signUpErrorPasswordTooShort": "Le mot de passe doit contenir au moins 6 caractères.",
+  "signUpGenderLabel": "Vous êtes",
+  "@signUpGenderLabel": {
+    "description": "Label above the mandatory two-option gender control on the sign-up screen."
+  },
+  "signUpGenderRequired": "Veuillez indiquer si vous êtes un homme ou une femme.",
+  "@signUpGenderRequired": {
+    "description": "Error shown when the sign-up form is submitted without a gender."
+  },
+  "genderMale": "Homme",
+  "@genderMale": {
+    "description": "The male value of the declared gender. Also the accessibility label and tooltip of the pictogram, which shows no text of its own."
+  },
+  "genderFemale": "Femme",
+  "@genderFemale": {
+    "description": "The female value of the declared gender. Also the accessibility label and tooltip of the pictogram, which shows no text of its own."
+  },
   "authErrorEmailAlreadyInUse": "Cet email est déjà utilisé.",
   "authErrorInvalidEmail": "Adresse email invalide.",
   "authErrorWeakPassword": "Mot de passe trop faible (min. 6 caractères).",

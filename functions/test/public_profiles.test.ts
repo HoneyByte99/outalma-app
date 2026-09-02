@@ -2,8 +2,10 @@
 // trigger and backfillPublicProfiles admin callable.
 //
 // The invariant under test: ONLY non-PII display fields (displayName,
-// photoPath, country, phoneVerified boolean) reach public_profiles; email and
-// phoneE164 must never leak into the world-readable collection.
+// photoPath, country, phoneVerified boolean, gender) reach public_profiles;
+// email and phoneE164 must never leak into the world-readable collection.
+// `gender` was added deliberately, is value-checked against the two canonical
+// strings rather than merely type-checked, and is the only key ever added.
 import functionsTest from 'firebase-functions-test';
 
 const tf = functionsTest({ projectId: 'demo-outalma' });
@@ -98,6 +100,39 @@ describe('projectPublicProfile', () => {
     expect(projectPublicProfile(undefined)).toBeNull();
   });
 
+  it('projects the declared gender, both values', () => {
+    // The catalogue card and the service detail are guest surfaces and resolve
+    // their provider through this document, so a gender that stopped here
+    // would never be drawn.
+    expect(projectPublicProfile({ displayName: 'Awa', gender: 'female' })).toEqual(
+      { displayName: 'Awa', phoneVerified: false, gender: 'female' }
+    );
+    expect(projectPublicProfile({ displayName: 'Moussa', gender: 'male' })).toEqual(
+      { displayName: 'Moussa', phoneVerified: false, gender: 'male' }
+    );
+  });
+
+  it('omits gender when the source has none (every account today)', () => {
+    const proj = projectPublicProfile({
+      displayName: 'Awa',
+    }) as unknown as Record<string, unknown>;
+    expect('gender' in proj).toBe(false);
+  });
+
+  it('DROPS a gender outside the two canonical values', () => {
+    // Value-checked, not merely type-checked. The 2024 FlutterFlow export used
+    // this exact key with another vocabulary, and a client can write the field
+    // itself. Anything else must not reach a world-readable document that the
+    // interface turns into a pictogram.
+    for (const bad of ['Male', 'FEMALE', 'homme', 'other', '', 42, null, {}]) {
+      const proj = projectPublicProfile({
+        displayName: 'Awa',
+        gender: bad,
+      }) as unknown as Record<string, unknown>;
+      expect('gender' in proj).toBe(false);
+    }
+  });
+
   it('is an ALLOWLIST: a field added to users later never reaches it', () => {
     // The regression that matters. Every key of this collection is world
     // readable, so the projection must be built key by key. A denylist would
@@ -134,6 +169,20 @@ describe('projectionsEqual', () => {
       projectionsEqual(base, { displayName: 'A', country: 'SN', phoneVerified: false })
     ).toBe(false);
     expect(projectionsEqual(base, { displayName: 'A', phoneVerified: true })).toBe(false);
+    expect(
+      projectionsEqual(base, { displayName: 'A', gender: 'male', phoneVerified: false })
+    ).toBe(false);
+  });
+
+  it('detects a gender CHANGE, so the mirror is not skipped', () => {
+    // The comparison is the write filter. A gender missing from it means the
+    // first user to correct their declaration never sees the public card update.
+    expect(
+      projectionsEqual(
+        { displayName: 'A', gender: 'male', phoneVerified: false },
+        { displayName: 'A', gender: 'female', phoneVerified: false }
+      )
+    ).toBe(false);
   });
 
   it('handles nulls (create / delete edges)', () => {
@@ -224,6 +273,21 @@ describe('mirrorPublicProfile', () => {
       )
     );
     expect((await publicProfile('u1'))?.phoneVerified).toBe(true);
+  });
+
+  it('mirrors a gender correction to the public document', async () => {
+    await tf.wrap(fns.mirrorPublicProfile)(
+      writeEvent(undefined, { displayName: 'Awa', gender: 'male' })
+    );
+    expect((await publicProfile('u1'))?.gender).toBe('male');
+
+    await tf.wrap(fns.mirrorPublicProfile)(
+      writeEvent(
+        { displayName: 'Awa', gender: 'male' },
+        { displayName: 'Awa', gender: 'female' }
+      )
+    );
+    expect((await publicProfile('u1'))?.gender).toBe('female');
   });
 
   it('deletes the projection when the user is deleted', async () => {

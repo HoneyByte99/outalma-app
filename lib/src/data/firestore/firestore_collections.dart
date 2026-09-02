@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/enums/category_id.dart';
+import '../../domain/enums/gender.dart';
 import '../../domain/enums/message_type.dart';
 import '../../domain/enums/price_type.dart';
 import '../../domain/enums/reviewer_role.dart';
@@ -187,6 +188,9 @@ class FirestoreCollections {
       termsAcceptedAt: data['termsAcceptedAt'] != null
           ? dateTimeFromFirestore(data['termsAcceptedAt'])
           : null,
+      // Absent on every account created before the field shipped, and left
+      // null for them rather than defaulted: see Gender.tryParse.
+      gender: Gender.tryParse(data['gender']),
     );
   }
 
@@ -209,6 +213,11 @@ class FirestoreCollections {
       if (user.pushToken != null) 'pushToken': user.pushToken,
       if (user.termsAcceptedAt != null)
         'termsAcceptedAt': dateTimeToFirestore(user.termsAcceptedAt!),
+      // Never written as null. `switchMode` and `updateProfile` both go through
+      // a merge write carrying the whole AppUser, and an explicit null there
+      // would erase the declared gender of every account whose in-memory copy
+      // predates a reload, exactly like the pushToken case above.
+      if (user.gender != null) 'gender': user.gender!.name,
       'createdAt': dateTimeToFirestore(user.createdAt),
     };
   }
@@ -232,6 +241,10 @@ class FirestoreCollections {
       // country the user never declared.
       country: data['country'] as String?,
       phoneVerified: (data['phoneVerified'] as bool?) ?? false,
+      // Same tolerance as above, on the collection where it matters most: this
+      // document feeds the catalogue card a guest sees, and 50 of the 50
+      // production documents predate the field.
+      gender: Gender.tryParse(data['gender']),
     );
   }
 

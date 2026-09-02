@@ -1,3 +1,5 @@
+import '../enums/gender.dart';
+
 /// The PII-free public view of a user, mirrored server-side into the
 /// world-readable `public_profiles` collection.
 ///
@@ -17,6 +19,7 @@ class PublicProfile {
     this.photoPath,
     this.country,
     this.phoneVerified = false,
+    this.gender,
   });
 
   final String id;
@@ -32,4 +35,14 @@ class PublicProfile {
   /// Whether a verified phone number is on file. The trust badge on a public
   /// profile reads this, so it never has to touch `phoneE164`.
   final bool phoneVerified;
+
+  /// The gender the provider declared at sign-up, projected here because the
+  /// surfaces that show it are GUEST surfaces: the catalogue card and the
+  /// service detail both resolve the provider through this document, never
+  /// through `users/{uid}`, which a visitor cannot read.
+  ///
+  /// Nullable like [country], and for the same reason turned up one notch: an
+  /// account created before the field existed has none, and a default would
+  /// print a pictogram asserting a gender the person never declared.
+  final Gender? gender;
 }

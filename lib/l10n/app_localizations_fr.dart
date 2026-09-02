@@ -176,6 +176,19 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le mot de passe doit contenir au moins 6 caractères.';
 
   @override
+  String get signUpGenderLabel => 'Vous êtes';
+
+  @override
+  String get signUpGenderRequired =>
+      'Veuillez indiquer si vous êtes un homme ou une femme.';
+
+  @override
+  String get genderMale => 'Homme';
+
+  @override
+  String get genderFemale => 'Femme';
+
+  @override
   String get authErrorEmailAlreadyInUse => 'Cet email est déjà utilisé.';
 
   @override

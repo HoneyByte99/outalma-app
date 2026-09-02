@@ -19,6 +19,7 @@ import '../booking/booking_request_sheet.dart';
 import '../shared/network_image.dart';
 import '../shared/marketplace_disclaimer.dart';
 import '../../application/review/review_providers.dart';
+import '../shared/gender_icon.dart';
 import '../shared/identity_trust_signal.dart';
 import 'service_zones_map.dart';
 import '../shared/user_avatar.dart';
@@ -478,6 +479,10 @@ class _ProviderRow extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 4),
+                        // Same pictogram as the catalogue card, same rule: a
+                        // provider whose gender is unknown gets nothing here.
+                        GenderIcon(gender: user?.gender, size: 16),
                         const SizedBox(width: 4),
                         // Beside the name, as a badge: the full mention used to
                         // sit under it and read "Identite non verifiee" by

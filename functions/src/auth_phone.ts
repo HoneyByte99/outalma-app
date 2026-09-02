@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Phone authentication via OTP — production flow
+// Phone authentication via OTP - production flow
 // ---------------------------------------------------------------------------
 //
 // Three callable functions form the canonical phone-auth pipeline:
@@ -12,7 +12,7 @@
 //       user. If no user exists for this phone, returns { newUser: true } so
 //       the client can route to the sign-up screen.
 //
-//   verifyPhoneOtpAndSignUp({ phone, code, displayName, country })
+//   verifyPhoneOtpAndSignUp({ phone, code, displayName, country, gender })
 //     → Confirms the code, asserts the phone is not taken, creates the
 //       Firebase Auth user (phoneNumber-native, no fake email) and the
 //       Firestore user doc, returns a Firebase custom token.
@@ -24,6 +24,7 @@ import * as admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import * as logger from 'firebase-functions/logger';
+import { GENDERS, Gender } from './public_profiles';
 
 const TWILIO_ACCOUNT_SID = defineSecret('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = defineSecret('TWILIO_AUTH_TOKEN');
@@ -80,6 +81,24 @@ function assertDisplayName(value: unknown, max = 80, min = 2): string {
     throw new HttpsError('invalid-argument', 'displayName must be a single line');
   }
   return cleaned;
+}
+
+/// The declared gender, MANDATORY on this path exactly as it is on the email
+/// one. Rejecting the call is the point: the phone sign-up writes its own
+/// `users` document server-side, so a tolerated absence here would be the one
+/// way to create an account without the field and quietly reopen the hole.
+///
+/// Vocabulary is the client enum's, `male`/`female`, and nothing else is
+/// accepted: this value ends up in a world-readable projection and is drawn as
+/// a pictogram beside a person's name.
+function assertGender(value: unknown): Gender {
+  if (typeof value !== 'string') {
+    throw new HttpsError('invalid-argument', 'gender must be a string');
+  }
+  if (!GENDERS.includes(value as Gender)) {
+    throw new HttpsError('invalid-argument', 'gender must be male or female');
+  }
+  return value as Gender;
 }
 
 function assertCountry(value: unknown): string {
@@ -170,7 +189,7 @@ async function twilioCheckVerification(
 }
 
 // ---------------------------------------------------------------------------
-// User lookup helpers — Firebase Auth is the source of truth for phone↔uid
+// User lookup helpers - Firebase Auth is the source of truth for phone↔uid
 // mapping. We DELIBERATELY do not look up via Firestore mirror, because the
 // users collection allows client-side updates and could be poisoned to redirect
 // sign-ins to an attacker-owned uid (cf. security review C1 / C2).
@@ -258,6 +277,10 @@ export const verifyPhoneOtpAndSignUp = onCall(
     const code = assertCode(request.data?.code);
     const displayName = assertDisplayName(request.data?.displayName);
     const country = assertCountry(request.data?.country);
+    // Validated BEFORE the Twilio check, with the other arguments: a malformed
+    // call must not consume the user's one-shot verification code before being
+    // rejected on a field the client could have checked itself.
+    const gender = assertGender(request.data?.gender);
 
     await twilioCheckVerification(phone, code);
 
@@ -273,7 +296,7 @@ export const verifyPhoneOtpAndSignUp = onCall(
 
     // Create Firebase Auth user with phoneNumber as the primary identifier.
     // No fake email, no deterministic password. Firebase Auth enforces phone
-    // uniqueness natively — if a concurrent request beat us to it, createUser
+    // uniqueness natively - if a concurrent request beat us to it, createUser
     // throws `auth/phone-number-already-exists` which we rethrow as a clean
     // already-exists error (H3 from security review).
     let created;
@@ -302,9 +325,10 @@ export const verifyPhoneOtpAndSignUp = onCall(
       email: '',
       phoneE164: phone,
       country,
+      gender,
       activeMode: 'client',
       createdAt: admin.firestore.Timestamp.now(),
-      // Consent proof (RGPD) — the sign-up screen gates submission on acceptance.
+      // Consent proof (RGPD) - the sign-up screen gates submission on acceptance.
       termsAcceptedAt: admin.firestore.Timestamp.now(),
     });
 

@@ -171,6 +171,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Password must be at least 6 characters.';
 
   @override
+  String get signUpGenderLabel => 'You are';
+
+  @override
+  String get signUpGenderRequired =>
+      'Please indicate whether you are a man or a woman.';
+
+  @override
+  String get genderMale => 'Man';
+
+  @override
+  String get genderFemale => 'Woman';
+
+  @override
   String get authErrorEmailAlreadyInUse => 'This email is already in use.';
 
   @override
