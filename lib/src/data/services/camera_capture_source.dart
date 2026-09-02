@@ -292,4 +292,34 @@ class CameraCaptureSource implements seam.IdentityCaptureSource {
     }
     return CameraPreview(controller);
   }
+
+  /// TO VERIFY ON DEVICE, and the only unknown the contour still carries: the
+  /// Android SIGN of the quarter turns. The magnitude is settled, and iOS is
+  /// settled too (preview and analysis are the same buffer there).
+  ///
+  /// The Android value also rests on the display rotation being 0, which the
+  /// flow's portrait lock is expected but not proven to pin. If the phone pass
+  /// shows a contour turned by two quarter turns, take
+  /// `controller.value.deviceOrientation` as a third input to
+  /// `previewQuarterTurns`: that is the value `CameraPreview` itself feeds its
+  /// `RotatedBox`, so the mapping becomes consistent with the widget by
+  /// construction instead of by assumption.
+  @override
+  seam.PreviewGeometry? get previewGeometry {
+    final controller = _controller;
+    final description = _description;
+    if (controller == null ||
+        description == null ||
+        !controller.value.isInitialized) {
+      return null;
+    }
+    final size = controller.value.previewSize;
+    if (size == null) return null;
+    return seam.PreviewGeometry(
+      previewWidth: size.width,
+      previewHeight: size.height,
+      sensorOrientation: description.sensorOrientation,
+      isIOS: defaultTargetPlatform == TargetPlatform.iOS,
+    );
+  }
 }
