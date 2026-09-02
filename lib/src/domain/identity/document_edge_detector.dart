@@ -288,15 +288,22 @@ DocumentEdgeObservation detectDocumentEdges({
   );
 }
 
-/// Whether a whole side of the frame is filled by the bright subject.
+/// Whether a whole side of the frame is filled by the subject.
 ///
 /// Checked per SIDE rather than over the border ring as a whole: a card that is
 /// too close usually overflows on one or two sides, never on all four, so a ring
 /// average would stay low and the branch would never fire. That is the same
 /// mistake as an area ceiling above the physical maximum, in another guise.
 ///
+/// Decided by resemblance to the SUBJECT, read from the grid's centre where the
+/// template asks the card to sit, rather than by a global midpoint split. A
+/// midpoint split assumes the subject is the brighter half of the frame, which
+/// fails as often as it holds: a dark card on a light table (a bright surface,
+/// a sheet of paper) is exactly as common as the reverse, and under that split
+/// its light BACKGROUND would be read as "bright", flipping every side count.
+///
 /// A minimum contrast range is required first, otherwise a flat grey field, in
-/// which every cell sits above its own midpoint, would report as overflowing.
+/// which every cell reads as its own subject, would report as overflowing.
 bool _overflowsFrame(Uint8List cells, int cols, int rows) {
   const minRange = 40;
   const sideFraction = 0.5;
@@ -308,25 +315,46 @@ bool _overflowsFrame(Uint8List cells, int cols, int rows) {
     if (v > max) max = v;
   }
   if (max - min < minRange) return false;
-  final mid = (min + max) / 2;
 
-  var topBright = 0;
-  var bottomBright = 0;
+  final subject = _meanOfCentre(cells, cols, rows);
+  final tolerance = (max - min) * 0.25;
+  bool resemblesSubject(int v) => (v - subject).abs() < tolerance;
+
+  var topCovered = 0;
+  var bottomCovered = 0;
   for (var x = 0; x < cols; x++) {
-    if (cells[x] > mid) topBright++;
-    if (cells[(rows - 1) * cols + x] > mid) bottomBright++;
+    if (resemblesSubject(cells[x])) topCovered++;
+    if (resemblesSubject(cells[(rows - 1) * cols + x])) bottomCovered++;
   }
-  var leftBright = 0;
-  var rightBright = 0;
+  var leftCovered = 0;
+  var rightCovered = 0;
   for (var y = 0; y < rows; y++) {
-    if (cells[y * cols] > mid) leftBright++;
-    if (cells[y * cols + cols - 1] > mid) rightBright++;
+    if (resemblesSubject(cells[y * cols])) leftCovered++;
+    if (resemblesSubject(cells[y * cols + cols - 1])) rightCovered++;
   }
 
-  return topBright / cols > sideFraction ||
-      bottomBright / cols > sideFraction ||
-      leftBright / rows > sideFraction ||
-      rightBright / rows > sideFraction;
+  return topCovered / cols > sideFraction ||
+      bottomCovered / cols > sideFraction ||
+      leftCovered / rows > sideFraction ||
+      rightCovered / rows > sideFraction;
+}
+
+/// Mean value of the grid's central quarter, where the template asks the
+/// subject to sit, whichever way its luminance compares to the background.
+double _meanOfCentre(Uint8List cells, int cols, int rows) {
+  final x0 = cols ~/ 4;
+  final x1 = cols - x0;
+  final y0 = rows ~/ 4;
+  final y1 = rows - y0;
+  var sum = 0;
+  var count = 0;
+  for (var y = y0; y < y1; y++) {
+    for (var x = x0; x < x1; x++) {
+      sum += cells[y * cols + x];
+      count++;
+    }
+  }
+  return sum / count;
 }
 
 void _sobel(
@@ -540,8 +568,23 @@ _Refined? _refine({
 
 double _norm2(double index, int count) => (index + 0.5) / count;
 
+/// Fraction of a border's transverse span the local line-fit search window
+/// may cover, per [_clampWindow].
+///
+/// Public so [maxRotationDeg] can be asserted against it at the config layer:
+/// for the two LONG sides of an ID-1 card, `L / T = idCardAspect`, so the
+/// window this function allows must reach at least
+/// `idCardAspect * tan(maxRotationDeg)` or the long-side fit is clipped
+/// towards the axis, [DocumentQuad.inPlaneRotationDeg] underestimates the true
+/// tilt, and the `rotation > maxRotationDeg` refusal guard never fires for a
+/// card that is actually past the supported range. At `maxRotationDeg = 10`
+/// that floor is `1.585 * tan(10deg) ~= 0.28`; `0.30` keeps a margin without
+/// widening enough to lock onto structure inside the card (verified against
+/// the `insideBars` fixture in `document_edge_detector_test.dart`).
+const double edgeWindowFraction = 0.30;
+
 double _clampWindow(double ideal, int transverse) {
-  final upper = math.max(2.0, transverse * 0.15);
+  final upper = math.max(2.0, transverse * edgeWindowFraction);
   return ideal.clamp(2.0, upper);
 }
 
@@ -590,8 +633,9 @@ _Fit? _fitVertical(
   }
   final expected = hi - lo + 1;
   if (xs.length < 3) return null;
-  final line = _leastSquares(ys, xs);
-  if (line == null) return null;
+  final rough = _leastSquares(ys, xs);
+  if (rough == null) return null;
+  final line = _dropFitOutliers(ys, xs, rough) ?? rough;
   return (
     slope: line.slope,
     offset: line.offset,
@@ -634,8 +678,9 @@ _Fit? _fitHorizontal(
   }
   final expected = hi - lo + 1;
   if (xs.length < 3) return null;
-  final line = _leastSquares(xs, ys);
-  if (line == null) return null;
+  final rough = _leastSquares(xs, ys);
+  if (rough == null) return null;
+  final line = _dropFitOutliers(xs, ys, rough) ?? rough;
   return (
     slope: line.slope,
     offset: line.offset,
@@ -643,6 +688,39 @@ _Fit? _fitHorizontal(
     count: ys.length,
     expected: expected,
   );
+}
+
+/// Refits after dropping points whose residual from [line] exceeds a few
+/// cells, then returns null if that changed nothing or left too few points.
+///
+/// Near a rotated card's corner, the fixed-window per-row (or per-column)
+/// search of [_fitVertical] / [_fitHorizontal] can lock onto the ADJACENT
+/// border instead of this one for the rows (or columns) past where the true
+/// corner already crossed over: the stage-1 rect is an axis-aligned box
+/// around a tilted card, so it always overshoots one edge's real extent
+/// near each corner. A handful of such points sit at the extremes of the
+/// search range, where a least-squares fit has the most leverage, and can
+/// pull a clean line's slope towards zero, i.e. underestimate the tilt: the
+/// exact failure `rotation > maxRotationDeg` exists to catch (M2). On a
+/// clean synthetic edge every residual sits near zero, so this is a no-op
+/// there.
+({double slope, double offset})? _dropFitOutliers(
+  List<double> a,
+  List<double> b,
+  ({double slope, double offset}) line,
+) {
+  const maxResidual = 2.5;
+  final keptA = <double>[];
+  final keptB = <double>[];
+  for (var i = 0; i < a.length; i++) {
+    final predicted = line.slope * a[i] + line.offset;
+    if ((b[i] - predicted).abs() <= maxResidual) {
+      keptA.add(a[i]);
+      keptB.add(b[i]);
+    }
+  }
+  if (keptA.length == a.length || keptA.length < 3) return null;
+  return _leastSquares(keptA, keptB);
 }
 
 ({double slope, double offset})? _leastSquares(

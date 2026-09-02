@@ -88,4 +88,24 @@ void main() {
       expect(() => CaptureConfig(framingGraceMs: 0), throwsAssertionError);
     });
   });
+
+  group(
+    'maxRotationDeg stays inside what the detector window can capture (M2)',
+    () {
+      test('the shipped default fits', () {
+        // Guards the coupling by formula, not by a copy of the number: if
+        // either maxRotationDeg or edgeWindowFraction moves without the other,
+        // this fails instead of the rotation guard silently under-refusing.
+        expect(
+          rotationFitsEdgeWindow(const CaptureConfig().maxRotationDeg),
+          isTrue,
+        );
+      });
+
+      test('a value past the window would not fit', () {
+        // Sanity check on the predicate itself: it must be able to say no.
+        expect(rotationFitsEdgeWindow(20), isFalse);
+      });
+    },
+  );
 }

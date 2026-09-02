@@ -1,3 +1,7 @@
+import 'dart:math' as math;
+
+import '../../domain/identity/document_edge_detector.dart'
+    show edgeWindowFraction, idCardAspect;
 import 'capture_source.dart';
 
 /// Which side of the ID card is being captured. Drives the framing hint, the
@@ -109,7 +113,11 @@ class CaptureConfig {
     /// Supported in-plane rotation. Past it the detector returns `unknown` with
     /// NO quad: the projection profiles have no peak left to find there, so a
     /// returned outline would be a WRONG one. The template stays as the only
-    /// guidance beyond this angle (Amath's call, 2026-09-02).
+    /// guidance beyond this angle (Amath's call, 2026-09-02). Kept in sync with
+    /// [edgeWindowFraction] by [rotationFitsEdgeWindow] and the test that calls
+    /// it: the local-fit window must stay wide enough to measure a tilt this
+    /// large on the card's long side, or the refusal guard silently stops
+    /// firing.
     this.maxRotationDeg = 10,
 
     /// Weight given to the newest corner position. Low means a heavy, slow
@@ -205,6 +213,23 @@ class CaptureConfig {
       ? rectoSharpnessThreshold
       : versoSharpnessThreshold;
 }
+
+/// Whether a `maxRotationDeg` value stays within what the detector's
+/// local-fit window can capture on the card's long side, i.e. whether
+/// [edgeWindowFraction] (`document_edge_detector.dart`) is wide enough for
+/// this angle. Below the bound, the fitted quad's measured rotation reflects
+/// the true tilt; above it the fit clips towards the axis, the measurement
+/// underestimates, and the `rotation > maxRotationDeg` refusal guard stops
+/// firing for a card that is genuinely past range (M2).
+///
+/// Not a constructor `assert`: `dart:math` functions are not `const`, so this
+/// check cannot be folded into [CaptureConfig]'s `const` constructor. Checked
+/// instead by a dedicated test, `capture_config_contour_test.dart`, which
+/// fails loudly the moment [CaptureConfig.maxRotationDeg]'s default and
+/// [edgeWindowFraction] diverge.
+bool rotationFitsEdgeWindow(double maxRotationDeg) =>
+    math.tan(maxRotationDeg * math.pi / 180) <=
+    edgeWindowFraction / idCardAspect;
 
 /// The lens each side uses. Both document sides use the back camera; the selfie
 /// uses the front one.
