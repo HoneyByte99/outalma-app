@@ -3584,6 +3584,24 @@ abstract class AppLocalizations {
   /// **'You can also take the photo yourself.'**
   String get identityCaptureManualHint;
 
+  /// No description provided for @identityCaptureNoDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Place your ID card inside the frame.'**
+  String get identityCaptureNoDocument;
+
+  /// No description provided for @identityCaptureTooSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring the card closer.'**
+  String get identityCaptureTooSmall;
+
+  /// No description provided for @identityCaptureTooClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the card back a little.'**
+  String get identityCaptureTooClose;
+
   /// No description provided for @identityStepProgress.
   ///
   /// In en, this message translates to:

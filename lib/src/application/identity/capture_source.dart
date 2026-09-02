@@ -140,6 +140,51 @@ abstract interface class IdentityCaptureSource {
   /// empty box before [start] or when there is nothing to show (the fake, the
   /// web stub), so the screen stays platform-agnostic and testable.
   Widget buildPreview();
+
+  /// What a drawing needs to land on the preview's pixels, or null before
+  /// [start] and on platforms with no camera.
+  PreviewGeometry? get previewGeometry;
+}
+
+/// The camera facts a drawing projected onto the preview needs.
+///
+/// It carries the PREVIEW size, not the plane size, and that distinction cost a
+/// review round. The plane dimensions are already on every [LumaFrame]; what
+/// nothing else could reach is `CameraController.value.previewSize`, and the
+/// contour needs it to check that the preview and the analysis plane show the
+/// same scene. That check is not paranoia: on Android the plugin binds
+/// `Preview`, `ImageCapture` and `ImageAnalysis` without a shared `ViewPort`, so
+/// nothing guarantees a common crop rectangle between them, and a 16:9 plane
+/// drawn over a 4:3 preview gives a contour that is wrong everywhere.
+///
+/// No decision lives here. It is a data carrier, and the judgement is made by
+/// pure functions that take it apart.
+class PreviewGeometry {
+  const PreviewGeometry({
+    required this.previewWidth,
+    required this.previewHeight,
+    required this.sensorOrientation,
+    required this.isIOS,
+  });
+
+  /// From `CameraController.value.previewSize`.
+  final double previewWidth;
+  final double previewHeight;
+
+  /// Degrees, as the platform reports it.
+  final int sensorOrientation;
+
+  /// Passed as a boolean so `domain/` stays pure Dart: the selector that reads
+  /// it lives there, and `TargetPlatform` comes from Flutter.
+  final bool isIOS;
+
+  /// Long side over short side, so it is comparable to a plane's own ratio
+  /// whichever way round each of them is reported.
+  double get aspect {
+    if (previewWidth <= 0 || previewHeight <= 0) return 0;
+    final ratio = previewWidth / previewHeight;
+    return ratio >= 1 ? ratio : 1 / ratio;
+  }
 }
 
 /// Thrown by [IdentityCaptureSource.start] when no camera can be opened.

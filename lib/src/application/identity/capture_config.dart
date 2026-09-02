@@ -59,6 +59,78 @@ class CaptureConfig {
     /// behind a blurred card passes the gate, and someone moving in the
     /// background blocks the shutter for good.
     this.analysisCenterFraction = 0.7,
+
+    // --- Contour detection. Both flags ship FALSE, so the increment lands
+    // inert: no contour drawn and no shutter behaviour changed. They are turned
+    // on, in this order, at the end of the real-phone pass that calibrates the
+    // thresholds below. Both are mutated guards (T3).
+
+    /// When false the contour is not drawn, AND the detector is not even run,
+    /// so the per-frame cost does not change either.
+    ///
+    /// Needed separately from [contourFramingEnabled]: [edgeThreshold] and
+    /// [minEdgeSupport] decide whether a contour appears at all, so with an
+    /// uncalibrated threshold the contour would be permanently absent or
+    /// flickering, and a flickering contour is the worst possible signal for
+    /// someone who cannot read.
+    this.contourOverlayEnabled = false,
+
+    /// When false the shutter is handed [DocumentFraming.unknown] whatever the
+    /// detector saw, so its behaviour is bit for bit what it was before this
+    /// feature existed.
+    this.contourFramingEnabled = false,
+
+    /// Long side of the detection grid, in cells. The short side is DERIVED from
+    /// the frame so cells stay near-square: a fixed pair would be 3x anisotropic
+    /// on a portrait plane, and the projection profiles would mean nothing.
+    this.contourGridLongSide = 96,
+
+    /// Mean |gradient| per cell above which a projection profile peak counts as
+    /// a border. PLACEHOLDER, calibrated on the phone pass.
+    this.edgeThreshold = 40,
+
+    /// Fraction of a border's sampled points that must carry real gradient.
+    this.minEdgeSupport = 0.6,
+
+    /// Fraction of the plane's area below which the card is too far away.
+    ///
+    /// 0.18 and not 0.25: the PAINTED template covers about 0.25 of the surface
+    /// (it is 0.86 of an ID-1 box, so 1.36:1, a pre-existing defect kept out of
+    /// this ticket), so a card framed exactly inside it would sit right on the
+    /// boundary. There is deliberately no upper area threshold: an ID-1 card
+    /// cannot physically cover more than about 0.355 of the plane, so "too
+    /// close" is decided geometrically instead.
+    this.minFill = 0.18,
+
+    /// Relative tolerance on the ID-1 ratio, measured long-over-short in plane
+    /// pixels so it is independent of which way the card lies in the plane.
+    this.aspectTolerance = 0.25,
+
+    /// Supported in-plane rotation. Past it the detector returns `unknown` with
+    /// NO quad: the projection profiles have no peak left to find there, so a
+    /// returned outline would be a WRONG one. The template stays as the only
+    /// guidance beyond this angle (Amath's call, 2026-09-02).
+    this.maxRotationDeg = 10,
+
+    /// Weight given to the newest corner position. Low means a heavy, slow
+    /// outline; 1 means no smoothing.
+    this.contourSmoothing = 0.3,
+
+    /// Consecutive detections before the contour appears.
+    this.acquireFrames = 3,
+
+    /// Consecutive misses before it goes. Deliberately larger than
+    /// [acquireFrames]: losing slower than acquiring is what stops a single
+    /// dropped frame from blanking the screen.
+    this.loseFrames = 5,
+
+    /// How long a readable-but-wrong framing may hold the shutter before the
+    /// framing is DOWNGRADED to unknown and the photo is taken anyway.
+    ///
+    /// This is what makes "the contour never blocks anyone" true rather than
+    /// declarative: a card on a dark table, where no contour can be found, is
+    /// still photographed. A mutated guard (T3).
+    this.framingGraceMs = 4000,
   }) : assert(
          rectoSharpnessThreshold > versoSharpnessThreshold,
          'the recto must be strictly harder than the verso (AC-C06)',
@@ -71,6 +143,31 @@ class CaptureConfig {
        assert(
          analysisCenterFraction > 0 && analysisCenterFraction <= 1,
          'the analysis window is a fraction of the frame',
+       ),
+       assert(
+         contourGridLongSide >= 12,
+         'a grid under 12 cells leaves no room for a Sobel and a peak',
+       ),
+       assert(edgeThreshold >= 0, 'a gradient threshold cannot be negative'),
+       assert(
+         minEdgeSupport > 0 && minEdgeSupport <= 1,
+         'edge support is a fraction',
+       ),
+       assert(minFill > 0 && minFill < 1, 'fill is a fraction of the plane'),
+       assert(aspectTolerance > 0, 'a tolerance of zero accepts nothing'),
+       assert(
+         maxRotationDeg > 0 && maxRotationDeg < 45,
+         'past 45 degrees there is no nearest axis',
+       ),
+       assert(
+         contourSmoothing > 0 && contourSmoothing <= 1,
+         'smoothing is a weight on the new position',
+       ),
+       assert(acquireFrames >= 1, 'at least one detection to appear'),
+       assert(loseFrames >= 1, 'at least one miss to disappear'),
+       assert(
+         framingGraceMs > 0,
+         'a grace of zero would never let a bad framing be overridden',
        );
 
   final double rectoSharpnessThreshold;
@@ -83,6 +180,26 @@ class CaptureConfig {
   final int autoRejectLimit;
   final int analyzeEveryNthFrame;
   final double analysisCenterFraction;
+
+  final bool contourOverlayEnabled;
+  final bool contourFramingEnabled;
+  final int contourGridLongSide;
+  final double edgeThreshold;
+  final double minEdgeSupport;
+  final double minFill;
+  final double aspectTolerance;
+  final double maxRotationDeg;
+  final double contourSmoothing;
+  final int acquireFrames;
+  final int loseFrames;
+  final int framingGraceMs;
+
+  /// Whether any contour work should happen at all this frame.
+  ///
+  /// With both flags off the screen must not even build the grid: "inert" has to
+  /// mean inert in cost as well as in behaviour, otherwise the P1 and P5 budget
+  /// lines move while the feature is supposedly off.
+  bool get contourWorkNeeded => contourOverlayEnabled || contourFramingEnabled;
 
   double sharpnessThresholdFor(DocumentSide side) => side == DocumentSide.recto
       ? rectoSharpnessThreshold

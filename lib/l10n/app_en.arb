@@ -862,6 +862,9 @@
   "identityCaptureHoldStill": "Stay still, the photo is coming.",
   "identityCaptureRefused": "Photo not kept. Frame the card again.",
   "identityCaptureManualHint": "You can also take the photo yourself.",
+  "identityCaptureNoDocument": "Place your ID card inside the frame.",
+  "identityCaptureTooSmall": "Bring the card closer.",
+  "identityCaptureTooClose": "Move the card back a little.",
   "identityStepProgress": "Step {current} of {total}",
   "@identityStepProgress": {
     "placeholders": {

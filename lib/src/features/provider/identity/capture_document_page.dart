@@ -9,8 +9,14 @@ import '../../../app/app_spacing.dart';
 import '../../../application/identity/capture_config.dart';
 import '../../../application/identity/capture_source.dart';
 import '../../../application/identity/document_shutter.dart';
+import '../../../application/identity/document_tracker.dart';
 import '../../../application/identity/identity_capture_providers.dart';
+import '../../../domain/identity/document_edge_detector.dart';
+import '../../../domain/identity/document_quad.dart';
 import '../../../domain/identity/frame_motion.dart';
+import '../../../domain/identity/luma_grid.dart';
+import '../../../domain/identity/preview_projection.dart';
+import '../../../domain/identity/preview_quarter_turns.dart';
 import '../../../domain/identity/image_sharpness.dart';
 import '../../shared/open_settings.dart';
 import 'identity_capture_widgets.dart';
@@ -74,6 +80,17 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     const DocumentShutterState.initial(),
   );
   final ValueNotifier<int> _flashToken = ValueNotifier(0);
+
+  /// Drives the contour alone, on the same footing as the shutter notifier, so
+  /// the camera preview never rebuilds (P5).
+  final ValueNotifier<DocumentTrackState> _contour = ValueNotifier(
+    const DocumentTrackState.initial(),
+  );
+
+  /// The contour in PREVIEW space, or null when nothing may be drawn. Kept
+  /// beside the tracker state because the projection needs the frame dimensions,
+  /// which only the analysis loop sees.
+  final ValueNotifier<DocumentQuad?> _projected = ValueNotifier(null);
 
   _Ui _ui = _Ui.loading;
 
@@ -162,6 +179,8 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
   }
 
   void _resetAnalysis() {
+    _contour.value = const DocumentTrackState.initial();
+    _projected.value = null;
     _frameIndex = 0;
     _lastSignature = null;
     _sharpnessKnown = false;
@@ -187,6 +206,87 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
         if (mounted) setState(() => _fallbackDue = true);
       },
     );
+  }
+
+  /// Runs the contour detection for one frame, drives the overlay, and returns
+  /// what the shutter should be told about the framing.
+  ///
+  /// Returns [DocumentFraming.unknown] on every path that is not a confident
+  /// reading, and whenever `contourFramingEnabled` is off. That is what keeps
+  /// this purely additive: `unknown` reproduces the pre-contour behaviour bit
+  /// for bit.
+  DocumentFraming _analyseContour(LumaFrame frame, CaptureConfig config) {
+    // Both flags off: no grid, no Sobel, no cost. "Inert" has to mean inert in
+    // milliseconds too, or the P1 and P5 budget lines move while the feature is
+    // supposedly switched off.
+    if (!config.contourWorkNeeded) return DocumentFraming.unknown;
+
+    final geometry = _source.previewGeometry;
+    if (geometry == null) return DocumentFraming.unknown;
+
+    // The premise nothing in the platform guarantees: on Android the plugin
+    // binds Preview and ImageAnalysis without a shared ViewPort, so a 16:9
+    // plane can end up drawn over a 4:3 preview, and that contour is wrong
+    // everywhere. When they disagree, draw nothing at all.
+    if (!previewMatchesPlane(
+      previewAspect: geometry.aspect,
+      planeWidth: frame.width,
+      planeHeight: frame.height,
+    )) {
+      _contour.value = const DocumentTrackState.initial();
+      _projected.value = null;
+      return DocumentFraming.unknown;
+    }
+
+    final grid = LumaGrid.sample(
+      frame.luma,
+      frame.width,
+      frame.height,
+      rowStride: frame.rowStride,
+      longSide: config.contourGridLongSide,
+    );
+    final observation = detectDocumentEdges(
+      cells: grid.cells,
+      cols: grid.cols,
+      rows: grid.rows,
+      planeWidth: frame.width,
+      planeHeight: frame.height,
+      edgeThreshold: config.edgeThreshold,
+      minEdgeSupport: config.minEdgeSupport,
+      minFill: config.minFill,
+      aspectTolerance: config.aspectTolerance,
+      maxRotationDeg: config.maxRotationDeg,
+    );
+
+    final tracked = trackDocument(
+      prev: _contour.value,
+      observation: observation,
+      smoothing: config.contourSmoothing,
+      acquireFrames: config.acquireFrames,
+      loseFrames: config.loseFrames,
+    );
+    _contour.value = tracked;
+
+    final quad = tracked.visible ? tracked.quad : null;
+    if (quad == null || !config.contourOverlayEnabled) {
+      _projected.value = null;
+    } else {
+      final projected = projectQuadToPreview(
+        quad: quad,
+        quarterTurns: previewQuarterTurns(
+          isIOS: geometry.isIOS,
+          sensorOrientation: geometry.sensorOrientation,
+        ),
+      );
+      // Last net against an absurd overlay: a wrong rotation gives a contour
+      // that is ABSENT, never one that is grotesque, and the template is still
+      // on screen either way.
+      _projected.value = quadMostlyInside(projected) ? projected : null;
+    }
+
+    return config.contourFramingEnabled
+        ? observation.framing
+        : DocumentFraming.unknown;
   }
 
   void _onFrame(LumaFrame frame) {
@@ -233,6 +333,8 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     );
     _sharpnessKnown = true;
 
+    final framing = _analyseContour(frame, config);
+
     var previousState = _shutter.value;
     if (_awaitingResumeAnchor) {
       _awaitingResumeAnchor = false;
@@ -251,6 +353,8 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       motionThreshold: config.motionThreshold,
       steadyHoldMs: config.steadyHoldMs,
       refusedHoldMs: config.refusedHoldMs,
+      framing: framing,
+      framingGraceMs: config.framingGraceMs,
     );
     _shutter.value = next;
 
@@ -368,6 +472,8 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
   void dispose() {
     // Order matters: silence the inputs before disposing what they write to.
     _fallbackTimer?.cancel();
+    _contour.dispose();
+    _projected.dispose();
     _sub?.cancel();
     _source.stop();
     _shutter.dispose();
@@ -429,6 +535,9 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       DocumentShutterReason.steadying => l10n.identityCaptureHoldStill,
       DocumentShutterReason.ready => l10n.identityCaptureHoldStill,
       DocumentShutterReason.refused => l10n.identityCaptureRefused,
+      DocumentShutterReason.noDocument => l10n.identityCaptureNoDocument,
+      DocumentShutterReason.tooSmall => l10n.identityCaptureTooSmall,
+      DocumentShutterReason.tooClose => l10n.identityCaptureTooClose,
     };
   }
 
@@ -442,12 +551,25 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       fit: StackFit.expand,
       children: [
         _source.buildPreview(),
+        // FULL-BLEED, deliberately: the AspectRatio CameraPreview wraps itself
+        // in is inert under this expanded Stack, so the texture is stretched
+        // over the whole rectangle and normalised plane coordinates map onto it
+        // linearly. Wrapping this in a Center or an AspectRatio would introduce
+        // the very letterbox it looks like it is correcting.
+        ValueListenableBuilder<DocumentQuad?>(
+          valueListenable: _projected,
+          builder: (context, quad, _) => DocumentContourOverlay(quad: quad),
+        ),
         ValueListenableBuilder<DocumentShutterState>(
           valueListenable: _shutter,
-          builder: (context, state, _) => DocumentFrameOverlay(
-            reason: state.reason,
-            progress: state.progress,
-            showFlipDemo: widget.side == DocumentSide.verso,
+          builder: (context, state, _) => ValueListenableBuilder<DocumentQuad?>(
+            valueListenable: _projected,
+            builder: (context, quad, _) => DocumentFrameOverlay(
+              reason: state.reason,
+              progress: state.progress,
+              showFlipDemo: widget.side == DocumentSide.verso,
+              contourVisible: quad != null,
+            ),
           ),
         ),
         ValueListenableBuilder<int>(
