@@ -80,12 +80,10 @@ class _AvatarPickerSheetState extends State<AvatarPickerSheet> {
         AvatarCatalog.defaultToneIndex;
   }
 
-  String? get _currentCharacter {
-    final id = widget.currentAvatarId;
-    if (id == null) return null;
-    final match = RegExp(r'_t[1-6]$').firstMatch(id);
-    return match == null ? id : id.substring(0, match.start);
-  }
+  /// Read from the catalogue rather than re-split here: the tone grammar has
+  /// one owner.
+  String? get _currentCharacter =>
+      AvatarCatalog.parse(widget.currentAvatarId)?.characterId;
 
   @override
   Widget build(BuildContext context) {

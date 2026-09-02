@@ -1,11 +1,13 @@
 /// The illustrated avatar catalogue, and the only place that turns an
 /// `avatarId` into something drawable.
 ///
-/// An `avatarId` is an opaque catalogue TOKEN, never a path. It is resolved
-/// here by table lookup, and never by string concatenation, so a value written
-/// by a patched client cannot address anything but a catalogue entry. That is
-/// what makes the character class of the grammar load bearing rather than
-/// decorative.
+/// An `avatarId` is an opaque catalogue TOKEN, never a path. The asset path is
+/// interpolated, but only from a `characterId` already proven to be a member of
+/// [humanIds] or [animalIds] on the line before: a value written by a patched
+/// client is rejected by that membership check and never reaches the
+/// interpolation. Said precisely, because "never concatenated" would be a
+/// stronger claim than the code makes, and a reader who noticed the gap could
+/// have "corrected" it in either direction.
 ///
 /// Resolution fails CLOSED, the way `BookingStatus.unknown` and
 /// `IdentityTrustStatus.fromString` already do in this codebase: anything that
@@ -19,12 +21,19 @@ library;
 class AvatarRef {
   const AvatarRef({
     required this.assetPath,
+    required this.characterId,
     required this.toneIndex,
     required this.skinToneArgb,
   });
 
   /// Full asset key, ready for `SvgPicture.asset`.
   final String assetPath;
+
+  /// The character without its tone suffix. Exposed so no caller has to
+  /// re-implement the suffix grammar: the picker needs it to mark the current
+  /// tile, and a second copy of `_t[1-6]$` living in `features/` would go
+  /// silently stale the day a seventh tone is added.
+  final String characterId;
 
   /// Index into [AvatarCatalog.skinTones], or null for an animal.
   final int? toneIndex;
@@ -192,6 +201,7 @@ abstract final class AvatarCatalog {
       // still resolves and the tone is dropped.
       return AvatarRef(
         assetPath: '$_assetDir/$characterId.svg',
+        characterId: characterId,
         toneIndex: null,
         skinToneArgb: null,
       );
@@ -202,6 +212,7 @@ abstract final class AvatarCatalog {
     final tone = toneIndex ?? defaultToneIndex;
     return AvatarRef(
       assetPath: '$_assetDir/$characterId.svg',
+      characterId: characterId,
       toneIndex: tone,
       skinToneArgb: skinTones[tone],
     );
