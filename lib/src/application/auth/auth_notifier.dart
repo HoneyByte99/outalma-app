@@ -269,13 +269,21 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
-  /// Updates mutable profile fields. **Phone number is intentionally not
+  /// Updates the name and the country. **Phone number is intentionally not
   /// editable here** - changing the phone requires re-verification via OTP
   /// and is handled by a dedicated flow (TBD).
+  ///
+  /// It does NOT take a photoPath, and that is load bearing rather than an
+  /// omission. The parameter existed and was removed when the avatar picker
+  /// shipped: this method cannot express an erasure, so setting a photo here
+  /// would leave any previously chosen `avatarId` on the document, both would
+  /// be published by the projection, and the display cascade (photo first)
+  /// would hide the inconsistency with a green suite. Every profile-image
+  /// change goes through [setProfileImage], which writes the two fields
+  /// together because they are mutually exclusive.
   Future<void> updateProfile({
     required String displayName,
     String? country,
-    String? photoPath,
   }) async {
     final current = state.valueOrNull;
     if (current is! AuthAuthenticated) return;
@@ -283,13 +291,73 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     final updated = current.user.copyWith(
       displayName: displayName,
       country: country ?? current.user.country,
-      photoPath: photoPath ?? current.user.photoPath,
     );
 
     state = AsyncData(AuthAuthenticated(updated));
 
     try {
       await ref.read(userRepositoryProvider).upsert(updated);
+    } catch (_) {
+      state = AsyncData(current);
+      rethrow;
+    }
+  }
+
+  /// Sets what shows as the profile image: an imported photo, an illustrated
+  /// avatar from the catalogue, or neither.
+  ///
+  /// The three are MUTUALLY EXCLUSIVE, which is why one method writes both
+  /// fields instead of two methods writing one each. Passing a photo clears
+  /// the avatar, passing an avatar clears the photo, passing neither returns
+  /// the user to their initials. Without that, choosing an avatar while a
+  /// photo is on file would be a silent no-op: the display order is photo,
+  /// then avatar, then initials, so the new avatar would never show.
+  ///
+  /// Deliberately NOT part of [updateProfile]. That method takes a required
+  /// displayName and is called from the profile form; grafting an image
+  /// concern onto it would make two unrelated callers share a signature. More
+  /// importantly, [updateProfile] merge-writes the whole user, and this one
+  /// must be able to ERASE.
+  Future<void> setProfileImage({String? photoPath, String? avatarId}) async {
+    final current = state.valueOrNull;
+    if (current is! AuthAuthenticated) return;
+    final user = current.user;
+
+    // Built through the full constructor rather than copyWith on purpose: the
+    // house idiom `x ?? this.x` means "keep", so copyWith cannot express a
+    // passage to null. Every other field is carried across by hand, and a test
+    // asserts each one, because the compiler only protects the six required
+    // parameters and dropping `phoneE164` here would blank the phone number
+    // on the profile page until the next restart.
+    final updated = AppUser(
+      id: user.id,
+      displayName: user.displayName,
+      email: user.email,
+      country: user.country,
+      activeMode: user.activeMode,
+      createdAt: user.createdAt,
+      phoneE164: user.phoneE164,
+      pushToken: user.pushToken,
+      termsAcceptedAt: user.termsAcceptedAt,
+      gender: user.gender,
+      photoPath: photoPath,
+      avatarId: avatarId,
+    );
+
+    state = AsyncData(AuthAuthenticated(updated));
+
+    try {
+      // The targeted write, not `upsert`: it removes the key of whichever
+      // field is null instead of setting it to null, and it touches nothing
+      // else on the document, so a stale in-memory copy cannot clobber a
+      // pushToken or a name another device just wrote.
+      await ref
+          .read(userRepositoryProvider)
+          .setProfileImage(
+            userId: user.id,
+            photoPath: photoPath,
+            avatarId: avatarId,
+          );
     } catch (_) {
       state = AsyncData(current);
       rethrow;

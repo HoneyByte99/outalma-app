@@ -48,17 +48,25 @@ describe('exportMyData', () => {
   });
 
   it('returns the caller personal data bundle', async () => {
-    await seedUser('u1', { email: 'u1@test.dev' });
+    // avatarId is seeded so the export is PROVEN to carry a newly added
+    // scalar, instead of being inferred from the shape of `one()`. Budget line
+    // S10 asks for erasure AND export of anything new; erasure is already
+    // proven by the userExists check below, this is the other half.
+    await seedUser('u1', {
+      email: 'u1@test.dev',
+      avatarId: 'human_afro1_t2',
+    });
     await seedService_raw('s1', { providerId: 'u1', published: true });
     await seedReview('r1', { reviewerId: 'u1', revieweeId: 'other' });
 
     const res = (await call(fns.exportMyData, {}, { uid: 'u1' })) as {
-      user: { id: string } | null;
+      user: { id: string; avatarId?: string } | null;
       services: unknown[];
       reviewsWritten: unknown[];
       exportedAt: string;
     };
     expect(res.user?.id).toBe('u1');
+    expect(res.user?.avatarId).toBe('human_afro1_t2');
     expect(res.services).toHaveLength(1);
     expect(res.reviewsWritten).toHaveLength(1);
     expect(res.exportedAt).toBeTruthy();

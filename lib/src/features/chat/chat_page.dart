@@ -742,6 +742,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   children: [
                     UserAvatar(
                       photoPath: otherUser?.photoPath,
+                      avatarId: otherUser?.avatarId,
                       displayName: chatTitle,
                       radius: 16,
                     ),
@@ -1353,6 +1354,7 @@ class _MessageBubble extends ConsumerWidget {
             UserAvatar(
               displayName: sender?.displayName ?? '',
               photoPath: sender?.photoPath,
+              avatarId: sender?.avatarId,
               radius: 14,
             ),
             const SizedBox(width: 8),

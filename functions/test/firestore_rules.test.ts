@@ -10,6 +10,7 @@ import {
 import {
   doc,
   getDoc,
+  deleteField,
   setDoc,
   updateDoc,
   serverTimestamp,
@@ -437,6 +438,12 @@ describe('public_profiles guest read', () => {
         photoPath: 'https://storage.example/avatars/bob.png',
         country: 'SN',
         phoneVerified: true,
+        // The two keys added after the original audit. Seeded so the assertion
+        // below describes a production-shaped document: a fixture missing them
+        // would leave the test VACANT for exactly the fields most likely to
+        // start leaking something.
+        gender: 'male',
+        avatarId: 'human_afro1_t2',
       });
       // The source document, carrying the PII the projection exists to keep out.
       await setDoc(doc(db, 'users/bob'), {
@@ -466,8 +473,10 @@ describe('public_profiles guest read', () => {
     // actually receives, not the intent of the function that wrote it.
     const snap = await getDoc(doc(anon(), 'public_profiles/bob'));
     expect(Object.keys(snap.data() ?? {}).sort()).toEqual([
+      'avatarId',
       'country',
       'displayName',
+      'gender',
       'phoneVerified',
       'photoPath',
     ]);
@@ -1014,5 +1023,182 @@ describe('core access invariants', () => {
 
   test('default-deny: unknown collection is not readable', async () => {
     await assertFails(getDoc(doc(asUser('alice'), 'secret_stuff/x')));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The avatarId guard on `users`. Budget line S2: every rule touched gets a
+// test that PASSES for the allowed and FAILS for the forbidden.
+// ---------------------------------------------------------------------------
+describe('users avatarId is a catalogue token', () => {
+  beforeEach(async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'users/alice'), {
+        displayName: 'Alice',
+        email: 'alice@example.com',
+        country: 'FR',
+      });
+    });
+  });
+
+  test('the owner CAN set a well-formed token', async () => {
+    await assertSucceeds(
+      updateDoc(doc(asUser('alice'), 'users/alice'), {
+        avatarId: 'human_afro1_t2',
+      })
+    );
+  });
+
+  test('the owner CAN clear it with null', async () => {
+    // Present-with-null is what a client sends right after an erasure, and a
+    // rule refusing it would block the very write that clears an avatar. Do
+    // NOT tighten this without reading avatarIdOk: `in` treats absent and null
+    // as different things.
+    await assertSucceeds(
+      updateDoc(doc(asUser('alice'), 'users/alice'), { avatarId: null })
+    );
+  });
+
+  test('a path traversal is REFUSED', async () => {
+    await assertFails(
+      updateDoc(doc(asUser('alice'), 'users/alice'), {
+        avatarId: 'human_../../etc/passwd',
+      })
+    );
+  });
+
+  test('a non-string is REFUSED', async () => {
+    await assertFails(
+      updateDoc(doc(asUser('alice'), 'users/alice'), { avatarId: 42 })
+    );
+    await assertFails(
+      updateDoc(doc(asUser('alice'), 'users/alice'), { avatarId: { tone: 3 } })
+    );
+  });
+
+  test('an oversized value is REFUSED', async () => {
+    await assertFails(
+      updateDoc(doc(asUser('alice'), 'users/alice'), {
+        avatarId: 'human_' + 'a'.repeat(5000),
+      })
+    );
+  });
+
+  test('uppercase is REFUSED, not normalised', async () => {
+    await assertFails(
+      updateDoc(doc(asUser('alice'), 'users/alice'), {
+        avatarId: 'Human_afro1_t2',
+      })
+    );
+  });
+
+  test('a tone outside the closed range is REFUSED', async () => {
+    await assertFails(
+      updateDoc(doc(asUser('alice'), 'users/alice'), {
+        avatarId: 'human_afro1_t7',
+      })
+    );
+  });
+
+  test('a document with NO avatarId is still writable', async () => {
+    // The compatibility test everyone forgets. Every account in production is
+    // in this state.
+    await assertSucceeds(
+      updateDoc(doc(asUser('alice'), 'users/alice'), { displayName: 'Alice B' })
+    );
+  });
+
+  test('a legacy off-grammar value does not FREEZE the document', async () => {
+    // THE test the affectedKeys() scoping exists for, and it only works
+    // written as updateDoc. A setDoc here would be a full overwrite, avatarId
+    // would be absent from request.resource.data, avatarIdOk would return true
+    // through its `!('avatarId' in ...)` branch, and removing the scoping
+    // would make NOTHING go red: the guard against a frozen account would be
+    // declared verified by a test that never touches it.
+    //
+    // Every client write to `users` is a merge, including the single-key
+    // pushToken refresh on every app start, so an unscoped guard would lock
+    // this document out of all of them.
+    await seed(async (db) => {
+      await setDoc(
+        doc(db, 'users/alice'),
+        { avatarId: 'legacy-value-from-elsewhere' },
+        { merge: true }
+      );
+    });
+    await assertSucceeds(
+      updateDoc(doc(asUser('alice'), 'users/alice'), { displayName: 'Alice B' })
+    );
+  });
+
+  test('but CHANGING one off-grammar value for another is REFUSED', async () => {
+    // The scoping is not a hole: a write that touches the field is judged.
+    await seed(async (db) => {
+      await setDoc(
+        doc(db, 'users/alice'),
+        { avatarId: 'legacy-value-from-elsewhere' },
+        { merge: true }
+      );
+    });
+    await assertFails(
+      updateDoc(doc(asUser('alice'), 'users/alice'), {
+        avatarId: 'another-bad-value',
+      })
+    );
+  });
+
+  test('CREATE with an off-grammar token is REFUSED', async () => {
+    // Covered independently of update: the create rule has its own guard, and
+    // a hostile client would otherwise just write the value at sign-up.
+    await assertFails(
+      setDoc(doc(asUser('carol'), 'users/carol'), {
+        displayName: 'Carol',
+        email: 'carol@example.com',
+        avatarId: '../../etc/passwd',
+      })
+    );
+  });
+
+  test('CREATE with a well-formed token is allowed', async () => {
+    await assertSucceeds(
+      setDoc(doc(asUser('dave'), 'users/dave'), {
+        displayName: 'Dave',
+        email: 'dave@example.com',
+        avatarId: 'animal_blob1',
+      })
+    );
+  });
+
+  test('the REAL erase write shape is allowed', async () => {
+    // Every test above uses updateDoc, but the app writes
+    // set({photoPath: deleteField(), avatarId: ...}, {merge: true}) from
+    // FirestoreUserRepository.setProfileImage. All branches of avatarIdOk are
+    // covered by the other cases, yet the exact request shape of the erase
+    // path was never put in front of the rules: if it were refused, every
+    // "pick an avatar over a photo" and every "remove" would fail with
+    // PERMISSION_DENIED and only a smoke test would notice.
+    await assertSucceeds(
+      setDoc(
+        doc(asUser('alice'), 'users/alice'),
+        { photoPath: deleteField(), avatarId: 'animal_blob1' },
+        { merge: true }
+      )
+    );
+    // And the same shape carrying a bad token is still refused.
+    await assertFails(
+      setDoc(
+        doc(asUser('alice'), 'users/alice'),
+        { photoPath: deleteField(), avatarId: '../../etc/passwd' },
+        { merge: true }
+      )
+    );
+  });
+
+  test('a THIRD PARTY cannot write somebody else avatarId', async () => {
+    await assertFails(
+      updateDoc(doc(asUser('mallory'), 'users/alice'), {
+        avatarId: 'animal_blob1',
+      })
+    );
   });
 });

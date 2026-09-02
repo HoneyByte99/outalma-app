@@ -334,6 +334,7 @@ class _ProviderLink extends ConsumerWidget {
             UserAvatar(
               displayName: provider?.displayName ?? '',
               photoPath: provider?.photoPath,
+              avatarId: provider?.avatarId,
               radius: 24,
             ),
             const SizedBox(width: 14),
@@ -413,6 +414,7 @@ class _ClientSummary extends ConsumerWidget {
               UserAvatar(
                 displayName: client?.displayName ?? '',
                 photoPath: client?.photoPath,
+                avatarId: client?.avatarId,
                 radius: 24,
               ),
               const SizedBox(width: 14),

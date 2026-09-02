@@ -259,7 +259,7 @@
   "serviceDeleteBody": "Cette annonce sera définitivement supprimée.",
   "serviceDeleted": "Service supprimé",
   "ratingNew": "Nouveau",
-  "ratingFromClients": "{count, plural, =1{\u00b7 1 avis de client} other{\u00b7 {count} avis de clients}}",
+  "ratingFromClients": "{count, plural, =1{· 1 avis de client} other{· {count} avis de clients}}",
   "@ratingFromClients": {
     "placeholders": {
       "count": {
@@ -267,7 +267,7 @@
       }
     }
   },
-  "ratingFloorHintClients": "\u00b7 moins de {count} avis de clients",
+  "ratingFloorHintClients": "· moins de {count} avis de clients",
   "@ratingFloorHintClients": {
     "placeholders": {
       "count": {
@@ -275,7 +275,7 @@
       }
     }
   },
-  "ratingFloorHint": "\u00b7 moins de {count} avis",
+  "ratingFloorHint": "· moins de {count} avis",
   "@ratingFloorHint": {
     "placeholders": {
       "count": {
@@ -283,7 +283,7 @@
       }
     }
   },
-  "reviewsAllReceived": "Tous les avis re\u00e7us",
+  "reviewsAllReceived": "Tous les avis reçus",
   "tooltipProviderProfile": "Mon profil prestataire",
   "bookingsTitle": "Mes réservations",
   "tabActive": "En cours",
@@ -330,7 +330,7 @@
       }
     }
   },
-  "serviceZoneWithDistance": "{label} \u00b7 {km} km",
+  "serviceZoneWithDistance": "{label} · {km} km",
   "@serviceZoneWithDistance": {
     "description": "Service card: the closest intervention zone and its distance from the active location filter.",
     "placeholders": {
@@ -966,5 +966,46 @@
   "bookingRequiresLogin": "Créez un compte pour réserver ce service",
   "guestLockedSectionLogin": "Connectez-vous pour ouvrir cette section",
   "introContinueAsGuest": "Explorer sans compte",
-  "introAlreadyHaveAccount": "J'ai déjà un compte"
+  "introAlreadyHaveAccount": "J'ai déjà un compte",
+  "avatarSheetTitle": "Photo de profil",
+  "avatarImportPhoto": "Importer une photo",
+  "avatarRemove": "Retirer, revenir aux initiales",
+  "avatarSkinToneLabel": "Teinte de peau",
+  "avatarSectionAnimals": "Animaux",
+  "avatarErrorSave": "Impossible d'enregistrer votre choix. Réessayez.",
+  "profileChangeAvatarA11y": "Changer la photo de profil",
+  "avatarItemLabel": "Avatar {index} sur {total}",
+  "@avatarItemLabel": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "avatarAnimalLabel": "Animal {index} sur {total}",
+  "@avatarAnimalLabel": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "avatarSkinToneItem": "Teinte de peau {index} sur {total}",
+  "@avatarSkinToneItem": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "avatarSheetClose": "Fermer"
 }

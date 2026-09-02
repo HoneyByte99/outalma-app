@@ -159,4 +159,40 @@ void main() {
       );
     },
   );
+
+  // The illustrated avatar, mirrored here because the catalogue card, the
+  // public provider profile and the review rows are GUEST surfaces and resolve
+  // their person through this document, not through `users`.
+  group('illustrated avatar', () {
+    test('reads a catalogue id', () async {
+      final db = FakeFirebaseFirestore();
+      await _write(db, 'a', {
+        'displayName': 'Awa',
+        'avatarId': 'human_afro1_t2',
+      });
+      final repo = FirestorePublicProfileRepository(db);
+      expect((await repo.watchById('a').first)!.avatarId, 'human_afro1_t2');
+    });
+
+    test('reads null when the field is absent', () async {
+      final db = FakeFirebaseFirestore();
+      await _write(db, 'a', {'displayName': 'Awa'});
+      final repo = FirestorePublicProfileRepository(db);
+      expect((await repo.watchById('a').first)!.avatarId, isNull);
+    });
+
+    test('reads null on a NON-STRING value instead of throwing', () async {
+      // A guest is looking at this surface, so a throw here would break a page
+      // for someone with no account and no way to fix it. The read completing
+      // at all is what proves the converter did not throw.
+      final db = FakeFirebaseFirestore();
+      await _write(db, 'a', {'displayName': 'Awa', 'avatarId': 42});
+      final repo = FirestorePublicProfileRepository(db);
+
+      final profile = await repo.watchById('a').first;
+      expect(profile, isNotNull);
+      expect(profile!.avatarId, isNull);
+      expect(profile.displayName, 'Awa', reason: 'the rest still reads');
+    });
+  });
 }

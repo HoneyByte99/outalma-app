@@ -85,7 +85,12 @@ class _BlockedUserTile extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          UserAvatar(displayName: name, photoPath: user.photoPath, radius: 22),
+          UserAvatar(
+            displayName: name,
+            photoPath: user.photoPath,
+            avatarId: user.avatarId,
+            radius: 22,
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Text(

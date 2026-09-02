@@ -32,6 +32,14 @@ module.exports = {
       functions: 80,
       statements: 80,
     },
+    // Budget line T5b, per-path floor on the file this increment touches. The
+    // ratchet, not a target: the file sits well above it.
+    './src/public_profiles.ts': {
+      lines: 80,
+      branches: 80,
+      functions: 80,
+      statements: 80,
+    },
     './src/identity_extraction.ts': {
       lines: 80,
       branches: 80,

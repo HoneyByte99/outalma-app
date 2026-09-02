@@ -75,9 +75,62 @@ service cloud.firestore {
           || request.resource.data.gender in ['male', 'female'];
       }
 
+      // The illustrated avatar: absent, null, or a well-formed catalogue token
+      // such as `human_afro1_t2`. Same reasoning as isGenderSafe above, this
+      // value being projected into the world-readable `public_profiles` too,
+      // with three differences worth writing down.
+      //
+      // A GRAMMAR, not an enumeration of the 40 x 6 possibilities. The
+      // illustrations ship inside the app bundle, so an enumeration here would
+      // force these rules to be deployed BEFORE every store release that adds
+      // an avatar, and a removed id would make an existing document read-only.
+      // A grammatical token that is not in the catalogue resolves to null on
+      // the client and shows initials, which hurts nobody. The server knows the
+      // FORM, the app owns the CONTENT, and neither ever has to be deployed
+      // with the other.
+      //
+      // The character class is what does the work: no dot, no slash, no
+      // backslash, no percent, no space, nothing outside ASCII. A path
+      // traversal is impossible rather than improbable, should anyone ever
+      // resolve this token by concatenation. Anchored, it also bounds the
+      // length at 30 characters, so no separate size cap is needed on a value
+      // that gets republished to every visitor.
+      //
+      // `null` is tolerated because absence and null are different things to
+      // `in`: the field is present-with-null right after an erasure, and a rule
+      // that refused it would block the very write that clears an avatar.
+      // Fail-open on the REPRESENTATION of empty, fail-closed on the VALUE.
+      function avatarIdOk() {
+        return !('avatarId' in request.resource.data)
+          || request.resource.data.avatarId == null
+          || (request.resource.data.avatarId is string
+              && request.resource.data.avatarId.matches('^(human|animal)_[a-z0-9]{1,20}(_t[1-6])?$'));
+      }
+
+      // On UPDATE the guard is SCOPED to writes that actually touch the field,
+      // and that scoping is not an ornament: it prevents freezing accounts.
+      // Every client write to `users` is a set(..., merge: true), including
+      // notification_service.dart writing the single `pushToken` key on every
+      // app start. On a merge, `request.resource.data` is the document AFTER
+      // the merge, so it carries the STORED avatarId even when the write does
+      // not mention it. An unscoped guard would therefore refuse the push-token
+      // refresh, the name edit, the country change and the terms acceptance of
+      // any document holding a non-conforming value, and the push-token path
+      // swallows its own exception, so the symptom would be silently missing
+      // notifications. Such a value can only arrive from before this rule
+      // shipped or from the Admin SDK, which bypasses these rules and does
+      // write `users` (auth_phone.ts, and field-scoped updates in index.ts).
+      //
+      // Scoping also means the grammar can be tightened later without freezing
+      // anyone: a removed id simply stops being re-selectable.
+      function isAvatarUpdateSafe() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['avatarId'])
+          || avatarIdOk();
+      }
+
       allow read: if signedIn();
-      allow create: if isAdmin() || (isSelf(uid) && isUserCreateSafe() && isGenderSafe());
-      allow update: if isAdmin() || (isSelf(uid) && isUserUpdateSafe() && isGenderSafe());
+      allow create: if isAdmin() || (isSelf(uid) && isUserCreateSafe() && isGenderSafe() && avatarIdOk());
+      allow update: if isAdmin() || (isSelf(uid) && isUserUpdateSafe() && isGenderSafe() && isAvatarUpdateSafe());
       allow delete: if isAdmin();
 
       // Users a person has blocked, private to that person.
@@ -122,6 +175,31 @@ service cloud.firestore {
     // not already going to show. The projection is still an ALLOWLIST and the
     // value is still checked against the two canonical strings on both sides,
     // in `projectPublicProfile` and in the `users` rule above.
+    //
+    // A SIXTH key was added on 2026-09-02, also outside the audit above:
+    //
+    //   avatarId        0/50    a catalogue token such as `human_afro1_t2`,
+    //                           naming an illustration that ships inside the
+    //                           app. Projected here because the same guest
+    //                           surfaces that need the name need the picture.
+    //                           0/50 because every account predates it.
+    //
+    // It names a drawing, it does not identify anybody, so opening it changes
+    // nothing about what this collection discloses. It is a TOKEN and neither a
+    // path nor a URL: the client resolves it through a lookup table and must
+    // never concatenate it or hand it to a fetching image loader. Value-checked
+    // on both sides against the same grammar, in `projectPublicProfile` and in
+    // `avatarIdOk` above.
+    //
+    // NOTE for the next audit: the two 0/50 lines above are DESIGN, not
+    // measurement, unlike the four counted lines. Re-measure them, do not
+    // inherit the zeros.
+    //
+    // Still unvalidated by value, and worth naming rather than leaving to be
+    // discovered: `photoPath` accepts any non-empty string and is handed
+    // straight to a network image loader on guest surfaces, and `displayName`
+    // accepts any string at all. Both are wider holes than anything avatarId
+    // could open. Separate increments.
     //
     // `providers/{uid}` was the alternative, being public already. It was
     // rejected on evidence: 23 documents, no `displayName` at all and a

@@ -235,6 +235,7 @@ class ProfileHeader extends ConsumerWidget {
           UserAvatar(
             displayName: user?.displayName ?? '',
             photoPath: user?.photoPath,
+            avatarId: user?.avatarId,
             radius: 40,
           ),
           const SizedBox(width: 20),
@@ -369,6 +370,7 @@ class _ReviewTile extends ConsumerWidget {
               UserAvatar(
                 displayName: reviewer?.displayName ?? '',
                 photoPath: reviewer?.photoPath,
+                avatarId: reviewer?.avatarId,
                 radius: 16,
               ),
               const SizedBox(width: 10),

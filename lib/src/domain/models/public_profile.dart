@@ -20,6 +20,7 @@ class PublicProfile {
     this.country,
     this.phoneVerified = false,
     this.gender,
+    this.avatarId,
   });
 
   final String id;
@@ -45,4 +46,9 @@ class PublicProfile {
   /// account created before the field existed has none, and a default would
   /// print a pictogram asserting a gender the person never declared.
   final Gender? gender;
+
+  /// The illustrated avatar, mirrored from `users` so the guest-reachable
+  /// surfaces can draw it: the catalogue card, the public provider profile and
+  /// the review rows all resolve their person through this document.
+  final String? avatarId;
 }

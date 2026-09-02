@@ -16,9 +16,18 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "lib/generated/**"
+    # Dev-only generator packages under tool/ carry their OWN pubspec, so they
+    # resolve their own dependencies and are never part of the app's analysis
+    # context. Verified before excluding: with tool/avatar_gen/ present and no
+    # `pub get` run inside it, a root `flutter analyze --fatal-warnings`
+    # reported 5 uri_does_not_exist / undefined_identifier errors from that
+    # directory. It would have passed on any machine where a developer had run
+    # `pub get` in the package, and failed only in CI, which checks out fresh
+    # and analyses the whole tree. Nothing under tool/ ships in the app.
+    - "tool/**"
 
   errors:
-    # Treat these as hard errors — they represent definite bugs.
+    # Treat these as hard errors, they represent definite bugs.
     missing_required_param: error
     missing_return: error
     dead_code: warning
@@ -26,7 +35,7 @@ analyzer:
 linter:
   rules:
     # -------------------------------------------------------------------------
-    # Correctness — these catch real bugs
+    # Correctness: these catch real bugs
     # -------------------------------------------------------------------------
 
     # Forces use of debugPrint (or a logger) instead of print(),
@@ -43,7 +52,7 @@ linter:
     close_sinks: true
 
     # -------------------------------------------------------------------------
-    # Code quality — improve reliability without massive churn
+    # Code quality: improve reliability without massive churn
     # -------------------------------------------------------------------------
 
     # Avoid returning a Future from a function that immediately awaits it.
@@ -52,7 +61,7 @@ linter:
     # Detects assignments whose value is never used.
     avoid_unused_constructor_parameters: true
 
-    # Prevent calling methods on dynamic — forces proper typing.
+    # Prevent calling methods on dynamic, forces proper typing.
     avoid_dynamic_calls: true
 
     # -------------------------------------------------------------------------

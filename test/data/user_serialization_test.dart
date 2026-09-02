@@ -26,6 +26,7 @@ AppUser _makeUser({
   String? pushToken,
   DateTime? createdAt,
   Gender? gender,
+  String? avatarId,
 }) {
   return AppUser(
     id: id,
@@ -38,6 +39,7 @@ AppUser _makeUser({
     pushToken: pushToken,
     createdAt: createdAt ?? DateTime(2024, 1, 15, 10, 0).toUtc(),
     gender: gender,
+    avatarId: avatarId,
   );
 }
 
@@ -249,6 +251,77 @@ void main() {
           ).doc(id).get()).data()!;
           expect(result.gender, isNull, reason: 'gender="$value"');
         }
+      },
+    );
+  });
+
+  // The illustrated avatar. Same shape of problem as the declared gender: an
+  // optional field mirrored into a world-readable projection, absent from every
+  // account that exists today.
+  group('AppUser serialization - illustrated avatar', () {
+    test('a catalogue id roundtrips', () async {
+      final user = _makeUser(id: 'u_av', avatarId: 'human_afro1_t2');
+      final col = FirestoreCollections.users(fakeDb);
+      await col.doc(user.id).set(user);
+
+      final raw = (await fakeDb.collection('users').doc(user.id).get()).data()!;
+      expect(raw['avatarId'], 'human_afro1_t2');
+
+      final result = (await col.doc(user.id).get()).data()!;
+      expect(result.avatarId, 'human_afro1_t2');
+    });
+
+    test(
+      'a null avatarId is OMITTED from the map, never written as null',
+      () async {
+        // Same hazard as pushToken and gender: upsert merge-writes the whole
+        // AppUser, so an explicit null would erase an avatar chosen on another
+        // device. Erasing goes through setProfileImage instead.
+        final user = _makeUser(id: 'no_avatar');
+        final col = FirestoreCollections.users(fakeDb);
+        await col.doc(user.id).set(user);
+
+        final raw = (await fakeDb.collection('users').doc(user.id).get())
+            .data()!;
+        expect(raw.containsKey('avatarId'), isFalse);
+      },
+    );
+
+    test('a NON-STRING value reads back null instead of throwing', () async {
+      // This is a guard on the authentication path, not a nicety. The bare
+      // `as String?` idiom used by the neighbouring fields would throw inside
+      // the converter, _resolveState would swallow it and return
+      // AuthUnauthenticated, and the owner would be signed out of their own
+      // account by a bad value in a decorative field.
+      final bad = <Object>[
+        42,
+        true,
+        <String, Object>{'tone': 3},
+        <String>['human_afro1'],
+      ];
+      for (var i = 0; i < bad.length; i++) {
+        final id = 'bad_$i';
+        await fakeDb.collection('users').doc(id).set({
+          'displayName': 'Awa',
+          'avatarId': bad[i],
+          'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
+        });
+        final snap = await FirestoreCollections.users(fakeDb).doc(id).get();
+        expect(snap.data, returnsNormally, reason: '${bad[i]} must not throw');
+        expect(snap.data()!.avatarId, isNull);
+      }
+    });
+
+    test(
+      'a document written before the field existed reads back null',
+      () async {
+        await fakeDb.collection('users').doc('legacy_av').set({
+          'displayName': 'Moussa',
+          'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
+        });
+        final col = FirestoreCollections.users(fakeDb);
+        final result = (await col.doc('legacy_av').get()).data()!;
+        expect(result.avatarId, isNull);
       },
     );
   });

@@ -28,4 +28,25 @@ class FirestoreUserRepository implements UserRepository {
       _db,
     ).doc(user.id).set(user, SetOptions(merge: true));
   }
+
+  @override
+  Future<void> setProfileImage({
+    required String userId,
+    required String? photoPath,
+    required String? avatarId,
+  }) async {
+    // Untyped on purpose: FieldValue.delete() cannot travel through the typed
+    // AppUser converter, and it is the only way to REMOVE a key rather than
+    // set it to null. A stored null would make `photoPath` and `avatarId`
+    // present-but-empty, which the projection already treats as absent, but
+    // leaving the key behind on a document that is mirrored world-readable is
+    // worth avoiding.
+    //
+    // Only these two keys are sent, so nothing else on the document can be
+    // clobbered by a stale in-memory copy.
+    await FirestoreCollections.usersRaw(_db).doc(userId).set({
+      'photoPath': photoPath ?? FieldValue.delete(),
+      'avatarId': avatarId ?? FieldValue.delete(),
+    }, SetOptions(merge: true));
+  }
 }

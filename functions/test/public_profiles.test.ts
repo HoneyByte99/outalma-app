@@ -12,6 +12,7 @@ const tf = functionsTest({ projectId: 'demo-outalma' });
 
 import * as fns from '../src/index';
 import {
+  isValidAvatarId,
   projectPublicProfile,
   projectionsEqual,
 } from '../src/public_profiles';
@@ -144,6 +145,10 @@ describe('projectPublicProfile', () => {
       homeAddress: '12 rue des Lilas',
       ipAddress: '81.2.3.4',
       dateOfBirth: '1990-04-02',
+      // Off-grammar on purpose: without it this test would be VACANT for
+      // avatarId, passing while proving nothing about the field the increment
+      // adds. With it, the same assertion covers both properties.
+      avatarId: '../../etc/passwd',
     }) as unknown as Record<string, unknown>;
     expect(Object.keys(proj).sort()).toEqual(['displayName', 'phoneVerified']);
   });
@@ -344,5 +349,253 @@ describe('backfillPublicProfiles', () => {
     await expect(
       call(fns.backfillPublicProfiles, {})
     ).rejects.toMatchObject({ code: expect.stringContaining('unauthenticated') });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isValidAvatarId: a pure grammar check, so a table of cases, each refusal
+// proving one NAMED thing.
+// ---------------------------------------------------------------------------
+describe('isValidAvatarId', () => {
+  const accepted = [
+    'human_afro1_t2',
+    'human_a_t1',
+    'human_afro1_t6',
+    'animal_blob1',
+    'animal_z9',
+    'human_abcdefghij0123456789', // the 20-character bound
+    'animal_0', // the 1-character bound
+  ];
+  it.each(accepted)('accepts %s', (value) => {
+    expect(isValidAvatarId(value)).toBe(true);
+  });
+
+  const refused: [string, unknown][] = [
+    ['empty', ''],
+    ['undefined', undefined],
+    ['null', null],
+    ['a number', 42],
+    ['a boolean', true],
+    // Firestore stores both of these happily, so the type check is not
+    // theoretical.
+    ['an object', { tone: 3 }],
+    ['an array', ['human_afro1_t2']],
+    ['uppercase, refused and NOT normalised', 'Human_afro1_t2'],
+    ['tone 0, below the closed range', 'human_afro1_t0'],
+    ['tone 7, above the closed range', 'human_afro1_t7'],
+    ['a repeated tone suffix', 'human_afro1_t2_t2'],
+    ['an unknown family', 'robot_afro1'],
+    ['an empty slug', 'human_'],
+    ['a leading space', ' human_afro1_t2'],
+    ['a trailing space', 'human_afro1_t2 '],
+    // The money cases: this is where a reviewer looks.
+    ['a path traversal', 'human_../../etc/passwd'],
+    ['an encoded traversal', 'human_..%2f..%2fetc'],
+    ['a slash in the slug', 'animal_a/b'],
+    ['a 21-character slug', 'human_abcdefghij01234567890'],
+  ];
+  it.each(refused)('refuses %s', (_reason, value) => {
+    expect(isValidAvatarId(value)).toBe(false);
+  });
+
+  it('refuses a trailing newline, so the `m` flag can never be added', () => {
+    // Corrected after a mutation pass caught the comment that used to sit
+    // here, which claimed that in JavaScript `$` without the `m` flag still
+    // matches before a trailing newline. That is Python. In JavaScript
+    // /^abc$/.test("abc\n") is FALSE, verified in node, which is why the
+    // source now uses the plain `$` instead of a `(?![\s\S])` terminator
+    // defended by a false reason.
+    //
+    // The test keeps its value all the same: adding the `m` flag WOULD make
+    // this pass, and that is the one change that would break agreement with
+    // the RE2 whole-string `matches()` in firestore.rules. Mutating the
+    // pattern to `/.../m` turns THIS red and nothing else.
+    expect(isValidAvatarId('human_afro1_t2\n')).toBe(false);
+  });
+
+  it('refuses an oversized value', () => {
+    expect(isValidAvatarId('human_' + 'a'.repeat(5000))).toBe(false);
+  });
+
+  it('answers the same on two consecutive calls', () => {
+    // Locks out the `g` flag forever: RegExp.prototype.test with `g` is
+    // stateful through lastIndex and alternates its answer.
+    expect(isValidAvatarId('animal_blob1')).toBe(true);
+    expect(isValidAvatarId('animal_blob1')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The avatar through the projection and the trigger.
+// ---------------------------------------------------------------------------
+describe('projectPublicProfile: illustrated avatar', () => {
+  it('projects a well-formed token', () => {
+    const proj = projectPublicProfile({
+      displayName: 'Awa',
+      avatarId: 'human_afro1_t2',
+    });
+    expect(proj).toEqual({
+      displayName: 'Awa',
+      phoneVerified: false,
+      avatarId: 'human_afro1_t2',
+    });
+  });
+
+  it('OMITS an off-grammar value', () => {
+    const proj = projectPublicProfile({
+      displayName: 'Awa',
+      avatarId: '../../etc/passwd',
+    }) as unknown as Record<string, unknown>;
+    // Both assertions on purpose: expect({a:1,b:undefined}).toEqual({a:1})
+    // PASSES in Jest, so toEqual alone would be a weaker claim than it looks.
+    expect(proj).toEqual({ displayName: 'Awa', phoneVerified: false });
+    expect(proj).not.toHaveProperty('avatarId');
+  });
+
+  it.each([[42], [{ tone: 3 }], [null], [['human_afro1_t2']]])(
+    'OMITS a non-string value (%p)',
+    (bad) => {
+      const proj = projectPublicProfile({
+        displayName: 'Awa',
+        avatarId: bad,
+      }) as unknown as Record<string, unknown>;
+      expect(proj).not.toHaveProperty('avatarId');
+    }
+  );
+
+  it('projects a photo AND an avatar when both are present', () => {
+    // The client keeps them mutually exclusive, so this is a robustness case
+    // for documents written before that rule or by the Admin SDK. Publishing
+    // both also means the display precedence can change later without a data
+    // migration.
+    const proj = projectPublicProfile({
+      displayName: 'Awa',
+      photoPath: 'https://example.test/a.jpg',
+      avatarId: 'human_afro1_t2',
+    });
+    expect(proj).toEqual({
+      displayName: 'Awa',
+      phoneVerified: false,
+      photoPath: 'https://example.test/a.jpg',
+      avatarId: 'human_afro1_t2',
+    });
+  });
+});
+
+describe('projectionsEqual: illustrated avatar', () => {
+  const base = { displayName: 'Awa', phoneVerified: false };
+
+  it('is false when only the avatar differs', () => {
+    expect(
+      projectionsEqual(
+        { ...base, avatarId: 'human_afro1_t2' },
+        { ...base, avatarId: 'animal_blob1' }
+      )
+    ).toBe(false);
+  });
+
+  it('is false when the avatar is present on one side only', () => {
+    expect(
+      projectionsEqual({ ...base, avatarId: 'human_afro1_t2' }, { ...base })
+    ).toBe(false);
+    expect(
+      projectionsEqual({ ...base }, { ...base, avatarId: 'human_afro1_t2' })
+    ).toBe(false);
+  });
+
+  it('is true when the avatar is the same', () => {
+    expect(
+      projectionsEqual(
+        { ...base, avatarId: 'human_afro1_t2' },
+        { ...base, avatarId: 'human_afro1_t2' }
+      )
+    ).toBe(true);
+  });
+});
+
+describe('mirrorPublicProfile: illustrated avatar', () => {
+  it('publishes a catalogue token', async () => {
+    await tf.wrap(fns.mirrorPublicProfile)(
+      writeEvent(undefined, { displayName: 'Awa', avatarId: 'human_afro1_t2' })
+    );
+    expect(await publicProfile('u1')).toEqual({
+      displayName: 'Awa',
+      phoneVerified: false,
+      avatarId: 'human_afro1_t2',
+    });
+  });
+
+  it('NEVER publishes an off-grammar token', async () => {
+    // The end-to-end proof that the PROJECTION is the last gate, not the rule:
+    // tf.wrap on a fabricated snapshot IS a write that bypasses firestore
+    // rules, exactly like the Admin SDK does.
+    await tf.wrap(fns.mirrorPublicProfile)(
+      writeEvent(undefined, {
+        displayName: 'Awa',
+        avatarId: 'human_../../etc/passwd',
+      })
+    );
+    const doc = await publicProfile('u1');
+    expect(doc).toEqual({ displayName: 'Awa', phoneVerified: false });
+    expect(doc).not.toHaveProperty('avatarId');
+  });
+
+  it('REWRITES the public document when ONLY the avatar changes', async () => {
+    // Without the avatarId line in projectionsEqual this test fails, and
+    // nothing else does: the trigger would short-circuit, the avatar would
+    // never reach any guest surface, and the suite would stay green. The
+    // marker technique is borrowed from the pushToken test above, inverted.
+    await tf.wrap(fns.mirrorPublicProfile)(
+      writeEvent(undefined, { displayName: 'Awa', avatarId: 'human_afro1_t2' })
+    );
+    await db()
+      .collection('public_profiles')
+      .doc('u1')
+      .set({ marker: 'untouched' }, { merge: true });
+
+    await tf.wrap(fns.mirrorPublicProfile)(
+      writeEvent(
+        { displayName: 'Awa', avatarId: 'human_afro1_t2' },
+        { displayName: 'Awa', avatarId: 'animal_blob1' }
+      )
+    );
+
+    const doc = await publicProfile('u1');
+    expect(doc?.avatarId).toBe('animal_blob1');
+    // The full set() swept the marker away, which is what proves a rewrite
+    // actually happened rather than a no-op.
+    expect(doc).not.toHaveProperty('marker');
+  });
+
+  it('removes the avatar from the public document when the user drops it',
+    async () => {
+      await tf.wrap(fns.mirrorPublicProfile)(
+        writeEvent(undefined, {
+          displayName: 'Awa',
+          avatarId: 'human_afro1_t2',
+        })
+      );
+      await tf.wrap(fns.mirrorPublicProfile)(
+        writeEvent(
+          { displayName: 'Awa', avatarId: 'human_afro1_t2' },
+          { displayName: 'Awa' }
+        )
+      );
+      const doc = await publicProfile('u1');
+      expect(doc).not.toHaveProperty('avatarId');
+    });
+
+  it('is idempotent on a REPLAY of the same event', async () => {
+    // Triggers replay, it is a fact of the platform (budget line D5), and this
+    // file had no replay test at all. The projection is deterministic and the
+    // write is a full set(), so a replay must be a no-op.
+    const event = writeEvent(undefined, {
+      displayName: 'Awa',
+      avatarId: 'human_afro1_t2',
+    });
+    await tf.wrap(fns.mirrorPublicProfile)(event);
+    const first = await publicProfile('u1');
+    await tf.wrap(fns.mirrorPublicProfile)(event);
+    expect(await publicProfile('u1')).toEqual(first);
   });
 });

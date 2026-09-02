@@ -1,8 +1,14 @@
-// Widget tests for UserAvatar — covers initials logic and radius sizing.
-// Only tests the photoPath: null path (no network mocking needed).
+// Widget tests for UserAvatar: initials, radius sizing, and the illustrated
+// avatar cascade.
+//
+// The photoPath branch is still not exercised against a real network (no
+// mocking needed for what is asserted here); what IS asserted is the
+// PRECEDENCE, which needs no network: a photo present means no SVG is built.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:outalma_app/src/domain/avatars/avatar_catalog.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/features/shared/user_avatar.dart';
 
@@ -102,6 +108,137 @@ void main() {
       );
       await tester.pump();
       expect(find.byIcon(Icons.person_rounded), findsOneWidget);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The illustrated avatar. The six tests above stay green untouched, which is
+  // itself the proof that avatarId is genuinely optional.
+  // -------------------------------------------------------------------------
+  group('illustrated avatar', () {
+    testWidgets('renders the SVG when there is no photo', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const UserAvatar(displayName: 'Awa Diop', avatarId: 'human_afro1_t2'),
+        ),
+      );
+
+      expect(find.byType(SvgPicture), findsOneWidget);
+      expect(find.text('AD'), findsNothing);
+    });
+
+    testWidgets('the PHOTO wins over the avatar', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const UserAvatar(
+            displayName: 'Awa Diop',
+            photoPath: 'https://example.test/a.jpg',
+            avatarId: 'human_afro1_t2',
+          ),
+        ),
+      );
+
+      // The cascade is photo, then avatar, then initials.
+      expect(find.byType(SvgPicture), findsNothing);
+    });
+
+    testWidgets('an UNKNOWN id falls back to initials', (tester) async {
+      // The whole compatibility story: an older build reading a profile that
+      // carries an avatar shipped later must show initials, not a hole.
+      await tester.pumpWidget(
+        _wrap(
+          const UserAvatar(
+            displayName: 'Awa Diop',
+            avatarId: 'human_shipped_in_a_newer_build',
+          ),
+        ),
+      );
+
+      expect(find.byType(SvgPicture), findsNothing);
+      expect(find.text('AD'), findsOneWidget);
+    });
+
+    testWidgets('an animal gets NO colour mapper', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const UserAvatar(displayName: 'Awa', avatarId: 'animal_blob1')),
+      );
+
+      final picture = tester.widget<SvgPicture>(find.byType(SvgPicture));
+      expect(
+        (picture.bytesLoader as SvgAssetLoader).colorMapper,
+        isNull,
+        reason: 'an animal has no skin to recolour',
+      );
+    });
+
+    testWidgets('a human gets the mapper of its tone', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const UserAvatar(displayName: 'Awa', avatarId: 'human_afro1_t4')),
+      );
+
+      final picture = tester.widget<SvgPicture>(find.byType(SvgPicture));
+      final mapper = (picture.bytesLoader as SvgAssetLoader).colorMapper;
+      expect(mapper, isNotNull);
+      // Index 3, because the id suffix is 1-based.
+      expect(
+        mapper!.substitute(
+          null,
+          'path',
+          'fill',
+          const Color(AvatarCatalog.skinSentinelArgb),
+        ),
+        Color(AvatarCatalog.skinTones[3]),
+      );
+    });
+
+    testWidgets('two tones give UNEQUAL mappers, one tone gives equal ones', (
+      tester,
+    ) async {
+      // This is the test that protects scroll performance, not correctness.
+      // `colorMapper` takes part in SvgCacheKey's hashCode and ==, so a mapper
+      // without value equality would miss the cache on every rebuild and
+      // re-parse the SVG: invisible on screen, visible while scrolling a chat
+      // list.
+      ColorMapper? currentMapper() {
+        final picture = tester.widget<SvgPicture>(find.byType(SvgPicture));
+        return (picture.bytesLoader as SvgAssetLoader).colorMapper;
+      }
+
+      await tester.pumpWidget(
+        _wrap(const UserAvatar(displayName: 'A', avatarId: 'human_afro1_t1')),
+      );
+      final t1 = currentMapper();
+
+      await tester.pumpWidget(
+        _wrap(const UserAvatar(displayName: 'B', avatarId: 'human_bantu1_t1')),
+      );
+      final sameTone = currentMapper();
+
+      await tester.pumpWidget(
+        _wrap(const UserAvatar(displayName: 'C', avatarId: 'human_afro1_t6')),
+      );
+      final t6 = currentMapper();
+
+      expect(t1, sameTone, reason: 'same tone must share one cache key');
+      expect(t1, isNot(t6), reason: 'different tones must not collide');
+    });
+
+    testWidgets('it stays inside its box at a small radius', (tester) async {
+      // radius 10 is the catalogue card, radius 14 the chat bubble: the
+      // smallest places this widget is asked to draw a whole bust.
+      await tester.pumpWidget(
+        _wrap(
+          const UserAvatar(
+            displayName: 'Awa',
+            avatarId: 'human_afro1_t2',
+            radius: 10,
+          ),
+        ),
+      );
+
+      final size = tester.getSize(find.byType(SvgPicture));
+      expect(size.width, 20);
+      expect(size.height, 20);
     });
   });
 }

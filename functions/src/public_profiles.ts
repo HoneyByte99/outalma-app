@@ -10,7 +10,7 @@
 // collection:
 //
 //   public_profiles/{uid} =
-//     { displayName, photoPath?, country?, phoneVerified, gender? }
+//     { displayName, photoPath?, country?, phoneVerified, gender?, avatarId? }
 //
 // Written EXCLUSIVELY here (the Firestore rule denies every client write), so
 // the projection can never be poisoned and cannot drift into holding PII.
@@ -35,6 +35,49 @@ export const PUBLIC_PROFILES = 'public_profiles';
 export const GENDERS = ['male', 'female'] as const;
 export type Gender = (typeof GENDERS)[number];
 
+/// Grammar of a catalogue avatar token, e.g. `human_afro1_t2`. Stated here as
+/// well as in `AvatarCatalog.idPattern` and in firestore.rules, for the same
+/// reason as GENDERS above: the projection is a security boundary and must not
+/// widen because a client wrote something else into `users`.
+///
+/// A GRAMMAR and not an enumeration, deliberately. The illustrations ship
+/// inside the app bundle, so an enumeration here would force the functions to
+/// be deployed BEFORE every store release that adds an avatar, a permanent
+/// ordering constraint for no benefit: a grammatical id that is not in the
+/// catalogue resolves to null on the client and shows initials, hurting nobody.
+/// The server knows the FORM, the app owns the CONTENT.
+///
+/// The character class is what makes a path traversal impossible rather than
+/// improbable, should anyone ever resolve this token by concatenation: no dot,
+/// no slash, no backslash, no percent, no space, nothing outside ASCII, so no
+/// homoglyph either. Being anchored it also bounds the length at 30
+/// characters, which is why no separate size cap is needed.
+///
+/// Anchored at both ends, with no flags. Two claims that were checked rather
+/// than assumed, because the first one was WRONG in an earlier revision of this
+/// file and only a mutation caught it:
+///
+/// In JavaScript, `$` without the `m` flag matches ONLY at the very end of the
+/// string, so `/^...$/.test("human_afro1_t2\n")` is FALSE. That is unlike
+/// Python, where `$` does match before a trailing newline. This file previously
+/// used `(?![\s\S])` and justified it by the Python behaviour; the terminator
+/// was harmless but the reason given for it was false, so it is now the plain
+/// `$` and the test that pins the newline case guards against somebody adding
+/// the `m` flag, which WOULD break the agreement with the RE2 whole-string
+/// `matches()` in firestore.rules.
+///
+/// No `g` flag either, and that one bites for real: `RegExp.prototype.test`
+/// with `g` is stateful through `lastIndex`, so two consecutive calls alternate
+/// their answer.
+export const AVATAR_ID_PATTERN =
+  /^(human|animal)_[a-z0-9]{1,20}(_t[1-6])?$/;
+
+/// True for a well-formed catalogue token. Exported so it can be unit-tested
+/// directly and reused.
+export function isValidAvatarId(value: unknown): value is string {
+  return typeof value === 'string' && AVATAR_ID_PATTERN.test(value);
+}
+
 export interface PublicProfile {
   displayName: string;
   photoPath?: string;
@@ -52,6 +95,19 @@ export interface PublicProfile {
   /// Omitted, never null, when the source has no value: 50 of the 50 accounts
   /// in production predate the field, and the client renders nothing for them.
   gender?: Gender;
+  /// The illustrated avatar the person picked, for those with no photo. Public
+  /// for the same reason as the two fields above: the catalogue card, the
+  /// public provider profile and the review rows are GUEST surfaces and
+  /// resolve their person through this document.
+  ///
+  /// A catalogue TOKEN, not a path and not a URL. The client resolves it
+  /// through a lookup table and must never concatenate it into a path or hand
+  /// it to an image loader that fetches, which is what `photoPath` right above
+  /// does with a URL.
+  ///
+  /// Omitted, never null, when the source has no value or the value is not
+  /// well formed.
+  avatarId?: string;
 }
 
 /**
@@ -89,6 +145,13 @@ export function projectPublicProfile(
   if (GENDERS.includes(user.gender as Gender)) {
     profile.gender = user.gender as Gender;
   }
+  // Value-checked like the gender above, and for a sharper reason: this value
+  // is a token the client turns into a file lookup. Placed after photoPath so
+  // the code reads in the order the client falls back: photo, then avatar,
+  // then initials.
+  if (isValidAvatarId(user.avatarId)) {
+    profile.avatarId = user.avatarId;
+  }
   return profile;
 }
 
@@ -107,6 +170,11 @@ export function projectionsEqual(
     (a.photoPath ?? null) === (b.photoPath ?? null) &&
     (a.country ?? null) === (b.country ?? null) &&
     (a.gender ?? null) === (b.gender ?? null) &&
+    // Omitting this line is silent and expensive: a user who changes ONLY
+    // their avatar would produce an equal projection, the trigger would
+    // short-circuit, and the new avatar would never reach any of the five
+    // guest-reachable surfaces. No error, no log, green suite.
+    (a.avatarId ?? null) === (b.avatarId ?? null) &&
     a.phoneVerified === b.phoneVerified
   );
 }
