@@ -452,6 +452,7 @@ class _ProviderRow extends ConsumerWidget {
               UserAvatar(
                 displayName: user?.displayName ?? '',
                 photoPath: user?.photoPath,
+                avatarId: user?.avatarId,
                 radius: 22,
               ),
               const SizedBox(width: AppSpacing.m),

@@ -71,6 +71,7 @@ class UserReviewsPage extends ConsumerWidget {
                   UserAvatar(
                     displayName: user?.displayName ?? '',
                     photoPath: user?.photoPath,
+                    avatarId: user?.avatarId,
                     radius: 24,
                   ),
                   const SizedBox(width: 14),

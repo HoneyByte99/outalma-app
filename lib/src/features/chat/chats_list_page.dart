@@ -204,6 +204,7 @@ class _ChatTile extends ConsumerWidget {
             UserAvatar(
               displayName: otherUser?.displayName ?? '',
               photoPath: otherUser?.photoPath,
+              avatarId: otherUser?.avatarId,
               radius: 26,
             ),
             const SizedBox(width: 14),

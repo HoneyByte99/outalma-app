@@ -238,6 +238,7 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                         UserAvatar(
                           displayName: appUser?.displayName ?? '',
                           photoPath: appUser?.photoPath,
+                          avatarId: appUser?.avatarId,
                           radius: 22,
                         ),
                         const SizedBox(width: 12),

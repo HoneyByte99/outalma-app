@@ -5,6 +5,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -31,6 +32,14 @@ Future<void> main() async {
     () async {
       final binding = WidgetsFlutterBinding.ensureInitialized();
       FlutterNativeSplash.preserve(widgetsBinding: binding);
+
+      // flutter_svg caches 100 parsed pictures by default, and the skin tone
+      // is part of the cache key, so the avatar picker alone can address
+      // 28 x 6 combinations. 150 covers a full sweep of the visible grid plus
+      // the avatars on whatever surface the user came from. Deliberately not
+      // 240: holding every combination in memory would be paying for a
+      // curiosity on the low-end device that matters here.
+      svg.cache.maximumSize = 150;
 
       final results = await Future.wait([
         Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),

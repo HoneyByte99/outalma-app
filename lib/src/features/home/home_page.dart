@@ -1242,6 +1242,7 @@ class ServiceCard extends ConsumerWidget {
                         UserAvatar(
                           displayName: providerUser?.displayName ?? '',
                           photoPath: providerUser?.photoPath,
+                          avatarId: providerUser?.avatarId,
                           radius: 10,
                         ),
                         const SizedBox(width: AppSpacing.xs),

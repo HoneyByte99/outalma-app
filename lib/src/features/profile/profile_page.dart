@@ -206,9 +206,12 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
                         ),
                       )
                     : UserAvatar(
-                        key: ValueKey(user.photoPath),
+                        // Keyed on BOTH, otherwise switching from a photo to an avatar (or
+                        // between two avatars) leaves the old subtree in place.
+                        key: ValueKey('${user.photoPath}|${user.avatarId}'),
                         displayName: user.displayName,
                         photoPath: user.photoPath,
+                        avatarId: user.avatarId,
                         radius: 30,
                       ),
                 if (!_uploading)
@@ -1475,6 +1478,7 @@ class _ReviewTile extends ConsumerWidget {
               UserAvatar(
                 displayName: reviewer?.displayName ?? '',
                 photoPath: reviewer?.photoPath,
+                avatarId: reviewer?.avatarId,
                 radius: 16,
               ),
               const SizedBox(width: 10),
