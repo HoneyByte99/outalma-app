@@ -269,13 +269,21 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
-  /// Updates mutable profile fields. **Phone number is intentionally not
+  /// Updates the name and the country. **Phone number is intentionally not
   /// editable here** - changing the phone requires re-verification via OTP
   /// and is handled by a dedicated flow (TBD).
+  ///
+  /// It does NOT take a photoPath, and that is load bearing rather than an
+  /// omission. The parameter existed and was removed when the avatar picker
+  /// shipped: this method cannot express an erasure, so setting a photo here
+  /// would leave any previously chosen `avatarId` on the document, both would
+  /// be published by the projection, and the display cascade (photo first)
+  /// would hide the inconsistency with a green suite. Every profile-image
+  /// change goes through [setProfileImage], which writes the two fields
+  /// together because they are mutually exclusive.
   Future<void> updateProfile({
     required String displayName,
     String? country,
-    String? photoPath,
   }) async {
     final current = state.valueOrNull;
     if (current is! AuthAuthenticated) return;
@@ -283,7 +291,6 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     final updated = current.user.copyWith(
       displayName: displayName,
       country: country ?? current.user.country,
-      photoPath: photoPath ?? current.user.photoPath,
     );
 
     state = AsyncData(AuthAuthenticated(updated));
