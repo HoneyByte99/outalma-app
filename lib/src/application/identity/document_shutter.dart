@@ -147,10 +147,19 @@ DocumentShutterState evaluateDocumentShutter({
   // below. One calculation rather than two competing rules: "every branch
   // relays it" and "good or unknown clears it" would contradict each other on a
   // frame that is well framed but blurred.
+  //
+  // It only starts once the scene has been TOUCHED, and that condition is not a
+  // detail: the grace measures how long the provider has been struggling with
+  // the framing, never how long a card sat on a table. Without it, a card left
+  // too far away for the whole grace before anyone touches it would have its
+  // clock already spent, and the first sharp-and-still stretch after the gesture
+  // would shoot a too-small frame without ever having said "come closer".
   final badSince =
       (framing == DocumentFraming.good || framing == DocumentFraming.unknown)
       ? null
-      : (prev.badFramingSinceMs ?? nowMs);
+      : (prev.armed || moved)
+      ? (prev.badFramingSinceMs ?? nowMs)
+      : null;
 
   // The fallback, and it is what makes "never blocking" true rather than
   // declarative: once the bad framing has lasted its grace, the framing is
@@ -212,7 +221,10 @@ DocumentShutterState evaluateDocumentShutter({
   // nothing to full at expiry.
   if (effective != DocumentFraming.unknown &&
       effective != DocumentFraming.good) {
-    final graceHeld = badSince == null ? 0 : nowMs - badSince;
+    // Non-null by construction: reaching this branch means the framing is
+    // neither good nor unknown AND the shutter is armed, which is exactly
+    // when the anchor is set.
+    final graceHeld = nowMs - badSince!;
     return DocumentShutterState(
       armed: true,
       steadySinceMs: prev.steadySinceMs ?? nowMs,

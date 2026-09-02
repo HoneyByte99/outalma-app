@@ -245,4 +245,52 @@ void main() {
       expect(state.steadySinceMs, isNull);
     });
   });
+
+  group('the grace clock only runs once the scene is touched', () {
+    test('a card left too far away does NOT spend its grace', () {
+      // Found in code review. The grace measures how long the PROVIDER has been
+      // struggling with the framing, never how long a card sat on a table. With
+      // the clock running while disarmed, a card left too far away for the whole
+      // grace would have it already spent, and the first sharp-and-still stretch
+      // after the gesture would shoot a too-small frame without ever having said
+      // "come closer".
+      var state = const DocumentShutterState.initial();
+      for (var t = 0; t <= _grace + 2000; t += 500) {
+        state = _step(state, nowMs: t, framing: DocumentFraming.tooSmall);
+        expect(state.badFramingSinceMs, isNull, reason: 'disarmed at $t');
+        expect(state.shouldCapture, isFalse);
+      }
+
+      // The gesture arms the shutter, and only now does the clock start.
+      state = _step(
+        state,
+        motion: 40,
+        nowMs: _grace + 2500,
+        framing: DocumentFraming.tooSmall,
+      );
+      state = _step(
+        state,
+        nowMs: _grace + 2600,
+        framing: DocumentFraming.tooSmall,
+      );
+      // The anchor lands on the GESTURE frame itself, not the one after: the
+      // grace starts the moment the provider begins handling the card.
+      expect(state.badFramingSinceMs, _grace + 2500);
+      expect(state.reason, DocumentShutterReason.tooSmall);
+
+      // And the guidance is shown for its full duration rather than skipped.
+      state = _step(
+        state,
+        nowMs: _grace + 2500 + _grace - 100,
+        framing: DocumentFraming.tooSmall,
+      );
+      expect(state.shouldCapture, isFalse);
+      state = _step(
+        state,
+        nowMs: _grace + 2500 + _grace,
+        framing: DocumentFraming.tooSmall,
+      );
+      expect(state.shouldCapture, isTrue);
+    });
+  });
 }
