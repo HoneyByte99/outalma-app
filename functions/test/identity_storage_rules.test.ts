@@ -211,3 +211,47 @@ describe('read: who may look at an identity document', () => {
     await assertFails(getBytes(ref(asOwner(), RECTO)));
   });
 });
+
+describe('avatar: the owner can REMOVE their own photo', () => {
+  // This suite existed only for identity documents, so nobody had ever put a
+  // delete of an avatar in front of the rules. The picker made
+  // AvatarUploadService.deleteAvatar() its first caller and the rule refused
+  // it: `allow write` covers delete, but on a delete `request.resource` is
+  // NULL, so `isImage()` and `smallEnough()` both error and the whole rule
+  // denies. The failure is silent at the call site, which logs and swallows,
+  // so the user was told their photo was removed while the object stayed.
+  //
+  // That matters because `read` on this path is open to every signed-in
+  // account and uids are enumerable from the world-readable `public_profiles`:
+  // an abandoned photo stays fetchable by anyone with an account until the
+  // whole account is deleted. Budget line S11.
+  const avatarPath = (uid: string) => `private/users/${uid}/avatar/profile.jpg`;
+
+  it('lets the owner delete their own avatar', async () => {
+    await seedObject(avatarPath(OWNER));
+    await assertSucceeds(deleteObject(ref(asOwner(), avatarPath(OWNER))));
+  });
+
+  it('still lets the owner upload one, with the type and size checks', async () => {
+    // The control: splitting create/update from delete must not have widened
+    // the upload, which is where budget line P3 lives.
+    await assertSucceeds(
+      uploadBytes(ref(asOwner(), avatarPath(OWNER)), bytes(), JPEG)
+    );
+    await assertFails(
+      uploadBytes(ref(asOwner(), avatarPath(OWNER)), bytes(), {
+        contentType: 'application/pdf',
+      })
+    );
+  });
+
+  it('refuses a THIRD PARTY deleting somebody else avatar', async () => {
+    await seedObject(avatarPath(OWNER));
+    await assertFails(deleteObject(ref(asOther(), avatarPath(OWNER))));
+  });
+
+  it('refuses an anonymous caller deleting one', async () => {
+    await seedObject(avatarPath(OWNER));
+    await assertFails(deleteObject(ref(asAnon(), avatarPath(OWNER))));
+  });
+});

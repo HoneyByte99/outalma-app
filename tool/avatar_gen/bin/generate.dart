@@ -148,8 +148,9 @@ void main(List<String> args) {
         // guard own its share of the suffix trap instead of leaving all of it
         // to the key-name check above.
         failures.add(
-          '${entry.id}: $key resolved to nothing, so it never reached '
-          'DiceBear. Component options are suffixed Variant since 10.',
+          '${entry.id}: $key resolved to nothing. The library refuses an '
+          'unknown key outright, so this is a legal key that reached '
+          'DiceBear and produced no value.',
         );
         return;
       }

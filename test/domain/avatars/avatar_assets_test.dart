@@ -95,6 +95,8 @@ void main() {
       'url(http',
       '<animate',
       '<style',
+      // A CSS-declared animation would slip past the two above.
+      'animation:',
     ];
     for (final f in files) {
       final body = read(f);

@@ -272,8 +272,11 @@ void main() {
   });
 
   testWidgets('the tap targets clear 44 points', (tester) async {
-    // A2, measured rather than asserted by eye.
-    await _openSheet(tester);
+    // A2, measured rather than asserted by eye. Opened WITH a photo so both
+    // action rows exist: the remove row is conditional, and measuring a
+    // one-element list while the comment claimed two was the previous version
+    // of this test.
+    await _openSheet(tester, hasPhoto: true);
 
     // Measured per swatch, by key. The previous loop measured the FIRST widget
     // once per iteration, so it proved nothing about the other five.
@@ -285,7 +288,10 @@ void main() {
 
     // The two action rows too, whose 48pt floor comes from _SheetAction's
     // BoxConstraints. Measuring the TEXT would have been unfalsifiable.
-    for (final label in ['Importer une photo']) {
+    for (final label in [
+      'Importer une photo',
+      'Retirer, revenir aux initiales',
+    ]) {
       final row = tester.getSize(
         find
             .ancestor(of: find.text(label), matching: find.byType(InkWell))

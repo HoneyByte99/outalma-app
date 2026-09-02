@@ -64,10 +64,27 @@ service firebase.storage {
     // User avatars
     // Path: /private/users/{uid}/avatar/{filename}
     // Read is open to any authenticated user so chat participants can display
-    // each other's profile photos. Write is restricted to the owner.
+    // each other's profile photos. Writes are the owner's.
+    //
+    // create/update and delete are SPLIT, and that split is a bug fix rather
+    // than tidiness. `allow write` covers delete, but on a delete request
+    // `request.resource` is NULL, so `isImage()` and `smallEnough()` both
+    // error and the rule denies: the owner could never delete their own photo.
+    // Nothing exercised it until the avatar picker became the first caller of
+    // AvatarUploadService.deleteAvatar(), and the failure is silent (the call
+    // site logs and swallows), so the user would be told their photo was
+    // removed while the object stayed behind. Since `read` is open to every
+    // signed-in account and uids are enumerable from the world-readable
+    // `public_profiles`, an abandoned photo stays fetchable by anyone with an
+    // account: budget line S11, and the product promise of "remove".
+    //
+    // The two content checks stay where they belong, on the upload, which is
+    // what budget line P3 asks for.
     match /private/users/{uid}/avatar/{filename} {
       allow read: if signedIn();
-      allow write: if isAdmin() || (isSelf(uid) && isImage() && smallEnough(5 * 1024 * 1024));
+      allow create, update: if isAdmin()
+        || (isSelf(uid) && isImage() && smallEnough(5 * 1024 * 1024));
+      allow delete: if isAdmin() || isSelf(uid);
     }
 
     // Chat media (images + voice messages)

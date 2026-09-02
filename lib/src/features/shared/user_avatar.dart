@@ -84,7 +84,10 @@ class UserAvatar extends StatelessWidget {
             ),
           ),
           errorWidget: (_, __, error) {
-            debugPrint('[UserAvatar] image load error for $photoPath: $error');
+            // The URL is NOT logged: it carries a Storage download token, and
+            // budget line S12 keeps tokens and PII out of the logs. The error
+            // alone says what went wrong.
+            debugPrint('[UserAvatar] photo load failed: $error');
             return fallback;
           },
         ),
