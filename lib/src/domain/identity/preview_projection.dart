@@ -71,6 +71,30 @@ DocumentQuad projectQuadToPreview({
   );
 }
 
+/// Whether a projected quad sits mostly inside the overlay rectangle.
+///
+/// The last net against an absurd overlay: if the platform rotation turns out to
+/// be wrong, the contour comes back ABSENT rather than grotesque, and the fixed
+/// template is still on screen either way.
+///
+/// A pure function and not a private helper on the page, for the reason this
+/// project has already written down once: a guard living in a widget is covered
+/// by nothing, so it has to be a selector. The margin is generous because a
+/// correct contour can legitimately touch the frame edge, which is exactly the
+/// "too close" case.
+bool quadMostlyInside(DocumentQuad quad, {double margin = 0.05}) {
+  var inside = 0;
+  for (final c in quad.corners) {
+    if (c.x >= -margin &&
+        c.x <= 1 + margin &&
+        c.y >= -margin &&
+        c.y <= 1 + margin) {
+      inside++;
+    }
+  }
+  return inside >= 3;
+}
+
 /// Whether the preview and the analysis plane can be assumed to show the same
 /// scene, which is the premise the whole contour rests on.
 ///

@@ -281,23 +281,12 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       // Last net against an absurd overlay: a wrong rotation gives a contour
       // that is ABSENT, never one that is grotesque, and the template is still
       // on screen either way.
-      _projected.value = _mostlyInside(projected) ? projected : null;
+      _projected.value = quadMostlyInside(projected) ? projected : null;
     }
 
     return config.contourFramingEnabled
         ? observation.framing
         : DocumentFraming.unknown;
-  }
-
-  /// Whether a projected quad sits mostly within the overlay rectangle.
-  static bool _mostlyInside(DocumentQuad quad) {
-    var inside = 0;
-    for (final c in quad.corners) {
-      if (c.x >= -0.05 && c.x <= 1.05 && c.y >= -0.05 && c.y <= 1.05) {
-        inside++;
-      }
-    }
-    return inside >= 3;
   }
 
   void _onFrame(LumaFrame frame) {

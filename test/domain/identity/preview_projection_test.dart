@@ -165,4 +165,54 @@ void main() {
       );
     });
   });
+
+  group('quadMostlyInside', () {
+    // The last net against an absurd overlay: a wrong platform rotation must
+    // give an ABSENT contour, never a grotesque one, and the template is still
+    // on screen either way.
+    test('accepts a quad well inside the frame', () {
+      expect(quadMostlyInside(_rect(0.1, 0.2, 0.9, 0.7)), isTrue);
+    });
+
+    test('accepts a quad that only touches the edge', () {
+      // A correct contour legitimately reaches the frame edge: that is the
+      // "too close" case, and it must still be drawn.
+      expect(quadMostlyInside(_rect(0.0, 0.2, 1.0, 0.7)), isTrue);
+    });
+
+    test('refuses a quad thrown almost entirely outside', () {
+      // What a wrong quarter-turn produces.
+      expect(quadMostlyInside(_rect(1.4, 1.3, 2.2, 1.8)), isFalse);
+    });
+
+    test('refuses when only two corners remain in frame', () {
+      const halfOut = DocumentQuad(
+        topLeft: (x: 0.5, y: 0.4),
+        topRight: (x: 1.9, y: 0.4),
+        bottomRight: (x: 1.9, y: 0.7),
+        bottomLeft: (x: 0.5, y: 0.7),
+      );
+      expect(quadMostlyInside(halfOut), isFalse);
+    });
+
+    test('honours the margin', () {
+      // A rectangle poking 0.03 past the left edge puts TWO corners out, not
+      // one, so the tight margin refuses it and the generous one accepts it.
+      final justOutside = _rect(-0.03, 0.2, 0.9, 0.7);
+      expect(quadMostlyInside(justOutside), isTrue, reason: 'default 0.05');
+      expect(quadMostlyInside(justOutside, margin: 0.01), isFalse);
+    });
+
+    test('tolerates a single corner outside', () {
+      // One corner past the edge is a plausible perspective quad on a card held
+      // at the frame boundary, and it must still be drawn.
+      const oneOut = DocumentQuad(
+        topLeft: (x: -0.2, y: 0.3),
+        topRight: (x: 0.9, y: 0.25),
+        bottomRight: (x: 0.9, y: 0.65),
+        bottomLeft: (x: 0.1, y: 0.7),
+      );
+      expect(quadMostlyInside(oneOut), isTrue);
+    });
+  });
 }

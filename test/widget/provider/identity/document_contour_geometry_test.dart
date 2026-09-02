@@ -30,12 +30,22 @@ import 'package:outalma_app/src/features/provider/identity/identity_capture_widg
 /// Verified against Flutter 3.41.5 and camera 0.12.0+2.
 
 /// A card-shaped bright region on a dark ground, big enough for the grid.
-LumaFrame _cardFrame({int width = 384, int height = 216, int atMs = 0}) {
+///
+/// [scale] shrinks the card about the centre, so a test can produce a framing
+/// the detector calls `tooSmall` without changing anything else.
+LumaFrame _cardFrame({
+  int width = 384,
+  int height = 216,
+  int atMs = 0,
+  double scale = 1,
+}) {
   final bytes = Uint8List(width * height);
-  final left = (width * 0.2).round();
-  final right = (width * 0.8).round();
-  final top = (height * 0.15).round();
-  final bottom = (height * 0.85).round();
+  final halfW = 0.3 * scale;
+  final halfH = 0.35 * scale;
+  final left = (width * (0.5 - halfW)).round();
+  final right = (width * (0.5 + halfW)).round();
+  final top = (height * (0.5 - halfH)).round();
+  final bottom = (height * (0.5 + halfH)).round();
   for (var y = 0; y < height; y++) {
     for (var x = 0; x < width; x++) {
       final inCard = x >= left && x <= right && y >= top && y <= bottom;
@@ -278,4 +288,80 @@ void main() {
       );
     },
   );
+
+  group('the framing flag', () {
+    // The behavioural half of the second flag. Its unit test pins the default;
+    // this pins what the default MEANS: with framing off, a badly framed card is
+    // still photographed exactly as it was before this feature existed.
+    Future<bool> runJourney(
+      WidgetTester tester, {
+      required bool contourFramingEnabled,
+    }) async {
+      final source = FakeCaptureSource()
+        ..previewAspectRatio = 9 / 16
+        ..geometry = const PreviewGeometry(
+          previewWidth: 1920,
+          previewHeight: 1080,
+          sensorOrientation: 90,
+          isIOS: false,
+        );
+      addTearDown(source.dispose);
+
+      var captured = false;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            identityCaptureSourceProvider.overrideWithValue(source),
+            documentTextDetectorProvider.overrideWithValue(
+              FakeDocumentTextDetector(),
+            ),
+            captureConfigProvider.overrideWithValue(
+              CaptureConfig(
+                rectoSharpnessThreshold: 10,
+                versoSharpnessThreshold: 5,
+                analysisCenterFraction: 1,
+                analyzeEveryNthFrame: 1,
+                contourOverlayEnabled: true,
+                contourFramingEnabled: contourFramingEnabled,
+                contourGridLongSide: 48,
+                edgeThreshold: 20,
+                minFill: 0.3,
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: AppTheme.light(),
+            home: CaptureDocumentPage(
+              side: DocumentSide.recto,
+              onCaptured: (_) => captured = true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Arm the shutter with a different scene, then hold a card that the
+      // detector calls too small, well past the 800 ms hold.
+      source.emitLuma(_cardFrame(atMs: 0, scale: 0.2));
+      await tester.pump();
+      for (var t = 100; t <= 2000; t += 100) {
+        source.emitLuma(_cardFrame(atMs: t, scale: 0.45));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      return captured;
+    }
+
+    testWidgets('OFF: a badly framed card is still photographed', (
+      tester,
+    ) async {
+      expect(await runJourney(tester, contourFramingEnabled: false), isTrue);
+    });
+
+    testWidgets('ON: a badly framed card is held back', (tester) async {
+      expect(await runJourney(tester, contourFramingEnabled: true), isFalse);
+    });
+  });
 }
