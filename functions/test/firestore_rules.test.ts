@@ -10,6 +10,7 @@ import {
 import {
   doc,
   getDoc,
+  deleteField,
   setDoc,
   updateDoc,
   serverTimestamp,
@@ -1165,6 +1166,31 @@ describe('users avatarId is a catalogue token', () => {
         email: 'dave@example.com',
         avatarId: 'animal_blob1',
       })
+    );
+  });
+
+  test('the REAL erase write shape is allowed', async () => {
+    // Every test above uses updateDoc, but the app writes
+    // set({photoPath: deleteField(), avatarId: ...}, {merge: true}) from
+    // FirestoreUserRepository.setProfileImage. All branches of avatarIdOk are
+    // covered by the other cases, yet the exact request shape of the erase
+    // path was never put in front of the rules: if it were refused, every
+    // "pick an avatar over a photo" and every "remove" would fail with
+    // PERMISSION_DENIED and only a smoke test would notice.
+    await assertSucceeds(
+      setDoc(
+        doc(asUser('alice'), 'users/alice'),
+        { photoPath: deleteField(), avatarId: 'animal_blob1' },
+        { merge: true }
+      )
+    );
+    // And the same shape carrying a bad token is still refused.
+    await assertFails(
+      setDoc(
+        doc(asUser('alice'), 'users/alice'),
+        { photoPath: deleteField(), avatarId: '../../etc/passwd' },
+        { merge: true }
+      )
     );
   });
 

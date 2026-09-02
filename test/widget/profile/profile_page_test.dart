@@ -45,12 +45,19 @@ class _FakeUploadService extends AvatarUploadService {
 
   bool deleted = false;
 
+  /// Shared with the fake notifier, so ORDER is observable and not merely
+  /// "both happened". An earlier version of the ordering test asserted only
+  /// that the delete had run, which is equally true of a delete-first
+  /// implementation, so it tested nothing.
+  List<String>? trace;
+
   @override
   Future<String?> pickAndUpload() async => 'https://example.test/a.jpg';
 
   @override
   Future<void> deleteAvatar() async {
     deleted = true;
+    trace?.add('delete');
   }
 }
 
@@ -66,12 +73,16 @@ class _RecordingAuthNotifier extends AuthNotifier {
   /// Lets a test exercise the failure path of the write.
   bool throwOnCall = false;
 
+  /// See _FakeUploadService.trace.
+  List<String>? trace;
+
   @override
   Future<AuthState> build() async => AuthAuthenticated(_user);
 
   @override
   Future<void> setProfileImage({String? photoPath, String? avatarId}) async {
     if (throwOnCall) throw Exception('offline');
+    trace?.add('write');
     calls.add((photoPath, avatarId));
   }
 }
@@ -129,9 +140,10 @@ void main() {
   // A notifier-only test would NOT have caught the defect this guards: the
   // photo path used to call updateProfile, which cannot clear an avatar, and a
   // test of setProfileImage alone would have stayed green while the page never
-  // called it. Two of the three outcomes are asserted here; the photo one goes
-  // through the system gallery, so it is covered by reading the code and by
-  // the smoke test.
+  // called it. All THREE outcomes are asserted here, including the photo one:
+  // the upload service is injected through a provider and its methods are
+  // virtual, so the earlier claim that the gallery made it untestable was
+  // simply wrong.
   // -------------------------------------------------------------------------
   group('avatar picker routing', () {
     late _RecordingAuthNotifier notifier;
@@ -213,20 +225,20 @@ void main() {
       expect(notifier.calls.single, ('https://example.test/a.jpg', null));
     });
 
-    testWidgets('the Storage object is deleted AFTER the write succeeds', (
-      tester,
-    ) async {
-      // Ordering guard. Deleting first would destroy the photo for good when
-      // the write then fails, while the snackbar told the user nothing was
-      // saved.
+    testWidgets('the write happens BEFORE the Storage delete', (tester) async {
+      // Ordering guard, and it has to observe the order rather than the fact
+      // that both ran: deleting first destroys the photo for good when the
+      // write then fails, while the snackbar tells the user nothing was saved.
       await tester.pumpWidget(wrapWith(user(photoPath: 'https://old/p.jpg')));
+      final trace = <String>[];
+      notifier.trace = trace;
+      uploads.trace = trace;
       await openSheet(tester);
 
       await tester.tap(find.byType(SvgPicture).first);
       await tester.pumpAndSettle();
 
-      expect(notifier.calls, hasLength(1));
-      expect(uploads.deleted, isTrue, reason: 'the old photo is cleaned up');
+      expect(trace, ['write', 'delete']);
     });
 
     testWidgets('a failed write shows the error and keeps the photo', (

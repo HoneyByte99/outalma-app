@@ -62,9 +62,10 @@ void main() {
     await _openSheet(tester);
 
     expect(find.text('Importer une photo'), findsOneWidget);
-    // The 28 humans are the first grid. The animals sit below the fold and the
-    // ListView builds lazily, which is the behaviour we want on a 40-tile
-    // sheet, so reaching them means scrolling.
+    // 40, because the surface set in _openSheet is tall enough for both
+    // shrinkWrap grids to lay out fully. That is also the real behaviour on a
+    // phone: shrinkWrap builds every tile at once, so the isolate burst on a
+    // tone tap covers all 28 humans. It is measured on the device, not here.
     expect(find.byType(SvgPicture), findsNWidgets(40));
 
     expect(find.text('Animaux'), findsOneWidget);
@@ -282,7 +283,15 @@ void main() {
       expect(size.height, greaterThanOrEqualTo(44), reason: 'swatch $i');
     }
 
-    final row = tester.getSize(find.text('Importer une photo'));
-    expect(row.height, greaterThan(0));
+    // The two action rows too, whose 48pt floor comes from _SheetAction's
+    // BoxConstraints. Measuring the TEXT would have been unfalsifiable.
+    for (final label in ['Importer une photo']) {
+      final row = tester.getSize(
+        find
+            .ancestor(of: find.text(label), matching: find.byType(InkWell))
+            .first,
+      );
+      expect(row.height, greaterThanOrEqualTo(44), reason: label);
+    }
   });
 }

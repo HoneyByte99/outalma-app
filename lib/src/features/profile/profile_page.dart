@@ -160,10 +160,12 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
 
   /// Writes an avatar choice, or clears both fields when [avatarId] is null.
   ///
-  /// The Storage object of a previously imported photo is deleted first, and a
-  /// failure there is logged and swallowed: an orphan file is a cost, not an
-  /// outage, and the user must not see their avatar choice fail because an old
-  /// file resisted.
+  /// The Firestore write comes FIRST, then the Storage object of a previously
+  /// imported photo is deleted. That order is the invariant, not an
+  /// implementation detail: see the comment in the body. A failure of the
+  /// delete is logged and swallowed, because an orphan file is a cost and not
+  /// an outage, and the user must not see a choice that is already saved fail
+  /// because an old file resisted.
   Future<void> _saveChoice({required String? avatarId}) async {
     final l10n = AppLocalizations.of(context)!;
     setState(() => _uploading = true);
