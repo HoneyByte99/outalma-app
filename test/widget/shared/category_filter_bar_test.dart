@@ -9,6 +9,7 @@ import 'package:outalma_app/l10n/app_localizations.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/domain/enums/category_id.dart';
 import 'package:outalma_app/src/features/shared/category_filter_bar.dart';
+import '../../support/golden_authority.dart';
 
 Widget _wrap({
   required CategoryId? selected,
@@ -109,7 +110,7 @@ void main() {
         find.byType(CategoryFilterBar),
         matchesGoldenFile('goldens/category_filter_bar_all.png'),
       );
-    });
+    }, skip: goldenSkip);
 
     testWidgets('golden: "Menage" selected', (tester) async {
       await tester.binding.setSurfaceSize(const Size(720, 72));
@@ -122,6 +123,6 @@ void main() {
         find.byType(CategoryFilterBar),
         matchesGoldenFile('goldens/category_filter_bar_menage.png'),
       );
-    });
+    }, skip: goldenSkip);
   });
 }

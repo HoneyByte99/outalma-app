@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/l10n/app_localizations.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/features/shared/empty_state_view.dart';
+import '../../support/golden_authority.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
   theme: AppTheme.light(),
@@ -70,6 +71,6 @@ void main() {
         find.byType(EmptyStateView),
         matchesGoldenFile('goldens/empty_state_category.png'),
       );
-    });
+    }, skip: goldenSkip);
   });
 }

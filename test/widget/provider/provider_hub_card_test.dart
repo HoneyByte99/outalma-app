@@ -40,6 +40,7 @@ import 'package:outalma_app/src/domain/models/provider_profile.dart';
 import 'package:outalma_app/src/domain/models/service.dart';
 import 'package:outalma_app/src/domain/review/rating_display.dart';
 import 'package:outalma_app/src/features/provider/provider_dashboard_page.dart';
+import '../../support/golden_authority.dart';
 
 class _FakeAuthNotifier extends AuthNotifier {
   @override
@@ -346,7 +347,7 @@ void main() {
         theme: AppTheme.light(),
         name: 'hub_card_light_available',
       );
-    });
+    }, skip: goldenSkip);
 
     testWidgets('light, paused', (tester) async {
       await golden(
@@ -356,7 +357,7 @@ void main() {
         theme: AppTheme.light(),
         name: 'hub_card_light_paused',
       );
-    });
+    }, skip: goldenSkip);
 
     testWidgets('light, nothing published', (tester) async {
       await golden(
@@ -366,7 +367,7 @@ void main() {
         theme: AppTheme.light(),
         name: 'hub_card_light_no_listing',
       );
-    });
+    }, skip: goldenSkip);
 
     testWidgets('dark, available', (tester) async {
       await golden(
@@ -376,7 +377,7 @@ void main() {
         theme: AppTheme.dark(),
         name: 'hub_card_dark_available',
       );
-    });
+    }, skip: goldenSkip);
 
     testWidgets('dark, paused', (tester) async {
       await golden(
@@ -386,7 +387,7 @@ void main() {
         theme: AppTheme.dark(),
         name: 'hub_card_dark_paused',
       );
-    });
+    }, skip: goldenSkip);
 
     testWidgets('dark, nothing published', (tester) async {
       await golden(
@@ -396,6 +397,6 @@ void main() {
         theme: AppTheme.dark(),
         name: 'hub_card_dark_no_listing',
       );
-    });
+    }, skip: goldenSkip);
   });
 }
