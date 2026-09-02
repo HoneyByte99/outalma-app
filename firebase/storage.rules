@@ -45,13 +45,23 @@ service firebase.storage {
     // on the service doc, whose write access is gated by Firestore rules
     // (provider-owner only), so uid-scoping here is sufficient.
     // Path: /public/services/{serviceId}/{uid}/{filename}
+    //
+    // create/update and delete are SPLIT, same defect and same fix as the
+    // avatar path below, and this is the worst instance of it: `read` here is
+    // `if true`, so an object the owner believes they removed stays
+    // downloadable by anyone, with no account, for as long as it exists.
+    // ServicePhotoUploadService.deletePhotoByUrl is a real caller (a provider
+    // removing a photo from their listing) and the failure is swallowed twice
+    // over at the call site in service_form_page.dart, so the listing loses
+    // the photo while the bytes stay public.
     match /public/services/{serviceId}/{uid}/{filename} {
       allow read: if true;
-      allow write: if isAdmin() || (
+      allow create, update: if isAdmin() || (
         isSelf(uid)
         && isImage()
         && smallEnough(5 * 1024 * 1024)
       );
+      allow delete: if isAdmin() || isSelf(uid);
     }
 
     // Legacy single-level service image path (pre uid-scoping). Public read for
@@ -94,14 +104,21 @@ service firebase.storage {
     // denied legitimate participants). The recipient plays media via the
     // tokenised download URL stored on the chat message, so read stays simple:
     // any signed-in user with the (unguessable, tokenised) URL.
+    //
+    // create/update and delete are SPLIT for the same reason as the avatar
+    // path. No Dart caller deletes chat media today, so this one is latent:
+    // the split is here so the first caller written against it works rather
+    // than shipping a silent refusal, and because a merged `allow write` on
+    // this file is now the exception rather than the shape to copy.
     match /private/chats/{chatId}/media/{uid}/{filename} {
       allow read: if signedIn();
-      allow write: if isAdmin() || (
+      allow create, update: if isAdmin() || (
         isSelf(uid)
         && (request.resource.contentType.matches('image/.*')
             || request.resource.contentType.matches('audio/.*'))
         && smallEnough(20 * 1024 * 1024)
       );
+      allow delete: if isAdmin() || isSelf(uid);
     }
 
     // Legacy chat media path (pre-uid-scoping). Read-only for backward compat
@@ -116,23 +133,36 @@ service firebase.storage {
     // Path: /private/bookings/voice/{uid}/{filename}
     // The provider plays the message via the tokenised download URL stored on
     // the booking document, so read can stay owner-only.
+    //
+    // create/update and delete are SPLIT, latent like the chat media path: no
+    // Dart caller deletes a voice message yet. Worth closing anyway, because a
+    // voice note recorded and then discarded before the request is sent is the
+    // obvious first caller, and it would have been refused.
     match /private/bookings/voice/{uid}/{filename} {
       allow read: if isAdmin() || isSelf(uid);
-      allow write: if isAdmin()
+      allow create, update: if isAdmin()
         || (isSelf(uid)
             && request.resource.contentType.matches('audio/.*')
             && smallEnough(20 * 1024 * 1024));
+      allow delete: if isAdmin() || isSelf(uid);
     }
 
     // Booking attachments (private to participants)
     // Path: /private/bookings/{bookingId}/attachments/{filename}
+    //
+    // create/update and delete are SPLIT, latent like the two above. Delete
+    // keeps the participant predicate rather than an uploader check: the path
+    // carries no uid segment, so participation in the booking is the only
+    // ownership this rule can express, and it is the same circle that `read`
+    // already grants.
     match /private/bookings/{bookingId}/attachments/{filename} {
       allow read: if isAdmin() || isBookingParticipant(bookingId);
-      allow write: if isAdmin()
+      allow create, update: if isAdmin()
         || (isBookingParticipant(bookingId)
             && (request.resource.contentType.matches('image/.*')
                 || request.resource.contentType.matches('application/pdf'))
             && smallEnough(20 * 1024 * 1024));
+      allow delete: if isAdmin() || isBookingParticipant(bookingId);
     }
 
     // Identity verification documents (provider CNI recto/verso + selfie)
