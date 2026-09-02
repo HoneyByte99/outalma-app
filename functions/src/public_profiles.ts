@@ -53,14 +53,24 @@ export type Gender = (typeof GENDERS)[number];
 /// homoglyph either. Being anchored it also bounds the length at 30
 /// characters, which is why no separate size cap is needed.
 ///
-/// The terminator is `(?![\s\S])` and NOT `$`: in JavaScript, without the `m`
-/// flag, `$` still matches before a trailing newline, so `/^...$/` would accept
-/// "human_afro1_t2\n" while the RE2 `matches()` in firestore.rules, which is a
-/// whole-string match, would refuse it. The two guards have to say the same
-/// thing. No `g` flag either: `RegExp.prototype.test` with `g` is stateful
-/// through `lastIndex` and two consecutive calls alternate their answer.
+/// Anchored at both ends, with no flags. Two claims that were checked rather
+/// than assumed, because the first one was WRONG in an earlier revision of this
+/// file and only a mutation caught it:
+///
+/// In JavaScript, `$` without the `m` flag matches ONLY at the very end of the
+/// string, so `/^...$/.test("human_afro1_t2\n")` is FALSE. That is unlike
+/// Python, where `$` does match before a trailing newline. This file previously
+/// used `(?![\s\S])` and justified it by the Python behaviour; the terminator
+/// was harmless but the reason given for it was false, so it is now the plain
+/// `$` and the test that pins the newline case guards against somebody adding
+/// the `m` flag, which WOULD break the agreement with the RE2 whole-string
+/// `matches()` in firestore.rules.
+///
+/// No `g` flag either, and that one bites for real: `RegExp.prototype.test`
+/// with `g` is stateful through `lastIndex`, so two consecutive calls alternate
+/// their answer.
 export const AVATAR_ID_PATTERN =
-  /^(human|animal)_[a-z0-9]{1,20}(_t[1-6])?(?![\s\S])/;
+  /^(human|animal)_[a-z0-9]{1,20}(_t[1-6])?$/;
 
 /// True for a well-formed catalogue token. Exported so it can be unit-tested
 /// directly and reused.
