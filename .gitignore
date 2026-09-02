@@ -44,33 +44,37 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Seed/admin script credentials — never commit
+# Seed/admin script credentials : never commit
 scripts/service-account.json
 **/service-account*.json
 **/*firebase-adminsdk*.json
 secrets/
 
-# Environment / secrets — never commit billing-sensitive keys
+# Pre-write dumps of production documents, written by the migration scripts
+# (fix-service-zone-keys.py --apply). Production data, not source.
+scripts/backups/
+
+# Environment / secrets : never commit billing-sensitive keys
 .env
 .env.*
 !.env.example
 
-# iOS secrets — copy Secrets.xcconfig.example → Secrets.xcconfig and fill in values
+# iOS secrets : copy Secrets.xcconfig.example → Secrets.xcconfig and fill in values
 ios/Flutter/Secrets.xcconfig
 
 # Node.js (root-level package.json for web tooling)
 node_modules/
 
-# Firebase config — injected by CI (GitHub Secrets); never commit live credentials.
+# Firebase config : injected by CI (GitHub Secrets); never commit live credentials.
 # Copy the .example versions, fill in real values, and add them as GitHub Secrets.
 ios/Runner/GoogleService-Info.plist
 android/app/google-services.json
 lib/firebase_options.dart
 
-# Seed data — contains test-account credentials and tester PII; never commit.
+# Seed data : contains test-account credentials and tester PII; never commit.
 seed/
 
-# Android release signing — never commit
+# Android release signing : never commit
 android/key.properties
 *.jks
 *.keystore
