@@ -16,8 +16,9 @@ Uint8List _grid(int cols, int rows, int Function(int x, int y) f) {
   return out;
 }
 
-/// A bright card on a dark ground, its borders on the given cell indices.
-/// [rotationDeg] shears the card in-plane so the tilt guard can be exercised.
+/// A card on a ground, its borders on the given cell indices, both
+/// axis-aligned. [ground] and [card] default to a bright card on a dark
+/// ground; pass the reverse to build a dark card on a bright ground.
 Uint8List _card(
   int cols,
   int rows, {
@@ -25,29 +26,52 @@ Uint8List _card(
   required int top,
   required int right,
   required int bottom,
-  double rotationDeg = 0,
   int ground = 20,
   int card = 230,
   List<({int left, int top, int right, int bottom})> insideBars = const [],
 }) {
-  final tan = math.tan(rotationDeg * math.pi / 180);
-  final midY = (top + bottom) / 2;
   return _grid(cols, rows, (x, y) {
-    // Shearing x by the distance from the card's middle row rotates the two
-    // vertical borders without changing the card's height.
-    final shift = ((y - midY) * tan).round();
-    final l = left + shift;
-    final r = right + shift;
-    if (x < l || x > r || y < top || y > bottom) return ground;
+    if (x < left || x > right || y < top || y > bottom) return ground;
     for (final bar in insideBars) {
-      if (x >= bar.left + shift &&
-          x <= bar.right + shift &&
-          y >= bar.top &&
-          y <= bar.bottom) {
+      if (x >= bar.left && x <= bar.right && y >= bar.top && y <= bar.bottom) {
         return ground;
       }
     }
     return card;
+  });
+}
+
+/// A card built as true membership in a ROTATED rectangle, centred at
+/// ([cx], [cy]) with half-extents [halfW] / [halfH].
+///
+/// Unlike [_card], which is always axis-aligned, this tilts all FOUR borders
+/// by [rotationDeg], including the long (horizontal) ones. A shear that only
+/// moves `x` by a function of `y`, the fixture this replaces, leaves the top
+/// and bottom borders exactly horizontal at any angle: it never exercises the
+/// window `_clampWindow` derives for the card's long side (M2), and it halves
+/// the rotation `DocumentQuad.inPlaneRotationDeg` reads back, since that
+/// average includes two untilted horizontal edges (M5).
+Uint8List _cardRotated(
+  int cols,
+  int rows, {
+  required double cx,
+  required double cy,
+  required double halfW,
+  required double halfH,
+  required double rotationDeg,
+  int ground = 20,
+  int card = 230,
+}) {
+  final angle = rotationDeg * math.pi / 180;
+  final cosA = math.cos(angle);
+  final sinA = math.sin(angle);
+  return _grid(cols, rows, (x, y) {
+    final dx = x - cx;
+    final dy = y - cy;
+    // Coordinates in the card's own (rotated) frame.
+    final u = dx * cosA + dy * sinA;
+    final v = -dx * sinA + dy * cosA;
+    return (u.abs() <= halfW && v.abs() <= halfH) ? card : ground;
   });
 }
 
@@ -122,6 +146,30 @@ void main() {
       expect(quad.bottomRight.x, closeTo(78.5 / 96, 3 / 96));
       expect(quad.bottomRight.y, closeTo(46.5 / 54, 3 / 54));
       expect(observation.aspect, closeTo(idCardAspect, 0.3));
+    });
+
+    test('finds the four corners of a dark card on a bright ground (M1)', () {
+      // The inverse polarity of the test above: a card DARKER than its
+      // ground, e.g. a dark wallet or a phone case on a light desk. Under
+      // the old midpoint-split overflow guard this framed exactly as above
+      // reported tooClose with no quad, because the light GROUND read as
+      // the "bright" side. Framing must not depend on which side is which.
+      final cells = _card(
+        96,
+        54,
+        left: 18,
+        top: 8,
+        right: 78,
+        bottom: 46,
+        ground: 210,
+        card: 40,
+      );
+      final observation = _detect(cells, 96, 54);
+      expect(observation.framing, DocumentFraming.good);
+      final quad = observation.quad;
+      expect(quad, isNotNull);
+      expect(quad!.topLeft.x, closeTo(18.5 / 96, 3 / 96));
+      expect(quad.bottomRight.x, closeTo(78.5 / 96, 3 / 96));
     });
 
     test('a flat field reports none', () {
@@ -200,32 +248,38 @@ void main() {
   });
 
   group('the rotation guard', () {
-    test('a slightly tilted card is still detected', () {
-      final cells = _card(
+    test('a card rotated within the supported range is detected, with the '
+        'tilt read accurately off its long side (M2)', () {
+      // A TRUE rotation (see _cardRotated): tilts the long horizontal
+      // borders too, which is the window M2 found clamped to 5.4 degrees
+      // against a config that ships maxRotationDeg = 10. A clipped fit
+      // would read back well under 8 here, not close to it.
+      final cells = _cardRotated(
         96,
         54,
-        left: 18,
-        top: 8,
-        right: 78,
-        bottom: 46,
-        rotationDeg: 6,
+        cx: 48,
+        cy: 27,
+        halfW: 26,
+        halfH: 16,
+        rotationDeg: 8,
       );
       final observation = _detect(cells, 96, 54);
       expect(observation.framing, DocumentFraming.good);
-      expect(observation.rotationDeg, greaterThan(0));
+      expect(observation.quad, isNotNull);
+      expect(observation.rotationDeg, closeTo(8, 2));
     });
 
     test('past the supported range it reports unknown and NO quad', () {
       // The decision is a refusal, not a measurement: beyond the range stage 1
       // has no peak left to find, so returning a quad would return a WRONG one.
-      final cells = _card(
+      final cells = _cardRotated(
         96,
         54,
-        left: 26,
-        top: 8,
-        right: 78,
-        bottom: 46,
-        rotationDeg: 25,
+        cx: 48,
+        cy: 27,
+        halfW: 26,
+        halfH: 16,
+        rotationDeg: 15,
       );
       final observation = _detect(cells, 96, 54);
       expect(observation.quad, isNull);
@@ -250,6 +304,31 @@ void main() {
       // `none`, i.e. "no card visible" to somebody holding one that fills the
       // screen. No quad here, because the outline genuinely is not knowable.
       final cells = _card(96, 54, left: 0, top: 8, right: 60, bottom: 46);
+      final observation = _detect(cells, 96, 54);
+      expect(observation.framing, DocumentFraming.tooClose);
+      expect(observation.quad, isNull);
+    });
+
+    test('a card overflowing on every side reports tooClose even when it is '
+        'darker than its ground (M1)', () {
+      // The card fills the whole frame, so the border ring is pure dark
+      // card, with one small ground patch tucked away from both the
+      // border and the centre-quarter subject sample, just to keep the
+      // guard's minimum contrast range satisfied. The OLD midpoint-split
+      // code never reads a dark border as "bright", so it MISSES this
+      // overflow entirely: a false negative, the mirror image of the
+      // false positive covered by the test above.
+      final cells = _card(
+        96,
+        54,
+        left: 0,
+        top: 0,
+        right: 95,
+        bottom: 53,
+        ground: 210,
+        card: 40,
+        insideBars: [(left: 2, top: 2, right: 10, bottom: 10)],
+      );
       final observation = _detect(cells, 96, 54);
       expect(observation.framing, DocumentFraming.tooClose);
       expect(observation.quad, isNull);
