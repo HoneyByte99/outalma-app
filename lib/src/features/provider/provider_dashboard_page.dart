@@ -192,26 +192,37 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
     final canToggle = publishedCount > 0;
     final accent = available ? oc.success : oc.warning;
 
+    // The state accent rings the WHOLE card instead of the 3px top strip it
+    // used to paint. What blocked a per-side accent was a border whose sides
+    // DIFFER, which Flutter refuses to combine with a borderRadius; a uniform
+    // Border.all has never had that limitation, so the strip was a workaround
+    // that ended up reading as a decorative tab rather than as a state.
+    // alpha 0.55: at full saturation a 1.5px ring of `success` around the hero
+    // card of the page competes with the availability pill and the CTA; muted
+    // to 0.55 over cardSurface it lands on #73CEB5 (light) / #278458 (dark),
+    // still unmistakably the state colour next to the #CDD8DE / #2B323D
+    // neutral border, but "legerement" as asked.
+    // canToggle false keeps the previous behaviour exactly (the strip was
+    // transparent then): no accent at all, the card falls back to oc.border at
+    // the 1px every other card on this page uses.
+    final borderWidth = canToggle ? 1.5 : 1.0;
+    final borderColor = canToggle ? accent.withValues(alpha: 0.55) : oc.border;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
       child: Container(
         decoration: BoxDecoration(
           color: oc.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          // Uniform border - a non-uniform border can't be combined with a
-          // borderRadius. The state accent is the clipped top strip below.
-          border: Border.all(color: oc.border),
+          border: Border.all(color: borderColor, width: borderWidth),
         ),
-        // Clip so the accent strip's top corners follow the card radius.
+        // A border insets its child, so the clip radius has to be the OUTER
+        // radius minus the border width, otherwise the rows paint into the
+        // ring at the corners and fray it.
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16 - borderWidth),
           child: Column(
             children: [
-              // Top-edge accent encodes the state before any text is read.
-              Container(
-                height: 3,
-                color: canToggle ? accent : Colors.transparent,
-              ),
               // Row 1 - identity. The whole row opens the profile editor (like
               // tapping a service tile), the pencil is just the affordance.
               Semantics(
@@ -1094,8 +1105,25 @@ class _IdentityHubLine extends ConsumerWidget {
         label = l10n.identityStatusRevokedTitle;
         subtitle = l10n.hubIdentityActionRequiredSub;
       case IdentityStatus.none:
-        icon = Icons.shield_outlined;
-        accent = oc.secondaryText;
+        // Not a state, an INVITATION, and the glyph has to say so. The shield
+        // is the reward of this flow (it is the badge a verified profile
+        // wears), so drawing it greyed out here announced a verdict: "your
+        // badge is off". Same reason the client surfaces show no badge at all
+        // until the identity is verified (decided 01/09). The ID-card glyph
+        // names what the provider is being asked to SUPPLY rather than what
+        // they have not earned, and it is already the icon of the capture flow
+        // this row opens (identity_guide_page, identity_capture_widgets), so
+        // the row and its destination read as one action.
+        // oc.primary and not secondaryText: grey is this card's disabled and
+        // metadata colour, and it is what made the row read as an extinguished
+        // badge. primary is the app's action colour (#1B3A4B light, #6FE8CC
+        // dark) and carries no trust semantics, unlike the trust* colours
+        // which would falsely suggest a verdict has been reached.
+        // The icon slot itself is kept: the storefront row above aligns its
+        // text at 48px (22px icon + 10px gap + 16px padding), and dropping the
+        // glyph would pull this text back to 16px and break the card.
+        icon = Icons.badge_outlined;
+        accent = oc.primary;
         label = l10n.hubIdentityVerifyCta;
         subtitle = l10n.hubIdentityVerifySub;
     }

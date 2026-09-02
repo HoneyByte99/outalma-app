@@ -1654,8 +1654,15 @@ class _IdentityVerificationCard extends ConsumerWidget {
         label = l10n.identityStatusRevokedTitle;
         subtitle = l10n.hubIdentityActionRequiredSub;
       case IdentityStatus.none:
-        icon = Icons.shield_outlined;
-        accent = oc.secondaryText;
+        // Invitation, not a state (same grammar as the dashboard hub line,
+        // _IdentityHubLine, which this card mirrors). The shield is the reward
+        // of the flow, so a greyed shield announced "your badge is off"; the
+        // ID-card glyph names what is being asked for and matches the capture
+        // flow this card opens. oc.primary is the action colour and carries no
+        // trust semantics, where oc.secondaryText is the disabled/metadata grey
+        // that made the row read as an extinguished badge.
+        icon = Icons.badge_outlined;
+        accent = oc.primary;
         label = l10n.hubIdentityVerifyCta;
         subtitle = l10n.hubIdentityVerifySub;
     }
