@@ -1,0 +1,19 @@
+# Dev-only generator, deliberately a SEPARATE package rather than a
+# dev_dependency of the app: dicebear_core pulls dicebear_schema and
+# json_schema, and a dev_dependency shares the app's resolution, so one
+# constraint conflict would block `flutter pub get` for everyone and for CI —
+# for a package the app never needs once the SVGs are committed. Isolating it
+# also keeps dicebear_styles' 9.7 MB out of every `pub get`, and makes it
+# structurally impossible for a file under lib/ to import a one-week-old
+# package.
+name: avatar_gen
+description: Generates the Outalma avatar catalogue from DiceBear definitions.
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  dicebear_core: ^10.7.0
+  dicebear_styles: ^10.6.0

@@ -23,6 +23,10 @@ dependencies:
   firebase_crashlytics: ^4.1.0
   image_picker: ^1.1.2
   cached_network_image: ^3.4.1
+  # Renders the illustrated avatar catalogue. Needed rather than raster assets
+  # because the skin tone is recoloured at RUN time through ColorMapper: in PNG
+  # it would take one file per character AND per tone, about 180 instead of 40.
+  flutter_svg: ^2.3.0
   connectivity_plus: ^6.1.0
   flutter_native_splash: ^2.4.3
 
@@ -109,4 +113,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    # Per-directory, like assets/images/ above: adding an avatar never touches
+    # this file again. Only *.svg live there; the licence sits in
+    # docs/avatars-licence.md so it is not bundled for nothing.
+    - assets/avatars/
     - docs/legal/
