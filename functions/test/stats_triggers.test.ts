@@ -370,7 +370,9 @@ describe('platform_stats round trip: create then delete leaves the counter uncha
       params: { userId: 'u1' },
       data: { displayName: 'U' },
       create: 'onUserCreated',
-      remove: 'onUserDeleted',
+      // `onUserDocDeleted`, not `onUserDeleted`: a legacy 1st Gen Auth trigger
+      // already owns that name in production. See functions/src/index.ts.
+      remove: 'onUserDocDeleted',
     },
     {
       name: 'providers → totalProviders',

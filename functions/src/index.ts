@@ -2654,7 +2654,24 @@ export const onUserCreated = onDocumentCreated('users/{userId}', async (event) =
   });
 });
 
-export const onUserDeleted = onDocumentDeleted('users/{userId}', async (event) => {
+/**
+ * Do NOT rename this back to `onUserDeleted`, the deployment breaks.
+ *
+ * A 1st Gen Cloud Function called `onUserDeleted` has been live in
+ * us-central1 since 2026-03-08. It is an Auth trigger
+ * (`providers/firebase.auth/eventTypes/user.delete`) left over from the
+ * pre-repository FlutterFlow scaffold; it was never committed here. Firebase
+ * matches deployed functions by NAME, and refuses to convert one in place:
+ *   Error: [functions:onUserDeleted(us-central1)] Upgrading from 1st Gen to
+ *   2nd Gen is not yet supported.
+ *
+ * The `Doc` in the name is the real distinction anyway: this trigger watches
+ * the Firestore document `users/{userId}`, not the Firebase Auth account. The
+ * two are deleted by different paths (`deleteMyAccount` removes the document
+ * first, the Auth account last), and only the document one feeds
+ * `platform_stats`.
+ */
+export const onUserDocDeleted = onDocumentDeleted('users/{userId}', async (event) => {
   await decrementStatIdempotent(event.id, 'user_deleted', { totalUsers: 1 });
 });
 
