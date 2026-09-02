@@ -5,9 +5,20 @@ import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from 'firebas
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as logger from 'firebase-functions/logger';
 import { assertAdminClaim, assertAdminOrModeratorClaim, assertMinSupportClaim, assertAuthenticated, requireBoolean, requireString } from './common';
+import { writeAdminLog, writeAdminLogTx } from './audit';
+import { createNotification, sendPushToUsers } from './notify';
 
 admin.initializeApp();
 const db = admin.firestore();
+
+import {
+  RATINGS,
+  countReview,
+  discountReview,
+  recountReview,
+  type RatingTx,
+} from './provider_rating';
+import { PUBLIC_PROFILES } from './public_profiles';
 
 // ---------------------------------------------------------------------------
 // IP geolocation cache (ipapi.co has 1 000 req/day on free tier)
@@ -92,7 +103,7 @@ async function getGeoForIp(ip: string): Promise<GeoData> {
 }
 
 // ---------------------------------------------------------------------------
-// Phone authentication — production OTP flow (Twilio Verify backend)
+// Phone authentication : production OTP flow (Twilio Verify backend)
 // ---------------------------------------------------------------------------
 export {
   requestPhoneOtp,
@@ -107,121 +118,9 @@ export {
 // Re-enable behind a feature flag only if a future benchmark needs them.
 
 // ---------------------------------------------------------------------------
-// Push notification helper
+// Public profile projection : PII-free mirror of `users`, readable by a guest
 // ---------------------------------------------------------------------------
-
-async function sendPushToUsers(
-  uids: string[],
-  notification: { title: string; body: string },
-  // Optional deep-link payload so the app can route on tap. All values must be
-  // strings (FCM data payload constraint).
-  data?: { [key: string]: string }
-): Promise<void> {
-  if (uids.length === 0) return;
-
-  // Fetch push tokens from user documents, keeping the uid↔token mapping so we
-  // can purge a token that FCM reports as permanently invalid (below).
-  const snapshots = await Promise.all(
-    uids.map(uid => db.collection('users').doc(uid).get())
-  );
-
-  const entries: { uid: string; token: string }[] = [];
-  for (const snap of snapshots) {
-    const token = snap.data()?.pushToken as string | undefined;
-    if (token) entries.push({ uid: snap.id, token });
-  }
-
-  if (entries.length === 0) return;
-
-  // Send multicast. No Android `clickAction`: modern firebase_messaging routes
-  // notification taps natively via onMessageOpenedApp/getInitialMessage, so the
-  // legacy FLUTTER_NOTIFICATION_CLICK intent is unnecessary (and was a no-op
-  // without a matching intent-filter).
-  const result = await admin.messaging().sendEachForMulticast({
-    tokens: entries.map(e => e.token),
-    notification: {
-      title: notification.title,
-      body: notification.body,
-    },
-    ...(data ? { data } : {}),
-    android: { priority: 'high' },
-    apns: { payload: { aps: { sound: 'default' } } },
-  });
-
-  logger.info('Push sent', {
-    successCount: result.successCount,
-    failureCount: result.failureCount,
-  });
-
-  // Purge tokens FCM reports as permanently invalid (uninstalled / reinstalled
-  // app, expired token). Otherwise they linger forever and every send silently
-  // fails. Delete only if the stored token still matches — never clobber a
-  // fresh token registered in the meantime.
-  const stale: { uid: string; token: string }[] = [];
-  result.responses.forEach((resp, i) => {
-    if (resp.success) return;
-    const entry = entries[i];
-    if (!entry) return;
-    const code = resp.error?.code;
-    if (
-      code === 'messaging/registration-token-not-registered' ||
-      code === 'messaging/invalid-registration-token' ||
-      code === 'messaging/invalid-argument'
-    ) {
-      stale.push(entry);
-    }
-  });
-  await Promise.all(
-    stale.map(async ({ uid, token }) => {
-      try {
-        const ref = db.collection('users').doc(uid);
-        await db.runTransaction(async (tx) => {
-          const cur = await tx.get(ref);
-          if (cur.data()?.pushToken === token) {
-            tx.update(ref, {
-              pushToken: admin.firestore.FieldValue.delete(),
-            });
-          }
-        });
-      } catch {
-        logger.warn('Failed to purge stale token', { uid });
-      }
-    })
-  );
-}
-
-// ---------------------------------------------------------------------------
-// In-app notification helper
-// ---------------------------------------------------------------------------
-
-async function createNotification(
-  uid: string,
-  data: {
-    type: string;
-    title: string;
-    body: string;
-    bookingId?: string;
-    chatId?: string;
-    // Which role this notification targets — drives the Client/Provider tabs in
-    // the app. Always set it: the caller knows the recipient's role.
-    audience?: 'client' | 'provider';
-  }
-): Promise<void> {
-  await db
-    .collection('notifications')
-    .doc(uid)
-    .collection('items')
-    .add({
-      type: data.type,
-      title: data.title,
-      body: data.body,
-      bookingId: data.bookingId ?? null,
-      chatId: data.chatId ?? null,
-      ...(data.audience ? { audience: data.audience } : {}),
-      read: false,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-}
+export { mirrorPublicProfile, backfillPublicProfiles } from './public_profiles';
 
 type BookingStatus =
   | 'requested'
@@ -233,6 +132,71 @@ type BookingStatus =
 
 function chatIdForBooking(bookingId: string): string {
   return `chat_${bookingId}`;
+}
+
+// ---------------------------------------------------------------------------
+// Senegal-only service location (CADRAGE section 5)
+// ---------------------------------------------------------------------------
+//
+// The prestation itself must take place in Senegal. The client filters and warns
+// at publication, but the server is the source of truth: a booking whose address
+// is provably outside Senegal is refused here regardless of what the client did.
+//
+// Two independent signals, both authoritative when present:
+//  - `countryCode`: the ISO code resolved by geocoding. If present it must be SN.
+//  - `lat`/`lng`: verified against Senegal's bounding box. Coordinates cannot be
+//    spoofed as easily as a label, so they are checked even when a countryCode
+//    claims SN.
+// When neither signal is present (a free-text address with no geocode) the
+// booking is allowed through, consistent with the zone check's "provider
+// discretion" stance: the gate refuses what it can prove is foreign, it does not
+// demand proof of Senegalese-ness the client may not have.
+
+// Padded bounding box for Senegal. Mainland Senegal spans roughly lat 12.3..16.7
+// and lng -17.6..-11.3; the padding avoids rejecting a coastal or border address
+// whose geocode lands just outside the tight hull. The point of this box is to
+// reject France/Europe/other continents, not to adjudicate the Gambia border.
+const SN_LAT_MIN = 12.0;
+const SN_LAT_MAX = 17.0;
+const SN_LNG_MIN = -17.9;
+const SN_LNG_MAX = -11.0;
+
+export function isWithinSenegalBox(lat: number, lng: number): boolean {
+  return (
+    lat >= SN_LAT_MIN &&
+    lat <= SN_LAT_MAX &&
+    lng >= SN_LNG_MIN &&
+    lng <= SN_LNG_MAX
+  );
+}
+
+/// Throws `failed-precondition` when the address snapshot is provably outside
+/// Senegal. A missing/partial snapshot is not rejected (see the note above).
+function assertServiceLocationInSenegal(addressSnapshot: unknown): void {
+  const addr = addressSnapshot as
+    | { lat?: unknown; lng?: unknown; countryCode?: unknown }
+    | null;
+  if (!addr || typeof addr !== 'object') return;
+
+  const cc =
+    typeof addr.countryCode === 'string'
+      ? addr.countryCode.trim().toUpperCase()
+      : null;
+  if (cc && cc !== 'SN') {
+    throw new HttpsError(
+      'failed-precondition',
+      'La prestation doit se situer au Senegal.'
+    );
+  }
+
+  if (typeof addr.lat === 'number' && typeof addr.lng === 'number') {
+    if (!isWithinSenegalBox(addr.lat, addr.lng)) {
+      throw new HttpsError(
+        'failed-precondition',
+        'La prestation doit se situer au Senegal.'
+      );
+    }
+  }
 }
 
 export const createBooking = onCall(async (request) => {
@@ -249,11 +213,14 @@ export const createBooking = onCall(async (request) => {
   // schedule/addressSnapshot are intentionally permissive for MVP; validate in app + tighten later.
   const schedule = request.data?.schedule ?? null;
   const addressSnapshot = request.data?.addressSnapshot ?? null;
+  // CADRAGE section 5: the prestation must be in Senegal. Server is source of
+  // truth; refuse an address provably outside SN before doing any work.
+  assertServiceLocationInSenegal(addressSnapshot);
   const audioMessageUrl = typeof request.data?.audioMessageUrl === 'string'
     ? request.data.audioMessageUrl.trim()
     : null;
   // Only accept a Firebase Storage URL that lives in the caller's own
-  // booking-voice folder — prevents storing arbitrary/phishing URLs that the
+  // booking-voice folder : prevents storing arbitrary/phishing URLs that the
   // provider would later open.
   if (audioMessageUrl !== null) {
     const okHost = audioMessageUrl.startsWith('https://firebasestorage.googleapis.com/');
@@ -279,7 +246,7 @@ export const createBooking = onCall(async (request) => {
 
   await db.runTransaction(async (tx) => {
     // Validate the target service exists, is published, and belongs to the
-    // claimed provider — and that the provider is not suspended. Prevents
+    // claimed provider, and that the provider is not suspended. Prevents
     // bookings against fantom/unpublished services or suspended providers.
     const serviceSnap = await tx.get(db.collection('services').doc(serviceId));
     if (!serviceSnap.exists) {
@@ -612,7 +579,7 @@ export const onBookingStatusChange = onDocumentUpdated(
       type: string;
       title: string;
       body: string;
-      // Which role the recipients are acting as for this event — drives the
+      // Which role the recipients are acting as for this event : drives the
       // Client/Provider notification tabs.
       audience: 'client' | 'provider';
     };
@@ -866,9 +833,102 @@ export const confirmDone = onCall(async (request) => {
 // Account self-deletion (App Store 5.1.1(v) / Google Play requirement)
 // Server-authoritative: purges the user's auth account + personal data.
 // ---------------------------------------------------------------------------
+/// True when the account holds any identity-verification data. Used to decide
+/// whether the purge below is allowed to fail the whole call.
+async function providerHasIdentityData(uid: string): Promise<boolean> {
+  const [files, state] = await Promise.all([
+    db
+      .collection('identity_verifications')
+      .where('providerId', '==', uid)
+      .limit(1)
+      .get(),
+    db.collection('identity_verification_states').doc(uid).get(),
+  ]);
+  return !files.empty || state.exists;
+}
+
+async function purgeIdentityData(uid: string): Promise<void> {
+  await admin.storage().bucket().deleteFiles({
+    prefix: `private/identity/${uid}/`,
+  });
+  await deleteIdentityVerificationData(uid);
+}
+
+/// Removes every identity-verification trace of a provider.
+///
+/// Committed in chunks of 400 writes, never in one batch: each file costs two
+/// deletions (the file and its identity_internal document), a Firestore batch
+/// caps at 500, and the account deletion batch is shared with services and the
+/// profile. Past roughly 245 files, a single batch would fail on every attempt,
+/// the account would become undeletable, and the identity documents would
+/// therefore never be purged. That is exactly the state this path exists to
+/// prevent.
+///
+/// The guard document is nominative on its own: it attests, per uid, that a
+/// person submitted an identity document, with timestamps. Leaving it behind
+/// would keep that trace with no purge path behind it.
+async function deleteIdentityVerificationData(uid: string): Promise<void> {
+  const CHUNK = 400;
+  const files = await db
+    .collection('identity_verifications')
+    .where('providerId', '==', uid)
+    .get();
+
+  let batch = db.batch();
+  let pending = 0;
+  const flush = async () => {
+    if (pending > 0) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  };
+
+  for (const file of files.docs) {
+    // Deleting a parent document does NOT delete its subcollections.
+    const internal = await file.ref.collection('identity_internal').get();
+    for (const sub of internal.docs) {
+      batch.delete(sub.ref);
+      if (++pending >= CHUNK) await flush();
+    }
+    batch.delete(file.ref);
+    if (++pending >= CHUNK) await flush();
+  }
+
+  batch.delete(db.collection('identity_verification_states').doc(uid));
+  // Public projection (E1). Same batch as the guard it derives from: leaving it
+  // behind would keep a public "verified" badge on a deleted account, and this
+  // is the only purge mechanism the project has (D4).
+  batch.delete(db.collection('provider_trust').doc(uid));
+  pending++;
+  await flush();
+}
+
 export const deleteMyAccount = onCall(async (request) => {
   const uid = request.auth?.uid;
   assertAuthenticated(uid);
+
+  // Identity data is purged in TWO passes, before and after the account
+  // document disappears. Retention was decided as "kept until the account is
+  // deleted", so this is the ONLY purge mechanism in the project.
+  //
+  // First pass, hard: if it fails, the whole call fails with nothing else
+  // destroyed, so the user can retry with an intact account. It runs only for
+  // accounts that actually hold identity data, so a Storage outage cannot block
+  // account deletion (an App Store requirement) for the vast majority of users
+  // who have nothing to purge.
+  //
+  // Second pass, after `users/{uid}` is gone: the first pass alone left a race.
+  // A submission in flight (readFingerprints takes ~6 storage calls) could
+  // commit between the purge and the batch, recreating the file, its internal
+  // document and the guard behind an account about to vanish, with no scheduled
+  // purge left to catch it. Once `users/{uid}` is deleted, submitIdentityVerification
+  // refuses outright, so a second pass closes the window for good. Both passes
+  // are idempotent, and deleting an empty prefix succeeds.
+  const hadIdentityData = await providerHasIdentityData(uid);
+  if (hadIdentityData) {
+    await purgeIdentityData(uid);
+  }
 
   // Delete owned services (a provider's listings) + provider profile + user doc
   // in a batch. Booking/review/chat history is retained but de-referenced; the
@@ -882,7 +942,29 @@ export const deleteMyAccount = onCall(async (request) => {
   services.forEach((d) => batch.delete(d.ref));
   batch.delete(db.collection('providers').doc(uid));
   batch.delete(db.collection('users').doc(uid));
+  // In the HARD batch, not in the identity purge: that pass is best effort for
+  // an account that never filed identity data, and a public rating document
+  // left behind a deleted account is not something to leave to best effort.
+  batch.delete(db.collection(RATINGS).doc(uid));
+  // Same batch, and deliberately redundant with mirrorPublicProfile, which also
+  // deletes this document when `users/{uid}` disappears. The projection is the
+  // one place a deleted account's NAME stays world readable, so its erasure
+  // must not depend on a trigger firing. Both paths are idempotent.
+  batch.delete(db.collection(PUBLIC_PROFILES).doc(uid));
   await batch.commit();
+
+  // Second pass, see above. Hard for accounts that held identity data, best
+  // effort otherwise: there was nothing to purge in that case, and failing here
+  // would make account deletion depend on Storage for every user.
+  if (hadIdentityData) {
+    await purgeIdentityData(uid);
+  } else {
+    try {
+      await purgeIdentityData(uid);
+    } catch (e) {
+      console.warn(`deleteMyAccount: late identity purge failed for ${uid}: ${e}`);
+    }
+  }
 
   // Best-effort cleanup of the user's avatar folder.
   try {
@@ -917,6 +999,49 @@ export const exportMyData = onCall(async (request) => {
       db.collection('reviews').where('revieweeId', '==', uid).get(),
     ]);
 
+  // Identity verification files belonging to the requester, field by field.
+  // Deliberately NOT a raw dump: no image, no storage path, and none of the
+  // internal review aids (duplicate flag, reference to a third party's file,
+  // reviewer identity), which is the same boundary the read rules enforce.
+  //
+  // identity_verification_states is NOT exported, and that is a decision rather
+  // than an omission: every field it holds is reconstructible from the files
+  // already exported (its timestamps are their submittedAt, its counter is the
+  // number of rejected ones, its flags are their statuses). It is a
+  // denormalised index, not a source. It IS deleted with the account, which the
+  // retention rule requires separately.
+  const identityFiles = await db
+    .collection('identity_verifications')
+    .where('providerId', '==', uid)
+    .get();
+  const identityVerifications = identityFiles.docs.map((d) => ({
+    id: d.id,
+    status: d.get('status'),
+    submittedAt: d.get('submittedAt'),
+    reviewedAt: d.get('reviewedAt'),
+    rejectionReason: d.get('rejectionReason'),
+    cniNumber: d.get('cniNumber'),
+    cniNom: d.get('cniNom'),
+    cniPrenom: d.get('cniPrenom'),
+    cniDateNaissance: d.get('cniDateNaissance'),
+    cniDateExpiration: d.get('cniDateExpiration'),
+    cniSexe: d.get('cniSexe'),
+  }));
+
+  // Public projection (E1). Budget line S10 asks for erasure AND export of any
+  // new PII collection. This one holds no PII at all, so exporting it is
+  // arguably unnecessary; it is exported anyway, because satisfying the line
+  // costs three lines and arguing about it costs more. The socle set the
+  // precedent of writing down what is excluded and why (see the guard document
+  // above), so here is the symmetric note for what is included.
+  const trust = await db.collection('provider_trust').doc(uid).get();
+  // Same S10 precedent as provider_trust just above: erasure AND export.
+  const rating = await db.collection(RATINGS).doc(uid).get();
+  // Same precedent again. Holds no PII by construction, but it is a document
+  // ABOUT the user that the whole internet can read, which is exactly the kind
+  // of thing a portability request expects to find in the archive.
+  const publicProfile = await db.collection(PUBLIC_PROFILES).doc(uid).get();
+
   const one = (s: admin.firestore.DocumentSnapshot) =>
     s.exists ? { id: s.id, ...s.data() } : null;
   const many = (q: admin.firestore.QuerySnapshot) =>
@@ -931,6 +1056,10 @@ export const exportMyData = onCall(async (request) => {
     bookingsAsProvider: many(bkProvider),
     reviewsWritten: many(revWritten),
     reviewsReceived: many(revReceived),
+    identityVerifications,
+    identityTrust: one(trust),
+    providerRating: one(rating),
+    publicProfile: one(publicProfile),
   };
 });
 
@@ -1008,7 +1137,7 @@ export const setAdminClaim = onCall(async (request) => {
 // ---------------------------------------------------------------------------
 
 /// IANA timezone for a user's country. Cloud Functions run in UTC, so a bare
-/// toLocaleTimeString() prints UTC — "votre RDV à 12:00" for a 14:00 Paris
+/// toLocaleTimeString() prints UTC : "votre RDV à 12:00" for a 14:00 Paris
 /// appointment. Senegal is UTC+0 (correct by accident before this fix); France
 /// is UTC+1/+2. Defaults to Paris (primary market).
 function timeZoneForCountry(country?: string): string {
@@ -1046,7 +1175,7 @@ export const sendBookingReminders = onSchedule(
       if (!data.reminded24h && diffHours >= 23.5 && diffHours <= 24.5) {
         // Format the appointment in the customer's local timezone (both
         // participants share the same market in practice). Without timeZone the
-        // string is UTC — an hour or two off for France.
+        // string is UTC : an hour or two off for France.
         let country: string | undefined;
         if (data.customerId) {
           const cs = await db.collection('users').doc(data.customerId).get();
@@ -1125,28 +1254,82 @@ export const sendBookingReminders = onSchedule(
 );
 
 // ---------------------------------------------------------------------------
+// autoCloseStaleBookings (SPEC section 1.5 / CADRAGE section 4)
+// ---------------------------------------------------------------------------
+//
+// A booking the provider started (`in_progress`) but the client never confirms
+// would otherwise stay open forever, and the bilateral review is gated on
+// `done`, so it would never unlock. This closes such a booking automatically
+// 48h after `startedAt`, exactly as `confirmDone` would, but system-driven.
+//
+// `confirmDone` (the manual path) is untouched: it still transitions the same
+// `in_progress -> done` and remains the normal way to close a booking early.
+//
+// The transition fires `onBookingStatusChange` (case `done`), which already
+// sends the "service termine" notification, so nothing is added on the notif
+// side. The extra markers (`autoClosed`, `closedBy`) let the UI and analytics
+// tell an auto-close apart from a client confirmation.
+
+/// 48h, the delay fixed on 2026-08-13 (SPEC section 1.5).
+const AUTO_CLOSE_AFTER_MS = 48 * 60 * 60 * 1000;
+
+export const autoCloseStaleBookings = onSchedule(
+  { schedule: 'every 60 minutes', timeZone: 'Europe/Paris' },
+  async () => {
+    const cutoff = admin.firestore.Timestamp.fromMillis(
+      Date.now() - AUTO_CLOSE_AFTER_MS
+    );
+
+    // status == in_progress AND startedAt <= cutoff. Needs the composite index
+    // (status asc, startedAt asc) added to firestore.indexes.json.
+    const snap = await db
+      .collection('bookings')
+      .where('status', '==', 'in_progress')
+      .where('startedAt', '<=', cutoff)
+      .get();
+
+    let closed = 0;
+
+    for (const doc of snap.docs) {
+      // Re-read and re-check inside the transaction: another scheduler run (retry
+      // or overlap) or a manual confirmDone/cancelBooking may have moved this
+      // booking since the query. Only a booking that is STILL in_progress and
+      // STILL past the cutoff is closed, which makes the job idempotent.
+      const didClose = await db.runTransaction(async (tx) => {
+        const fresh = await tx.get(doc.ref);
+        if (!fresh.exists) return false;
+        const b = fresh.data() as {
+          status?: BookingStatus;
+          startedAt?: admin.firestore.Timestamp | null;
+        };
+        if (b.status !== 'in_progress') return false;
+        if (!b.startedAt || b.startedAt.toMillis() > cutoff.toMillis()) {
+          return false;
+        }
+        tx.update(doc.ref, {
+          status: 'done' as BookingStatus,
+          doneAt: admin.firestore.FieldValue.serverTimestamp(),
+          autoClosed: true,
+          closedBy: 'system',
+        });
+        return true;
+      });
+      if (didClose) closed++;
+    }
+
+    logger.info(
+      `Auto-close stale bookings: checked ${snap.size}, closed ${closed}`
+    );
+  }
+);
+
+// ---------------------------------------------------------------------------
 // Admin audit log helper
 // ---------------------------------------------------------------------------
 
-async function writeAdminLog(data: {
-  actorUid: string;
-  action: string;
-  targetType: string;
-  targetId: string;
-  notes?: string;
-}): Promise<void> {
-  await db.collection('admin_logs').add({
-    actorUid: data.actorUid,
-    action: data.action,
-    targetType: data.targetType,
-    targetId: data.targetId,
-    notes: data.notes ?? null,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-  });
-}
 
 // ---------------------------------------------------------------------------
-// setModeratorClaim — admin only
+// setModeratorClaim : admin only
 // ---------------------------------------------------------------------------
 
 export const setModeratorClaim = onCall(async (request) => {
@@ -1185,7 +1368,7 @@ export const setModeratorClaim = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// setSupportClaim — admin only
+// setSupportClaim : admin only
 // ---------------------------------------------------------------------------
 
 export const setSupportClaim = onCall(async (request) => {
@@ -1222,7 +1405,7 @@ export const setSupportClaim = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// setReadonlyClaim — admin only
+// setReadonlyClaim : admin only
 // ---------------------------------------------------------------------------
 
 export const setReadonlyClaim = onCall(async (request) => {
@@ -1259,7 +1442,7 @@ export const setReadonlyClaim = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// suspendProvider — admin or moderator
+// suspendProvider : admin or moderator
 // ---------------------------------------------------------------------------
 
 export const suspendProvider = onCall(async (request) => {
@@ -1335,7 +1518,7 @@ export const suspendProvider = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// unsuspendProvider — admin only
+// unsuspendProvider : admin only
 // ---------------------------------------------------------------------------
 
 export const unsuspendProvider = onCall(async (request) => {
@@ -1368,7 +1551,7 @@ export const unsuspendProvider = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// removeService — admin or moderator
+// removeService : admin or moderator
 // ---------------------------------------------------------------------------
 
 export const removeService = onCall(async (request) => {
@@ -1397,7 +1580,7 @@ export const removeService = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// deleteMessage — admin or moderator (soft delete)
+// deleteMessage : admin or moderator (soft delete)
 // ---------------------------------------------------------------------------
 
 export const deleteMessage = onCall(async (request) => {
@@ -1433,11 +1616,11 @@ export const deleteMessage = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveReport — admin or moderator
+// resolveReport : admin or moderator
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// revokeUserSessions — admin only
+// revokeUserSessions : admin only
 // Forces token refresh on all sessions for the target user.
 // ---------------------------------------------------------------------------
 
@@ -1448,7 +1631,7 @@ export const revokeUserSessions = onCall(async (request) => {
 
   const targetUid = requireString(request.data?.uid, 'uid');
 
-  // Revoke all refresh tokens — forces re-authentication on all devices.
+  // Revoke all refresh tokens : forces re-authentication on all devices.
   await admin.auth().revokeRefreshTokens(targetUid);
 
   await writeAdminLog({
@@ -1462,7 +1645,7 @@ export const revokeUserSessions = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// logSession — called by the mobile app on every sign-in
+// logSession : called by the mobile app on every sign-in
 // ---------------------------------------------------------------------------
 
 export const logSession = onCall(async (request) => {
@@ -1577,7 +1760,7 @@ export const logSession = onCall(async (request) => {
   );
   await batch.commit();
 
-  // Anomaly detection (async, non-blocking — failures logged but don't block login)
+  // Anomaly detection (async, non-blocking, failures logged but don't block login)
   detectAnomalies(uid, eventData).catch((e) =>
     logger.warn('Anomaly detection failed', { uid, error: String(e) })
   );
@@ -1586,11 +1769,11 @@ export const logSession = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveReport — admin or moderator
+// resolveReport : admin or moderator
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Moderation queue — service pre-publication workflow
+// Moderation queue : service pre-publication workflow
 // ---------------------------------------------------------------------------
 
 export const submitServiceForReview = onCall(async (request) => {
@@ -1702,7 +1885,7 @@ export const republishService = onCall(async (request) => {
   if (service.status === 'rejected' || service.status === 'pending_review') {
     throw new HttpsError(
       'permission-denied',
-      `Service has moderation status "${service.status}" — it must go through the moderation queue before republication.`
+      `Service has moderation status "${service.status}", it must go through the moderation queue before republication.`
     );
   }
 
@@ -1785,7 +1968,7 @@ export const rejectService = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// User bans — suspend / ban / shadow-ban
+// User bans : suspend / ban / shadow-ban
 // ---------------------------------------------------------------------------
 
 export const banUser = onCall(async (request) => {
@@ -1836,7 +2019,7 @@ export const unbanUser = onCall(async (request) => {
     liftedBy: callerUid,
   });
 
-  // Only clear isBanned — shadow-ban state is independent and must be lifted
+  // Only clear isBanned : shadow-ban state is independent and must be lifted
   // explicitly via a separate action (shadowBanUser sets it, no auto-clear here).
   await db.collection('users').doc(targetUid).update({
     isBanned: false,
@@ -1930,8 +2113,62 @@ export const suspendUser = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// Review moderation — hide / unhide / delete
+// Review moderation : hide / unhide / delete
 // ---------------------------------------------------------------------------
+
+/// Runs one moderation action on a review as a SINGLE Firestore transaction:
+/// the delta on the public aggregate, the register that makes it idempotent,
+/// the mutation of the review itself, and the staff log. All four commit, or
+/// none of them do.
+///
+/// This closes a real hole. When the delta ran in its own transaction after the
+/// mutation, a delta that threw left the review hidden everywhere while it was
+/// still counted in the provider's public rating. The backfill only ever
+/// COUNTS, so it could not repair a missing decrement: the only recovery was a
+/// moderator noticing, then unhiding and re-hiding.
+///
+/// The order inside the callback is not a preference, Firestore forces it. A
+/// transaction rejects any read issued after its first write, and the delta
+/// still has to read the booking, the register and the aggregate. So the delta
+/// runs BEFORE the review is mutated, and every read of the whole unit happens
+/// before every write.
+async function moderateReviewAtomically(opts: {
+  reviewId: string;
+  callerUid: string;
+  action: string;
+  /// Applies the aggregate delta through the caller's transaction. Reads first,
+  /// writes after, so it stays legal ahead of `mutate`.
+  delta: (tx: RatingTx, review: Record<string, unknown>) => Promise<boolean>;
+  /// Mutates the review document itself. Writes only.
+  mutate: (tx: RatingTx, reviewRef: admin.firestore.DocumentReference) => void;
+}): Promise<void> {
+  const reviewRef = db.collection('reviews').doc(opts.reviewId);
+
+  await db.runTransaction(async (tx) => {
+    const reviewSnap = await tx.get(reviewRef);
+    if (!reviewSnap.exists) {
+      throw new HttpsError('not-found', 'Review not found.');
+    }
+
+    await opts.delta(tx, reviewSnap.data() as Record<string, unknown>);
+    opts.mutate(tx, reviewRef);
+
+    // Inside the transaction, and no longer before it. The log used to be
+    // written first precisely BECAUSE the delta was a separate transaction
+    // that could fail on its own: writing it early kept the staff action
+    // traced (S7) when the second leg died. That reason is gone. Now the log
+    // shares the fate of the action it describes, so a log written outside
+    // would sometimes record a hiding that never happened, and for an audit
+    // trail a false entry is worse than an absent one. Same call and same
+    // reasoning the identity decisions already use.
+    writeAdminLogTx(tx, {
+      actorUid: opts.callerUid,
+      action: opts.action,
+      targetType: 'review',
+      targetId: opts.reviewId,
+    });
+  });
+}
 
 export const hideReview = onCall(async (request) => {
   const callerUid = request.auth?.uid;
@@ -1939,19 +2176,13 @@ export const hideReview = onCall(async (request) => {
   assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
 
   const reviewId = requireString(request.data?.reviewId, 'reviewId');
-  const reviewRef = db.collection('reviews').doc(reviewId);
-  const reviewSnap = await reviewRef.get();
-  if (!reviewSnap.exists) {
-    throw new HttpsError('not-found', 'Review not found.');
-  }
 
-  await reviewRef.update({ hidden: true });
-
-  await writeAdminLog({
-    actorUid: callerUid,
+  await moderateReviewAtomically({
+    reviewId,
+    callerUid: callerUid as string,
     action: 'hide_review',
-    targetType: 'review',
-    targetId: reviewId,
+    delta: (tx, review) => discountReview(reviewId, { ...review, hidden: true }, tx),
+    mutate: (tx, ref) => tx.update(ref, { hidden: true }),
   });
 
   return { reviewId, hidden: true };
@@ -1963,19 +2194,15 @@ export const unhideReview = onCall(async (request) => {
   assertAdminOrModeratorClaim(request.auth?.token as Record<string, unknown> | undefined);
 
   const reviewId = requireString(request.data?.reviewId, 'reviewId');
-  const reviewRef = db.collection('reviews').doc(reviewId);
-  const reviewSnap = await reviewRef.get();
-  if (!reviewSnap.exists) {
-    throw new HttpsError('not-found', 'Review not found.');
-  }
 
-  await reviewRef.update({ hidden: false });
-
-  await writeAdminLog({
-    actorUid: callerUid,
+  await moderateReviewAtomically({
+    reviewId,
+    callerUid: callerUid as string,
     action: 'unhide_review',
-    targetType: 'review',
-    targetId: reviewId,
+    // The review read here is still `hidden: true`; recountReview neutralises
+    // that flag itself, because the decision belongs to the recorded state.
+    delta: (tx, review) => recountReview(reviewId, review, tx),
+    mutate: (tx, ref) => tx.update(ref, { hidden: false }),
   });
 
   return { reviewId, hidden: false };
@@ -1987,26 +2214,20 @@ export const deleteReview = onCall(async (request) => {
   assertAdminClaim(request.auth?.token?.admin);
 
   const reviewId = requireString(request.data?.reviewId, 'reviewId');
-  const reviewRef = db.collection('reviews').doc(reviewId);
-  const reviewSnap = await reviewRef.get();
-  if (!reviewSnap.exists) {
-    throw new HttpsError('not-found', 'Review not found.');
-  }
 
-  await reviewRef.delete();
-
-  await writeAdminLog({
-    actorUid: callerUid,
+  await moderateReviewAtomically({
+    reviewId,
+    callerUid: callerUid as string,
     action: 'delete_review',
-    targetType: 'review',
-    targetId: reviewId,
+    delta: (tx, review) => discountReview(reviewId, review, tx),
+    mutate: (tx, ref) => tx.delete(ref),
   });
 
   return { reviewId, deleted: true };
 });
 
 // ---------------------------------------------------------------------------
-// resolveReport — admin or moderator
+// resolveReport : admin or moderator
 // ---------------------------------------------------------------------------
 
 export const resolveReport = onCall(async (request) => {
@@ -2051,7 +2272,7 @@ export const resolveReport = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// Security — anomaly detection (called internally from logSession)
+// Security : anomaly detection (called internally from logSession)
 // ---------------------------------------------------------------------------
 
 async function detectAnomalies(
@@ -2174,7 +2395,7 @@ function haversineKm(
 }
 
 // ---------------------------------------------------------------------------
-// Security — resolve alert (admin only)
+// Security : resolve alert (admin only)
 // ---------------------------------------------------------------------------
 
 export const resolveSecurityAlert = onCall(async (request) => {
@@ -2215,7 +2436,7 @@ export const resolveSecurityAlert = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// Security — IP blocklist management (admin only)
+// Security : IP blocklist management (admin only)
 // ---------------------------------------------------------------------------
 
 export const addToIpBlocklist = onCall(async (request) => {
@@ -2289,7 +2510,7 @@ export const removeFromIpBlocklist = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// Security — scheduled: purge expired session data (runs daily at 3am Paris)
+// Security : scheduled: purge expired session data (runs daily at 3am Paris)
 // ---------------------------------------------------------------------------
 
 export const purgeExpiredSessionData = onSchedule(
@@ -2353,7 +2574,7 @@ export const purgeIpGeoCache = onSchedule(
 );
 
 // ---------------------------------------------------------------------------
-// Platform stats — incremental counters maintained by triggers
+// Platform stats : incremental counters maintained by triggers
 //
 // Idempotency: Firebase Gen2 triggers can be retried on failure. Without
 // deduplication, FieldValue.increment would double-count on retries.
@@ -2376,12 +2597,54 @@ async function incrementStatIdempotent(
   const dedupRef = db.doc(`processed_events/${eventId}`);
   await db.runTransaction(async (tx) => {
     const dedup = await tx.get(dedupRef);
-    if (dedup.exists) return; // already processed — Firebase retry guard
+    if (dedup.exists) return; // already processed : Firebase retry guard
     tx.set(dedupRef, {
       processedAt: admin.firestore.FieldValue.serverTimestamp(),
       type: eventType,
     });
     tx.set(STATS_REF, { ...statsUpdate, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  });
+}
+
+/**
+ * Atomically subtract from stats fields, floored at zero, guarded by the same
+ * dedup event document as the increments.
+ *
+ * FieldValue.increment(-1) is deliberately NOT used here. The counters predate
+ * their delete triggers and have already been repaired by hand once, so the
+ * live document holds a number that does not match the collection sizes. A
+ * blind decrement would happily drive a field below zero and leave it there
+ * for good, which is worse than the over-count it is meant to fix. The
+ * transaction reads the current value first and floors every field at 0.
+ *
+ * `fields` carries POSITIVE amounts to subtract (`{ totalUsers: 1 }`).
+ */
+async function decrementStatIdempotent(
+  eventId: string,
+  eventType: string,
+  fields: Record<string, number>,
+): Promise<void> {
+  const dedupRef = db.doc(`processed_events/${eventId}`);
+  await db.runTransaction(async (tx) => {
+    // Both reads happen before any write: a Firestore transaction forbids the
+    // reverse order.
+    const dedup = await tx.get(dedupRef);
+    if (dedup.exists) return; // already processed : Firebase retry guard
+    const current = ((await tx.get(STATS_REF)).data() ?? {}) as Record<string, unknown>;
+
+    const update: Record<string, unknown> = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    for (const [field, amount] of Object.entries(fields)) {
+      const value = typeof current[field] === 'number' ? (current[field] as number) : 0;
+      update[field] = Math.max(0, value - amount);
+    }
+
+    tx.set(dedupRef, {
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      type: eventType,
+    });
+    tx.set(STATS_REF, update, { merge: true });
   });
 }
 
@@ -2391,10 +2654,35 @@ export const onUserCreated = onDocumentCreated('users/{userId}', async (event) =
   });
 });
 
+/**
+ * Do NOT rename this back to `onUserDeleted`, the deployment breaks.
+ *
+ * A 1st Gen Cloud Function called `onUserDeleted` has been live in
+ * us-central1 since 2026-03-08. It is an Auth trigger
+ * (`providers/firebase.auth/eventTypes/user.delete`) left over from the
+ * pre-repository FlutterFlow scaffold; it was never committed here. Firebase
+ * matches deployed functions by NAME, and refuses to convert one in place:
+ *   Error: [functions:onUserDeleted(us-central1)] Upgrading from 1st Gen to
+ *   2nd Gen is not yet supported.
+ *
+ * The `Doc` in the name is the real distinction anyway: this trigger watches
+ * the Firestore document `users/{userId}`, not the Firebase Auth account. The
+ * two are deleted by different paths (`deleteMyAccount` removes the document
+ * first, the Auth account last), and only the document one feeds
+ * `platform_stats`.
+ */
+export const onUserDocDeleted = onDocumentDeleted('users/{userId}', async (event) => {
+  await decrementStatIdempotent(event.id, 'user_deleted', { totalUsers: 1 });
+});
+
 export const onProviderCreated = onDocumentCreated('providers/{providerId}', async (event) => {
   await incrementStatIdempotent(event.id, 'provider_created', {
     totalProviders: admin.firestore.FieldValue.increment(1),
   });
+});
+
+export const onProviderDeleted = onDocumentDeleted('providers/{providerId}', async (event) => {
+  await decrementStatIdempotent(event.id, 'provider_deleted', { totalProviders: 1 });
 });
 
 export const onServiceCreated = onDocumentCreated('services/{serviceId}', async (event) => {
@@ -2425,6 +2713,14 @@ export const onServiceCreated = onDocumentCreated('services/{serviceId}', async 
   }
 });
 
+export const onServiceDeleted = onDocumentDeleted('services/{serviceId}', async (event) => {
+  await decrementStatIdempotent(event.id, 'service_deleted', { totalServices: 1 });
+  // The providers/{providerId} document created as a side effect of
+  // onServiceCreated is deliberately left alone: it carries a profile (bio,
+  // serviceArea, suspended) that outlives any single service, and the provider
+  // may still have others.
+});
+
 export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async (event) => {
   await incrementStatIdempotent(event.id, 'booking_created', {
     totalBookings: admin.firestore.FieldValue.increment(1),
@@ -2434,7 +2730,7 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
   // most important notification of the marketplace: without it a provider who
   // isn't actively in the app never learns they were solicited (requests would
   // silently expire). Booking creation is a `create` with status 'requested',
-  // which onBookingStatusChange (an update trigger) never sees — so it lives
+  // which onBookingStatusChange (an update trigger) never sees, so it lives
   // here.
   const booking = event.data?.data() as { providerId?: string } | undefined;
   const providerId = booking?.providerId;
@@ -2462,25 +2758,48 @@ export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (ev
     revieweeId?: string;
     reviewerRole?: string;
     bookingId?: string;
+    hidden?: boolean;
   } | undefined;
   const revieweeId = review?.revieweeId;
   if (!revieweeId) return;
+
+  // Safety net for clients already in the wild. The public read rule on
+  // `reviews` is `resource.data.hidden == false`, which a document lacking the
+  // field can neither satisfy nor be matched by a query: a review written by a
+  // build that predates the serializer change would be invisible to every
+  // visitor, for ever. The current client writes the field itself, so this
+  // normally does nothing.
+  //
+  // Idempotent by construction: it writes only when the field is absent, and a
+  // trigger replay finds it present the second time. Not merged into any other
+  // write, and deliberately not a transaction: it touches a field no other
+  // writer on this path touches, and losing it costs public visibility of one
+  // review, never a rating.
+  if (review.hidden === undefined && event.data) {
+    try {
+      await event.data.ref.update({ hidden: false });
+    } catch (e) {
+      logger.warn('review hidden normalisation failed, review stays private', {
+        reviewId: event.params.reviewId,
+        error: String(e),
+      });
+    }
+  }
 
   // The reviewee is the opposite role of the reviewer: a client-authored review
   // lands on the provider, a provider-authored review lands on the client. Drive
   // the right Client/Provider notification tab accordingly.
   const audience: 'client' | 'provider' =
     review?.reviewerRole === 'client' ? 'provider' : 'client';
+
+  // The rating goes FIRST, and it is deduplicated. A trigger retry is free and
+  // the dedup absorbs the second pass, so nothing is ever double counted; but
+  // a push failure raised before the increment would lose the rating for good,
+  // with no decrement and no repair path other than the backfill.
+  await countReview(event.params.reviewId, review as Record<string, unknown>);
+
   const title = 'Nouvel avis';
   const body = 'Vous avez reçu un nouvel avis.';
-  await sendPushToUsers(
-    [revieweeId],
-    { title, body },
-    {
-      type: 'review_received',
-      ...(review?.bookingId ? { bookingId: review.bookingId } : {}),
-    }
-  );
   await createNotification(revieweeId, {
     type: 'review_received',
     title,
@@ -2488,6 +2807,23 @@ export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (ev
     bookingId: review?.bookingId,
     audience,
   });
+  // Only the push is swallowed: it is the one leg whose failure must not undo
+  // the rest, and a retry would re-deliver a notification the user already has.
+  try {
+    await sendPushToUsers(
+      [revieweeId],
+      { title, body },
+      {
+        type: 'review_received',
+        ...(review?.bookingId ? { bookingId: review.bookingId } : {}),
+      }
+    );
+  } catch (e) {
+    logger.warn('review push failed, rating and in-app notification kept', {
+      reviewId: event.params.reviewId,
+      error: String(e),
+    });
+  }
 });
 
 export const onBookingUpdatedStats = onDocumentUpdated('bookings/{bookingId}', async (event) => {
@@ -2499,7 +2835,26 @@ export const onBookingUpdatedStats = onDocumentUpdated('bookings/{bookingId}', a
     await incrementStatIdempotent(event.id, 'booking_done', {
       totalBookingsDone: admin.firestore.FieldValue.increment(1),
     });
+    return;
   }
+
+  // Symmetric leg. The increment above fires on every transition INTO done, so
+  // a booking reopened and completed again (done -> disputed -> done) counted
+  // twice with nothing ever giving the point back. Decrementing when a booking
+  // LEAVES done makes totalBookingsDone a consistent count of the bookings
+  // currently done, the same semantics totalReportsPending already has.
+  if (before.status === 'done' && after.status !== 'done') {
+    await decrementStatIdempotent(event.id, 'booking_undone', { totalBookingsDone: 1 });
+  }
+});
+
+export const onBookingDeleted = onDocumentDeleted('bookings/{bookingId}', async (event) => {
+  const booking = event.data?.data() as { status?: string } | undefined;
+  await decrementStatIdempotent(event.id, 'booking_deleted', {
+    totalBookings: 1,
+    // A deleted booking that was done also stops counting as done.
+    ...(booking?.status === 'done' ? { totalBookingsDone: 1 } : {}),
+  });
 });
 
 export const onReportCreatedStats = onDocumentCreated('reports/{reportId}', async (event) => {
@@ -2515,10 +2870,29 @@ export const onReportUpdatedStats = onDocumentUpdated('reports/{reportId}', asyn
   if (!before || !after || before.status === after.status) return;
 
   if (before.status === 'open' && after.status !== 'open') {
-    await incrementStatIdempotent(event.id, 'report_closed', {
-      totalReportsPending: admin.firestore.FieldValue.increment(-1),
+    // Was a raw increment(-1), which drove the field negative whenever a report
+    // was closed on a stats document that had not counted its creation (every
+    // report that predates these triggers). Same clamped path as the deletes.
+    await decrementStatIdempotent(event.id, 'report_closed', { totalReportsPending: 1 });
+    return;
+  }
+
+  // Reopening a closed report puts it back in the pending queue.
+  if (before.status !== 'open' && after.status === 'open') {
+    await incrementStatIdempotent(event.id, 'report_reopened', {
+      totalReportsPending: admin.firestore.FieldValue.increment(1),
     });
   }
+});
+
+export const onReportDeleted = onDocumentDeleted('reports/{reportId}', async (event) => {
+  const report = event.data?.data() as { status?: string } | undefined;
+  await decrementStatIdempotent(event.id, 'report_deleted', {
+    totalReports: 1,
+    // Only a still-open report was being counted as pending; a closed one
+    // already gave its point back through onReportUpdatedStats.
+    ...(report?.status === 'open' ? { totalReportsPending: 1 } : {}),
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -2574,7 +2948,7 @@ export const onReportCreated = onDocumentCreated(
 );
 
 // ---------------------------------------------------------------------------
-// Analytics — incremental counters for posts & events (stats/global)
+// Analytics : incremental counters for posts & events (stats/global)
 // ---------------------------------------------------------------------------
 
 const ANALYTICS_STATS_REF = db.collection('stats').doc('global');
@@ -2625,3 +2999,15 @@ export const initializeStats = onCall(async (request) => {
 
   return { initialized: true };
 });
+
+// ---------------------------------------------------------------------------
+// Identity verification (provider CNI + selfie)
+// ---------------------------------------------------------------------------
+
+export {
+  submitIdentityVerification,
+  approveIdentityVerification,
+  rejectIdentityVerification,
+  revokeIdentityVerification,
+  getIdentityVerificationImages,
+} from './identity_verification';

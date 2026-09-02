@@ -4,13 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../shared/network_image.dart';
-import '../shared/verified_badge.dart';
+import '../shared/identity_trust_signal.dart';
+import '../review/rating_summary.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/review/review_providers.dart';
-import '../../application/user/user_providers.dart';
-import '../../core/utils/format_utils.dart';
+import '../../application/user/public_profile_providers.dart';
+import '../shared/service_price_label.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
 import '../shared/category_icon.dart';
@@ -26,25 +27,27 @@ class PublicProviderProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final userAsync = ref.watch(userByIdProvider(providerId));
+    final userAsync = ref.watch(publicProfileByIdProvider(providerId));
     final reviewsAsync = ref.watch(reviewsForUserProvider(providerId));
     final servicesAsync = ref.watch(publicProviderServicesProvider(providerId));
 
-    // The page hinges on the USER document. The providers/{uid} doc is optional
-    // (it only adds bio / serviceArea / verified badge). While the user doc is
-    // still loading we show a spinner; if it resolves to null the provider does
-    // not exist and we show a graceful unavailable state.
+    // The page hinges on the PUBLIC PROJECTION, not on users/{uid}: it is
+    // reachable without an account and `users` is gated on signedIn(), which
+    // made the whole screen resolve to "provider unavailable" for a visitor.
+    // The providers/{uid} doc stays optional (it only adds the bio). While the
+    // projection is still loading we show a spinner; if it resolves to null the
+    // provider does not exist and we show a graceful unavailable state.
     if (userAsync.isLoading && !userAsync.hasValue) {
       return Scaffold(
         backgroundColor: oc.background,
-        appBar: AppBar(backgroundColor: oc.surface),
+        appBar: AppBar(backgroundColor: oc.cardSurface),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
     if (userAsync.valueOrNull == null) {
       return Scaffold(
         backgroundColor: oc.background,
-        appBar: AppBar(backgroundColor: oc.surface),
+        appBar: AppBar(backgroundColor: oc.cardSurface),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -65,36 +68,47 @@ class PublicProviderProfilePage extends ConsumerWidget {
       backgroundColor: oc.background,
       body: CustomScrollView(
         slivers: [
+          // The header used to live in a FlexibleSpaceBar under a fixed
+          // expandedHeight of 200, and it overflowed the moment a provider's
+          // bio ran to three lines: the yellow "BOTTOM OVERFLOWED" banner was
+          // visible on the real app. Growing the fixed height only postpones
+          // the same trap, and clipping the bio cuts the text a provider sells
+          // themselves with, so the header now sizes to its own content and
+          // survives a 200% text scale (budget line A6).
           SliverAppBar(
-            expandedHeight: 200,
             pinned: true,
-            backgroundColor: oc.surface,
-            leading: Padding(
-              padding: const EdgeInsets.all(8),
-              child: CircleAvatar(
-                backgroundColor: oc.surface.withValues(alpha: 0.9),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                  color: oc.primaryText,
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.pin,
-              background: _ProfileHeader(
-                providerId: providerId,
-                reviewsAsync: reviewsAsync,
-              ),
-            ),
+            // cardSurface, NOT surface: the two are the same white in light
+            // mode but differ in dark (#1A2029 against #1F252F), and the
+            // FlexibleSpaceBar used to hide that. Without this a band appears
+            // between the bar and the header in dark mode.
+            backgroundColor: oc.cardSurface,
+            // AppTheme.light() sets no surfaceTintColor, unlike dark(), so M3
+            // would tint the bar on scroll now that nothing covers it.
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0,
+            // No title on purpose. Without a flexibleSpace a pinned title is
+            // visible AT REST, 56 px above the same name in the header: the lot
+            // would fix one rendering defect by introducing a duplicated name
+            // on the screen where a client decides. A pinned bar carrying only
+            // a back button is ordinary mobile behaviour; driving the title
+            // from scroll offset is the complete answer and the complexity the
+            // MVP rule declines.
+            leading: const BackButton(),
           ),
+          SliverToBoxAdapter(child: ProfileHeader(providerId: providerId)),
 
           // ---- Reviews ----
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+              // The label varies, the title itself is always rendered: making
+              // it conditional would leave the empty and error states floating
+              // with no heading just above "Services proposes". "Tous les avis
+              // recus" says the list counts something other than the header.
               child: Text(
-                l10n.reviewsLabel,
+                (reviewsAsync.valueOrNull?.isNotEmpty ?? false)
+                    ? l10n.reviewsAllReceived
+                    : l10n.reviewsLabel,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -109,8 +123,14 @@ class PublicProviderProfilePage extends ConsumerWidget {
                 ),
               ),
             ),
-            error: (_, __) =>
-                const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) => SliverToBoxAdapter(
+              child: _ErrorSection(
+                label: l10n.errorGeneral,
+                retryLabel: l10n.retry,
+                onRetry: () =>
+                    ref.invalidate(reviewsForUserProvider(providerId)),
+              ),
+            ),
             data: (reviews) => reviews.isEmpty
                 ? SliverToBoxAdapter(
                     child: _EmptySection(
@@ -149,8 +169,14 @@ class PublicProviderProfilePage extends ConsumerWidget {
                 ),
               ),
             ),
-            error: (_, __) =>
-                const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) => SliverToBoxAdapter(
+              child: _ErrorSection(
+                label: l10n.errorGeneral,
+                retryLabel: l10n.retry,
+                onRetry: () =>
+                    ref.invalidate(publicProviderServicesProvider(providerId)),
+              ),
+            ),
             data: (services) => services.isEmpty
                 ? SliverToBoxAdapter(
                     child: _EmptySection(
@@ -179,35 +205,31 @@ class PublicProviderProfilePage extends ConsumerWidget {
 // Profile header
 // ---------------------------------------------------------------------------
 
-class _ProfileHeader extends ConsumerWidget {
-  const _ProfileHeader({required this.providerId, required this.reviewsAsync});
+@visibleForTesting
+class ProfileHeader extends ConsumerWidget {
+  const ProfileHeader({super.key, required this.providerId});
 
   final String providerId;
-  final AsyncValue<List<Review>> reviewsAsync;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
-    final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
+    final user = ref.watch(publicProfileByIdProvider(providerId)).valueOrNull;
     final providerProfile = ref
         .watch(providerProfileByIdProvider(providerId))
         .valueOrNull;
-    final reviews = reviewsAsync.valueOrNull ?? [];
-    final avgRating = reviews.isEmpty
-        ? null
-        : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
-    // A.8 — trust signal: a provider is "verified" once they have completed
-    // their onboarding (profile exists) AND have a verified phone number on
-    // file (phoneE164 set, which only happens through Twilio OTP or
-    // sign-up).
-    final isVerified =
-        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
+    // D6-a/E7: the trust badge reflects a server-owned identity verdict,
+    // rendered by IdentityTrustSignal below (no client-side phone heuristic).
 
     return Container(
       color: oc.cardSurface,
-      padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
+      // 20 at the top, not 80: the 80 existed only to clear the app bar the
+      // header used to sit behind. It sits below it now.
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        // start, not center: at a variable height, an avatar centred against a
+        // four-line bio floats far from the name it belongs to.
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           UserAvatar(
             displayName: user?.displayName ?? '',
@@ -224,7 +246,7 @@ class _ProfileHeader extends ConsumerWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        user?.displayName ?? '—',
+                        user?.displayName ?? '-',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -232,38 +254,40 @@ class _ProfileHeader extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (isVerified) ...[
-                      const SizedBox(width: 6),
-                      const VerifiedBadge(compact: true),
-                    ],
+                    const SizedBox(width: 6),
+                    // Inline beside the name, like the service detail, and no
+                    // longer a full pill on its own line. The comment that used
+                    // to justify the dedicated line was about the PILL, which
+                    // carries text and would eat the name at 375 px; a 15 px
+                    // badge read together with the name does not.
+                    //
+                    // Renders ONLY for a verified provider. This is a client
+                    // surface, so it makes no claim about anyone else: it drops
+                    // the sentence "Identite non verifiee", which taught every
+                    // client that nobody here is trustworthy, and it no longer
+                    // leaves a muted glyph in its place either.
+                    IdentityTrustSignal(
+                      providerId: providerId,
+                      style: TrustSignalStyle.badge,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                if (avgRating != null) ...[
-                  Row(
-                    children: [
-                      ...List.generate(
-                        5,
-                        (i) => Icon(
-                          i < avgRating.round()
-                              ? Icons.star_rounded
-                              : Icons.star_outline_rounded,
-                          size: 16,
-                          color: context.oc.star,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${avgRating.toStringAsFixed(1)} (${reviews.length})',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.secondaryText,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                ],
-                if (user?.country != null && user!.country.isNotEmpty)
+                // One display rule, in one place. This header used to compute
+                // its own five-star row, which is how it once showed "5.0 (2)"
+                // while the card said "Nouveau". explainBasis because the list
+                // of every review received sits right below.
+                RatingSummary(
+                  userId: providerId,
+                  source: RatingSource.provider,
+                  explainBasis: true,
+                ),
+                const SizedBox(height: 4),
+                // Nullable on the projection, unlike AppUser.country which
+                // defaults to 'FR': the public document omits the field when
+                // the user declared no country, so a flag is shown only when
+                // there is one to show rather than defaulted to France.
+                if (user?.country != null && user!.country!.isNotEmpty)
                   Row(
                     children: [
                       Icon(
@@ -272,10 +296,15 @@ class _ProfileHeader extends ConsumerWidget {
                         color: oc.secondaryText,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        CountryUtils.flagAndName(user.country),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: oc.secondaryText,
+                      // Flexible: a Row child that is not flexible receives
+                      // maxWidth: infinity and overflows to the RIGHT rather
+                      // than wrapping. "Emirats arabes unis" exceeds the 227 px
+                      // this column gets at 375 px once the text scale rises.
+                      Flexible(
+                        child: Text(
+                          CountryUtils.flagAndName(user.country!),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: oc.secondaryText),
                         ),
                       ),
                     ],
@@ -311,7 +340,13 @@ class _ReviewTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
-    final reviewer = ref.watch(userByIdProvider(review.reviewerId)).valueOrNull;
+    final l10n = AppLocalizations.of(context)!;
+    // The reviewer is resolved from the public projection too. A reviewer is
+    // usually a CLIENT, not a provider, so providers/{uid} could never have
+    // named them even if it carried a display name.
+    final reviewer = ref
+        .watch(publicProfileByIdProvider(review.reviewerId))
+        .valueOrNull;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -334,7 +369,7 @@ class _ReviewTile extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  reviewer?.displayName ?? '—',
+                  reviewer?.displayName ?? '-',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -364,7 +399,7 @@ class _ReviewTile extends ConsumerWidget {
                 Icon(review.categoryId!.icon, size: 13, color: oc.primary),
                 const SizedBox(width: 4),
                 Text(
-                  review.categoryId!.label,
+                  review.categoryId!.labelOf(l10n),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: oc.primary,
                     fontWeight: FontWeight.w600,
@@ -401,10 +436,8 @@ class _PublicServiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    final formattedPrice = formatPriceFromCents(service.price);
-    final priceLabel = service.priceType.name == 'hourly'
-        ? '$formattedPrice/h'
-        : formattedPrice;
+    final l10n = AppLocalizations.of(context)!;
+    final priceLabel = servicePriceLabel(service, l10n);
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.serviceDetail(service.id)),
@@ -490,6 +523,44 @@ class _PublicServiceTile extends StatelessWidget {
 // Empty section placeholder
 // ---------------------------------------------------------------------------
 
+/// A network error inside a profile section, distinct from an empty section: a
+/// short line plus a retry, so a load failure never reads as "no reviews" or "no
+/// services" (aligned with the home and chat error states).
+class _ErrorSection extends StatelessWidget {
+  const _ErrorSection({
+    required this.label,
+    required this.retryLabel,
+    required this.onRetry,
+  });
+
+  final String label;
+  final String retryLabel;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, size: 18, color: oc.icons),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: Text(retryLabel)),
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptySection extends StatelessWidget {
   const _EmptySection({required this.icon, required this.label});
 
@@ -505,11 +576,20 @@ class _EmptySection extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: oc.icons),
           const SizedBox(width: 10),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+          // Expanded, like _ErrorSection just above already had. Without it
+          // "Aucun avis recu pour le moment" overflows about 83 px to the RIGHT
+          // at 375 px, which is a real defect on a phone at a raised text scale
+          // AND the reason an overflow regression test on this page could never
+          // reach green: viewport slivers paint last-to-first, so this error was
+          // reported before the header's and takeException() returns only the
+          // first one.
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+            ),
           ),
         ],
       ),

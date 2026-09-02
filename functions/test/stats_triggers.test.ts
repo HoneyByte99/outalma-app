@@ -12,7 +12,7 @@
 // only moved once.
 import functionsTest from 'firebase-functions-test';
 
-const tf = functionsTest({ projectId: 'demo-outalma' });
+const tf = functionsTest({ projectId: 'demo-outalma', storageBucket: 'demo-outalma.appspot.com' });
 
 import * as fns from '../src/index';
 import * as admin from 'firebase-admin';
@@ -228,6 +228,9 @@ describe('onReportCreatedStats → platform_stats report counters', () => {
 // ---------------------------------------------------------------------------
 describe('onReportUpdatedStats → platform_stats.totalReportsPending', () => {
   it('decrements pending when a report leaves open status', async () => {
+    await tf.wrap(fns.onReportCreatedStats)(
+      createEvent({ status: 'open' }, 'reports/r1', { reportId: 'r1' }, 'evt-report-close-pre'),
+    );
     await tf.wrap(fns.onReportUpdatedStats)(
       updateEvent(
         { status: 'open' },
@@ -238,11 +241,30 @@ describe('onReportUpdatedStats → platform_stats.totalReportsPending', () => {
       ),
     );
 
-    expect((await platformStats())?.totalReportsPending).toBe(-1);
+    expect((await platformStats())?.totalReportsPending).toBe(0);
     expect(await dedupExists('evt-report-close-1')).toBe(true);
   });
 
+  // Closing a report the counter never counted (every report predating these
+  // triggers) used to write -1 and leave it there. The clamp is the fix.
+  it('never drives pending below zero', async () => {
+    await tf.wrap(fns.onReportUpdatedStats)(
+      updateEvent(
+        { status: 'open' },
+        { status: 'resolved' },
+        'reports/r1',
+        { reportId: 'r1' },
+        'evt-report-close-floor',
+      ),
+    );
+
+    expect((await platformStats())?.totalReportsPending).toBe(0);
+  });
+
   it('is idempotent on the same event id', async () => {
+    await tf.wrap(fns.onReportCreatedStats)(
+      createEvent({ status: 'open' }, 'reports/r1', { reportId: 'r1' }, 'evt-report-close-dup-pre'),
+    );
     const ev = updateEvent(
       { status: 'open' },
       { status: 'resolved' },
@@ -253,7 +275,21 @@ describe('onReportUpdatedStats → platform_stats.totalReportsPending', () => {
     await tf.wrap(fns.onReportUpdatedStats)(ev);
     await tf.wrap(fns.onReportUpdatedStats)(ev);
 
-    expect((await platformStats())?.totalReportsPending).toBe(-1);
+    expect((await platformStats())?.totalReportsPending).toBe(0);
+  });
+
+  it('re-increments pending when a closed report is reopened', async () => {
+    await tf.wrap(fns.onReportUpdatedStats)(
+      updateEvent(
+        { status: 'resolved' },
+        { status: 'open' },
+        'reports/r1',
+        { reportId: 'r1' },
+        'evt-report-reopen-1',
+      ),
+    );
+
+    expect((await platformStats())?.totalReportsPending).toBe(1);
   });
 
   it('does nothing when status is unchanged', async () => {
@@ -307,6 +343,271 @@ describe('onPostCreated / onPostDeleted → stats.postsCount', () => {
     );
 
     expect((await analyticsStats())?.postsCount).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Delete triggers → platform_stats round trip
+//
+// The point of the whole family: create then delete must leave the counter
+// exactly where it started. Before these triggers existed every deletion left
+// the counter inflated for good, and platform_stats had to be repaired by hand.
+// ---------------------------------------------------------------------------
+describe('platform_stats round trip: create then delete leaves the counter unchanged', () => {
+  const cases: {
+    name: string;
+    field: string;
+    path: string;
+    params: Record<string, string>;
+    data: Record<string, unknown>;
+    create: keyof typeof fns;
+    remove: keyof typeof fns;
+  }[] = [
+    {
+      name: 'users → totalUsers',
+      field: 'totalUsers',
+      path: 'users/u1',
+      params: { userId: 'u1' },
+      data: { displayName: 'U' },
+      create: 'onUserCreated',
+      // `onUserDocDeleted`, not `onUserDeleted`: a legacy 1st Gen Auth trigger
+      // already owns that name in production. See functions/src/index.ts.
+      remove: 'onUserDocDeleted',
+    },
+    {
+      name: 'providers → totalProviders',
+      field: 'totalProviders',
+      path: 'providers/p1',
+      params: { providerId: 'p1' },
+      data: { uid: 'p1' },
+      create: 'onProviderCreated',
+      remove: 'onProviderDeleted',
+    },
+    {
+      name: 'services → totalServices',
+      field: 'totalServices',
+      path: 'services/s1',
+      params: { serviceId: 's1' },
+      data: { title: 'Plomberie' },
+      create: 'onServiceCreated',
+      remove: 'onServiceDeleted',
+    },
+    {
+      name: 'bookings → totalBookings',
+      field: 'totalBookings',
+      path: 'bookings/b1',
+      params: { bookingId: 'b1' },
+      data: { status: 'requested' },
+      create: 'onBookingCreated',
+      remove: 'onBookingDeleted',
+    },
+    {
+      name: 'reports → totalReports',
+      field: 'totalReports',
+      path: 'reports/r1',
+      params: { reportId: 'r1' },
+      data: { reason: 'spam', status: 'open' },
+      create: 'onReportCreatedStats',
+      remove: 'onReportDeleted',
+    },
+  ];
+
+  for (const c of cases) {
+    describe(c.name, () => {
+      it('create then delete returns to zero', async () => {
+        await tf.wrap(fns[c.create] as never)(
+          createEvent(c.data, c.path, c.params, `rt-c-${c.field}`),
+        );
+        expect((await platformStats())?.[c.field]).toBe(1);
+
+        await tf.wrap(fns[c.remove] as never)(
+          createEvent(c.data, c.path, c.params, `rt-d-${c.field}`),
+        );
+        expect((await platformStats())?.[c.field]).toBe(0);
+      });
+
+      it('two creates and one delete leave exactly one', async () => {
+        await tf.wrap(fns[c.create] as never)(
+          createEvent(c.data, c.path, c.params, `rt2-c1-${c.field}`),
+        );
+        await tf.wrap(fns[c.create] as never)(
+          createEvent(c.data, c.path, c.params, `rt2-c2-${c.field}`),
+        );
+        await tf.wrap(fns[c.remove] as never)(
+          createEvent(c.data, c.path, c.params, `rt2-d1-${c.field}`),
+        );
+
+        expect((await platformStats())?.[c.field]).toBe(1);
+      });
+
+      it('the delete is idempotent on the same event id', async () => {
+        await tf.wrap(fns[c.create] as never)(
+          createEvent(c.data, c.path, c.params, `rti-c1-${c.field}`),
+        );
+        await tf.wrap(fns[c.create] as never)(
+          createEvent(c.data, c.path, c.params, `rti-c2-${c.field}`),
+        );
+        const ev = createEvent(c.data, c.path, c.params, `rti-d-${c.field}`);
+        await tf.wrap(fns[c.remove] as never)(ev);
+        await tf.wrap(fns[c.remove] as never)(ev);
+
+        expect((await platformStats())?.[c.field]).toBe(1);
+        expect(await dedupExists(`rti-d-${c.field}`)).toBe(true);
+      });
+
+      // The counters predate their delete triggers and were repaired by hand
+      // once, so a deletion can legitimately land on a counter that is already
+      // at zero or absent. It must floor, never go negative.
+      it('deleting with no prior count floors at zero', async () => {
+        await tf.wrap(fns[c.remove] as never)(
+          createEvent(c.data, c.path, c.params, `rtf-d-${c.field}`),
+        );
+
+        expect((await platformStats())?.[c.field]).toBe(0);
+      });
+    });
+  }
+});
+
+describe('onBookingDeleted → totalBookingsDone', () => {
+  it('a deleted done booking also gives back its done point', async () => {
+    await tf.wrap(fns.onBookingCreated)(
+      createEvent({ status: 'requested' }, 'bookings/b1', { bookingId: 'b1' }, 'bd-create'),
+    );
+    await tf.wrap(fns.onBookingUpdatedStats)(
+      updateEvent(
+        { status: 'in_progress' },
+        { status: 'done' },
+        'bookings/b1',
+        { bookingId: 'b1' },
+        'bd-done',
+      ),
+    );
+    expect((await platformStats())?.totalBookingsDone).toBe(1);
+
+    await tf.wrap(fns.onBookingDeleted)(
+      createEvent({ status: 'done' }, 'bookings/b1', { bookingId: 'b1' }, 'bd-delete'),
+    );
+
+    const stats = await platformStats();
+    expect(stats?.totalBookings).toBe(0);
+    expect(stats?.totalBookingsDone).toBe(0);
+  });
+
+  it('a deleted booking that was never done leaves totalBookingsDone alone', async () => {
+    await tf.wrap(fns.onBookingCreated)(
+      createEvent({ status: 'requested' }, 'bookings/b1', { bookingId: 'b1' }, 'bnd-create'),
+    );
+    await tf.wrap(fns.onBookingUpdatedStats)(
+      updateEvent(
+        { status: 'in_progress' },
+        { status: 'done' },
+        'bookings/b2',
+        { bookingId: 'b2' },
+        'bnd-other-done',
+      ),
+    );
+
+    await tf.wrap(fns.onBookingDeleted)(
+      createEvent({ status: 'cancelled' }, 'bookings/b1', { bookingId: 'b1' }, 'bnd-delete'),
+    );
+
+    expect((await platformStats())?.totalBookingsDone).toBe(1);
+  });
+});
+
+describe('onBookingUpdatedStats → leaving done', () => {
+  it('decrements totalBookingsDone when a booking leaves done', async () => {
+    await tf.wrap(fns.onBookingUpdatedStats)(
+      updateEvent(
+        { status: 'in_progress' },
+        { status: 'done' },
+        'bookings/b1',
+        { bookingId: 'b1' },
+        'bu-done',
+      ),
+    );
+    await tf.wrap(fns.onBookingUpdatedStats)(
+      updateEvent(
+        { status: 'done' },
+        { status: 'disputed' },
+        'bookings/b1',
+        { bookingId: 'b1' },
+        'bu-undone',
+      ),
+    );
+
+    expect((await platformStats())?.totalBookingsDone).toBe(0);
+  });
+
+  it('a done → disputed → done cycle counts the booking once, not twice', async () => {
+    for (const [before, after, id] of [
+      ['in_progress', 'done', 'cyc-1'],
+      ['done', 'disputed', 'cyc-2'],
+      ['disputed', 'done', 'cyc-3'],
+    ] as const) {
+      await tf.wrap(fns.onBookingUpdatedStats)(
+        updateEvent({ status: before }, { status: after }, 'bookings/b1', { bookingId: 'b1' }, id),
+      );
+    }
+
+    expect((await platformStats())?.totalBookingsDone).toBe(1);
+  });
+
+  it('never drives totalBookingsDone below zero', async () => {
+    await tf.wrap(fns.onBookingUpdatedStats)(
+      updateEvent(
+        { status: 'done' },
+        { status: 'cancelled' },
+        'bookings/b1',
+        { bookingId: 'b1' },
+        'bu-floor',
+      ),
+    );
+
+    expect((await platformStats())?.totalBookingsDone).toBe(0);
+  });
+});
+
+describe('onReportDeleted → totalReportsPending', () => {
+  it('a deleted open report also leaves the pending queue', async () => {
+    await tf.wrap(fns.onReportCreatedStats)(
+      createEvent({ status: 'open' }, 'reports/r1', { reportId: 'r1' }, 'rd-create'),
+    );
+    await tf.wrap(fns.onReportDeleted)(
+      createEvent({ status: 'open' }, 'reports/r1', { reportId: 'r1' }, 'rd-delete'),
+    );
+
+    const stats = await platformStats();
+    expect(stats?.totalReports).toBe(0);
+    expect(stats?.totalReportsPending).toBe(0);
+  });
+
+  it('a deleted closed report does not give back the pending point twice', async () => {
+    // Two reports created (pending = 2), one closed (pending = 1), then that
+    // closed one deleted: pending must stay at 1, not drop to 0.
+    await tf.wrap(fns.onReportCreatedStats)(
+      createEvent({ status: 'open' }, 'reports/r1', { reportId: 'r1' }, 'rdc-create1'),
+    );
+    await tf.wrap(fns.onReportCreatedStats)(
+      createEvent({ status: 'open' }, 'reports/r2', { reportId: 'r2' }, 'rdc-create2'),
+    );
+    await tf.wrap(fns.onReportUpdatedStats)(
+      updateEvent(
+        { status: 'open' },
+        { status: 'resolved' },
+        'reports/r1',
+        { reportId: 'r1' },
+        'rdc-close1',
+      ),
+    );
+    await tf.wrap(fns.onReportDeleted)(
+      createEvent({ status: 'resolved' }, 'reports/r1', { reportId: 'r1' }, 'rdc-delete1'),
+    );
+
+    const stats = await platformStats();
+    expect(stats?.totalReports).toBe(1);
+    expect(stats?.totalReportsPending).toBe(1);
   });
 });
 

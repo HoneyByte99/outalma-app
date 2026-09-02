@@ -1,6 +1,8 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../domain/review/rating_display.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -11,12 +13,14 @@ import '../../app/router.dart';
 import '../../data/services/callable_function_client.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/identity/identity_verification_providers.dart';
 import '../../application/locale/locale_provider.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../application/user/user_providers.dart';
 import '../../data/services/avatar_upload_service.dart';
 import '../../domain/enums/active_mode.dart';
+import '../../domain/enums/identity_status.dart';
 import '../../domain/models/app_user.dart';
 import '../../domain/models/review.dart';
 import '../shared/user_avatar.dart';
@@ -61,6 +65,17 @@ class ProfilePage extends ConsumerWidget {
             const _ModeToggle(),
             const SizedBox(height: 28),
 
+            // Identity verification (provider only): the natural place a
+            // provider looks for their own verification state and the entry to
+            // the capture flow. Hidden in client mode, where it means nothing.
+            if (user != null &&
+                ref.watch(activeModeProvider) == ActiveMode.provider) ...[
+              _SectionLabel(label: l10n.profileIdentitySection),
+              const SizedBox(height: 12),
+              const _IdentityVerificationCard(),
+              const SizedBox(height: 28),
+            ],
+
             // Identity: edit profile.
             if (user != null) ...[
               _SectionLabel(label: l10n.profileInformation),
@@ -89,7 +104,7 @@ class ProfilePage extends ConsumerWidget {
             const _ExportDataTile(),
             const SizedBox(height: 28),
 
-            // Account actions at the bottom — sign out, then the destructive
+            // Account actions at the bottom , sign out, then the destructive
             // delete account last.
             _SectionLabel(label: l10n.profileAccount),
             const SizedBox(height: 12),
@@ -119,7 +134,7 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
   bool _uploading = false;
 
   Future<void> _pickAvatar() async {
-    // Read current user at call time — don't depend on widget prop
+    // Read current user at call time , don't depend on widget prop
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
 
@@ -139,12 +154,15 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
             photoPath: url,
           );
     } catch (e) {
+      // Keep the technical detail in the logs, never on screen (m3): the target
+      // audience reads a generic localized message, not a raw exception string.
+      debugPrint('Profile photo upload failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.profileErrorUpload(e.toString())),
+            content: Text(l10n.profileErrorUpload),
             backgroundColor: context.oc.error,
-            duration: const Duration(seconds: 8),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -156,7 +174,7 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    // Watch directly — always fresh, no prop-timing race condition
+    // Watch directly , always fresh, no prop-timing race condition
     final authAsync = ref.watch(authNotifierProvider);
     final user = authAsync.valueOrNull is AuthAuthenticated
         ? (authAsync.valueOrNull as AuthAuthenticated).user
@@ -341,7 +359,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Email — read-only
+            // Email , read-only
             _ReadOnlyField(
               label: l10n.fieldEmail,
               value: widget.user.email,
@@ -363,11 +381,11 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
             ),
             const SizedBox(height: 14),
 
-            // Phone — read-only. Changing the phone requires re-verification
+            // Phone , read-only. Changing the phone requires re-verification
             // via OTP and will be handled by a dedicated flow.
             _ReadOnlyField(
               label: l10n.fieldPhone,
-              value: _phone == null || _phone!.isEmpty ? '—' : _phone!,
+              value: _phone == null || _phone!.isEmpty ? '-' : _phone!,
               icon: Icons.phone_outlined,
             ),
             const SizedBox(height: 20),
@@ -862,7 +880,7 @@ class _AccountSection extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Legal links (privacy + terms) — must stay reachable after sign-up
+// Legal links (privacy + terms) , must stay reachable after sign-up
 // ---------------------------------------------------------------------------
 
 class _LegalLinksSection extends StatelessWidget {
@@ -918,7 +936,7 @@ class _LegalLinksSection extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Blocked accounts — entry point to the management screen
+// Blocked accounts , entry point to the management screen
 // ---------------------------------------------------------------------------
 
 class _BlockedAccountsTile extends StatelessWidget {
@@ -1241,10 +1259,12 @@ class _MyReviewsTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
     final l10n = AppLocalizations.of(context)!;
-    final reviews = ref.watch(reviewsForUserProvider(uid)).valueOrNull ?? [];
-    final avg = reviews.isEmpty
-        ? null
-        : reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
+    // "Mes avis" is a self view over every review received, both roles, so it
+    // reads the review-derived reputation and not the provider aggregate. Same
+    // floor as everywhere else, so the tile cannot contradict the page it opens.
+    final display = ref.watch(clientReputationProvider(uid)).valueOrNull;
+    final avg = (display != null && !display.isNew) ? display.average : null;
+    final reviewsCount = display?.count ?? 0;
 
     return Container(
       decoration: BoxDecoration(
@@ -1269,7 +1289,7 @@ class _MyReviewsTile extends ConsumerWidget {
               ),
               if (avg != null)
                 Text(
-                  '${avg.toStringAsFixed(1)} (${reviews.length})',
+                  '${avg.toStringAsFixed(1)} ($reviewsCount)',
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
@@ -1305,14 +1325,15 @@ class MyReviewsPage extends ConsumerWidget {
           ? const SizedBox.shrink()
           : SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-              child: _MyReviewsSection(uid: uid),
+              child: MyReviewsSection(uid: uid),
             ),
     );
   }
 }
 
-class _MyReviewsSection extends ConsumerWidget {
-  const _MyReviewsSection({required this.uid});
+@visibleForTesting
+class MyReviewsSection extends ConsumerWidget {
+  const MyReviewsSection({super.key, required this.uid});
 
   final String uid;
 
@@ -1354,9 +1375,16 @@ class _MyReviewsSection extends ConsumerWidget {
           );
         }
 
-        final avg =
-            reviews.map((r) => r.rating).reduce((a, b) => a + b) /
-            reviews.length;
+        // The same rule as the tile above, so a user never sees two different
+        // numbers one tap apart for the same account.
+        final display = ratingDisplay(
+          sum: reviews.map((r) => r.rating).reduce((a, b) => a + b),
+          count: reviews.length,
+        );
+        // Below the floor there is no average to state. Printing 0.0 with
+        // five empty stars, right above the user's own five-star reviews, is
+        // worse than saying nothing.
+        final avg = display.average;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1372,29 +1400,34 @@ class _MyReviewsSection extends ConsumerWidget {
               child: Row(
                 children: [
                   Text(
-                    avg.toStringAsFixed(1),
+                    avg?.toStringAsFixed(1) ?? l10n.ratingNew,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: oc.primaryText,
+                      color: avg == null ? oc.secondaryText : oc.primaryText,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: List.generate(
-                          5,
-                          (i) => Icon(
-                            i < avg.round()
-                                ? Icons.star_rounded
-                                : Icons.star_outline_rounded,
-                            size: 18,
-                            color: context.oc.star,
+                      // No stars at all below the floor: five empty ones read
+                      // as a rating of zero, which is a claim we are not
+                      // making.
+                      if (avg != null) ...[
+                        Row(
+                          children: List.generate(
+                            5,
+                            (i) => Icon(
+                              i < avg.round()
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              size: 18,
+                              color: context.oc.star,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
+                        const SizedBox(height: 2),
+                      ],
                       Text(
                         l10n.reviewsCount(reviews.length),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1447,7 +1480,7 @@ class _ReviewTile extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  reviewer?.displayName ?? '—',
+                  reviewer?.displayName ?? '-',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -1566,6 +1599,121 @@ class _LanguageSelector extends ConsumerWidget {
             ],
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Identity verification (provider only)
+// ---------------------------------------------------------------------------
+
+/// The provider's own identity verification state, plus the entry into the
+/// capture flow. Mirrors the dashboard hub line (_IdentityHubLine) so the state
+/// grammar is the same everywhere: verified, under way, or not verified.
+///
+/// Loading and read errors collapse to the neutral "verify" affordance rather
+/// than a false "not verified" - the same fail-closed rule the trust signal
+/// uses: an unread state never publishes an untrue claim.
+class _IdentityVerificationCard extends ConsumerWidget {
+  const _IdentityVerificationCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    // Own private file, not the public projection (M7): a rejected/revoked file
+    // must surface "action required" on the provider's own profile, which the
+    // lossy public projection would hide as a neutral "verify" CTA.
+    final record = ref.watch(myIdentityVerificationProvider).valueOrNull;
+    final status = record?.status ?? IdentityStatus.none;
+
+    final IconData icon;
+    final Color accent;
+    final String label;
+    final String subtitle;
+    switch (status) {
+      case IdentityStatus.approved:
+        icon = Icons.verified_rounded;
+        accent = oc.trustVerifiedText;
+        label = l10n.trustVerifiedLabel;
+        subtitle = l10n.hubIdentityVerifiedSub;
+      case IdentityStatus.pending:
+        icon = Icons.schedule_rounded;
+        accent = oc.trustPendingText;
+        label = l10n.trustPendingLabel;
+        subtitle = l10n.hubIdentityPendingSub;
+      case IdentityStatus.rejected:
+        icon = Icons.error_outline;
+        accent = oc.trustRejectedText;
+        label = l10n.identityStatusRejectedTitle;
+        subtitle = l10n.hubIdentityActionRequiredSub;
+      case IdentityStatus.revoked:
+        icon = Icons.error_outline;
+        accent = oc.trustRejectedText;
+        label = l10n.identityStatusRevokedTitle;
+        subtitle = l10n.hubIdentityActionRequiredSub;
+      case IdentityStatus.none:
+        // Invitation, not a state (same grammar as the dashboard hub line,
+        // _IdentityHubLine, which this card mirrors). The shield is the reward
+        // of the flow, so a greyed shield announced "your badge is off"; the
+        // ID-card glyph names what is being asked for and matches the capture
+        // flow this card opens. oc.primary is the action colour and carries no
+        // trust semantics, where oc.secondaryText is the disabled/metadata grey
+        // that made the row read as an extinguished badge.
+        icon = Icons.badge_outlined;
+        accent = oc.primary;
+        label = l10n.hubIdentityVerifyCta;
+        subtitle = l10n.hubIdentityVerifySub;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: oc.cardSurface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        border: Border.all(color: oc.border),
+      ),
+      child: Semantics(
+        button: true,
+        label: label,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+          onTap: () => context.push(AppRoutes.identityStatus),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                Icon(icon, size: 22, color: accent),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Label in primaryText, the accent lives in the icon only
+                      // (matches the dashboard hub line grammar).
+                      Text(
+                        label,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: oc.primaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right_rounded, color: oc.secondaryText),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

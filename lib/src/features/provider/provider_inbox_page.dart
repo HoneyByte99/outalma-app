@@ -11,6 +11,7 @@ import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/booking.dart';
+import '../shared/booking_status_label.dart';
 import '../review/rating_summary.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -64,7 +65,7 @@ class _ProviderInboxPageState extends ConsumerState<ProviderInboxPage>
             ],
             bottom: TabBar(
               controller: _tabController,
-              // Fill the full width — 3 fixed tabs share the bar evenly.
+              // Fill the full width: 3 fixed tabs share the bar evenly.
               tabs: [
                 Tab(
                   icon: const Icon(Icons.inbox_outlined, size: 18),
@@ -269,7 +270,10 @@ class _InboxCard extends ConsumerWidget {
                         ),
                       // Client trust signal (rating + review count).
                       const SizedBox(height: 4),
-                      RatingSummary(userId: booking.customerId),
+                      RatingSummary(
+                        userId: booking.customerId,
+                        source: RatingSource.client,
+                      ),
                     ],
                   ),
                 ),
@@ -337,15 +341,16 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final (label, color) = switch (status) {
-      BookingStatus.requested => (l10n.statusPending, oc.warning),
-      BookingStatus.accepted => (l10n.statusAccepted, oc.primary),
-      BookingStatus.inProgress => (l10n.statusInProgress, oc.statusInProgress),
-      BookingStatus.done => (l10n.statusDone, oc.success),
-      BookingStatus.rejected => (l10n.statusRejected, oc.secondaryText),
-      BookingStatus.cancelled => (l10n.statusCancelled, oc.secondaryText),
-      BookingStatus.unknown => ('—', oc.secondaryText),
+    final color = switch (status) {
+      BookingStatus.requested => oc.warning,
+      BookingStatus.accepted => oc.primary,
+      BookingStatus.inProgress => oc.statusInProgress,
+      BookingStatus.done => oc.success,
+      BookingStatus.rejected => oc.secondaryText,
+      BookingStatus.cancelled => oc.secondaryText,
+      BookingStatus.unknown => oc.secondaryText,
     };
+    final label = status.labelOf(l10n);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(

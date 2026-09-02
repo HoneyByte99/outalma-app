@@ -71,7 +71,7 @@
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Outalma Service utilise votre galerie pour choisir des photos.</string>
 		<key>NSCameraUsageDescription</key>
-		<string>Outalma Service utilise la caméra pour prendre des photos.</string>
+		<string>Outalma utilise la caméra pour photographier votre pièce d'identité (recto, verso) et prendre un selfie de vérification. Ces images servent uniquement à vérifier votre identité.</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>Outalma Service utilise le micro pour les messages vocaux.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>

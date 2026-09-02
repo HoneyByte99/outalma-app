@@ -24,7 +24,7 @@ final providerRepositoryProvider = Provider<ProviderRepository>((ref) {
   return FirestoreProviderRepository(ref.watch(firestoreProvider));
 });
 
-/// Current user's provider profile — null if they haven't activated yet.
+/// Current user's provider profile: null if they haven't activated yet.
 final currentProviderProfileProvider = StreamProvider<ProviderProfile?>((ref) {
   final uid = ref.watch(_stableUidProvider);
   if (uid == null) return const Stream.empty();
@@ -38,7 +38,7 @@ final pausedProviderIdsProvider = StreamProvider<Set<String>>((ref) {
   return ref.watch(providerRepositoryProvider).watchPausedProviderIds();
 });
 
-/// Any provider's profile by uid — used by public provider profile pages,
+/// Any provider's profile by uid: used by public provider profile pages,
 /// service cards, and trust signals.
 final providerProfileByIdProvider = StreamProvider.autoDispose
     .family<ProviderProfile?, String>((ref, uid) {
@@ -105,7 +105,7 @@ final providerCompletedBookingsProvider = StreamProvider<List<Booking>>((ref) {
       );
 });
 
-/// Published services for any given provider uid — used on public profile pages.
+/// Published services for any given provider uid: used on public profile pages.
 final publicProviderServicesProvider = StreamProvider.autoDispose
     .family<List<Service>, String>((ref, uid) {
       return ref
@@ -140,9 +140,9 @@ class ProviderStats {
   final int upcomingThisWeek;
 }
 
-final providerStatsProvider = Provider<ProviderStats>((ref) {
-  final history = ref.watch(providerBookingHistoryProvider).valueOrNull ?? [];
-  final now = DateTime.now();
+/// Pure KPI computation, shared by the sync and async providers so the dashboard
+/// can show a loading/error state (M3) without duplicating the maths.
+ProviderStats computeProviderStats(List<Booking> history, DateTime now) {
   final monthStart = DateTime(now.year, now.month);
   final weekEnd = now.add(const Duration(days: 7));
 
@@ -174,6 +174,21 @@ final providerStatsProvider = Provider<ProviderStats>((ref) {
     acceptanceRate: totalDecisions == 0 ? null : accepted / totalDecisions,
     upcomingThisWeek: upcoming,
   );
+}
+
+final providerStatsProvider = Provider<ProviderStats>((ref) {
+  final history = ref.watch(providerBookingHistoryProvider).valueOrNull ?? [];
+  return computeProviderStats(history, DateTime.now());
+});
+
+/// The KPIs as an [AsyncValue] so the dashboard can distinguish "still loading"
+/// and "failed to load" from a genuine "zero activity" (M3): a null-collapsed
+/// history must not render as real zeros.
+final providerStatsAsyncProvider = Provider<AsyncValue<ProviderStats>>((ref) {
+  final historyAsync = ref.watch(providerBookingHistoryProvider);
+  return historyAsync.whenData(
+    (history) => computeProviderStats(history, DateTime.now()),
+  );
 });
 
 /// Current provider's blocked slots.
@@ -183,7 +198,7 @@ final providerBlockedSlotsProvider = StreamProvider<List<BlockedSlot>>((ref) {
   return ref.watch(providerRepositoryProvider).watchBlockedSlots(uid);
 });
 
-/// Blocked slots for any provider — used by clients to check availability.
+/// Blocked slots for any provider: used by clients to check availability.
 final blockedSlotsForProviderProvider = StreamProvider.autoDispose
     .family<List<BlockedSlot>, String>((ref, uid) {
       return ref.watch(providerRepositoryProvider).watchBlockedSlots(uid);

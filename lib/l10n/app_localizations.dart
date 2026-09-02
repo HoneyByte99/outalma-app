@@ -416,6 +416,30 @@ abstract class AppLocalizations {
   /// **'Password must be at least 6 characters.'**
   String get signUpErrorPasswordTooShort;
 
+  /// Label above the mandatory two-option gender control on the sign-up screen.
+  ///
+  /// In en, this message translates to:
+  /// **'You are'**
+  String get signUpGenderLabel;
+
+  /// Error shown when the sign-up form is submitted without a gender.
+  ///
+  /// In en, this message translates to:
+  /// **'Please indicate whether you are a man or a woman.'**
+  String get signUpGenderRequired;
+
+  /// The male value of the declared gender. Also the accessibility label and tooltip of the pictogram, which shows no text of its own.
+  ///
+  /// In en, this message translates to:
+  /// **'Man'**
+  String get genderMale;
+
+  /// The female value of the declared gender. Also the accessibility label and tooltip of the pictogram, which shows no text of its own.
+  ///
+  /// In en, this message translates to:
+  /// **'Woman'**
+  String get genderFemale;
+
   /// No description provided for @authErrorEmailAlreadyInUse.
   ///
   /// In en, this message translates to:
@@ -548,11 +572,71 @@ abstract class AppLocalizations {
   /// **'All'**
   String get categoryAll;
 
+  /// No description provided for @categoryMenage.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleaning'**
+  String get categoryMenage;
+
+  /// No description provided for @categoryPlomberie.
+  ///
+  /// In en, this message translates to:
+  /// **'Plumbing'**
+  String get categoryPlomberie;
+
+  /// No description provided for @categoryJardinage.
+  ///
+  /// In en, this message translates to:
+  /// **'Gardening'**
+  String get categoryJardinage;
+
+  /// No description provided for @categoryElectricite.
+  ///
+  /// In en, this message translates to:
+  /// **'Electricity'**
+  String get categoryElectricite;
+
+  /// No description provided for @categoryPeinture.
+  ///
+  /// In en, this message translates to:
+  /// **'Painting'**
+  String get categoryPeinture;
+
+  /// No description provided for @categoryBricolage.
+  ///
+  /// In en, this message translates to:
+  /// **'Handyman'**
+  String get categoryBricolage;
+
+  /// No description provided for @categoryGardeEnfants.
+  ///
+  /// In en, this message translates to:
+  /// **'Childcare'**
+  String get categoryGardeEnfants;
+
+  /// No description provided for @categoryCuisine.
+  ///
+  /// In en, this message translates to:
+  /// **'Cooking'**
+  String get categoryCuisine;
+
+  /// No description provided for @categoryRepassage.
+  ///
+  /// In en, this message translates to:
+  /// **'Ironing'**
+  String get categoryRepassage;
+
   /// No description provided for @servicesEmpty.
   ///
   /// In en, this message translates to:
   /// **'No services available\nright now'**
   String get servicesEmpty;
+
+  /// No description provided for @homeCategoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No « {category} » listings\nyet'**
+  String homeCategoryEmpty(String category);
 
   /// No description provided for @clearFilters.
   ///
@@ -644,11 +728,11 @@ abstract class AppLocalizations {
   /// **'Location'**
   String get locationTitle;
 
-  /// No description provided for @locationAllFrance.
+  /// No description provided for @locationAllAreas.
   ///
   /// In en, this message translates to:
-  /// **'All of France'**
-  String get locationAllFrance;
+  /// **'All of Senegal'**
+  String get locationAllAreas;
 
   /// No description provided for @locationValidate.
   ///
@@ -761,8 +845,8 @@ abstract class AppLocalizations {
   /// No description provided for @profileErrorUpload.
   ///
   /// In en, this message translates to:
-  /// **'Error: {error}'**
-  String profileErrorUpload(String error);
+  /// **'Could not upload the photo. Please try again.'**
+  String get profileErrorUpload;
 
   /// No description provided for @profileSaved.
   ///
@@ -1118,6 +1202,30 @@ abstract class AppLocalizations {
   /// **'New'**
   String get ratingNew;
 
+  /// No description provided for @ratingFromClients.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{· 1 client review} other{· {count} client reviews}}'**
+  String ratingFromClients(int count);
+
+  /// No description provided for @ratingFloorHintClients.
+  ///
+  /// In en, this message translates to:
+  /// **'· fewer than {count} client reviews'**
+  String ratingFloorHintClients(int count);
+
+  /// No description provided for @ratingFloorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'· fewer than {count} reviews'**
+  String ratingFloorHint(int count);
+
+  /// No description provided for @reviewsAllReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'All reviews received'**
+  String get reviewsAllReceived;
+
   /// No description provided for @tooltipProviderProfile.
   ///
   /// In en, this message translates to:
@@ -1268,6 +1376,30 @@ abstract class AppLocalizations {
   /// **'Estimated distance: ~{km} km'**
   String bookingDistanceEstimate(String km);
 
+  /// Service card: the closest intervention zone and its distance from the active location filter.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} · {km} km'**
+  String serviceZoneWithDistance(String label, String km);
+
+  /// Service card: the first intervention zone plus how many others the service covers.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} +{count}'**
+  String serviceZoneWithMore(String label, int count);
+
+  /// Service card: the distance part of the location line ALONE, rendered in its own box beside the zone name so the ellipsis can never eat it. Keep it identical to the tail of serviceZoneWithDistance, which is the same line assembled for screen readers.
+  ///
+  /// In en, this message translates to:
+  /// **'· {km} km'**
+  String serviceZoneDistancePart(String km);
+
+  /// Service card: the count of other zones ALONE, rendered in its own box beside the zone name so the ellipsis can never eat it. Keep it identical to the tail of serviceZoneWithMore.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count}'**
+  String serviceZoneMorePart(int count);
+
   /// No description provided for @bookingOpenDirections.
   ///
   /// In en, this message translates to:
@@ -1285,6 +1417,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Phone number not yet shared'**
   String get bookingPhoneNotShared;
+
+  /// No description provided for @bookingCallAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get bookingCallAction;
+
+  /// No description provided for @bookingWhatsappAction.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get bookingWhatsappAction;
+
+  /// No description provided for @bookingPhoneCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Number copied'**
+  String get bookingPhoneCopied;
 
   /// No description provided for @bookingAddPhoneInProfile.
   ///
@@ -1622,6 +1772,12 @@ abstract class AppLocalizations {
   /// **'This provider is currently unavailable.'**
   String get bookingProviderUnavailable;
 
+  /// No description provided for @bookingAddressNotInSenegal.
+  ///
+  /// In en, this message translates to:
+  /// **'The service must take place in Senegal. Please choose an address in Senegal.'**
+  String get bookingAddressNotInSenegal;
+
   /// No description provided for @marketplaceDisclaimer.
   ///
   /// In en, this message translates to:
@@ -1643,7 +1799,7 @@ abstract class AppLocalizations {
   /// No description provided for @bookingStep3Hint.
   ///
   /// In en, this message translates to:
-  /// **'E.g. 12 rue de la Paix, Paris 75001'**
+  /// **'E.g. Rue 10, Point E, Dakar'**
   String get bookingStep3Hint;
 
   /// No description provided for @bookingBack.
@@ -1669,6 +1825,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Voice message'**
   String get bookingVoiceMessageLabel;
+
+  /// No description provided for @chatPhotoMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get chatPhotoMessageLabel;
 
   /// No description provided for @bookingRecordPrompt.
   ///
@@ -1897,6 +2059,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All day'**
   String get calendarFullDay;
+
+  /// No description provided for @calendarLegendBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get calendarLegendBooking;
+
+  /// No description provided for @calendarLegendBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get calendarLegendBlocked;
+
+  /// No description provided for @calendarServiceFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Service'**
+  String get calendarServiceFallback;
 
   /// No description provided for @calendarDeleteSlotTitle.
   ///
@@ -2186,17 +2366,35 @@ abstract class AppLocalizations {
   /// **'Become a provider'**
   String get onboardingTitle;
 
+  /// No description provided for @onboardingEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit my profile'**
+  String get onboardingEditTitle;
+
   /// No description provided for @onboardingHeadline.
   ///
   /// In en, this message translates to:
   /// **'Offer your services'**
   String get onboardingHeadline;
 
+  /// No description provided for @onboardingEditHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your provider profile'**
+  String get onboardingEditHeadline;
+
   /// No description provided for @onboardingBody.
   ///
   /// In en, this message translates to:
   /// **'Create your provider profile in seconds. You can then publish your services and receive requests.'**
   String get onboardingBody;
+
+  /// No description provided for @onboardingEditBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Update your introduction and working hours.'**
+  String get onboardingEditBody;
 
   /// No description provided for @onboardingBio.
   ///
@@ -2207,7 +2405,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingBioHint.
   ///
   /// In en, this message translates to:
-  /// **'E.g. Plumber with 10 years of experience, available in the Paris area…'**
+  /// **'E.g. Plumber with 10 years of experience, available in Dakar…'**
   String get onboardingBioHint;
 
   /// No description provided for @onboardingActivate.
@@ -2215,6 +2413,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Activate my provider profile'**
   String get onboardingActivate;
+
+  /// No description provided for @onboardingSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get onboardingSave;
 
   /// No description provided for @onboardingHours.
   ///
@@ -2449,6 +2653,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'flat fee'**
   String get priceFixed;
+
+  /// No description provided for @priceDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'per day'**
+  String get priceDaily;
+
+  /// No description provided for @priceMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'per month'**
+  String get priceMonthly;
+
+  /// No description provided for @priceUnitHourly.
+  ///
+  /// In en, this message translates to:
+  /// **'/h'**
+  String get priceUnitHourly;
+
+  /// No description provided for @priceUnitDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'/day'**
+  String get priceUnitDaily;
+
+  /// No description provided for @priceUnitMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'/mo'**
+  String get priceUnitMonthly;
+
+  /// No description provided for @serviceFormBillingMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing mode'**
+  String get serviceFormBillingMode;
+
+  /// No description provided for @serviceFormExtraTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional tasks covered'**
+  String get serviceFormExtraTasks;
+
+  /// No description provided for @serviceFormExtraTasksSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to three tasks beyond the main one'**
+  String get serviceFormExtraTasksSubtitle;
+
+  /// No description provided for @serviceFormExtraTasksMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Three additional tasks at most.'**
+  String get serviceFormExtraTasksMax;
+
+  /// No description provided for @serviceFormPriceRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed range: {min} to {max} F CFA'**
+  String serviceFormPriceRange(String min, String max);
+
+  /// No description provided for @serviceFormPriceOutOfRange.
+  ///
+  /// In en, this message translates to:
+  /// **'The price must be between {min} and {max} F CFA.'**
+  String serviceFormPriceOutOfRange(String min, String max);
+
+  /// No description provided for @serviceFormPriceMonthlyMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly minimum'**
+  String get serviceFormPriceMonthlyMin;
+
+  /// No description provided for @serviceFormPriceMonthlyMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly maximum'**
+  String get serviceFormPriceMonthlyMax;
+
+  /// No description provided for @serviceFormMonthlyMaxBelowMin.
+  ///
+  /// In en, this message translates to:
+  /// **'The maximum must be greater than or equal to the minimum.'**
+  String get serviceFormMonthlyMaxBelowMin;
+
+  /// No description provided for @serviceFormPricingUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The pricing grid is unavailable. Retry.'**
+  String get serviceFormPricingUnavailable;
 
   /// No description provided for @photoAdd.
   ///
@@ -3169,6 +3463,672 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Undo'**
   String get serviceFormPhotoUndo;
+
+  /// Public identity trust state shown to clients.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified profile'**
+  String get trustVerifiedLabel;
+
+  /// Public identity trust state shown to clients.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification under way'**
+  String get trustPendingLabel;
+
+  /// Public identity trust state shown to clients.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity not verified'**
+  String get trustUnverifiedLabel;
+
+  /// No description provided for @identityCaptureRectoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Front of the ID'**
+  String get identityCaptureRectoTitle;
+
+  /// No description provided for @identityCaptureVersoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Back of the ID'**
+  String get identityCaptureVersoTitle;
+
+  /// No description provided for @identityCaptureRectoInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the front of your card inside the frame, flat and readable.'**
+  String get identityCaptureRectoInstruction;
+
+  /// No description provided for @identityCaptureVersoInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the back of your card inside the frame, flat and readable.'**
+  String get identityCaptureVersoInstruction;
+
+  /// No description provided for @identityCaptureButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Take the photo'**
+  String get identityCaptureButton;
+
+  /// No description provided for @identityCaptureRetake.
+  ///
+  /// In en, this message translates to:
+  /// **'Retake'**
+  String get identityCaptureRetake;
+
+  /// No description provided for @identityCaptureUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this photo'**
+  String get identityCaptureUse;
+
+  /// No description provided for @identityCaptureBlurry.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo too blurry. Steady the device and move closer to the document.'**
+  String get identityCaptureBlurry;
+
+  /// No description provided for @identityCaptureNoText.
+  ///
+  /// In en, this message translates to:
+  /// **'No readable text detected. Line up your ID card inside the frame.'**
+  String get identityCaptureNoText;
+
+  /// No description provided for @identityCaptureSendAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Send anyway, a human will review it'**
+  String get identityCaptureSendAnyway;
+
+  /// No description provided for @identityCaptureAutoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The photo is taken automatically.'**
+  String get identityCaptureAutoHint;
+
+  /// No description provided for @identityCaptureSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the card inside the frame.'**
+  String get identityCaptureSearching;
+
+  /// No description provided for @identityCaptureFlipCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the card over.'**
+  String get identityCaptureFlipCard;
+
+  /// No description provided for @identityCaptureMoving.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the card still.'**
+  String get identityCaptureMoving;
+
+  /// No description provided for @identityCaptureHoldStill.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay still, the photo is coming.'**
+  String get identityCaptureHoldStill;
+
+  /// No description provided for @identityCaptureRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo not kept. Frame the card again.'**
+  String get identityCaptureRefused;
+
+  /// No description provided for @identityCaptureManualHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can also take the photo yourself.'**
+  String get identityCaptureManualHint;
+
+  /// No description provided for @identityStepProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String identityStepProgress(int current, int total);
+
+  /// No description provided for @identityPermissionDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera not allowed'**
+  String get identityPermissionDeniedTitle;
+
+  /// No description provided for @identityPermissionDeniedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Outalma needs the camera to photograph your ID. Allow camera access to continue.'**
+  String get identityPermissionDeniedBody;
+
+  /// No description provided for @identityOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get identityOpenSettings;
+
+  /// No description provided for @identityCameraUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera unavailable'**
+  String get identityCameraUnavailableTitle;
+
+  /// No description provided for @identityCameraUnavailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No usable camera on this device. The verification journey runs on a phone.'**
+  String get identityCameraUnavailableBody;
+
+  /// No description provided for @identityRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get identityRetry;
+
+  /// No description provided for @identitySelfieTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification selfie'**
+  String get identitySelfieTitle;
+
+  /// No description provided for @identityLivenessWaitingFace.
+  ///
+  /// In en, this message translates to:
+  /// **'Place your face inside the frame.'**
+  String get identityLivenessWaitingFace;
+
+  /// No description provided for @identityLivenessMultipleFaces.
+  ///
+  /// In en, this message translates to:
+  /// **'Only one face must be visible.'**
+  String get identityLivenessMultipleFaces;
+
+  /// No description provided for @identityLivenessTurnHead.
+  ///
+  /// In en, this message translates to:
+  /// **'Slowly turn your head to the side.'**
+  String get identityLivenessTurnHead;
+
+  /// No description provided for @identityLivenessReturnToFront.
+  ///
+  /// In en, this message translates to:
+  /// **'Now face the lens again.'**
+  String get identityLivenessReturnToFront;
+
+  /// No description provided for @identityLivenessReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold still.'**
+  String get identityLivenessReady;
+
+  /// No description provided for @identityLivenessExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The challenge timed out. Let\'s start over.'**
+  String get identityLivenessExpired;
+
+  /// No description provided for @identityLivenessRetryDifferent.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s retry: slowly turn your head to the side, then face the lens again.'**
+  String get identityLivenessRetryDifferent;
+
+  /// No description provided for @identityLivenessFaceGuideLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Demonstration of the head movement to perform.'**
+  String get identityLivenessFaceGuideLabel;
+
+  /// No description provided for @identityLivenessSupportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Need a hand?'**
+  String get identityLivenessSupportTitle;
+
+  /// No description provided for @identityLivenessSupportBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The challenge did not complete after several tries. Contact support to finish your verification.'**
+  String get identityLivenessSupportBody;
+
+  /// No description provided for @identityContactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get identityContactSupport;
+
+  /// No description provided for @identityRecapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your photos'**
+  String get identityRecapTitle;
+
+  /// No description provided for @identityRecapBody.
+  ///
+  /// In en, this message translates to:
+  /// **'These three images will be sent for verification.'**
+  String get identityRecapBody;
+
+  /// No description provided for @identityRecapConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Send for verification'**
+  String get identityRecapConfirm;
+
+  /// No description provided for @identityDepositUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending your photos…'**
+  String get identityDepositUploading;
+
+  /// No description provided for @identityDepositSubmitting.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalising…'**
+  String get identityDepositSubmitting;
+
+  /// No description provided for @identityDepositSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos sent'**
+  String get identityDepositSuccessTitle;
+
+  /// No description provided for @identityDepositSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your file is being reviewed. You will be notified of the decision.'**
+  String get identityDepositSuccessBody;
+
+  /// No description provided for @identityDepositAlreadySubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'This submission was already recorded.'**
+  String get identityDepositAlreadySubmitted;
+
+  /// No description provided for @identityErrorBatchInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The upload did not complete. Retake your photos.'**
+  String get identityErrorBatchInvalid;
+
+  /// No description provided for @identityErrorObjectsMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Your photos did not arrive. Retake the capture.'**
+  String get identityErrorObjectsMissing;
+
+  /// No description provided for @identityErrorBatchStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Your photos waited too long. Retake the capture.'**
+  String get identityErrorBatchStale;
+
+  /// No description provided for @identityErrorAccountMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Session expired. Please sign in again.'**
+  String get identityErrorAccountMissing;
+
+  /// No description provided for @identityErrorPendingExists.
+  ///
+  /// In en, this message translates to:
+  /// **'A file is already under review.'**
+  String get identityErrorPendingExists;
+
+  /// No description provided for @identityErrorAlreadyVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Your identity is already verified.'**
+  String get identityErrorAlreadyVerified;
+
+  /// No description provided for @identityErrorRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many recent submissions. Try again later.'**
+  String get identityErrorRateLimited;
+
+  /// No description provided for @identityErrorRateLimitedWithDelay.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many recent submissions. Try again in {duration}.'**
+  String identityErrorRateLimitedWithDelay(String duration);
+
+  /// No description provided for @identityErrorStorageDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'The upload was refused. Retake your photos.'**
+  String get identityErrorStorageDenied;
+
+  /// No description provided for @identityErrorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection interrupted. You can resume.'**
+  String get identityErrorNetwork;
+
+  /// No description provided for @identityErrorUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get identityErrorUnknown;
+
+  /// No description provided for @identityDurationHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h'**
+  String identityDurationHours(int hours);
+
+  /// No description provided for @identityDurationMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String identityDurationMinutes(int minutes);
+
+  /// No description provided for @identityDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get identityDone;
+
+  /// No description provided for @identityGuideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your identity'**
+  String get identityGuideTitle;
+
+  /// No description provided for @identityGuideStepRecto.
+  ///
+  /// In en, this message translates to:
+  /// **'Front'**
+  String get identityGuideStepRecto;
+
+  /// No description provided for @identityGuideStepVerso.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get identityGuideStepVerso;
+
+  /// No description provided for @identityGuideStepSelfie.
+  ///
+  /// In en, this message translates to:
+  /// **'Selfie'**
+  String get identityGuideStepSelfie;
+
+  /// No description provided for @identityGuideWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'A verified profile earns client trust. The badge shows you are who you say you are.'**
+  String get identityGuideWhy;
+
+  /// No description provided for @identityGuideNext.
+  ///
+  /// In en, this message translates to:
+  /// **'A member of our team reviews your file within 48 hours. You can keep offering your services in the meantime.'**
+  String get identityGuideNext;
+
+  /// No description provided for @identityGuideHave.
+  ///
+  /// In en, this message translates to:
+  /// **'Have your CEDEAO ID card ready, in a well-lit spot. Allow about two minutes. Your photos are not kept on the phone.'**
+  String get identityGuideHave;
+
+  /// No description provided for @identityGuideStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get identityGuideStart;
+
+  /// No description provided for @identityGuideConsentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tick the box to continue'**
+  String get identityGuideConsentHint;
+
+  /// No description provided for @identityGuideMention1.
+  ///
+  /// In en, this message translates to:
+  /// **'We collect a photo of the front and back of your ID card, and a selfie.'**
+  String get identityGuideMention1;
+
+  /// No description provided for @identityGuideMention2.
+  ///
+  /// In en, this message translates to:
+  /// **'They are used only to check that you are the person offering services on Outalma.'**
+  String get identityGuideMention2;
+
+  /// No description provided for @identityGuideMention3.
+  ///
+  /// In en, this message translates to:
+  /// **'Only authorised members of the Outalma team can view them. No client and no other provider has access.'**
+  String get identityGuideMention3;
+
+  /// No description provided for @identityGuideMention4.
+  ///
+  /// In en, this message translates to:
+  /// **'They are kept until you delete your account.'**
+  String get identityGuideMention4;
+
+  /// No description provided for @identityGuideMention5.
+  ///
+  /// In en, this message translates to:
+  /// **'You can delete your account at any time from your settings.'**
+  String get identityGuideMention5;
+
+  /// No description provided for @identityGuideMention6.
+  ///
+  /// In en, this message translates to:
+  /// **'We reply within 48 hours. You can keep offering your services in the meantime.'**
+  String get identityGuideMention6;
+
+  /// No description provided for @identityConsentCheckbox.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read the above and I agree to send my ID document and my selfie to Outalma for verification.'**
+  String get identityConsentCheckbox;
+
+  /// No description provided for @identityConsentTermsLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the terms of use'**
+  String get identityConsentTermsLink;
+
+  /// No description provided for @identityStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity verification'**
+  String get identityStatusTitle;
+
+  /// No description provided for @identityStatusNoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Get the « Verified profile » badge so clients can trust you before booking.'**
+  String get identityStatusNoneBody;
+
+  /// No description provided for @identityStatusStartCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify my identity'**
+  String get identityStatusStartCta;
+
+  /// No description provided for @identityStatusRestartCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Start again'**
+  String get identityStatusRestartCta;
+
+  /// No description provided for @identityStatusPendingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted on {date}, reply within 48 hours. You will be notified of the decision.'**
+  String identityStatusPendingBody(String date);
+
+  /// No description provided for @identityStatusPendingBodyNoDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Your file is under review, reply within 48 hours. You will be notified of the decision.'**
+  String get identityStatusPendingBodyNoDate;
+
+  /// No description provided for @identityStatusVerifiedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified since {date}.'**
+  String identityStatusVerifiedBody(String date);
+
+  /// No description provided for @identityStatusVerifiedBodyNoDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile is verified.'**
+  String get identityStatusVerifiedBodyNoDate;
+
+  /// No description provided for @identityStatusRejectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification refused'**
+  String get identityStatusRejectedTitle;
+
+  /// No description provided for @identityStatusRevokedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification withdrawn'**
+  String get identityStatusRevokedTitle;
+
+  /// No description provided for @identityStatusPriorityNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your next file will be handled as a priority.'**
+  String get identityStatusPriorityNote;
+
+  /// No description provided for @identityStatusNoReason.
+  ///
+  /// In en, this message translates to:
+  /// **'No reason was provided. You can start again.'**
+  String get identityStatusNoReason;
+
+  /// No description provided for @identityStatusUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'State unavailable'**
+  String get identityStatusUnavailable;
+
+  /// No description provided for @identityWebOnlyMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity verification is done from the Outalma mobile app.'**
+  String get identityWebOnlyMobile;
+
+  /// No description provided for @identityWebBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get identityWebBack;
+
+  /// No description provided for @identitySupportReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reference: {reference}'**
+  String identitySupportReference(String reference);
+
+  /// No description provided for @hubIdentityVerifiedSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile is verified'**
+  String get hubIdentityVerifiedSub;
+
+  /// No description provided for @hubIdentityPendingSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply within 48 hours'**
+  String get hubIdentityPendingSub;
+
+  /// No description provided for @hubIdentityVerifyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify my identity'**
+  String get hubIdentityVerifyCta;
+
+  /// No description provided for @hubIdentityVerifySub.
+  ///
+  /// In en, this message translates to:
+  /// **'Get the « Verified profile » badge'**
+  String get hubIdentityVerifySub;
+
+  /// No description provided for @hubIdentityActionRequiredSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Action required: restart verification'**
+  String get hubIdentityActionRequiredSub;
+
+  /// No description provided for @profileIdentitySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity verification'**
+  String get profileIdentitySection;
+
+  /// No description provided for @calendarFormatMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get calendarFormatMonth;
+
+  /// No description provided for @calendarFormatTwoWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'2 weeks'**
+  String get calendarFormatTwoWeeks;
+
+  /// No description provided for @serviceSeeReviews.
+  ///
+  /// In en, this message translates to:
+  /// **'See reviews'**
+  String get serviceSeeReviews;
+
+  /// No description provided for @homeGuestGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a trusted provider near you'**
+  String get homeGuestGreeting;
+
+  /// No description provided for @guestSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get guestSignIn;
+
+  /// No description provided for @authPromptBenefits.
+  ///
+  /// In en, this message translates to:
+  /// **'An account lets you book, exchange messages with your provider and follow your requests.'**
+  String get authPromptBenefits;
+
+  /// No description provided for @authPromptKeepBrowsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep browsing without an account'**
+  String get authPromptKeepBrowsing;
+
+  /// No description provided for @bookingRequiresLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account to request this service'**
+  String get bookingRequiresLogin;
+
+  /// No description provided for @guestLockedSectionLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to open this section'**
+  String get guestLockedSectionLogin;
+
+  /// No description provided for @introContinueAsGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse without an account'**
+  String get introContinueAsGuest;
+
+  /// No description provided for @introAlreadyHaveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'I already have an account'**
+  String get introAlreadyHaveAccount;
 }
 
 class _AppLocalizationsDelegate

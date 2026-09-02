@@ -50,7 +50,10 @@ class GeocodingService {
       body: jsonEncode({
         'input': input,
         'languageCode': 'fr',
-        'includedRegionCodes': ['fr', 'sn'],
+        // The product only serves Senegal (CADRAGE section 5): suggest SN
+        // addresses only. The server (createBooking) is the source of truth and
+        // refuses a non-SN prestation regardless.
+        'includedRegionCodes': ['sn'],
       }),
     );
 
@@ -73,19 +76,21 @@ class GeocodingService {
         .toList();
   }
 
-  /// Nominatim (OpenStreetMap) free geocoding — encodes lat/lng in the placeId
-  /// as "nominatim:<lat>,<lng>" so no second lookup is needed.
+  /// Nominatim (OpenStreetMap) free geocoding. Encodes lat/lng (and the resolved
+  /// ISO country code, when available) in the placeId as
+  /// "nominatim:<lat>,<lng>[,<cc>]" so no second lookup is needed.
   Future<List<PlaceSuggestion>> _nominatimSearch(String input) async {
     try {
-      final uri = Uri.parse('https://nominatim.openstreetmap.org/search')
-          .replace(
-            queryParameters: {
-              'q': input,
-              'format': 'json',
-              'limit': '5',
-              'accept-language': 'fr',
-            },
-          );
+      final uri = Uri.parse('https://nominatim.openstreetmap.org/search').replace(
+        queryParameters: {
+          'q': input,
+          'format': 'json',
+          'limit': '5',
+          'accept-language': 'fr',
+          // Needed to read the country of each result (address.country_code).
+          'addressdetails': '1',
+        },
+      );
 
       final response = await _client.get(
         uri,
@@ -98,13 +103,17 @@ class GeocodingService {
       return results.cast<Map<String, dynamic>>().map((r) {
         final lat = r['lat'] as String;
         final lng = r['lon'] as String;
+        final address = r['address'] as Map<String, dynamic>?;
+        final cc = (address?['country_code'] as String?)?.toUpperCase() ?? '';
         final name = (r['display_name'] as String)
             .split(',')
             .take(3)
             .join(',')
             .trim();
         return PlaceSuggestion(
-          placeId: 'nominatim:$lat,$lng',
+          placeId: cc.isEmpty
+              ? 'nominatim:$lat,$lng'
+              : 'nominatim:$lat,$lng,$cc',
           description: name,
         );
       }).toList();
@@ -113,15 +122,22 @@ class GeocodingService {
     }
   }
 
-  /// Returns lat/lng for a given [placeId].
-  /// Nominatim placeIds are encoded as "nominatim:<lat>,<lng>".
-  Future<({double lat, double lng})?> getPlaceLatLng(String placeId) async {
+  /// Returns lat/lng (and ISO [countryCode] when resolvable) for a given
+  /// [placeId]. Nominatim placeIds are encoded as "nominatim:<lat>,<lng>[,<cc>]".
+  Future<({double lat, double lng, String? countryCode})?> getPlaceLatLng(
+    String placeId,
+  ) async {
     if (placeId.startsWith('nominatim:')) {
-      final coords = placeId.substring('nominatim:'.length).split(',');
-      if (coords.length == 2) {
-        final lat = double.tryParse(coords[0]);
-        final lng = double.tryParse(coords[1]);
-        if (lat != null && lng != null) return (lat: lat, lng: lng);
+      final parts = placeId.substring('nominatim:'.length).split(',');
+      if (parts.length >= 2) {
+        final lat = double.tryParse(parts[0]);
+        final lng = double.tryParse(parts[1]);
+        if (lat != null && lng != null) {
+          final cc = parts.length >= 3 && parts[2].trim().isNotEmpty
+              ? parts[2].trim().toUpperCase()
+              : null;
+          return (lat: lat, lng: lng, countryCode: cc);
+        }
       }
       return null;
     }
@@ -130,7 +146,10 @@ class GeocodingService {
 
     final response = await _client.get(
       uri,
-      headers: {'X-Goog-Api-Key': _apiKey, 'X-Goog-FieldMask': 'location'},
+      headers: {
+        'X-Goog-Api-Key': _apiKey,
+        'X-Goog-FieldMask': 'location,addressComponents',
+      },
     );
 
     if (response.statusCode != 200) return null;
@@ -143,7 +162,23 @@ class GeocodingService {
     final lng = (location['longitude'] as num?)?.toDouble();
     if (lat == null || lng == null) return null;
 
-    return (lat: lat, lng: lng);
+    return (lat: lat, lng: lng, countryCode: _countryFromComponents(json));
+  }
+
+  /// Extracts the ISO country code (e.g. "SN") from a Places details response's
+  /// `addressComponents`. Returns null when absent.
+  String? _countryFromComponents(Map<String, dynamic> json) {
+    final components = json['addressComponents'] as List?;
+    if (components == null) return null;
+    for (final raw in components) {
+      final comp = raw as Map<String, dynamic>;
+      final types = (comp['types'] as List?)?.cast<dynamic>() ?? const [];
+      if (types.contains('country')) {
+        final short = comp['shortText'] as String?;
+        if (short != null && short.isNotEmpty) return short.toUpperCase();
+      }
+    }
+    return null;
   }
 
   /// Reverse-geocodes [lat]/[lng] into a human-readable address label.

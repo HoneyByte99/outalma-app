@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/booking_status.dart';
 import '../../domain/enums/category_id.dart';
+import '../../domain/enums/gender.dart';
 import '../../domain/enums/message_type.dart';
 import '../../domain/enums/price_type.dart';
 import '../../domain/enums/reviewer_role.dart';
@@ -14,6 +15,7 @@ import '../../domain/models/chat_message.dart';
 import '../../domain/models/app_notification.dart';
 import '../../domain/models/phone_share.dart';
 import '../../domain/models/provider_profile.dart';
+import '../../domain/models/public_profile.dart';
 import '../../domain/models/report.dart';
 import '../../domain/models/review.dart';
 import '../../domain/models/service.dart';
@@ -32,6 +34,26 @@ class FirestoreCollections {
         .withConverter<AppUser>(
           fromFirestore: (snap, _) => _userFromFirestore(snap),
           toFirestore: (user, _) => _userToFirestore(user),
+        );
+  }
+
+  /// The world-readable, PII-free mirror of `users`. Public surfaces resolve
+  /// display names and avatars here so a signed-out visitor can read them:
+  /// `users` is gated on `signedIn()` because it holds email and phone.
+  static CollectionReference<PublicProfile> publicProfiles(
+    FirebaseFirestore db,
+  ) {
+    return db
+        .collection('public_profiles')
+        .withConverter<PublicProfile>(
+          fromFirestore: (snap, _) => _publicProfileFromFirestore(snap),
+          // Read-only from the client. The projection is written exclusively by
+          // the mirrorPublicProfile Cloud Function and every client write is
+          // denied by the rules, so a working serialiser here would advertise a
+          // path that does not exist and would fail at the network layer.
+          toFirestore: (_, __) => throw UnsupportedError(
+            'public_profiles is server-owned: client writes are denied',
+          ),
         );
   }
 
@@ -166,6 +188,9 @@ class FirestoreCollections {
       termsAcceptedAt: data['termsAcceptedAt'] != null
           ? dateTimeFromFirestore(data['termsAcceptedAt'])
           : null,
+      // Absent on every account created before the field shipped, and left
+      // null for them rather than defaulted: see Gender.tryParse.
+      gender: Gender.tryParse(data['gender']),
     );
   }
 
@@ -174,7 +199,7 @@ class FirestoreCollections {
       'displayName': user.displayName,
       'email': user.email,
       'photoPath': user.photoPath,
-      // Never write phoneE164 as null — the create rule requires the field to
+      // Never write phoneE164 as null: the create rule requires the field to
       // be absent for email-only accounts, and the update rule blocks any
       // client-side change to this field (security review C1/C2).
       if (user.phoneE164 != null) 'phoneE164': user.phoneE164,
@@ -188,8 +213,39 @@ class FirestoreCollections {
       if (user.pushToken != null) 'pushToken': user.pushToken,
       if (user.termsAcceptedAt != null)
         'termsAcceptedAt': dateTimeToFirestore(user.termsAcceptedAt!),
+      // Never written as null. `switchMode` and `updateProfile` both go through
+      // a merge write carrying the whole AppUser, and an explicit null there
+      // would erase the declared gender of every account whose in-memory copy
+      // predates a reload, exactly like the pushToken case above.
+      if (user.gender != null) 'gender': user.gender!.name,
       'createdAt': dateTimeToFirestore(user.createdAt),
     };
+  }
+
+  // ---- PublicProfile ----
+
+  /// Deliberately tolerant of every absent field. The projection is produced by
+  /// a Cloud Function from whatever `users/{uid}` holds, and a document written
+  /// before a field existed must degrade to a blank name rather than throw on a
+  /// public surface a visitor is looking at.
+  static PublicProfile _publicProfileFromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> snap,
+  ) {
+    final data = snap.data() ?? const <String, dynamic>{};
+    return PublicProfile(
+      id: snap.id,
+      displayName: (data['displayName'] as String?) ?? '',
+      photoPath: data['photoPath'] as String?,
+      // Left null when absent, NOT defaulted to 'FR' like AppUser does: this
+      // document feeds a public profile, and a default here would display a
+      // country the user never declared.
+      country: data['country'] as String?,
+      phoneVerified: (data['phoneVerified'] as bool?) ?? false,
+      // Same tolerance as above, on the collection where it matters most: this
+      // document feeds the catalogue card a guest sees, and 50 of the 50
+      // production documents predate the field.
+      gender: Gender.tryParse(data['gender']),
+    );
   }
 
   // ---- Service ----
@@ -211,6 +267,10 @@ class FirestoreCollections {
         (data['priceType'] as String?) ?? PriceType.fixed.name,
       ),
       price: (data['price'] as num?)?.toInt() ?? 0,
+      priceMax: (data['priceMax'] as num?)?.toInt(),
+      extraTasks:
+          (data['extraTasks'] as List?)?.whereType<String>().toList() ??
+          const [],
       published: (data['published'] as bool?) ?? false,
       serviceZones: _serviceZonesFromFirestore(data),
       status: data['status'] as String?,
@@ -228,6 +288,11 @@ class FirestoreCollections {
       'photos': service.photos,
       'priceType': service.priceType.name,
       'price': service.price,
+      // priceMax is written only for the monthly range mode; the security rule
+      // rejects a priceMax present outside the monthly mode, so it must be
+      // absent (not null) for hourly and daily.
+      if (service.priceMax != null) 'priceMax': service.priceMax,
+      'extraTasks': service.extraTasks,
       'published': service.published,
       'serviceZones': service.serviceZones.map(serviceZoneToMap).toList(),
       'createdAt': dateTimeToFirestore(service.createdAt),
@@ -336,7 +401,7 @@ class FirestoreCollections {
           : null,
       if (booking.audioMessageUrl != null)
         'audioMessageUrl': booking.audioMessageUrl,
-      // Cancellation metadata — set server-side by cancelBooking. Included here
+      // Cancellation metadata, set server-side by cancelBooking. Included here
       // so the typed converter round-trips a Booking fully (clients do not write
       // bookings today; this keeps the serializer aligned with the model).
       if (booking.cancelReason != null) 'cancelReason': booking.cancelReason,
@@ -433,7 +498,7 @@ class FirestoreCollections {
       bio: data['bio'] as String?,
       workingHourStart: (data['workingHourStart'] as num?)?.toInt(),
       workingHourEnd: (data['workingHourEnd'] as num?)?.toInt(),
-      // Availability defaults to true (available) when the field is missing —
+      // Availability defaults to true (available) when the field is missing,
       // a provider is hidden only if they explicitly paused.
       active: (data['active'] as bool?) ?? true,
       suspended: (data['suspended'] as bool?) ?? false,
@@ -498,10 +563,30 @@ class FirestoreCollections {
       categoryId: data['categoryId'] != null
           ? CategoryId.fromString(data['categoryId'] as String)
           : null,
+      // Absent on the historical corpus, so absence means visible.
+      hidden: (data['hidden'] as bool?) ?? false,
       createdAt: dateTimeFromFirestore(data['createdAt']),
     );
   }
 
+  /// `hidden` IS written here, and always as the literal `false`, never as
+  /// `review.hidden`.
+  ///
+  /// It used to be omitted, on the argument that a moderation verdict must not
+  /// be client-writable while the `create` rule carried no field allowlist. The
+  /// rule now carries one: `hidden` is accepted on create only when it equals
+  /// false (see firebase/firestore.rules), so the field can be written without
+  /// handing the verdict to the client.
+  ///
+  /// Omitting it stopped being an option once reviews became publicly readable.
+  /// That rule is `resource.data.hidden == false`, which a document lacking the
+  /// field cannot satisfy and a query cannot match: a review created without
+  /// the field would be invisible to every visitor, for ever.
+  ///
+  /// The literal, not the model field: `create` is the only path through here,
+  /// and a future caller passing a Review built with `hidden: true` must not be
+  /// able to smuggle it in. The rule would refuse the write anyway; this makes
+  /// the client refuse to build it in the first place.
   static Map<String, Object?> _reviewToFirestore(Review review) {
     return {
       'bookingId': review.bookingId,
@@ -511,6 +596,7 @@ class FirestoreCollections {
       'rating': review.rating,
       'comment': review.comment,
       if (review.categoryId != null) 'categoryId': review.categoryId!.name,
+      'hidden': false,
       'createdAt': dateTimeToFirestore(review.createdAt),
     };
   }

@@ -1,6 +1,7 @@
 export 'enums/active_mode.dart';
 export 'enums/booking_status.dart';
 export 'enums/category_id.dart';
+export 'enums/gender.dart';
 export 'enums/message_type.dart';
 export 'enums/price_type.dart';
 export 'enums/reviewer_role.dart';
@@ -17,6 +18,8 @@ export 'models/report.dart';
 export 'models/review.dart';
 export 'models/service.dart';
 export 'models/service_zone.dart';
+
+export 'pricing/pricing_config.dart';
 
 export 'utils/distance.dart';
 

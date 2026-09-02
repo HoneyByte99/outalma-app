@@ -1,4 +1,4 @@
-// Tests for PhoneField — validates static validate() logic and widget rendering.
+// Tests for PhoneField : validates static validate() logic and widget rendering.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -76,6 +76,63 @@ void main() {
       await tester.pump();
       expect(find.text('🇸🇳'), findsOneWidget);
       expect(find.text('+221'), findsOneWidget);
+    });
+  });
+
+  // The country list carries accents ("Senegal" with an acute e), and someone
+  // signing up on a phone in Dakar types without them. TWO mirrored cases, or
+  // folding a single side passes and the other mutation survives.
+  group('PhoneField country picker: accent-insensitive', () {
+    Finder inList(String label) =>
+        find.descendant(of: find.byType(ListView), matching: find.text(label));
+
+    Future<void> openPicker(WidgetTester tester) async {
+      await tester.pumpWidget(_wrap(PhoneField(onChanged: (_) {})));
+      await tester.pump();
+      // The dial-code chip opens the sheet.
+      await tester.tap(find.text('+33'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('an UNACCENTED query finds an ACCENTED country', (
+      tester,
+    ) async {
+      await openPicker(tester);
+      await tester.enterText(find.byType(TextField).last, 'senegal');
+      await tester.pumpAndSettle();
+
+      expect(
+        inList('S\u00e9n\u00e9gal'),
+        findsOneWidget,
+        reason: 'the fold must apply to the country NAME side',
+      );
+      expect(inList('France'), findsNothing);
+    });
+
+    testWidgets('an ACCENTED query finds the same country', (tester) async {
+      await openPicker(tester);
+      await tester.enterText(find.byType(TextField).last, 'S\u00e9n\u00e9gal');
+      await tester.pumpAndSettle();
+
+      expect(
+        inList('S\u00e9n\u00e9gal'),
+        findsOneWidget,
+        reason: 'the fold must apply to the QUERY side too',
+      );
+    });
+
+    testWidgets('a dial code still filters, and a miss filters everything', (
+      tester,
+    ) async {
+      await openPicker(tester);
+      await tester.enterText(find.byType(TextField).last, '+221');
+      await tester.pumpAndSettle();
+      expect(inList('S\u00e9n\u00e9gal'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).last, 'zzzz');
+      await tester.pumpAndSettle();
+      expect(inList('S\u00e9n\u00e9gal'), findsNothing);
+      expect(inList('France'), findsNothing);
     });
   });
 }

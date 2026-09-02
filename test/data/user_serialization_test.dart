@@ -12,6 +12,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/src/data/firestore/firestore_collections.dart';
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
+import 'package:outalma_app/src/domain/enums/gender.dart';
 import 'package:outalma_app/src/domain/models/app_user.dart';
 
 AppUser _makeUser({
@@ -24,6 +25,7 @@ AppUser _makeUser({
   String? phoneE164,
   String? pushToken,
   DateTime? createdAt,
+  Gender? gender,
 }) {
   return AppUser(
     id: id,
@@ -35,6 +37,7 @@ AppUser _makeUser({
     phoneE164: phoneE164,
     pushToken: pushToken,
     createdAt: createdAt ?? DateTime(2024, 1, 15, 10, 0).toUtc(),
+    gender: gender,
   );
 }
 
@@ -45,7 +48,7 @@ void main() {
     fakeDb = FakeFirebaseFirestore();
   });
 
-  group('AppUser serialization — all fields populated', () {
+  group('AppUser serialization - all fields populated', () {
     test('roundtrip preserves all fields', () async {
       final user = _makeUser(
         photoPath: 'gs://bucket/photo.jpg',
@@ -67,7 +70,7 @@ void main() {
     });
   });
 
-  group('AppUser serialization — minimal fields (nulls)', () {
+  group('AppUser serialization - minimal fields (nulls)', () {
     test('roundtrip with null optional fields does not crash', () async {
       final user = _makeUser(); // no photoPath, phoneE164, pushToken
       final col = FirestoreCollections.users(fakeDb);
@@ -81,7 +84,7 @@ void main() {
     });
   });
 
-  group('AppUser serialization — activeMode enum', () {
+  group('AppUser serialization - activeMode enum', () {
     test('client mode roundtrips as "client" string', () async {
       final user = _makeUser(activeMode: ActiveMode.client);
       final col = FirestoreCollections.users(fakeDb);
@@ -119,7 +122,7 @@ void main() {
     });
   });
 
-  group('AppUser serialization — displayName fallback', () {
+  group('AppUser serialization - displayName fallback', () {
     test('missing displayName field returns empty string', () async {
       await fakeDb.collection('users').doc('no_name').set({
         'email': 'x@x.com',
@@ -131,7 +134,7 @@ void main() {
     });
   });
 
-  group('AppUser serialization — createdAt timestamp', () {
+  group('AppUser serialization - createdAt timestamp', () {
     test('createdAt roundtrips with millisecond precision', () async {
       final t = DateTime(2024, 6, 20, 9, 30, 0).toUtc();
       final user = _makeUser(createdAt: t);
@@ -165,7 +168,7 @@ void main() {
     });
   });
 
-  group('AppUser serialization — country default', () {
+  group('AppUser serialization - country default', () {
     test('missing country field defaults to FR', () async {
       await fakeDb.collection('users').doc('no_country').set({
         'displayName': 'Marc',
@@ -175,5 +178,78 @@ void main() {
       final result = (await col.doc('no_country').get()).data()!;
       expect(result.country, 'FR');
     });
+  });
+
+  // The declared gender. Collected at sign-up on both paths, drawn as a
+  // pictogram on two public surfaces, and absent from every one of the 50
+  // accounts that exist today, which is why the null case is tested first.
+  group('AppUser serialization - declared gender', () {
+    test('both values roundtrip through their canonical string', () async {
+      for (final (gender, stored) in [
+        (Gender.male, 'male'),
+        (Gender.female, 'female'),
+      ]) {
+        final user = _makeUser(id: 'u_$stored', gender: gender);
+        final col = FirestoreCollections.users(fakeDb);
+        await col.doc(user.id).set(user);
+
+        final raw = (await fakeDb.collection('users').doc(user.id).get())
+            .data()!;
+        expect(raw['gender'], stored);
+
+        final result = (await col.doc(user.id).get()).data()!;
+        expect(result.gender, gender);
+      }
+    });
+
+    test(
+      'a document written before the field existed reads back null',
+      () async {
+        // The production case: all 50 accounts. Reading a default here would
+        // print a pictogram claiming a gender nobody declared.
+        await fakeDb.collection('users').doc('legacy').set({
+          'displayName': 'Moussa',
+          'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
+        });
+        final col = FirestoreCollections.users(fakeDb);
+        final result = (await col.doc('legacy').get()).data()!;
+        expect(result.gender, isNull);
+      },
+    );
+
+    test(
+      'a null gender is OMITTED from the map, never written as null',
+      () async {
+        // Same hazard as pushToken: switchMode and updateProfile both merge-write
+        // the whole AppUser, and an explicit null would erase a declared gender
+        // whenever the in-memory copy is stale.
+        final user = _makeUser(id: 'no_gender');
+        final col = FirestoreCollections.users(fakeDb);
+        await col.doc(user.id).set(user);
+
+        final raw = (await fakeDb.collection('users').doc(user.id).get())
+            .data()!;
+        expect(raw.containsKey('gender'), isFalse);
+      },
+    );
+
+    test(
+      'a legacy or foreign value reads back null, not a nearest match',
+      () async {
+        // The 2024 FlutterFlow export used the same key with another vocabulary.
+        for (final value in ['Homme', 'M', 'other', 42]) {
+          final id = 'legacy_$value';
+          await fakeDb.collection('users').doc(id).set({
+            'displayName': 'X',
+            'gender': value,
+            'createdAt': Timestamp.fromDate(DateTime(2024, 1, 1).toUtc()),
+          });
+          final result = (await FirestoreCollections.users(
+            fakeDb,
+          ).doc(id).get()).data()!;
+          expect(result.gender, isNull, reason: 'gender="$value"');
+        }
+      },
+    );
   });
 }

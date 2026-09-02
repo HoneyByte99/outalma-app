@@ -3,7 +3,7 @@
 // notification docs, dead-token purge, and reminder timezone formatting.
 import functionsTest from 'firebase-functions-test';
 
-const tf = functionsTest({ projectId: 'demo-outalma' });
+const tf = functionsTest({ projectId: 'demo-outalma', storageBucket: 'demo-outalma.appspot.com' });
 
 import * as fns from '../src/index';
 import * as admin from 'firebase-admin';
@@ -190,6 +190,72 @@ describe('onReviewCreated → notify the reviewee', () => {
     const notifs = await getNotifications(customer);
     expect(notifs).toHaveLength(1);
     expect(notifs[0]?.audience).toBe('client');
+  });
+});
+
+// The public read rule on `reviews` is `resource.data.hidden == false`. A
+// document that LACKS the field cannot satisfy it and cannot be matched by the
+// visitor query either, so a review written by a build older than the
+// serializer change would be invisible to every visitor, for ever. The current
+// client writes the field; this trigger is the net under the clients already
+// installed on real phones.
+describe('onReviewCreated normalises the hidden field', () => {
+  const db = () => admin.firestore();
+
+  async function fire(id: string, data: Record<string, unknown>) {
+    await db().collection('reviews').doc(id).set(data);
+    const snap = await db().collection('reviews').doc(id).get();
+    await tf.wrap(fns.onReviewCreated)({
+      data: tf.firestore.makeDocumentSnapshot(
+        snap.data() as Record<string, unknown>,
+        `reviews/${id}`
+      ),
+      params: { reviewId: id },
+      id: `evt-hidden-${id}`,
+    } as never);
+    return (await db().collection('reviews').doc(id).get()).data();
+  }
+
+  const base = {
+    revieweeId: provider,
+    reviewerId: customer,
+    reviewerRole: 'client',
+    bookingId: 'b1',
+    rating: 5,
+  };
+
+  it('adds hidden false when the field is ABSENT', async () => {
+    const after = await fire('rev-absent', base);
+    expect(after?.hidden).toBe(false);
+  });
+
+  it('leaves an explicit hidden false alone', async () => {
+    const after = await fire('rev-false', { ...base, hidden: false });
+    expect(after?.hidden).toBe(false);
+  });
+
+  it('NEVER unhides a review that is already hidden', async () => {
+    // The one way this net could do damage: a moderated review is hidden:true,
+    // and a trigger replay must not reset it to false. It writes only when the
+    // field is absent, which is what makes a replay harmless.
+    const after = await fire('rev-true', { ...base, hidden: true });
+    expect(after?.hidden).toBe(true);
+  });
+
+  it('is idempotent across a replay', async () => {
+    await fire('rev-replay', base);
+    // Second pass over the SAME document, now carrying the field.
+    const snap = await db().collection('reviews').doc('rev-replay').get();
+    await tf.wrap(fns.onReviewCreated)({
+      data: tf.firestore.makeDocumentSnapshot(
+        snap.data() as Record<string, unknown>,
+        'reviews/rev-replay'
+      ),
+      params: { reviewId: 'rev-replay' },
+      id: 'evt-hidden-replay-2',
+    } as never);
+    const after = (await db().collection('reviews').doc('rev-replay').get()).data();
+    expect(after?.hidden).toBe(false);
   });
 });
 

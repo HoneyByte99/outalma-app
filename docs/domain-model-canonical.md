@@ -49,9 +49,9 @@ Firestore collection: `users/{uid}`
 | `displayName` | String | Public display name |
 | `photoPath` | String? | Firebase Storage path (not URL) |
 | `email` | String | From Firebase Auth |
-| `phoneE164` | String? | Private — never exposed publicly |
+| `phoneE164` | String? | Private : never exposed publicly |
 | `country` | String | "FR" or "SN" |
-| `activeMode` | String | "client" or "provider" — the current UI switch state |
+| `activeMode` | String | "client" or "provider", the current UI switch state |
 | `pushToken` | String? | FCM token for notifications |
 | `createdAt` | Timestamp | UTC |
 
@@ -71,7 +71,7 @@ Firestore collection: `providers/{uid}` (same UID as users/{uid})
 | `bio` | String? | Short description of the provider |
 | `serviceArea` | String? | City or zone description |
 | `active` | bool | Whether provider profile is active |
-| `suspended` | bool | Set by admin — overrides active |
+| `suspended` | bool | Set by admin : overrides active |
 | `createdAt` | Timestamp | When provider profile was activated |
 
 ---
@@ -105,11 +105,11 @@ Firestore collection: `services/{serviceId}` (public read)
 | `priceType` | String | "hourly" or "fixed" |
 | `price` | int | Price in smallest currency unit (centimes) |
 | `published` | bool | Only published services are discoverable |
-| `serviceZones` | List\<Map\> | `[{label, lat, lng, radiusKm}]` — intervention zones |
+| `serviceZones` | List\<Map\> | `[{label, lat, lng, radiusKm}]` : intervention zones |
 | `createdAt` | Timestamp | UTC |
 | `updatedAt` | Timestamp | UTC |
 
-`ownerId` is NOT used — the field is `providerId` for consistency with bookings.
+`ownerId` is NOT used, the field is `providerId` for consistency with bookings.
 
 ### ServiceZone (value object, not a Firestore collection)
 
@@ -136,19 +136,19 @@ Firestore collection: `bookings/{bookingId}` (top-level, not subcollection)
 | `requestMessage` | String | Free-text message from client |
 | `scheduledAt` | Timestamp? | Structured date/time for the appointment (preferred) |
 | `schedule` | Map? | Legacy slot info (freeform, kept for backwards compat) |
-| `addressSnapshot` | Map? | Client address at time of booking. Shape: `{address: string, lat?: number, lng?: number}` — coordinates come from Google Places when the user picks an autocomplete suggestion and power the distance estimate + directions button on the booking detail page. |
+| `addressSnapshot` | Map? | Client address at time of booking. Shape: `{address: string, lat?: number, lng?: number}` : coordinates come from Google Places when the user picks an autocomplete suggestion and power the distance estimate + directions button on the booking detail page. |
 | `chatId` | String? | Set by `acceptBooking()` Cloud Function |
 | `reminded24h` | bool | Flag for 24h reminder (set by sendBookingReminders) |
 | `reminded1h` | bool | Flag for 1h reminder (set by sendBookingReminders) |
 | `createdAt` | Timestamp | UTC |
-| `acceptedAt` | Timestamp? | UTC — set by acceptBooking() |
-| `rejectedAt` | Timestamp? | UTC — set by rejectBooking() |
-| `cancelledAt` | Timestamp? | UTC — set by cancelBooking() |
-| `startedAt` | Timestamp? | UTC — set by markInProgress() |
-| `doneAt` | Timestamp? | UTC — set by confirmDone() |
+| `acceptedAt` | Timestamp? | UTC : set by acceptBooking() |
+| `rejectedAt` | Timestamp? | UTC : set by rejectBooking() |
+| `cancelledAt` | Timestamp? | UTC : set by cancelBooking() |
+| `startedAt` | Timestamp? | UTC : set by markInProgress() |
+| `doneAt` | Timestamp? | UTC : set by confirmDone() |
 
-`userId` is NOT used — fields are `customerId` and `providerId`.
-`updatedAt` is NOT used — individual transition timestamps are used instead.
+`userId` is NOT used, fields are `customerId` and `providerId`.
+`updatedAt` is NOT used, individual transition timestamps are used instead.
 
 ---
 
@@ -183,11 +183,11 @@ Firestore collection: `chats/{chatId}/messages/{messageId}`
 | `type` | String | "text", "image", or "voice" |
 | `text` | String? | Present when type=text, or as caption for images |
 | `mediaUrl` | String? | Present when type=image or type=voice (Storage URL) |
-| `createdAt` | Timestamp | UTC — use `createdAt` not `sentAt` |
+| `createdAt` | Timestamp | UTC, use `createdAt` not `sentAt` |
 
 Firestore rules: message create requires `text OR mediaUrl` (not both mandatory).
 
-Field name is `createdAt` (not `sentAt`) — aligns with all other collections.
+Field name is `createdAt` (not `sentAt`), aligns with all other collections.
 
 ---
 
@@ -204,12 +204,80 @@ Firestore collection: `reviews/{reviewId}`
 | `reviewerRole` | String | "client" or "provider" |
 | `rating` | int | 1 to 5 |
 | `comment` | String? | Free text |
+| `categoryId` | String? | Service category, captured from the booking at review time. Null on legacy reviews |
+| `hidden` | bool? | Moderation verdict, written ONLY by `hideReview` / `unhideReview`. **Absent means visible**, which is how the historical corpus reads |
 | `createdAt` | Timestamp | UTC |
 
 Reviews are bilateral: after `done`, both the client and provider can leave a review.
-One review per (bookingId, reviewerRole) pair — enforced by rules.
+One review per (bookingId, reviewerRole) pair, enforced by rules.
+
+**`hidden` is read-only on the client.** It is deliberately absent from the Dart
+serializer: the `create` rule on `reviews` carries no field allowlist, so a client
+able to write the key could stamp or clear its own moderation flag. The app reads
+it and filters `watchForUser` and `watchRecentForUser`; `watchForBooking` is NOT
+filtered, because `hasReviewedProvider` uses it to know whether a review already
+exists and hiding one there would offer the form again into a refused write.
+
+**Not a security boundary.** `firestore.rules` still allows any signed-in account
+to read a hidden review directly. Tightening that needs a moderator exemption plus
+emulator tests, and is tracked separately.
+
+`reviewerRole` is written by the client and constrained by no rule. It is fine for
+choosing a notification audience, and must never decide a publication: the server
+resolves the author's role from the BOOKING (see `provider_rating.ts`).
 
 ---
+
+## ProviderTrust : `provider_trust/{uid}`
+
+Public projection of a provider's identity verification. World-readable,
+`write: if false` for every client including the provider it describes: it is
+derived by the decision transaction (Admin SDK) and never typed by hand.
+
+| Field | Type | Notes |
+|---|---|---|
+| `identityStatus` | `'verified' \| 'pending'` | Absent document = not verified. A refusal is publicly indistinguishable from never having submitted |
+| `updatedAt` | timestamp | |
+
+Owned end to end by the identity subsystem, which DELETES the document on
+reject and on revoke. Nothing whose lifecycle is the ACCOUNT's may live here.
+
+## ProviderRating : `provider_ratings/{uid}`
+
+Public rating aggregate of a provider. World-readable, because a client reads
+it before choosing; `write: if false` for everyone, because a reputation the
+subject can type is not a reputation.
+
+| Field | Type | Notes |
+|---|---|---|
+| `ratingSum` | int | Sum of the ratings that count |
+| `ratingCount` | int | How many. Below 3 the app shows "Nouveau" rather than an average |
+| `updatedAt` | timestamp | |
+
+A review counts only when its author is the CUSTOMER of the booking, which the
+BOOKING establishes: `reviewerRole` is written by the client, no rule
+constrains it, and it is absent from historical reviews. Hidden reviews do not
+count, and moderation moves the aggregate in real time.
+
+Deliberately separate from `provider_trust`: that document is deleted on an
+identity refusal, which would take a provider's whole reputation with it.
+
+Companion register `rating_events/{reviewId}` holds `{ counted }` for
+idempotency. Closed to every client and NEVER purged: unlike
+`processed_events`, the backfill's safety depends on it being permanent.
+
+Moderation (`hideReview`, `unhideReview`, `deleteReview`) writes the review, the
+aggregate, the register and the `admin_logs` entry in ONE transaction. It has
+to: the backfill only ever COUNTS, so a decrement lost between two transactions
+is a drift no replay can repair. Every transition is decided on the recorded
+`counted` state, never by re-evaluating the predicate, because an unhide reads a
+review that is still `hidden`, and a hide landing before the backfill would
+subtract from an aggregate that never held the review.
+
+The predicate itself exists twice, in `functions/src/provider_rating.ts` and in
+`scripts/rating_predicate.py`. `shared/rating-parity-cases.json` is the single
+table of cases both are tested against, so a divergence fails a test instead of
+silently making the aggregate disagree with what a replay computes.
 
 ## PhoneShare
 
@@ -264,7 +332,7 @@ Notification types: `new_message`, `booking_accepted`, `booking_rejected`, `book
 ```
 BookingStatus : requested | accepted | in_progress | done | rejected | cancelled
 UserRole      : customer | provider | admin   (technical auth role, not UI mode)
-ActiveMode    : client | provider              (UI switch — stored on AppUser)
+ActiveMode    : client | provider              (UI switch, stored on AppUser)
 MessageType   : text | image | voice | system
 PriceType     : hourly | fixed
 Country       : FR | SN

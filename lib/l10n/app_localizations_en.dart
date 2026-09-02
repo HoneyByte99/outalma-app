@@ -171,6 +171,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Password must be at least 6 characters.';
 
   @override
+  String get signUpGenderLabel => 'You are';
+
+  @override
+  String get signUpGenderRequired =>
+      'Please indicate whether you are a man or a woman.';
+
+  @override
+  String get genderMale => 'Man';
+
+  @override
+  String get genderFemale => 'Woman';
+
+  @override
   String get authErrorEmailAlreadyInUse => 'This email is already in use.';
 
   @override
@@ -245,7 +258,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryAll => 'All';
 
   @override
+  String get categoryMenage => 'Cleaning';
+
+  @override
+  String get categoryPlomberie => 'Plumbing';
+
+  @override
+  String get categoryJardinage => 'Gardening';
+
+  @override
+  String get categoryElectricite => 'Electricity';
+
+  @override
+  String get categoryPeinture => 'Painting';
+
+  @override
+  String get categoryBricolage => 'Handyman';
+
+  @override
+  String get categoryGardeEnfants => 'Childcare';
+
+  @override
+  String get categoryCuisine => 'Cooking';
+
+  @override
+  String get categoryRepassage => 'Ironing';
+
+  @override
   String get servicesEmpty => 'No services available\nright now';
+
+  @override
+  String homeCategoryEmpty(String category) {
+    return 'No « $category » listings\nyet';
+  }
 
   @override
   String get clearFilters => 'Clear filters';
@@ -294,7 +339,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationTitle => 'Location';
 
   @override
-  String get locationAllFrance => 'All of France';
+  String get locationAllAreas => 'All of Senegal';
 
   @override
   String get locationValidate => 'Apply';
@@ -353,9 +398,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAccount => 'Account';
 
   @override
-  String profileErrorUpload(String error) {
-    return 'Error: $error';
-  }
+  String get profileErrorUpload =>
+      'Could not upload the photo. Please try again.';
 
   @override
   String get profileSaved => 'Profile updated.';
@@ -555,6 +599,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ratingNew => 'New';
 
   @override
+  String ratingFromClients(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '· $count client reviews',
+      one: '· 1 client review',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ratingFloorHintClients(int count) {
+    return '· fewer than $count client reviews';
+  }
+
+  @override
+  String ratingFloorHint(int count) {
+    return '· fewer than $count reviews';
+  }
+
+  @override
+  String get reviewsAllReceived => 'All reviews received';
+
+  @override
   String get tooltipProviderProfile => 'My provider profile';
 
   @override
@@ -636,6 +704,26 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String serviceZoneWithDistance(String label, String km) {
+    return '$label · $km km';
+  }
+
+  @override
+  String serviceZoneWithMore(String label, int count) {
+    return '$label +$count';
+  }
+
+  @override
+  String serviceZoneDistancePart(String km) {
+    return '· $km km';
+  }
+
+  @override
+  String serviceZoneMorePart(int count) {
+    return '+$count';
+  }
+
+  @override
   String get bookingOpenDirections => 'Directions';
 
   @override
@@ -643,6 +731,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookingPhoneNotShared => 'Phone number not yet shared';
+
+  @override
+  String get bookingCallAction => 'Call';
+
+  @override
+  String get bookingWhatsappAction => 'WhatsApp';
+
+  @override
+  String get bookingPhoneCopied => 'Number copied';
 
   @override
   String get bookingAddPhoneInProfile =>
@@ -821,6 +918,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This provider is currently unavailable.';
 
   @override
+  String get bookingAddressNotInSenegal =>
+      'The service must take place in Senegal. Please choose an address in Senegal.';
+
+  @override
   String get marketplaceDisclaimer =>
       'Outalma only connects clients and independent providers. Any agreement and payment is made directly between you, outside the app and at your own risk. Always check who you are dealing with.';
 
@@ -832,7 +933,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Where should the provider intervene? (optional)';
 
   @override
-  String get bookingStep3Hint => 'E.g. 12 rue de la Paix, Paris 75001';
+  String get bookingStep3Hint => 'E.g. Rue 10, Point E, Dakar';
 
   @override
   String get bookingBack => 'Back';
@@ -845,6 +946,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bookingVoiceMessageLabel => 'Voice message';
+
+  @override
+  String get chatPhotoMessageLabel => 'Photo';
 
   @override
   String get bookingRecordPrompt => 'Tap to record';
@@ -974,6 +1078,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calendarFullDay => 'All day';
+
+  @override
+  String get calendarLegendBooking => 'Booking';
+
+  @override
+  String get calendarLegendBlocked => 'Unavailable';
+
+  @override
+  String get calendarServiceFallback => 'Service';
 
   @override
   String get calendarDeleteSlotTitle => 'Remove this block?';
@@ -1126,21 +1239,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingTitle => 'Become a provider';
 
   @override
+  String get onboardingEditTitle => 'Edit my profile';
+
+  @override
   String get onboardingHeadline => 'Offer your services';
+
+  @override
+  String get onboardingEditHeadline => 'Your provider profile';
 
   @override
   String get onboardingBody =>
       'Create your provider profile in seconds. You can then publish your services and receive requests.';
 
   @override
+  String get onboardingEditBody =>
+      'Update your introduction and working hours.';
+
+  @override
   String get onboardingBio => 'Introduction (optional)';
 
   @override
   String get onboardingBioHint =>
-      'E.g. Plumber with 10 years of experience, available in the Paris area…';
+      'E.g. Plumber with 10 years of experience, available in Dakar…';
 
   @override
   String get onboardingActivate => 'Activate my provider profile';
+
+  @override
+  String get onboardingSave => 'Save';
 
   @override
   String get onboardingHours => 'Working hours';
@@ -1265,6 +1391,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get priceFixed => 'flat fee';
+
+  @override
+  String get priceDaily => 'per day';
+
+  @override
+  String get priceMonthly => 'per month';
+
+  @override
+  String get priceUnitHourly => '/h';
+
+  @override
+  String get priceUnitDaily => '/day';
+
+  @override
+  String get priceUnitMonthly => '/mo';
+
+  @override
+  String get serviceFormBillingMode => 'Billing mode';
+
+  @override
+  String get serviceFormExtraTasks => 'Additional tasks covered';
+
+  @override
+  String get serviceFormExtraTasksSubtitle =>
+      'Up to three tasks beyond the main one';
+
+  @override
+  String get serviceFormExtraTasksMax => 'Three additional tasks at most.';
+
+  @override
+  String serviceFormPriceRange(String min, String max) {
+    return 'Allowed range: $min to $max F CFA';
+  }
+
+  @override
+  String serviceFormPriceOutOfRange(String min, String max) {
+    return 'The price must be between $min and $max F CFA.';
+  }
+
+  @override
+  String get serviceFormPriceMonthlyMin => 'Monthly minimum';
+
+  @override
+  String get serviceFormPriceMonthlyMax => 'Monthly maximum';
+
+  @override
+  String get serviceFormMonthlyMaxBelowMin =>
+      'The maximum must be greater than or equal to the minimum.';
+
+  @override
+  String get serviceFormPricingUnavailable =>
+      'The pricing grid is unavailable. Retry.';
 
   @override
   String get photoAdd => 'Add a photo (optional)';
@@ -1655,4 +1833,390 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serviceFormPhotoUndo => 'Undo';
+
+  @override
+  String get trustVerifiedLabel => 'Verified profile';
+
+  @override
+  String get trustPendingLabel => 'Verification under way';
+
+  @override
+  String get trustUnverifiedLabel => 'Identity not verified';
+
+  @override
+  String get identityCaptureRectoTitle => 'Front of the ID';
+
+  @override
+  String get identityCaptureVersoTitle => 'Back of the ID';
+
+  @override
+  String get identityCaptureRectoInstruction =>
+      'Place the front of your card inside the frame, flat and readable.';
+
+  @override
+  String get identityCaptureVersoInstruction =>
+      'Place the back of your card inside the frame, flat and readable.';
+
+  @override
+  String get identityCaptureButton => 'Take the photo';
+
+  @override
+  String get identityCaptureRetake => 'Retake';
+
+  @override
+  String get identityCaptureUse => 'Use this photo';
+
+  @override
+  String get identityCaptureBlurry =>
+      'Photo too blurry. Steady the device and move closer to the document.';
+
+  @override
+  String get identityCaptureNoText =>
+      'No readable text detected. Line up your ID card inside the frame.';
+
+  @override
+  String get identityCaptureSendAnyway => 'Send anyway, a human will review it';
+
+  @override
+  String get identityCaptureAutoHint => 'The photo is taken automatically.';
+
+  @override
+  String get identityCaptureSearching => 'Place the card inside the frame.';
+
+  @override
+  String get identityCaptureFlipCard => 'Turn the card over.';
+
+  @override
+  String get identityCaptureMoving => 'Hold the card still.';
+
+  @override
+  String get identityCaptureHoldStill => 'Stay still, the photo is coming.';
+
+  @override
+  String get identityCaptureRefused => 'Photo not kept. Frame the card again.';
+
+  @override
+  String get identityCaptureManualHint =>
+      'You can also take the photo yourself.';
+
+  @override
+  String identityStepProgress(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get identityPermissionDeniedTitle => 'Camera not allowed';
+
+  @override
+  String get identityPermissionDeniedBody =>
+      'Outalma needs the camera to photograph your ID. Allow camera access to continue.';
+
+  @override
+  String get identityOpenSettings => 'Open settings';
+
+  @override
+  String get identityCameraUnavailableTitle => 'Camera unavailable';
+
+  @override
+  String get identityCameraUnavailableBody =>
+      'No usable camera on this device. The verification journey runs on a phone.';
+
+  @override
+  String get identityRetry => 'Try again';
+
+  @override
+  String get identitySelfieTitle => 'Verification selfie';
+
+  @override
+  String get identityLivenessWaitingFace => 'Place your face inside the frame.';
+
+  @override
+  String get identityLivenessMultipleFaces => 'Only one face must be visible.';
+
+  @override
+  String get identityLivenessTurnHead => 'Slowly turn your head to the side.';
+
+  @override
+  String get identityLivenessReturnToFront => 'Now face the lens again.';
+
+  @override
+  String get identityLivenessReady => 'Hold still.';
+
+  @override
+  String get identityLivenessExpired =>
+      'The challenge timed out. Let\'s start over.';
+
+  @override
+  String get identityLivenessRetryDifferent =>
+      'Let\'s retry: slowly turn your head to the side, then face the lens again.';
+
+  @override
+  String get identityLivenessFaceGuideLabel =>
+      'Demonstration of the head movement to perform.';
+
+  @override
+  String get identityLivenessSupportTitle => 'Need a hand?';
+
+  @override
+  String get identityLivenessSupportBody =>
+      'The challenge did not complete after several tries. Contact support to finish your verification.';
+
+  @override
+  String get identityContactSupport => 'Contact support';
+
+  @override
+  String get identityRecapTitle => 'Check your photos';
+
+  @override
+  String get identityRecapBody =>
+      'These three images will be sent for verification.';
+
+  @override
+  String get identityRecapConfirm => 'Send for verification';
+
+  @override
+  String get identityDepositUploading => 'Sending your photos…';
+
+  @override
+  String get identityDepositSubmitting => 'Finalising…';
+
+  @override
+  String get identityDepositSuccessTitle => 'Photos sent';
+
+  @override
+  String get identityDepositSuccessBody =>
+      'Your file is being reviewed. You will be notified of the decision.';
+
+  @override
+  String get identityDepositAlreadySubmitted =>
+      'This submission was already recorded.';
+
+  @override
+  String get identityErrorBatchInvalid =>
+      'The upload did not complete. Retake your photos.';
+
+  @override
+  String get identityErrorObjectsMissing =>
+      'Your photos did not arrive. Retake the capture.';
+
+  @override
+  String get identityErrorBatchStale =>
+      'Your photos waited too long. Retake the capture.';
+
+  @override
+  String get identityErrorAccountMissing =>
+      'Session expired. Please sign in again.';
+
+  @override
+  String get identityErrorPendingExists => 'A file is already under review.';
+
+  @override
+  String get identityErrorAlreadyVerified =>
+      'Your identity is already verified.';
+
+  @override
+  String get identityErrorRateLimited =>
+      'Too many recent submissions. Try again later.';
+
+  @override
+  String identityErrorRateLimitedWithDelay(String duration) {
+    return 'Too many recent submissions. Try again in $duration.';
+  }
+
+  @override
+  String get identityErrorStorageDenied =>
+      'The upload was refused. Retake your photos.';
+
+  @override
+  String get identityErrorNetwork => 'Connection interrupted. You can resume.';
+
+  @override
+  String get identityErrorUnknown => 'Something went wrong. Please try again.';
+
+  @override
+  String identityDurationHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String identityDurationMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get identityDone => 'Done';
+
+  @override
+  String get identityGuideTitle => 'Verify your identity';
+
+  @override
+  String get identityGuideStepRecto => 'Front';
+
+  @override
+  String get identityGuideStepVerso => 'Back';
+
+  @override
+  String get identityGuideStepSelfie => 'Selfie';
+
+  @override
+  String get identityGuideWhy =>
+      'A verified profile earns client trust. The badge shows you are who you say you are.';
+
+  @override
+  String get identityGuideNext =>
+      'A member of our team reviews your file within 48 hours. You can keep offering your services in the meantime.';
+
+  @override
+  String get identityGuideHave =>
+      'Have your CEDEAO ID card ready, in a well-lit spot. Allow about two minutes. Your photos are not kept on the phone.';
+
+  @override
+  String get identityGuideStart => 'Start';
+
+  @override
+  String get identityGuideConsentHint => 'Tick the box to continue';
+
+  @override
+  String get identityGuideMention1 =>
+      'We collect a photo of the front and back of your ID card, and a selfie.';
+
+  @override
+  String get identityGuideMention2 =>
+      'They are used only to check that you are the person offering services on Outalma.';
+
+  @override
+  String get identityGuideMention3 =>
+      'Only authorised members of the Outalma team can view them. No client and no other provider has access.';
+
+  @override
+  String get identityGuideMention4 =>
+      'They are kept until you delete your account.';
+
+  @override
+  String get identityGuideMention5 =>
+      'You can delete your account at any time from your settings.';
+
+  @override
+  String get identityGuideMention6 =>
+      'We reply within 48 hours. You can keep offering your services in the meantime.';
+
+  @override
+  String get identityConsentCheckbox =>
+      'I have read the above and I agree to send my ID document and my selfie to Outalma for verification.';
+
+  @override
+  String get identityConsentTermsLink => 'Read the terms of use';
+
+  @override
+  String get identityStatusTitle => 'Identity verification';
+
+  @override
+  String get identityStatusNoneBody =>
+      'Get the « Verified profile » badge so clients can trust you before booking.';
+
+  @override
+  String get identityStatusStartCta => 'Verify my identity';
+
+  @override
+  String get identityStatusRestartCta => 'Start again';
+
+  @override
+  String identityStatusPendingBody(String date) {
+    return 'Submitted on $date, reply within 48 hours. You will be notified of the decision.';
+  }
+
+  @override
+  String get identityStatusPendingBodyNoDate =>
+      'Your file is under review, reply within 48 hours. You will be notified of the decision.';
+
+  @override
+  String identityStatusVerifiedBody(String date) {
+    return 'Verified since $date.';
+  }
+
+  @override
+  String get identityStatusVerifiedBodyNoDate => 'Your profile is verified.';
+
+  @override
+  String get identityStatusRejectedTitle => 'Verification refused';
+
+  @override
+  String get identityStatusRevokedTitle => 'Verification withdrawn';
+
+  @override
+  String get identityStatusPriorityNote =>
+      'Your next file will be handled as a priority.';
+
+  @override
+  String get identityStatusNoReason =>
+      'No reason was provided. You can start again.';
+
+  @override
+  String get identityStatusUnavailable => 'State unavailable';
+
+  @override
+  String get identityWebOnlyMobile =>
+      'Identity verification is done from the Outalma mobile app.';
+
+  @override
+  String get identityWebBack => 'Back';
+
+  @override
+  String identitySupportReference(String reference) {
+    return 'Your reference: $reference';
+  }
+
+  @override
+  String get hubIdentityVerifiedSub => 'Your profile is verified';
+
+  @override
+  String get hubIdentityPendingSub => 'Reply within 48 hours';
+
+  @override
+  String get hubIdentityVerifyCta => 'Verify my identity';
+
+  @override
+  String get hubIdentityVerifySub => 'Get the « Verified profile » badge';
+
+  @override
+  String get hubIdentityActionRequiredSub =>
+      'Action required: restart verification';
+
+  @override
+  String get profileIdentitySection => 'Identity verification';
+
+  @override
+  String get calendarFormatMonth => 'Month';
+
+  @override
+  String get calendarFormatTwoWeeks => '2 weeks';
+
+  @override
+  String get serviceSeeReviews => 'See reviews';
+
+  @override
+  String get homeGuestGreeting => 'Find a trusted provider near you';
+
+  @override
+  String get guestSignIn => 'Sign in';
+
+  @override
+  String get authPromptBenefits =>
+      'An account lets you book, exchange messages with your provider and follow your requests.';
+
+  @override
+  String get authPromptKeepBrowsing => 'Keep browsing without an account';
+
+  @override
+  String get bookingRequiresLogin =>
+      'Create an account to request this service';
+
+  @override
+  String get guestLockedSectionLogin => 'Sign in to open this section';
+
+  @override
+  String get introContinueAsGuest => 'Browse without an account';
+
+  @override
+  String get introAlreadyHaveAccount => 'I already have an account';
 }

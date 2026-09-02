@@ -182,9 +182,9 @@ class _ActiveBookingsWithCalendarState
           child: TableCalendar<Booking>(
             locale: locale,
             calendarFormat: CalendarFormat.twoWeeks,
-            availableCalendarFormats: const {
-              CalendarFormat.twoWeeks: '2 sem.',
-              CalendarFormat.month: 'Mois',
+            availableCalendarFormats: {
+              CalendarFormat.twoWeeks: l10n.calendarFormatTwoWeeks,
+              CalendarFormat.month: l10n.calendarFormatMonth,
             },
             firstDay: DateTime.now().subtract(const Duration(days: 30)),
             lastDay: DateTime.now().add(const Duration(days: 365)),

@@ -1,6 +1,5 @@
 {
   "@@locale": "en",
-
   "navHome": "Home",
   "navBookings": "Bookings",
   "navChats": "Chats",
@@ -9,12 +8,10 @@
   "navMissions": "Missions",
   "navNotifications": "Notifications",
   "tooltipNotifications": "Notifications",
-
   "themeLight": "Light",
   "themeDark": "Dark",
   "themeAuto": "Auto",
   "themeSystem": "System",
-
   "cancel": "Cancel",
   "save": "Save",
   "confirm": "Confirm",
@@ -23,7 +20,6 @@
   "errorGeneral": "An error occurred. Please try again.",
   "errorLoading": "Loading error",
   "errorNetwork": "Connection error",
-
   "signInWelcome": "Welcome back!",
   "signInSubtitle": "Sign in to access your services.",
   "signInEmailHint": "Email address",
@@ -40,7 +36,6 @@
   "authErrorAccountDisabled": "This account has been disabled.",
   "authErrorTooManyRequests": "Too many attempts. Try again later.",
   "authErrorSignInFailed": "Sign in failed. Check your credentials.",
-
   "signUpTitle": "Create your account",
   "signUpSubtitle": "Join Outalma and access home services.",
   "signUpNameHint": "Your full name",
@@ -58,6 +53,22 @@
   "signUpSignIn": "Sign in",
   "signUpErrorEmptyFields": "Please fill in all required fields.",
   "signUpErrorPasswordTooShort": "Password must be at least 6 characters.",
+  "signUpGenderLabel": "You are",
+  "@signUpGenderLabel": {
+    "description": "Label above the mandatory two-option gender control on the sign-up screen."
+  },
+  "signUpGenderRequired": "Please indicate whether you are a man or a woman.",
+  "@signUpGenderRequired": {
+    "description": "Error shown when the sign-up form is submitted without a gender."
+  },
+  "genderMale": "Man",
+  "@genderMale": {
+    "description": "The male value of the declared gender. Also the accessibility label and tooltip of the pictogram, which shows no text of its own."
+  },
+  "genderFemale": "Woman",
+  "@genderFemale": {
+    "description": "The female value of the declared gender. Also the accessibility label and tooltip of the pictogram, which shows no text of its own."
+  },
   "authErrorEmailAlreadyInUse": "This email is already in use.",
   "authErrorInvalidEmail": "Invalid email address.",
   "authErrorWeakPassword": "Password too weak (min. 6 characters).",
@@ -73,17 +84,20 @@
   "phoneOtpSentTo": "Code sent to {phone}",
   "@phoneOtpSentTo": {
     "placeholders": {
-      "phone": { "type": "String" }
+      "phone": {
+        "type": "String"
+      }
     }
   },
   "phoneOtpNoAccount": "No account found for this number. Please sign up first.",
   "signUpVerificationNotice": "After signing up, a verification email will be sent. Tap the link in your inbox to confirm your address.",
   "signUpVerificationResent": "Verification email re-sent.",
-
   "homeGreeting": "Hello {name}",
   "@homeGreeting": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "homeGreetingNoName": "Hello",
@@ -92,11 +106,30 @@
   "homeSearchEmpty": "No results for « {query} »",
   "@homeSearchEmpty": {
     "placeholders": {
-      "query": { "type": "String" }
+      "query": {
+        "type": "String"
+      }
     }
   },
   "categoryAll": "All",
+  "categoryMenage": "Cleaning",
+  "categoryPlomberie": "Plumbing",
+  "categoryJardinage": "Gardening",
+  "categoryElectricite": "Electricity",
+  "categoryPeinture": "Painting",
+  "categoryBricolage": "Handyman",
+  "categoryGardeEnfants": "Childcare",
+  "categoryCuisine": "Cooking",
+  "categoryRepassage": "Ironing",
   "servicesEmpty": "No services available\nright now",
+  "homeCategoryEmpty": "No « {category} » listings\nyet",
+  "@homeCategoryEmpty": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
   "clearFilters": "Clear filters",
   "modeClient": "Client",
   "modeProvider": "Provider",
@@ -111,9 +144,8 @@
   "dashboardStatsUpcomingWeek": "Upcoming this week",
   "dashboardStatsThisMonth": "Bookings this month",
   "dashboardStatsAcceptanceRate": "Acceptance rate",
-
   "locationTitle": "Location",
-  "locationAllFrance": "All of France",
+  "locationAllAreas": "All of Senegal",
   "locationValidate": "Apply",
   "locationUseMyPosition": "Use my location",
   "locationPermissionDenied": "Location permission denied",
@@ -128,22 +160,18 @@
   "locationSaved": "\"{name}\" saved",
   "@locationSaved": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "profileTitle": "Profile & Settings",
   "profileMyReviews": "My reviews",
   "profileActiveMode": "Active mode",
   "profileInformation": "Information",
   "profileAppearance": "Appearance",
   "profileAccount": "Account",
-  "profileErrorUpload": "Error: {error}",
-  "@profileErrorUpload": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "profileErrorUpload": "Could not upload the photo. Please try again.",
   "profileSaved": "Profile updated.",
   "profileSaveError": "Could not save. Please try again.",
   "profileLanguage": "Language",
@@ -164,10 +192,11 @@
   "reviewsCount": "{count, plural, =0{No reviews} =1{1 review} other{{count} reviews}}",
   "@reviewsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "dashboardTitle": "Dashboard",
   "dashboardMyServices": "My services",
   "dashboardAdd": "Add",
@@ -191,7 +220,9 @@
   "hubPauseBody": "Your {count} listings will be hidden from clients. Resume whenever you want.",
   "@hubPauseBody": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "hubPauseBodyNoCount": "Your listings will be hidden from clients. Resume whenever you want.",
@@ -210,13 +241,17 @@
   "serviceToggleActivate": "Bring {title} online",
   "@serviceToggleActivate": {
     "placeholders": {
-      "title": { "type": "String" }
+      "title": {
+        "type": "String"
+      }
     }
   },
   "serviceToggleDeactivate": "Take {title} offline",
   "@serviceToggleDeactivate": {
     "placeholders": {
-      "title": { "type": "String" }
+      "title": {
+        "type": "String"
+      }
     }
   },
   "serviceDelete": "Delete",
@@ -224,8 +259,32 @@
   "serviceDeleteBody": "This listing will be permanently removed.",
   "serviceDeleted": "Service deleted",
   "ratingNew": "New",
+  "ratingFromClients": "{count, plural, =1{\u00b7 1 client review} other{\u00b7 {count} client reviews}}",
+  "@ratingFromClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingFloorHintClients": "\u00b7 fewer than {count} client reviews",
+  "@ratingFloorHintClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingFloorHint": "\u00b7 fewer than {count} reviews",
+  "@ratingFloorHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsAllReceived": "All reviews received",
   "tooltipProviderProfile": "My provider profile",
-
   "bookingsTitle": "My bookings",
   "tabActive": "In progress",
   "tabDone": "Completed",
@@ -242,16 +301,19 @@
   "bookingRequestedAt": "Request from {date}",
   "@bookingRequestedAt": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "bookingScheduledAt": "Scheduled: {datetime}",
   "@bookingScheduledAt": {
     "placeholders": {
-      "datetime": { "type": "String" }
+      "datetime": {
+        "type": "String"
+      }
     }
   },
-
   "bookingDetailTitle": "Booking details",
   "bookingService": "Service",
   "bookingMessage": "Message",
@@ -263,18 +325,67 @@
   "bookingDistanceEstimate": "Estimated distance: ~{km} km",
   "@bookingDistanceEstimate": {
     "placeholders": {
-      "km": {"type": "String"}
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceZoneWithDistance": "{label} \u00b7 {km} km",
+  "@serviceZoneWithDistance": {
+    "description": "Service card: the closest intervention zone and its distance from the active location filter.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceZoneWithMore": "{label} +{count}",
+  "@serviceZoneWithMore": {
+    "description": "Service card: the first intervention zone plus how many others the service covers.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serviceZoneDistancePart": "\u00b7 {km} km",
+  "@serviceZoneDistancePart": {
+    "description": "Service card: the distance part of the location line ALONE, rendered in its own box beside the zone name so the ellipsis can never eat it. Keep it identical to the tail of serviceZoneWithDistance, which is the same line assembled for screen readers.",
+    "placeholders": {
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceZoneMorePart": "+{count}",
+  "@serviceZoneMorePart": {
+    "description": "Service card: the count of other zones ALONE, rendered in its own box beside the zone name so the ellipsis can never eat it. Keep it identical to the tail of serviceZoneWithMore.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
     }
   },
   "bookingOpenDirections": "Directions",
   "bookingContact": "Contact",
   "bookingPhoneNotShared": "Phone number not yet shared",
+  "bookingCallAction": "Call",
+  "bookingWhatsappAction": "WhatsApp",
+  "bookingPhoneCopied": "Number copied",
   "bookingAddPhoneInProfile": "Add your phone number in your profile to share it.",
   "bookingPhoneShared": "Your phone number is shared",
   "bookingSharePhone": "Share my number ({phone})",
   "@bookingSharePhone": {
     "placeholders": {
-      "phone": { "type": "String" }
+      "phone": {
+        "type": "String"
+      }
     }
   },
   "bookingSharePhoneError": "Could not share phone number.",
@@ -318,7 +429,6 @@
   "bookingConfirmDoneButton": "Confirm service completion",
   "bookingDoneSuccess": "Service completed!",
   "bookingDoneError": "Error while confirming.",
-
   "bookingRequestTitle": "Request this service",
   "bookingStep1Title": "Describe your need",
   "bookingStep1Subtitle": "Give details to help the provider understand your request.",
@@ -326,7 +436,9 @@
   "bookingDefaultMessage": "Hello, I am interested in your service « {serviceTitle} ». Could you contact me to arrange an appointment? Thank you!",
   "@bookingDefaultMessage": {
     "placeholders": {
-      "serviceTitle": { "type": "String" }
+      "serviceTitle": {
+        "type": "String"
+      }
     }
   },
   "bookingStep2Title": "Preferred date and time",
@@ -336,14 +448,16 @@
   "bookingPickSlot": "Choose an available time",
   "bookingNoSlots": "No free slots that day. Try another date.",
   "bookingProviderUnavailable": "This provider is currently unavailable.",
+  "bookingAddressNotInSenegal": "The service must take place in Senegal. Please choose an address in Senegal.",
   "marketplaceDisclaimer": "Outalma only connects clients and independent providers. Any agreement and payment is made directly between you, outside the app and at your own risk. Always check who you are dealing with.",
   "bookingStep3Title": "Service address",
   "bookingStep3Subtitle": "Where should the provider intervene? (optional)",
-  "bookingStep3Hint": "E.g. 12 rue de la Paix, Paris 75001",
+  "bookingStep3Hint": "E.g. Rue 10, Point E, Dakar",
   "bookingBack": "Back",
   "bookingContinue": "Continue",
   "bookingSend": "Send request",
   "bookingVoiceMessageLabel": "Voice message",
+  "chatPhotoMessageLabel": "Photo",
   "bookingRecordPrompt": "Tap to record",
   "bookingDeleteRecording": "Delete recording",
   "bookingVoicePermissionDenied": "Microphone permission denied. Check your settings.",
@@ -354,7 +468,6 @@
   "bookingConflictBusy": "The provider already has an appointment at this time.",
   "bookingConflictUnavailableDay": "The provider is unavailable on this day.",
   "bookingConflictUnavailableSlot": "The provider is unavailable at this time slot.",
-
   "messagesTitle": "Messages",
   "chatEmpty": "No active chats",
   "chatEmptySubtitle": "Conversations start after\na booking is accepted.",
@@ -369,12 +482,15 @@
   "chatErrorSend": "Could not send.",
   "chatTabActive": "In progress",
   "chatTabDone": "Completed",
-
   "notificationsTitle": "Notifications",
   "notificationsReadAll": "Mark all read",
   "notificationsUnreadCount": "{count} unread",
   "@notificationsUnreadCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "notificationsEmpty": "No notifications",
   "notificationsEmptySubtitle": "You will be notified here\nwhen something happens.",
@@ -383,26 +499,34 @@
   "notificationTimeMinutes": "{count} min ago",
   "@notificationTimeMinutes": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "notificationTimeHours": "{count} h ago",
   "@notificationTimeHours": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "notificationTimeYesterday": "Yesterday",
   "notificationTimeDays": "{count} days ago",
   "@notificationTimeDays": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "inboxTitle": "Missions",
   "inboxCalendarTooltip": "My calendar",
   "calendarFullDay": "All day",
+  "calendarLegendBooking": "Booking",
+  "calendarLegendBlocked": "Unavailable",
+  "calendarServiceFallback": "Service",
   "calendarDeleteSlotTitle": "Remove this block?",
   "calendarDeleteSlotBody": "This time will become bookable again.",
   "calendarDeleteSlotConfirm": "Remove",
@@ -418,7 +542,6 @@
   "inboxLoadError": "Could not load data.",
   "inboxOpenChat": "Open chat",
   "inboxMoreDetails": "More details",
-
   "reviewTitle": "Leave a review",
   "reviewEvaluateProvider": "Rate the provider",
   "reviewEvaluateClient": "Rate the client",
@@ -430,7 +553,6 @@
   "reviewError": "Could not submit review.",
   "reviewBookingNotFound": "Booking not found.",
   "reviewOnlyAfterDone": "Review available only after service completion.",
-
   "reportTitle": "Report",
   "reportQuestion": "Why are you reporting?",
   "reportSubtitle": "Your report is anonymous and will be reviewed by our team.",
@@ -443,15 +565,18 @@
   "reportReason4": "Offensive content",
   "reportReason5": "Harassment",
   "reportReason6": "Other",
-
   "serviceDescription": "Description",
   "serviceProviderLabel": "Provider",
   "serviceViewProfile": "View profile",
   "servicePhotoCounter": "Photo {current} of {total}",
   "@servicePhotoCounter": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "serviceBook": "Request this service",
@@ -459,19 +584,21 @@
   "serviceNotFound": "Service not found",
   "seeMore": "See more",
   "seeLess": "See less",
-
   "onboardingTitle": "Become a provider",
+  "onboardingEditTitle": "Edit my profile",
   "onboardingHeadline": "Offer your services",
+  "onboardingEditHeadline": "Your provider profile",
   "onboardingBody": "Create your provider profile in seconds. You can then publish your services and receive requests.",
+  "onboardingEditBody": "Update your introduction and working hours.",
   "onboardingBio": "Introduction (optional)",
-  "onboardingBioHint": "E.g. Plumber with 10 years of experience, available in the Paris area…",
+  "onboardingBioHint": "E.g. Plumber with 10 years of experience, available in Dakar…",
   "onboardingActivate": "Activate my provider profile",
+  "onboardingSave": "Save",
   "onboardingHours": "Working hours",
   "onboardingHoursHint": "Clients can only book time slots within this window.",
   "onboardingHoursStart": "From",
   "onboardingHoursEnd": "To",
   "onboardingError": "Could not activate profile. Please try again.",
-
   "serviceFormCreateTitle": "New service",
   "serviceFormEditTitle": "Edit service",
   "serviceFormTitleLabel": "Service title",
@@ -493,11 +620,22 @@
   "serviceFormPhotoAdd": "Add a photo (optional)",
   "serviceFormPhotoMax": "You can add up to {max} photos.",
   "@serviceFormPhotoMax": {
-    "placeholders": { "max": { "type": "int" } }
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
   },
   "serviceFormPhotoCount": "{count} of {max} photos",
   "@serviceFormPhotoCount": {
-    "placeholders": { "count": { "type": "int" }, "max": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
   },
   "serviceFormSaveError": "Could not save. Please try again.",
   "serviceFormPublishNeedsProfile": "Complete your provider profile before publishing. You can save it as a draft for now.",
@@ -512,16 +650,52 @@
   "zoneAdd": "Add an area",
   "priceHourly": "per hour",
   "priceFixed": "flat fee",
+  "priceDaily": "per day",
+  "priceMonthly": "per month",
+  "priceUnitHourly": "/h",
+  "priceUnitDaily": "/day",
+  "priceUnitMonthly": "/mo",
+  "serviceFormBillingMode": "Billing mode",
+  "serviceFormExtraTasks": "Additional tasks covered",
+  "serviceFormExtraTasksSubtitle": "Up to three tasks beyond the main one",
+  "serviceFormExtraTasksMax": "Three additional tasks at most.",
+  "serviceFormPriceRange": "Allowed range: {min} to {max} F CFA",
+  "@serviceFormPriceRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceFormPriceOutOfRange": "The price must be between {min} and {max} F CFA.",
+  "@serviceFormPriceOutOfRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceFormPriceMonthlyMin": "Monthly minimum",
+  "serviceFormPriceMonthlyMax": "Monthly maximum",
+  "serviceFormMonthlyMaxBelowMin": "The maximum must be greater than or equal to the minimum.",
+  "serviceFormPricingUnavailable": "The pricing grid is unavailable. Retry.",
   "photoAdd": "Add a photo (optional)",
   "zoneRadiusLabel": "Radius: {radius}",
   "@zoneRadiusLabel": {
     "placeholders": {
-      "radius": { "type": "String" }
+      "radius": {
+        "type": "String"
+      }
     }
   },
-  "zoneValidate": "Validate",
+  "zoneValidate": "Confirm",
   "zoneModify": "Modify",
-
   "phoneAuthTitle": "Phone number",
   "phoneAuthSubtitle": "Enter your number to receive a verification code via SMS.",
   "phoneAuthButton": "Send code",
@@ -532,7 +706,9 @@
   "otpSubtitle": "A code was sent to {phone}",
   "@otpSubtitle": {
     "placeholders": {
-      "phone": { "type": "String" }
+      "phone": {
+        "type": "String"
+      }
     }
   },
   "otpHint": "6-digit code",
@@ -540,7 +716,9 @@
   "otpResendIn": "Resend in {seconds}s",
   "@otpResendIn": {
     "placeholders": {
-      "seconds": { "type": "int" }
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "otpResend": "Resend code",
@@ -551,11 +729,9 @@
   "phoneNameHint": "First and last name",
   "phoneNameButton": "Continue",
   "phoneNameError": "Could not save. Please try again.",
-
   "langSystem": "System (device)",
   "langFrench": "French",
   "langEnglish": "English",
-
   "switchModeTitle": "Choose a mode",
   "switchModeHeading": "Your active mode",
   "switchModeDescription": "Switch between client and provider mode at any time.",
@@ -563,8 +739,7 @@
   "themeSystemSubtitle": "Follows your device preferences",
   "themeLightSubtitle": "Always in light mode",
   "themeDarkSubtitle": "Always in dark mode",
-
-  "chatRecording": "Recording in progress\u2026",
+  "chatRecording": "Recording in progress…",
   "chatSubtitle": "Coordinate the service details here.",
   "chatMicError": "Could not activate microphone.",
   "chatMicPermission": "Allow microphone access to send a voice message.",
@@ -576,13 +751,11 @@
   "chatVoiceError": "Could not send voice message.",
   "chatVoiceSending": "Sending voice message…",
   "chatFileError": "Could not send file.",
-  "chatAddCaption": "Add a message\u2026",
+  "chatAddCaption": "Add a message…",
   "chatGallery": "Gallery",
-
   "reviewsLabel": "Reviews",
   "servicesOffered": "Services offered",
   "bookingAddressLabel": "Service address",
-
   "introSlide1Title": "Welcome to Outalma",
   "introSlide1Body": "Find the best service providers near you, quickly and with confidence.",
   "introSlide2Title": "Book in seconds",
@@ -633,7 +806,13 @@
   "bookingModeText": "Text",
   "bookingModeVoice": "Voice",
   "reviewStarLabel": "{count} star{count, plural, one{} other{s}}",
-  "@reviewStarLabel": { "placeholders": { "count": { "type": "int" } } },
+  "@reviewStarLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "chatReply": "Reply",
   "chatCopy": "Copy",
   "chatCopied": "Copied",
@@ -650,10 +829,180 @@
   "zoneSheetEditTitle": "Edit area",
   "zoneSheetAddTitle": "Add an area",
   "zoneCityOrAddress": "City or address",
-  "zoneRadius": "Service radius",
   "zoneEdit": "Edit",
-  "zoneValidate": "Confirm",
   "serviceFormPhotoRemove": "Remove photo",
   "serviceFormPhotoRemoved": "Photo removed",
-  "serviceFormPhotoUndo": "Undo"
+  "serviceFormPhotoUndo": "Undo",
+  "trustVerifiedLabel": "Verified profile",
+  "@trustVerifiedLabel": {
+    "description": "Public identity trust state shown to clients."
+  },
+  "trustPendingLabel": "Verification under way",
+  "@trustPendingLabel": {
+    "description": "Public identity trust state shown to clients."
+  },
+  "trustUnverifiedLabel": "Identity not verified",
+  "@trustUnverifiedLabel": {
+    "description": "Public identity trust state shown to clients."
+  },
+  "identityCaptureRectoTitle": "Front of the ID",
+  "identityCaptureVersoTitle": "Back of the ID",
+  "identityCaptureRectoInstruction": "Place the front of your card inside the frame, flat and readable.",
+  "identityCaptureVersoInstruction": "Place the back of your card inside the frame, flat and readable.",
+  "identityCaptureButton": "Take the photo",
+  "identityCaptureRetake": "Retake",
+  "identityCaptureUse": "Use this photo",
+  "identityCaptureBlurry": "Photo too blurry. Steady the device and move closer to the document.",
+  "identityCaptureNoText": "No readable text detected. Line up your ID card inside the frame.",
+  "identityCaptureSendAnyway": "Send anyway, a human will review it",
+  "identityCaptureAutoHint": "The photo is taken automatically.",
+  "identityCaptureSearching": "Place the card inside the frame.",
+  "identityCaptureFlipCard": "Turn the card over.",
+  "identityCaptureMoving": "Hold the card still.",
+  "identityCaptureHoldStill": "Stay still, the photo is coming.",
+  "identityCaptureRefused": "Photo not kept. Frame the card again.",
+  "identityCaptureManualHint": "You can also take the photo yourself.",
+  "identityStepProgress": "Step {current} of {total}",
+  "@identityStepProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "identityPermissionDeniedTitle": "Camera not allowed",
+  "identityPermissionDeniedBody": "Outalma needs the camera to photograph your ID. Allow camera access to continue.",
+  "identityOpenSettings": "Open settings",
+  "identityCameraUnavailableTitle": "Camera unavailable",
+  "identityCameraUnavailableBody": "No usable camera on this device. The verification journey runs on a phone.",
+  "identityRetry": "Try again",
+  "identitySelfieTitle": "Verification selfie",
+  "identityLivenessWaitingFace": "Place your face inside the frame.",
+  "identityLivenessMultipleFaces": "Only one face must be visible.",
+  "identityLivenessTurnHead": "Slowly turn your head to the side.",
+  "identityLivenessReturnToFront": "Now face the lens again.",
+  "identityLivenessReady": "Hold still.",
+  "identityLivenessExpired": "The challenge timed out. Let's start over.",
+  "identityLivenessRetryDifferent": "Let's retry: slowly turn your head to the side, then face the lens again.",
+  "identityLivenessFaceGuideLabel": "Demonstration of the head movement to perform.",
+  "identityLivenessSupportTitle": "Need a hand?",
+  "identityLivenessSupportBody": "The challenge did not complete after several tries. Contact support to finish your verification.",
+  "identityContactSupport": "Contact support",
+  "identityRecapTitle": "Check your photos",
+  "identityRecapBody": "These three images will be sent for verification.",
+  "identityRecapConfirm": "Send for verification",
+  "identityDepositUploading": "Sending your photos…",
+  "identityDepositSubmitting": "Finalising…",
+  "identityDepositSuccessTitle": "Photos sent",
+  "identityDepositSuccessBody": "Your file is being reviewed. You will be notified of the decision.",
+  "identityDepositAlreadySubmitted": "This submission was already recorded.",
+  "identityErrorBatchInvalid": "The upload did not complete. Retake your photos.",
+  "identityErrorObjectsMissing": "Your photos did not arrive. Retake the capture.",
+  "identityErrorBatchStale": "Your photos waited too long. Retake the capture.",
+  "identityErrorAccountMissing": "Session expired. Please sign in again.",
+  "identityErrorPendingExists": "A file is already under review.",
+  "identityErrorAlreadyVerified": "Your identity is already verified.",
+  "identityErrorRateLimited": "Too many recent submissions. Try again later.",
+  "identityErrorRateLimitedWithDelay": "Too many recent submissions. Try again in {duration}.",
+  "@identityErrorRateLimitedWithDelay": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "identityErrorStorageDenied": "The upload was refused. Retake your photos.",
+  "identityErrorNetwork": "Connection interrupted. You can resume.",
+  "identityErrorUnknown": "Something went wrong. Please try again.",
+  "identityDurationHours": "{hours} h",
+  "@identityDurationHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "identityDurationMinutes": "{minutes} min",
+  "@identityDurationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "identityDone": "Done",
+  "identityGuideTitle": "Verify your identity",
+  "identityGuideStepRecto": "Front",
+  "identityGuideStepVerso": "Back",
+  "identityGuideStepSelfie": "Selfie",
+  "identityGuideWhy": "A verified profile earns client trust. The badge shows you are who you say you are.",
+  "identityGuideNext": "A member of our team reviews your file within 48 hours. You can keep offering your services in the meantime.",
+  "identityGuideHave": "Have your CEDEAO ID card ready, in a well-lit spot. Allow about two minutes. Your photos are not kept on the phone.",
+  "identityGuideStart": "Start",
+  "identityGuideConsentHint": "Tick the box to continue",
+  "identityGuideMention1": "We collect a photo of the front and back of your ID card, and a selfie.",
+  "identityGuideMention2": "They are used only to check that you are the person offering services on Outalma.",
+  "identityGuideMention3": "Only authorised members of the Outalma team can view them. No client and no other provider has access.",
+  "identityGuideMention4": "They are kept until you delete your account.",
+  "identityGuideMention5": "You can delete your account at any time from your settings.",
+  "identityGuideMention6": "We reply within 48 hours. You can keep offering your services in the meantime.",
+  "identityConsentCheckbox": "I have read the above and I agree to send my ID document and my selfie to Outalma for verification.",
+  "identityConsentTermsLink": "Read the terms of use",
+  "identityStatusTitle": "Identity verification",
+  "identityStatusNoneBody": "Get the « Verified profile » badge so clients can trust you before booking.",
+  "identityStatusStartCta": "Verify my identity",
+  "identityStatusRestartCta": "Start again",
+  "identityStatusPendingBody": "Submitted on {date}, reply within 48 hours. You will be notified of the decision.",
+  "@identityStatusPendingBody": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "identityStatusPendingBodyNoDate": "Your file is under review, reply within 48 hours. You will be notified of the decision.",
+  "identityStatusVerifiedBody": "Verified since {date}.",
+  "@identityStatusVerifiedBody": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "identityStatusVerifiedBodyNoDate": "Your profile is verified.",
+  "identityStatusRejectedTitle": "Verification refused",
+  "identityStatusRevokedTitle": "Verification withdrawn",
+  "identityStatusPriorityNote": "Your next file will be handled as a priority.",
+  "identityStatusNoReason": "No reason was provided. You can start again.",
+  "identityStatusUnavailable": "State unavailable",
+  "identityWebOnlyMobile": "Identity verification is done from the Outalma mobile app.",
+  "identityWebBack": "Back",
+  "identitySupportReference": "Your reference: {reference}",
+  "@identitySupportReference": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "hubIdentityVerifiedSub": "Your profile is verified",
+  "hubIdentityPendingSub": "Reply within 48 hours",
+  "hubIdentityVerifyCta": "Verify my identity",
+  "hubIdentityVerifySub": "Get the « Verified profile » badge",
+  "hubIdentityActionRequiredSub": "Action required: restart verification",
+  "profileIdentitySection": "Identity verification",
+  "calendarFormatMonth": "Month",
+  "calendarFormatTwoWeeks": "2 weeks",
+  "serviceSeeReviews": "See reviews",
+  "homeGuestGreeting": "Find a trusted provider near you",
+  "guestSignIn": "Sign in",
+  "authPromptBenefits": "An account lets you book, exchange messages with your provider and follow your requests.",
+  "authPromptKeepBrowsing": "Keep browsing without an account",
+  "bookingRequiresLogin": "Create an account to request this service",
+  "guestLockedSectionLogin": "Sign in to open this section",
+  "introContinueAsGuest": "Browse without an account",
+  "introAlreadyHaveAccount": "I already have an account"
 }

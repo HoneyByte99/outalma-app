@@ -65,6 +65,16 @@ if [ -n "$staged_fn_ts" ]; then
   fi
 fi
 
+# Git exports GIT_DIR (and GIT_WORK_TREE) to its hooks. The Flutter tool shells
+# out to `git describe` inside its OWN sdk directory to learn its version, and
+# with GIT_DIR pointing at this repository it reads the wrong one: it reports
+# 0.0.0-unknown, rebuilds its tool, then refuses any dependency that declares a
+# minimum Flutter version. Since the identity capture work added ML Kit, which
+# does declare one, every Dart commit was blocked by an environment quirk rather
+# than by a defect. Stripping the two variables makes flutter behave here exactly
+# as it does in a normal shell.
+flutter() { env -u GIT_DIR -u GIT_WORK_TREE command flutter "$@"; }
+
 code_changed=$(printf '%s\n' "$staged_dart" | grep -E '^(lib|test)/' || true)
 [ -z "$code_changed" ] && exit 0
 

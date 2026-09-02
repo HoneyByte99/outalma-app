@@ -8,12 +8,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/services/callable_function_client.dart';
 import '../../domain/enums/active_mode.dart';
+import '../../domain/enums/gender.dart';
 import '../../domain/models/app_user.dart';
 import 'auth_providers.dart';
 import 'auth_state.dart';
 
 // ---------------------------------------------------------------------------
-// Email verification link — round-trip target after the user clicks the
+// Email verification link - round-trip target after the user clicks the
 // "Verify your email" link sent by Firebase Auth.
 // ---------------------------------------------------------------------------
 
@@ -22,7 +23,7 @@ import 'auth_state.dart';
 const _iosBundleId = 'com.honeybyte.outalmaApp';
 const _androidPackage = 'com.honeybyte.outalma_app';
 
-/// Continue URL — must point at a domain listed in the project's Firebase
+/// Continue URL - must point at a domain listed in the project's Firebase
 /// Authentication "Authorized domains" list and in the iOS Associated
 /// Domains / Android intent filters.
 const _emailVerifyContinueUrl =
@@ -45,7 +46,7 @@ class PhoneSignInResult {
   const PhoneSignInResult({required this.signedIn});
 
   /// `true` when the OTP matched an existing Outalma account and the client
-  /// is now authenticated. `false` when the phone has no account yet — the
+  /// is now authenticated. `false` when the phone has no account yet - the
   /// caller should redirect to the sign-up flow.
   final bool signedIn;
 
@@ -53,7 +54,7 @@ class PhoneSignInResult {
 }
 
 class AuthNotifier extends AsyncNotifier<AuthState> {
-  // ignore: cancel_subscriptions — cancelled via ref.onDispose(_authSub.cancel) below.
+  // ignore: cancel_subscriptions - cancelled via ref.onDispose(_authSub.cancel) below.
   late StreamSubscription<User?> _authSub;
 
   @override
@@ -105,7 +106,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         // Defensive: phone signups and email magic-link signups both create
         // the Firestore user doc through dedicated paths (Cloud Function or
         // [completeEmailMagicLink]). If we still end up here, write a minimal
-        // doc WITHOUT `phoneE164` — the Firestore rule blocks client writes
+        // doc WITHOUT `phoneE164` - the Firestore rule blocks client writes
         // to that field (security review C1).
         appUser = AppUser(
           id: firebaseUser.uid,
@@ -129,7 +130,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     // Clear this device's push token from the user doc BEFORE signing out.
     // Otherwise the phone keeps receiving the previous account's notifications,
     // and if another account signs in on the same device both accounts point
-    // their pushToken at it — a confidentiality leak (someone else's chat
+    // their pushToken at it - a confidentiality leak (someone else's chat
     // previews on the lock screen). Best-effort: never block sign-out.
     final auth = ref.read(firebaseAuthProvider);
     final uid = auth.currentUser?.uid;
@@ -159,7 +160,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   // ---------------------------------------------------------------------------
-  // Phone authentication via OTP — production flow (Twilio Verify backend)
+  // Phone authentication via OTP - production flow (Twilio Verify backend)
   // All flows are server-authoritative through Cloud Functions.
   // ---------------------------------------------------------------------------
 
@@ -219,6 +220,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String code,
     required String displayName,
     required String country,
+    required Gender gender,
   }) async {
     try {
       final result = await const CallableFunctionClient().call(
@@ -228,6 +230,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           'code': code,
           'displayName': displayName,
           'country': country,
+          // The account document is written server-side on this path, so the
+          // declared gender has to travel with the call: there is no client
+          // write afterwards that could carry it.
+          'gender': gender.name,
         },
       );
 
@@ -264,7 +270,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   /// Updates mutable profile fields. **Phone number is intentionally not
-  /// editable here** — changing the phone requires re-verification via OTP
+  /// editable here** - changing the phone requires re-verification via OTP
   /// and is handled by a dedicated flow (TBD).
   Future<void> updateProfile({
     required String displayName,
@@ -291,7 +297,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   // ---------------------------------------------------------------------------
-  // Email authentication — password-based with one-time email verification
+  // Email authentication - password-based with one-time email verification
   // ---------------------------------------------------------------------------
   //
   // Sign-up: create Firebase Auth account with email+password, write Firestore
@@ -303,7 +309,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   // sends a reset link.
   //
   // The verification link round-trips through Firebase's action handler and
-  // back into the app via Universal Links / App Links — handled in
+  // back into the app via Universal Links / App Links - handled in
   // [completeEmailVerification].
 
   /// Creates a new account via email + password, then sends a one-time email
@@ -313,6 +319,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String displayName,
     required String email,
     required String password,
+    required Gender gender,
   }) async {
     final auth = ref.read(firebaseAuthProvider);
     final credential = await auth.createUserWithEmailAndPassword(
@@ -345,12 +352,15 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         country: existing?.country ?? 'FR',
         activeMode: existing?.activeMode ?? ActiveMode.client,
         createdAt: existing?.createdAt ?? DateTime.now(),
-        // Consent proof — the sign-up screen gates submission on acceptance.
+        // Consent proof - the sign-up screen gates submission on acceptance.
         termsAcceptedAt: existing?.termsAcceptedAt ?? DateTime.now(),
+        // Declared, mandatory, and never re-derived: the sign-up screen gates
+        // submission on it exactly as it does on consent.
+        gender: gender,
       ),
     );
 
-    // Send the verification mail. Failures here do NOT abort sign-up — the
+    // Send the verification mail. Failures here do NOT abort sign-up - the
     // user is already in. UI can offer "Resend" via [resendVerificationEmail].
     try {
       await user.sendEmailVerification(

@@ -91,11 +91,15 @@ class _ProviderOnboardingPageState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+    // An already-active provider reaching this screen from the hub pencil is
+    // editing, not activating (M5): the title, copy and CTA must say so.
+    final isEdit =
+        ref.watch(currentProviderProfileProvider).valueOrNull != null;
 
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
-        title: Text(l10n.onboardingTitle),
+        title: Text(isEdit ? l10n.onboardingEditTitle : l10n.onboardingTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.pop(),
@@ -126,12 +130,14 @@ class _ProviderOnboardingPageState
                 const SizedBox(height: 28),
 
                 Text(
-                  l10n.onboardingHeadline,
+                  isEdit
+                      ? l10n.onboardingEditHeadline
+                      : l10n.onboardingHeadline,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  l10n.onboardingBody,
+                  isEdit ? l10n.onboardingEditBody : l10n.onboardingBody,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: oc.secondaryText,
                     height: 1.5,
@@ -153,7 +159,7 @@ class _ProviderOnboardingPageState
                 ),
                 const SizedBox(height: 24),
 
-                // Working hours — drives the slots the client can book.
+                // Working hours: drives the slots the client can book.
                 Text(
                   l10n.onboardingHours,
                   style: Theme.of(context).textTheme.titleSmall,
@@ -214,7 +220,9 @@ class _ProviderOnboardingPageState
                             ),
                           )
                         : Text(
-                            l10n.onboardingActivate,
+                            isEdit
+                                ? l10n.onboardingSave
+                                : l10n.onboardingActivate,
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                   ),

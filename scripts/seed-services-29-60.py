@@ -30,15 +30,19 @@ def upsert(col, doc_id, data):
     return True
 
 
-# Coordonnées
-DAKAR      = {"label": "Dakar",         "latitude": 14.6928, "longitude": -17.4467, "radiusKm": 15}
-PARIS93    = {"label": "Paris 93",      "latitude": 48.9356, "longitude":   2.3539, "radiusKm": 20}
-ORLEANS    = {"label": "Orléans",       "latitude": 47.9029, "longitude":   1.9039, "radiusKm": 15}
-CHARTRES   = {"label": "Chartres",      "latitude": 48.4484, "longitude":   1.4876, "radiusKm": 15}
-BLOIS      = {"label": "Blois",         "latitude": 47.5861, "longitude":   1.3359, "radiusKm": 15}
-ETAMPES    = {"label": "Étampes",       "latitude": 48.4344, "longitude":   2.1600, "radiusKm": 15}
-THIES      = {"label": "Thiès",         "latitude": 14.7900, "longitude": -16.9200, "radiusKm": 15}
-SAINT_LOUIS = {"label": "Saint-Louis",  "latitude": 16.0179, "longitude": -16.4896, "radiusKm": 15}
+# Coordonnées. Les clés sont `lat`/`lng` : c'est le contrat lu par
+# serviceZoneFromMap côté app et par createBooking côté serveur. Ce script a
+# écrit `latitude`/`longitude` jusqu'au 02/09/2026, ce qui faisait parser toutes
+# les zones en (0,0) et vidait le catalogue dès qu'une localisation était
+# choisie. Ne pas renommer ces clés.
+DAKAR      = {"label": "Dakar",         "lat": 14.6928, "lng": -17.4467, "radiusKm": 15}
+PARIS93    = {"label": "Paris 93",      "lat": 48.9356, "lng":   2.3539, "radiusKm": 20}
+ORLEANS    = {"label": "Orléans",       "lat": 47.9029, "lng":   1.9039, "radiusKm": 15}
+CHARTRES   = {"label": "Chartres",      "lat": 48.4484, "lng":   1.4876, "radiusKm": 15}
+BLOIS      = {"label": "Blois",         "lat": 47.5861, "lng":   1.3359, "radiusKm": 15}
+ETAMPES    = {"label": "Étampes",       "lat": 48.4344, "lng":   2.1600, "radiusKm": 15}
+THIES      = {"label": "Thiès",         "lat": 14.7900, "lng": -16.9200, "radiusKm": 15}
+SAINT_LOUIS = {"label": "Saint-Louis",  "lat": 16.0179, "lng": -16.4896, "radiusKm": 15}
 
 # Photos par catégorie
 PHOTOS = {
@@ -100,7 +104,7 @@ PHOTOS = {
 
 SERVICES = [
     # -----------------------------------------------------------------------
-    # seed_user_01 — Moussa Diallo — menage, Dakar (svc 29, 30, 31)
+    # seed_user_01 - Moussa Diallo - menage, Dakar (svc 29, 30, 31)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_29",
@@ -145,7 +149,7 @@ SERVICES = [
         "_seeded": True,
     },
     # -----------------------------------------------------------------------
-    # seed_user_02 — Fatou Ndiaye — gardeEnfants, Paris 93 (svc 32, 33, 34)
+    # seed_user_02 - Fatou Ndiaye - gardeEnfants, Paris 93 (svc 32, 33, 34)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_32",
@@ -190,7 +194,7 @@ SERVICES = [
         "_seeded": True,
     },
     # -----------------------------------------------------------------------
-    # seed_user_03 — Ibrahima Sow — electricite, Orléans (svc 35, 36, 37)
+    # seed_user_03 - Ibrahima Sow - electricite, Orléans (svc 35, 36, 37)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_35",
@@ -235,7 +239,7 @@ SERVICES = [
         "_seeded": True,
     },
     # -----------------------------------------------------------------------
-    # seed_user_04 — Aminata Traore — menage, Chartres (svc 38, 39, 40)
+    # seed_user_04 - Aminata Traore - menage, Chartres (svc 38, 39, 40)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_38",
@@ -280,7 +284,7 @@ SERVICES = [
         "_seeded": True,
     },
     # -----------------------------------------------------------------------
-    # seed_user_05 — Cheikh Mbaye — plomberie, Dakar (svc 41, 42, 43)
+    # seed_user_05 - Cheikh Mbaye - plomberie, Dakar (svc 41, 42, 43)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_41",
@@ -325,7 +329,7 @@ SERVICES = [
         "_seeded": True,
     },
     # -----------------------------------------------------------------------
-    # seed_user_06 — Mariama Bah — gardeEnfants, Orléans (svc 44, 45, 46)
+    # seed_user_06 - Mariama Bah - gardeEnfants, Orléans (svc 44, 45, 46)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_44",
@@ -370,7 +374,7 @@ SERVICES = [
         "_seeded": True,
     },
     # -----------------------------------------------------------------------
-    # seed_user_07 — Ousmane Diop — jardinage, Thiès (svc 47, 48, 49)
+    # seed_user_07 - Ousmane Diop - jardinage, Thiès (svc 47, 48, 49)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_47",
@@ -415,7 +419,7 @@ SERVICES = [
         "_seeded": True,
     },
     # -----------------------------------------------------------------------
-    # seed_user_08 — Rokhaya Sarr — menage, Étampes (svc 50, 51, 52)
+    # seed_user_08 - Rokhaya Sarr - menage, Étampes (svc 50, 51, 52)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_50",
@@ -460,7 +464,7 @@ SERVICES = [
         "_seeded": True,
     },
     # -----------------------------------------------------------------------
-    # seed_user_09 — Abdoulaye Fall — peinture, Saint-Louis SN (svc 53, 54)
+    # seed_user_09 - Abdoulaye Fall - peinture, Saint-Louis SN (svc 53, 54)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_53",
@@ -491,7 +495,7 @@ SERVICES = [
         "_seeded": True,
     },
     # -----------------------------------------------------------------------
-    # seed_user_10 — Ndeye Cisse — bricolage, Paris 93 (svc 55, 56, 57)
+    # seed_user_10 - Ndeye Cisse - bricolage, Paris 93 (svc 55, 56, 57)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_55",
@@ -536,7 +540,7 @@ SERVICES = [
         "_seeded": True,
     },
     # -----------------------------------------------------------------------
-    # seed_user_11 — Mamadou Kouyate — plomberie, Blois (svc 58, 59, 60)
+    # seed_user_11 - Mamadou Kouyate - plomberie, Blois (svc 58, 59, 60)
     # -----------------------------------------------------------------------
     {
         "id": "seed_svc_58",

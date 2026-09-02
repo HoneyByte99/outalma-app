@@ -16,11 +16,12 @@ import '../../application/user/user_providers.dart';
 import '../../core/utils/date_utils.dart' as date_utils;
 import '../../domain/enums/booking_status.dart';
 import '../../domain/models/chat.dart';
+import '../../domain/enums/message_type.dart';
 import '../../domain/models/chat_message.dart';
 import '../shared/user_avatar.dart';
 
 // ---------------------------------------------------------------------------
-// Combined booking-status map — avoids N+1 Firestore reads in the chat list.
+// Combined booking-status map: avoids N+1 Firestore reads in the chat list.
 // Merges the user's customer bookings and provider bookings (both already
 // subscribed upstream) into a single bookingId → BookingStatus lookup.
 // ---------------------------------------------------------------------------
@@ -113,7 +114,7 @@ class _ChatsListPageState extends ConsumerState<ChatsListPage>
 }
 
 // ---------------------------------------------------------------------------
-// Filtered chat list — splits by booking status
+// Filtered chat list: splits by booking status
 // ---------------------------------------------------------------------------
 
 class _ChatListFiltered extends ConsumerWidget {
@@ -124,7 +125,7 @@ class _ChatListFiltered extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Single map lookup — no per-chat Firestore subscriptions.
+    // Single map lookup: no per-chat Firestore subscriptions.
     final statusMap = ref.watch(_bookingStatusMapProvider);
     final filtered = chats.where((chat) {
       final status = statusMap[chat.bookingId];
@@ -299,10 +300,25 @@ class _LastMessagePreview extends StatelessWidget {
 
     final isMe = message!.senderId == myUid;
     final prefix = isMe ? l10n.chatYou : '';
-    final text = message!.text ?? '';
+    // A voice note or a caption-less photo has no text: showing an empty preview
+    // leaves the line blank, which is worst for a vocal-first audience. Fall back
+    // to a typed label so every conversation reads in the list.
+    final String body;
+    switch (message!.type) {
+      case MessageType.voice:
+        body = l10n.bookingVoiceMessageLabel;
+      case MessageType.image:
+        final caption = message!.text;
+        body = (caption != null && caption.isNotEmpty)
+            ? caption
+            : l10n.chatPhotoMessageLabel;
+      case MessageType.text:
+      case MessageType.system:
+        body = message!.text ?? '';
+    }
 
     return Text(
-      '$prefix$text',
+      '$prefix$body',
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: hasUnread ? oc.primaryText : oc.secondaryText,
         fontWeight: hasUnread ? FontWeight.w500 : FontWeight.w400,

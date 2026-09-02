@@ -1,0 +1,225 @@
+{
+  "_readme": [
+    "The single table of cases for the provider-rating predicate, which exists",
+    "TWICE: countsTowardProviderRating + isUsableRating in",
+    "functions/src/provider_rating.ts, and counts + usable in",
+    "scripts/rating_predicate.py (used by backfill-provider-ratings.py).",
+    "",
+    "A divergence between the two makes the aggregate disagree with what a",
+    "replay computes, silently and with no alarm. So both implementations are",
+    "run against THIS file and against each other, by",
+    "functions/test/rating_parity.test.ts. Add a case here, never in one of the",
+    "two test bodies: two hand-kept lists drift, which is the very failure this",
+    "is meant to catch.",
+    "",
+    "Per case: `review` and `booking` are the raw documents. `booking` is null",
+    "when the review's bookingId resolves to nothing. `expected.counts` is the",
+    "predicate verdict. `expected.rating` is the NORMALISED rating both sides",
+    "must agree on, or null when the value is not one we publish.",
+    "",
+    "Note on 4.0: JSON parses it to an int in JS and to a float in Python. That",
+    "asymmetry is real (Firestore hands integers back as doubles) and is the",
+    "reason the Python side normalises rather than returning a boolean, so the",
+    "case is deliberate, not an accident of formatting."
+  ],
+  "cases": [
+    {
+      "name": "customer authored, visible, rating 4",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 4, "hidden": false },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": 4 }
+    },
+    {
+      "name": "customer authored, hidden flag absent entirely (legacy review)",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 3 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": 3 }
+    },
+    {
+      "name": "provider authored: never counts toward their own rating",
+      "review": { "reviewerId": "provider_1", "bookingId": "b1", "rating": 5, "hidden": false },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": false, "rating": 5 }
+    },
+    {
+      "name": "provider authored while CLAIMING reviewerRole client (S1)",
+      "review": {
+        "reviewerId": "provider_1",
+        "reviewerRole": "client",
+        "bookingId": "b1",
+        "rating": 5,
+        "hidden": false
+      },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": false, "rating": 5 }
+    },
+    {
+      "name": "third party authored: neither side of the booking",
+      "review": { "reviewerId": "stranger", "bookingId": "b1", "rating": 5 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": false, "rating": 5 }
+    },
+    {
+      "name": "reviewerId absent",
+      "review": { "bookingId": "b1", "rating": 4 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": false, "rating": 4 }
+    },
+    {
+      "name": "reviewerId empty string",
+      "review": { "reviewerId": "", "bookingId": "b1", "rating": 4 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": false, "rating": 4 }
+    },
+    {
+      "name": "reviewerId null",
+      "review": { "reviewerId": null, "bookingId": "b1", "rating": 4 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": false, "rating": 4 }
+    },
+    {
+      "name": "self booking: customerId equals providerId",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 5 },
+      "booking": { "customerId": "client_1", "providerId": "client_1" },
+      "expected": { "counts": false, "rating": 5 }
+    },
+    {
+      "name": "hidden true: moderation must move the public number",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 4, "hidden": true },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": false, "rating": 4 }
+    },
+    {
+      "name": "hidden as the STRING \"true\": not the boolean, so not hidden",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 4, "hidden": "true" },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": 4 }
+    },
+    {
+      "name": "hidden as the number 1: not the boolean, so not hidden",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 4, "hidden": 1 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": 4 }
+    },
+    {
+      "name": "hidden null",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 4, "hidden": null },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": 4 }
+    },
+    {
+      "name": "bookingId missing: nothing establishes the author's role",
+      "review": { "reviewerId": "client_1", "rating": 4 },
+      "booking": null,
+      "expected": { "counts": false, "rating": 4 }
+    },
+    {
+      "name": "bookingId points at a booking that does not exist",
+      "review": { "reviewerId": "client_1", "bookingId": "gone", "rating": 4 },
+      "booking": null,
+      "expected": { "counts": false, "rating": 4 }
+    },
+    {
+      "name": "booking without customerId",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 4 },
+      "booking": { "providerId": "provider_1" },
+      "expected": { "counts": false, "rating": 4 }
+    },
+    {
+      "name": "booking without providerId: nobody to credit",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 4 },
+      "booking": { "customerId": "client_1" },
+      "expected": { "counts": false, "rating": 4 }
+    },
+    {
+      "name": "booking with empty-string ids",
+      "review": { "reviewerId": "", "bookingId": "b1", "rating": 4 },
+      "booking": { "customerId": "", "providerId": "" },
+      "expected": { "counts": false, "rating": 4 }
+    },
+    {
+      "name": "rating 1: lower bound accepted",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 1 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": 1 }
+    },
+    {
+      "name": "rating 5: upper bound accepted",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 5 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": 5 }
+    },
+    {
+      "name": "rating 0: below the scale",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 0 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": null }
+    },
+    {
+      "name": "rating 6: above the scale",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 6 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": null }
+    },
+    {
+      "name": "rating -1",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": -1 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": null }
+    },
+    {
+      "name": "rating null",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": null },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": null }
+    },
+    {
+      "name": "rating absent",
+      "review": { "reviewerId": "client_1", "bookingId": "b1" },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": null }
+    },
+    {
+      "name": "rating as the STRING \"4\": data we do not understand",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": "4" },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": null }
+    },
+    {
+      "name": "rating 4.5: not an integer on the scale",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 4.5 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": null }
+    },
+    {
+      "name": "rating 4.0: an integer Firestore handed back as a double",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 4.0 },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": 4 }
+    },
+    {
+      "name": "rating true: a bool is an int in Python, and must NOT pass",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": true },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": null }
+    },
+    {
+      "name": "rating false: same trap, the falsy side",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": false },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": true, "rating": null }
+    },
+    {
+      "name": "hidden AND unusable rating: both reasons at once",
+      "review": { "reviewerId": "client_1", "bookingId": "b1", "rating": 9, "hidden": true },
+      "booking": { "customerId": "client_1", "providerId": "provider_1" },
+      "expected": { "counts": false, "rating": null }
+    },
+    {
+      "name": "self booking AND provider authored: both reasons at once",
+      "review": { "reviewerId": "provider_1", "bookingId": "b1", "rating": 5 },
+      "booking": { "customerId": "provider_1", "providerId": "provider_1" },
+      "expected": { "counts": false, "rating": 5 }
+    }
+  ]
+}

@@ -2,6 +2,10 @@ import '../enums/category_id.dart';
 import '../enums/price_type.dart';
 import 'service_zone.dart';
 
+/// Sentinel marking an omitted `copyWith` argument, so nullable fields can be
+/// explicitly cleared (pass null) or left untouched (omit the argument).
+const Object _unset = Object();
+
 class Service {
   const Service({
     required this.id,
@@ -17,6 +21,8 @@ class Service {
     this.description,
     this.serviceZones = const [],
     this.status,
+    this.extraTasks = const [],
+    this.priceMax,
   });
 
   final String id;
@@ -26,7 +32,19 @@ class Service {
   final String? description;
   final List<String> photos;
   final PriceType priceType;
+
+  /// Price in whole FCFA. For hourly/daily modes this is the flat price; for the
+  /// monthly mode it is the LOW end of the range (the high end is [priceMax]).
   final int price;
+
+  /// High end of the monthly range, in whole FCFA. Present only when
+  /// [priceType] is monthly; null for hourly and daily.
+  final int? priceMax;
+
+  /// Extra tasks the listing also covers, beyond the main [categoryId].
+  /// Zero to three entries; never contains the main category.
+  final List<String> extraTasks;
+
   final bool published;
   final List<ServiceZone> serviceZones;
   final DateTime createdAt;
@@ -34,7 +52,7 @@ class Service {
 
   /// Server-managed moderation status: null (never reviewed), 'pending_review',
   /// 'approved', or 'rejected'. Set exclusively by the moderation Cloud
-  /// Functions — the client reads it but never writes it.
+  /// Functions, the client reads it but never writes it.
   final String? status;
 
   Service copyWith({
@@ -50,6 +68,11 @@ class Service {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? status,
+    List<String>? extraTasks,
+    // Wrapped so a caller can explicitly clear priceMax (e.g. switching a
+    // monthly listing back to hourly): pass `priceMax: null` and it clears;
+    // omit the argument and the current value is kept.
+    Object? priceMax = _unset,
   }) {
     return Service(
       id: id,
@@ -65,6 +88,8 @@ class Service {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       status: status ?? this.status,
+      extraTasks: extraTasks ?? this.extraTasks,
+      priceMax: identical(priceMax, _unset) ? this.priceMax : priceMax as int?,
     );
   }
 }

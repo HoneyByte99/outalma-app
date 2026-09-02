@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
+import '../../app/router.dart';
 import '../../application/onboarding/onboarding_provider.dart';
 import '../shared/marketplace_disclaimer.dart';
 
@@ -41,7 +42,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   // "Skip" jumps to the last slide (where the terms checkbox + Get Started
-  // live) instead of trying to finish — finishing requires terms acceptance,
+  // live) instead of trying to finish - finishing requires terms acceptance,
   // which is only shown on the last slide.
   void _skipToEnd() {
     _controller.animateToPage(
@@ -51,15 +52,43 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     );
   }
 
+  /// Records consent, then opens the catalogue.
+  ///
+  /// The consent gate stays in FRONT of everything, guest browsing included,
+  /// and that is a deliberate call rather than an oversight in the guest work.
+  /// The last slide carries the marketplace disclaimer: Outalma introduces
+  /// clients and providers and is not the employer of either. That statement
+  /// protects the visitor and the company on the BROWSING surface, which is
+  /// exactly where someone with no account forms their expectations. Collecting
+  /// it after sign-up would leave every visitor who never signs up, most of
+  /// them, having read nothing.
+  ///
+  /// What changed is only where the door leads: /home instead of /sign-in. One
+  /// gate, one consent, then free browsing.
   Future<void> _finish() async {
     if (!_termsAccepted) {
       setState(() => _showTermsError = true);
       return;
     }
+    await _persistConsent();
+    if (mounted) context.go(AppRoutes.home);
+  }
+
+  /// Same consent, then straight to sign-in. Someone who already has an account
+  /// must still pass the gate: this is the first launch on THIS device.
+  Future<void> _goToSignIn() async {
+    if (!_termsAccepted) {
+      setState(() => _showTermsError = true);
+      return;
+    }
+    await _persistConsent();
+    if (mounted) context.go(AppRoutes.signIn);
+  }
+
+  Future<void> _persistConsent() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_done', true);
     ref.read(onboardingDoneProvider.notifier).state = true;
-    if (mounted) context.go('/home');
   }
 
   @override
@@ -203,7 +232,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
             // Action button
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+              padding: EdgeInsets.fromLTRB(24, 0, 24, isLast ? 8 : 32),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -215,7 +244,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     ),
                   ),
                   child: Text(
-                    isLast ? l10n.introGetStarted : l10n.introNext,
+                    // The consent slide's CTA names where it leads. It used to
+                    // read "Commencer" and land on the sign-in wall, which made
+                    // the account look compulsory. It opens the catalogue now.
+                    isLast ? l10n.introContinueAsGuest : l10n.introNext,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -224,6 +256,20 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 ),
               ),
             ),
+
+            // Sign-in for someone who already has an account, so the only path
+            // to it is not "browse, then find the header button".
+            if (isLast)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                child: TextButton(
+                  onPressed: _goToSignIn,
+                  child: Text(
+                    l10n.introAlreadyHaveAccount,
+                    style: TextStyle(color: oc.primary),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

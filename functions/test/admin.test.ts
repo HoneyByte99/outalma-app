@@ -2,7 +2,7 @@
 // is required (custom claims, getUser, deleteUser).
 import functionsTest from 'firebase-functions-test';
 
-const tf = functionsTest({ projectId: 'demo-outalma' });
+const tf = functionsTest({ projectId: 'demo-outalma', storageBucket: 'demo-outalma.appspot.com' });
 
 import * as fns from '../src/index';
 import * as admin from 'firebase-admin';
@@ -127,6 +127,29 @@ describe('deleteMyAccount', () => {
     expect(await serviceExists('s1')).toBe(false);
     expect(await serviceExists('s2')).toBe(false);
     expect(await authUserExists('u1')).toBe(false);
+  });
+
+  it('deletes the world-readable public profile in its own batch', async () => {
+    // mirrorPublicProfile also deletes it when users/{uid} disappears, and the
+    // redundancy is the point: this document is where a deleted account's name
+    // stays readable by the whole internet, so erasure must not depend on a
+    // trigger firing. Asserted from the batch alone (no trigger runs here).
+    await createAuthUser('u9');
+    await seedUser('u9');
+    await admin
+      .firestore()
+      .collection('public_profiles')
+      .doc('u9')
+      .set({ displayName: 'Awa', phoneVerified: false });
+
+    await call(fns.deleteMyAccount, {}, { uid: 'u9' });
+
+    const snap = await admin
+      .firestore()
+      .collection('public_profiles')
+      .doc('u9')
+      .get();
+    expect(snap.exists).toBe(false);
   });
 });
 

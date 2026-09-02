@@ -9,6 +9,12 @@ import 'package:outalma_app/src/domain/repositories/review_repository.dart';
 // ---------------------------------------------------------------------------
 
 class _FakeReviewRepository implements ReviewRepository {
+  @override
+  Stream<List<Review>> watchRecentForUser(
+    String userId, {
+    required int limit,
+  }) => watchForUser(userId).map((r) => r.take(limit).toList());
+
   Review? lastCreated;
   Object? shouldThrow;
 

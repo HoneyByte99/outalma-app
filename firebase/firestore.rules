@@ -48,12 +48,12 @@ service cloud.firestore {
       // path wildcard to the authenticated user's uid.
       function isUserUpdateSafe() {
         // Use .get() with a sentinel default for phoneE164 because dot-notation on an
-        // absent field does not compare equal to null in Firestore rules — only .get()
+        // absent field does not compare equal to null in Firestore rules, only .get()
         // guarantees a safe fallback that makes null==null evaluate to true.
         return request.resource.data.get('phoneE164', '__absent__') == resource.data.get('phoneE164', '__absent__')
           && request.resource.data.email == resource.data.email;
       }
-      // Email-only accounts must not carry a phoneE164 field on create — phone
+      // Email-only accounts must not carry a phoneE164 field on create, phone
       // numbers are written exclusively by Cloud Functions (admin SDK, bypasses
       // these rules). The path-level isSelf(uid) guard already ensures the user
       // can only write their own document.
@@ -61,15 +61,81 @@ service cloud.firestore {
         return !('phoneE164' in request.resource.data);
       }
 
+      // The declared gender: absent, or exactly one of the two canonical
+      // values. The owner writes their own, which `isSelf(uid)` already
+      // guarantees, but the VALUE is checked here too, and that is the point:
+      // this field is projected into the world-readable `public_profiles` and
+      // drawn as a pictogram beside a person's name, so an arbitrary string
+      // written by a patched client must be refused at the door rather than
+      // filtered later. Absence stays legal: every account created before this
+      // field existed must remain writable (a mode switch, an avatar change)
+      // without being forced to invent a declaration.
+      function isGenderSafe() {
+        return !('gender' in request.resource.data)
+          || request.resource.data.gender in ['male', 'female'];
+      }
+
       allow read: if signedIn();
-      allow create: if isAdmin() || (isSelf(uid) && isUserCreateSafe());
-      allow update: if isAdmin() || (isSelf(uid) && isUserUpdateSafe());
+      allow create: if isAdmin() || (isSelf(uid) && isUserCreateSafe() && isGenderSafe());
+      allow update: if isAdmin() || (isSelf(uid) && isUserUpdateSafe() && isGenderSafe());
       allow delete: if isAdmin();
 
-      // Users a person has blocked — private to that person.
+      // Users a person has blocked, private to that person.
       match /blockedUsers/{blockedUid} {
         allow read, write: if isSelf(uid);
       }
+    }
+
+    // ---------- PUBLIC PROFILES (PII-free mirror of users) ----------
+    //
+    // World readable, because a visitor with no account browses the catalogue
+    // and every card, service detail and review carries a name and an avatar.
+    // Those used to be read from `users/{uid}`, which is gated on signedIn()
+    // and holds `email` and `phoneE164`: a guest got PERMISSION_DENIED, and the
+    // fix of opening `users` would have published every address and number.
+    //
+    // Opening THIS collection was checked field by field against production
+    // before the rule was written, not assumed from the projection code. The
+    // 50 documents carried exactly four keys and nothing else:
+    //
+    //   displayName    50/50    the name the user chose to be called
+    //   photoPath      50/50    public Storage avatar URL, already world
+    //                           readable through its download token
+    //   phoneVerified  50/50    boolean, whether a number is on file, never
+    //                           the number
+    //   country        42/50    ISO code, self-declared, country granularity
+    //
+    // A FIFTH key was added deliberately, and it is the only one so far:
+    //
+    //   gender          0/50    'male' or 'female', declared by the person at
+    //                           sign-up, projected here because the catalogue
+    //                           card and the service detail are guest surfaces
+    //                           and resolve their provider through this
+    //                           document. 0/50 because every account predates
+    //                           the field; the client renders nothing for them
+    //                           and never a default glyph.
+    //
+    // It widens what the collection publishes, so it was weighed rather than
+    // waved through: it is not a contact route, not an identifier, and it is
+    // shown to every visitor by an explicit product decision, on the very card
+    // it is projected for. Publishing it here publishes nothing the card was
+    // not already going to show. The projection is still an ALLOWLIST and the
+    // value is still checked against the two canonical strings on both sides,
+    // in `projectPublicProfile` and in the `users` rule above.
+    //
+    // `providers/{uid}` was the alternative, being public already. It was
+    // rejected on evidence: 23 documents, no `displayName` at all and a
+    // `photoUrl` on 12 of them. It cannot name a reviewer either, and reviewers
+    // are not providers.
+    //
+    // `write: if false` for every client including admin: the document is
+    // derived from `users/{uid}` by mirrorPublicProfile (Admin SDK, which
+    // bypasses these rules). A client-writable projection would let anyone
+    // publish any name next to any service, which is the whole reason the
+    // display name is not simply denormalised onto `services`.
+    match /public_profiles/{uid} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // ---------- PROVIDERS (public read, owner write) ----------
@@ -82,8 +148,13 @@ service cloud.firestore {
       // `suspended:false` and undo moderation. Those keys are set exclusively by
       // suspendProvider/unsuspendProvider (Admin SDK) and read back as a gate in
       // createBooking. (Security review S2.) `active` is intentionally NOT in
-      // this list — it is the owner-controlled pause switch, also gated server-
+      // this list, it is the owner-controlled pause switch, also gated server-
       // side in createBooking.
+      //
+      // The identity badge is deliberately NOT here: budget line S4 forbids
+      // guarding a trust field with a deny list, since a deny list only covers
+      // the keys someone remembered to list. It lives in `provider_trust`,
+      // below, which no client can write at all.
       allow update: if isAdmin()
         || (isSelf(uid)
             && !request.resource.data.diff(resource.data).affectedKeys()
@@ -98,17 +169,101 @@ service cloud.firestore {
       allow delete: if isAdmin() || isSelf(uid);
     }
 
+    // ---------- IDENTITY VERIFICATION (provider CNI + selfie) ----------
+    // Every write goes through Cloud Functions (Admin SDK bypasses these rules).
+    // Direct client writes are denied everywhere below: a verdict is a trust
+    // decision, and the client is never trusted with one.
+    //
+    // The file is deliberately split in two documents because Firestore rules
+    // authorise a WHOLE document, never a field: the provider must be able to
+    // read their own status, rejection reason and extracted fields, but must
+    // never see the duplicate flag nor `doublonReferenceId`, which is the id of
+    // ANOTHER provider's file. Hence a subcollection the owner cannot read.
+    match /identity_verifications/{verificationId} {
+      allow read: if isAdminOrModerator()
+        || (signedIn() && resource.data.providerId == request.auth.uid);
+      allow write: if false;
+
+      // Review aids: duplicate flag, reference to a third party's file, storage
+      // paths, raw MRZ, reviewer identity. Staff only, never the owner.
+      match /identity_internal/{docId} {
+        allow read: if isAdminOrModerator();
+        allow write: if false;
+      }
+    }
+
+    // Per-provider guard document. Serialises concurrent submissions and holds
+    // the rate-limit window. Nominative, so it is deleted with the account.
+    //
+    // Read is open to staff only, and NOT to the provider it describes: letting
+    // the owner read it would expose nothing they cannot already infer from
+    // their own files, but it would put a rate-limit counter in reach of the
+    // party the limit constrains. Staff can read it because the review screen
+    // will need to explain why a provider cannot submit again.
+    match /identity_verification_states/{uid} {
+      allow read: if isAdminOrModerator();
+      allow write: if false;
+    }
+
+    // ---------- PROVIDER TRUST (public projection, server-owned) ----------
+    //
+    // One document per provider, carrying the public identity state and nothing
+    // else: no name, no card number, no storage path, no rejection reason, no
+    // file id. The document is world readable, so everything in it is public.
+    //
+    // Two values only, `pending` and `verified`. Absence is the third state,
+    // "not verified": a rejected or revoked file deletes the document, so a
+    // refusal is publicly indistinguishable from never having submitted. There
+    // is no public shaming in this product.
+    //
+    // `write: if false` for every client, including the provider it describes
+    // and including admin: it is derived from the guard document by the decision
+    // transaction (Admin SDK, which bypasses these rules), never typed by hand.
+    // That is what budget line S4 asks for, and it is why the flag does not live
+    // on `providers/{uid}` behind a deny list.
+    match /provider_trust/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ---------- PROVIDER RATINGS (public aggregate, CF only) ----------
+    // `{ ratingSum, ratingCount }` for a provider, maintained by the review
+    // trigger and by the moderation callables. Public, because a client reads
+    // it before choosing and must be able to do so; `write: if false` for
+    // everyone including the provider it describes, because a reputation the
+    // subject can type is not a reputation (budget line S1).
+    //
+    // Deliberately NOT merged into `provider_trust`: that document is owned by
+    // the identity subsystem, which DELETES it on reject and on revoke, and a
+    // shared document would lose a provider's whole reputation the day a
+    // moderator refuses a blurry photo.
+    match /provider_ratings/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ---------- SERVICE TYPES (reference collection) ----------
     match /service_types/{typeId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
+    // ---------- PRICING CONFIG (public read, no client write) ----------
+    // Single source of the pricing grid, read by these rules AND by the app.
+    // Writes are closed even to admins: the grid is edited from the Firebase
+    // console via the Admin SDK (which bypasses rules), so there is no client
+    // write path to secure. Stricter than service_types on purpose. If the
+    // document is missing, service writes fail closed (see priceWithinBounds).
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ---------- SERVICES (public read) ----------
     match /services/{serviceId} {
       allow read: if true;
 
-      // Providers are active by default — publishing is NOT gated on onboarding.
+      // Providers are active by default, publishing is NOT gated on onboarding.
       // The only block is moderation: a suspended provider cannot publish. No
       // provider doc yet → allowed (active by default). (E1, relaxed.)
       function publishAllowed() {
@@ -117,13 +272,68 @@ service cloud.firestore {
           || get(/databases/$(database)/documents/providers/$(request.auth.uid)).data.suspended != true;
       }
 
-      // categoryId must be one of the fixed catalogue categories — no
+      // categoryId must be one of the fixed catalogue categories, no
       // off-catalogue services, regardless of client or direct API write.
       function validCategory() {
         return request.resource.data.categoryId in [
-          'menage', 'plomberie', 'jardinage', 'electricite',
-          'peinture', 'bricolage', 'gardeEnfants'
+          'menage', 'cuisine', 'plomberie', 'jardinage', 'electricite',
+          'peinture', 'bricolage', 'gardeEnfants', 'repassage'
         ];
+      }
+
+      // ----- Encadre pricing guard (spec pricing-ranges) -----
+      // The grid lives in config/pricing; these rules are its enforcer. The
+      // app only mirrors this guard for input comfort, it is never the source.
+      function pricingCfg() {
+        return get(/databases/$(database)/documents/config/pricing).data;
+      }
+
+      // Explicit branches rather than cfg.modes[mode]: indexing a map by a
+      // variable key that is absent fails the whole rule evaluation. An unknown
+      // mode falls through to monthly here but is then rejected by the
+      // priceType allowlist below, so no read error occurs.
+      function boundsFor(cfg, mode) {
+        return mode == 'hourly' ? cfg.modes.hourly
+             : mode == 'daily'  ? cfg.modes.daily
+             : cfg.modes.monthly;
+      }
+
+      // All arithmetic is integer. Comparing price <= max * (1 + pct/100) in
+      // floating point would reject legitimate values (3500 * 1.15 = 4024.99).
+      // Written price * 100 <= max * (100 + pct * n), exact for whole percents.
+      function priceWithinBounds() {
+        let d = request.resource.data;
+        let cfg = pricingCfg();
+        let extras = d.get('extraTasks', []);
+        let distinct = extras.toSet();
+        // Count DISTINCT tasks. Using the raw list length here would let a
+        // direct write inflate the ceiling with duplicates (e.g. three copies
+        // of one task priced at the N=3 cap); the equality below also rejects
+        // any list that carries duplicates in the first place.
+        let n = distinct.size();
+        let b = boundsFor(cfg, d.priceType);
+        let cap = b.max * (100 + b.extraBonusPercent * n);
+        return d.priceType in ['hourly', 'daily', 'monthly']
+          && d.price is int
+          && n <= cfg.maxExtraTasks
+          && extras.size() == n
+          && distinct.hasOnly(cfg.boundedCategories)
+          && !(d.categoryId in extras)
+          && d.price >= b.min
+          && d.price * 100 <= cap
+          && (d.priceType == 'monthly'
+                ? (d.priceMax is int
+                    && d.priceMax >= d.price
+                    && d.priceMax * 100 <= cap)
+                : !('priceMax' in d));
+      }
+
+      // Only the bounded launch categories are constrained; the five off-launch
+      // categories keep a free price because they are absent from
+      // boundedCategories, not because an if forgot them.
+      function priceGuard() {
+        return !(request.resource.data.categoryId in pricingCfg().boundedCategories)
+          || priceWithinBounds();
       }
 
       // Create by owner provider
@@ -131,6 +341,7 @@ service cloud.firestore {
         || (signedIn()
             && request.resource.data.providerId == request.auth.uid
             && validCategory()
+            && priceGuard()
             && publishAllowed());
 
       // Update by owner; providerId immutable
@@ -139,6 +350,7 @@ service cloud.firestore {
             && resource.data.providerId == request.auth.uid
             && request.resource.data.providerId == resource.data.providerId
             && validCategory()
+            && priceGuard()
             && publishAllowed());
 
       allow delete: if isAdmin()
@@ -146,7 +358,7 @@ service cloud.firestore {
     }
 
     // ---------- BOOKINGS (private) ----------
-    // Note: isBookingParticipant() is NOT used here — it calls get() on the
+    // Note: isBookingParticipant() is NOT used here, it calls get() on the
     // booking document itself (circular reference), which Firestore denies for
     // both get and list. Use resource.data directly instead.
     match /bookings/{bookingId} {
@@ -165,7 +377,7 @@ service cloud.firestore {
       allow create: if false;
 
       // Update: bookings are mutated EXCLUSIVELY by Cloud Functions (accept,
-      // reject, cancel, markInProgress, confirmDone — Admin SDK bypasses rules).
+      // reject, cancel, markInProgress, confirmDone, Admin SDK bypasses rules).
       // The client never writes a booking document (the repository only reads),
       // so any client update is denied. This closes the previous hole where a
       // participant could forge server-authoritative fields (chatId, doneAt,
@@ -240,7 +452,7 @@ service cloud.firestore {
           || (isParticipantViaChat()
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
               && request.auth.uid in request.resource.data.readBy)
-          // A participant may add/update emoji reactions — but ONLY their own
+          // A participant may add/update emoji reactions, but ONLY their own
           // entry in the reactions map (keyed by uid). Previously any
           // participant could overwrite/delete the OTHER party's reaction.
           // (Security review S4.)
@@ -256,7 +468,7 @@ service cloud.firestore {
           // Sender edits their own message text within 15 minutes of sending:
           // only text + edited may change, edited flips to true. Edits are also
           // blocked once the booking is done (conversation read-only) or when
-          // the pair is blocked — same gate as create. (Security review S4.)
+          // the pair is blocked, same gate as create. (Security review S4.)
           || (resource.data.senderId == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited'])
               && request.resource.data.edited == true
@@ -271,7 +483,7 @@ service cloud.firestore {
       // ---------- TYPING INDICATORS ----------
       // Each user writes their own doc (uid == auth.uid).
       // Read is open to any chat participant.
-      // Abuse risk: negligible — one tiny doc per participant, no data exposed.
+      // Abuse risk: negligible, one tiny doc per participant, no data exposed.
       match /typing/{uid} {
         function isParticipantViaChatForTyping() {
           return signedIn()
@@ -315,7 +527,32 @@ service cloud.firestore {
     // Reviews are only allowed after a booking reaches "done" status.
     // Reviewer must be a participant of the referenced booking.
     match /reviews/{reviewId} {
-      allow read: if signedIn();
+      // Public read, so a visitor can read the reviews before creating an
+      // account. A signed-in account keeps the unrestricted read it had, which
+      // is what lets an already shipped client keep listing reviews without a
+      // `hidden` filter in its query.
+      //
+      // A visitor gets ONLY reviews explicitly flagged as not hidden, and the
+      // exact form below matters. Two things a future edit must not "simplify":
+      //
+      // 1. NEVER `resource.data.get('hidden', false) == false`. Measured on the
+      //    emulator: for a `list`, rules are evaluated against the fields the
+      //    QUERY constrains, not against each document. With a default value,
+      //    an unconstrained query satisfies the rule and Firestore then returns
+      //    every document, moderated ones included. That is a silent hole, and
+      //    it is the tempting shape because it makes `get` work on legacy docs.
+      //    The plain field access below cannot be satisfied unless the query
+      //    itself carries `where('hidden', '==', false)`.
+      // 2. NEVER `resource.data.hidden != true`. A Firestore query on a field
+      //    that is ABSENT matches nothing, so a `!=` form silently drops every
+      //    document written before the field existed.
+      //
+      // Consequence, and it is a hard prerequisite: every review document must
+      // carry `hidden`. The historical corpus did not, hence
+      // scripts/normalize-review-hidden.py, and every new review gets the field
+      // from the client serializer plus `onReviewCreated` as a safety net for
+      // clients already in the wild.
+      allow read: if signedIn() || resource.data.hidden == false;
 
       // Create-only (no non-admin update) + deterministic doc id
       // "{bookingId}_{reviewerId}" guarantees one review per (booking, reviewer):
@@ -338,7 +575,15 @@ service cloud.firestore {
         )
         // Coupure totale: no review between a blocked pair (either direction).
         && !exists(/databases/$(database)/documents/users/$(request.auth.uid)/blockedUsers/$(request.resource.data.revieweeId))
-        && !exists(/databases/$(database)/documents/users/$(request.resource.data.revieweeId)/blockedUsers/$(request.auth.uid));
+        && !exists(/databases/$(database)/documents/users/$(request.resource.data.revieweeId)/blockedUsers/$(request.auth.uid))
+        // `hidden` is a moderation verdict owned by the server, and the public
+        // read above now depends on it. The client may carry the field, because
+        // it MUST for the review to be publicly readable, but only ever as
+        // false: an allowlist of one value rather than a denylist (S4). Absent
+        // is still accepted, so a client already in the wild keeps working;
+        // `onReviewCreated` fills the field in for those.
+        && (!('hidden' in request.resource.data)
+            || request.resource.data.hidden == false);
 
       allow update, delete: if isAdmin();
     }
@@ -353,7 +598,7 @@ service cloud.firestore {
 
     // ---------- DATA EXPORT REQUESTS (RGPD portability) ----------
     // Created exclusively by the requestDataExport Cloud Function (Admin SDK).
-    // The doc holds the destination email (PII) — readable only by the owner
+    // The doc holds the destination email (PII), readable only by the owner
     // and support+, who fulfil it from the admin dashboard.
     match /data_export_requests/{reqId} {
       allow read: if isMinSupport()
@@ -447,10 +692,21 @@ service cloud.firestore {
       allow write: if false; // written exclusively by Cloud Functions (Admin SDK)
     }
 
-    // ---------- PROCESSED EVENTS (trigger dedup — CF only via Admin SDK) ----------
+    // ---------- PROCESSED EVENTS (trigger dedup, CF only via Admin SDK) ----------
     // Used by stat-increment triggers to prevent double-counting on Firebase retries.
     // Should be purged after 7 days via a Firestore TTL policy on the `processedAt` field.
     match /processed_events/{eventId} {
+      allow read, write: if false; // CF only via Admin SDK
+    }
+
+    // ---------- RATING EVENTS (aggregate idempotency register, CF only) ----------
+    // One document per review, holding whether that review is currently counted
+    // in the public aggregate. NEVER purge it: unlike `processed_events` above,
+    // the backfill's safety depends on this register being permanent, and a TTL
+    // would make the next run recount every review older than the window.
+    // Holds no personal data beyond a review id, which already survives account
+    // deletion by design (reviews are retained and de-referenced).
+    match /rating_events/{reviewId} {
       allow read, write: if false; // CF only via Admin SDK
     }
 

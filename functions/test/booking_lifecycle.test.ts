@@ -2,7 +2,7 @@
 // product trusts). Runs against the Firestore emulator via `npm test`.
 import functionsTest from 'firebase-functions-test';
 
-const tf = functionsTest({ projectId: 'demo-outalma' });
+const tf = functionsTest({ projectId: 'demo-outalma', storageBucket: 'demo-outalma.appspot.com' });
 
 // Importing index initializes the default admin app (pointed at the emulator
 // because emulators:exec sets FIRESTORE_EMULATOR_HOST). Import it BEFORE any
@@ -263,6 +263,82 @@ describe('createBooking', () => {
     expect(booking?.customerId).toBe(customer);
     expect(booking?.providerId).toBe(provider);
   });
+
+  // CADRAGE section 5: the prestation must be in Senegal (server is source of truth).
+  describe('Senegal-only location filter', () => {
+    it('rejects an address whose countryCode is not SN', async () => {
+      await expectReject(
+        call(
+          fns.createBooking,
+          {
+            ...validData,
+            addressSnapshot: { address: 'Paris', countryCode: 'FR' },
+          },
+          { uid: customer }
+        ),
+        'failed-precondition'
+      );
+    });
+
+    it('rejects coordinates outside the Senegal box (Paris)', async () => {
+      await expectReject(
+        call(
+          fns.createBooking,
+          {
+            ...validData,
+            addressSnapshot: { address: 'Paris', lat: 48.85, lng: 2.35 },
+          },
+          { uid: customer }
+        ),
+        'failed-precondition'
+      );
+    });
+
+    it('rejects SN-labelled coordinates that fall outside Senegal (spoof)', async () => {
+      await expectReject(
+        call(
+          fns.createBooking,
+          {
+            ...validData,
+            addressSnapshot: {
+              address: 'spoof',
+              countryCode: 'SN',
+              lat: 48.85,
+              lng: 2.35,
+            },
+          },
+          { uid: customer }
+        ),
+        'failed-precondition'
+      );
+    });
+
+    it('accepts Dakar coordinates with countryCode SN', async () => {
+      const res = (await call(
+        fns.createBooking,
+        {
+          ...validData,
+          addressSnapshot: {
+            address: 'Dakar',
+            countryCode: 'sn',
+            lat: 14.6928,
+            lng: -17.4467,
+          },
+        },
+        { uid: customer }
+      )) as { bookingId: string };
+      expect(res.bookingId).toBeTruthy();
+    });
+
+    it('allows a free-text address with no country and no coordinates', async () => {
+      const res = (await call(
+        fns.createBooking,
+        { ...validData, addressSnapshot: { address: 'somewhere' } },
+        { uid: customer }
+      )) as { bookingId: string };
+      expect(res.bookingId).toBeTruthy();
+    });
+  });
 });
 
 describe('acceptBooking', () => {
@@ -399,6 +475,100 @@ describe('confirmDone', () => {
     await expectReject(
       call(fns.confirmDone, { bookingId: 'b1' }, { uid: customer }),
       'failed-precondition'
+    );
+  });
+});
+
+// LOT 1: auto-close of a booking the client never confirms (SPEC section 1.5).
+// The scheduled wrapper takes no event arg; the cast matches the pattern used
+// for sendBookingReminders in notifications.test.ts.
+describe('autoCloseStaleBookings', () => {
+  const AUTO_CLOSE_AFTER_MS = 48 * 60 * 60 * 1000;
+
+  function tsAgo(ms: number): admin.firestore.Timestamp {
+    return admin.firestore.Timestamp.fromMillis(Date.now() - ms);
+  }
+
+  async function seedInProgressStartedAt(
+    id: string,
+    startedMsAgo: number,
+    status = 'in_progress'
+  ): Promise<void> {
+    await admin.firestore().collection('bookings').doc(id).set({
+      customerId: customer,
+      providerId: provider,
+      serviceId: 'svc1',
+      requestMessage: 'x',
+      status,
+      startedAt: tsAgo(startedMsAgo),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  const run = () =>
+    (tf.wrap(fns.autoCloseStaleBookings as never) as () => Promise<void>)();
+
+  it('closes an in_progress booking started more than 48h ago', async () => {
+    await seedInProgressStartedAt('stale', AUTO_CLOSE_AFTER_MS + 60 * 60 * 1000);
+    await run();
+    const b = await getBooking('stale');
+    expect(b?.status).toBe('done');
+    expect(b?.autoClosed).toBe(true);
+    expect(b?.closedBy).toBe('system');
+    expect(b?.doneAt).toBeTruthy();
+  });
+
+  it('leaves an in_progress booking younger than 48h intact', async () => {
+    await seedInProgressStartedAt('fresh', AUTO_CLOSE_AFTER_MS - 60 * 60 * 1000);
+    await run();
+    const b = await getBooking('fresh');
+    expect(b?.status).toBe('in_progress');
+    expect(b?.autoClosed).toBeUndefined();
+  });
+
+  it('leaves an already done booking untouched', async () => {
+    await admin.firestore().collection('bookings').doc('done1').set({
+      customerId: customer,
+      providerId: provider,
+      serviceId: 'svc1',
+      requestMessage: 'x',
+      status: 'done',
+      startedAt: tsAgo(AUTO_CLOSE_AFTER_MS + 60 * 60 * 1000),
+      doneAt: tsAgo(60 * 1000),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    await run();
+    const b = await getBooking('done1');
+    expect(b?.status).toBe('done');
+    // Not written by the auto-close path (it was a manual confirmation).
+    expect(b?.autoClosed).toBeUndefined();
+    expect(b?.closedBy).toBeUndefined();
+  });
+
+  it('leaves a cancelled booking untouched even if old', async () => {
+    await seedInProgressStartedAt(
+      'cancelled1',
+      AUTO_CLOSE_AFTER_MS + 60 * 60 * 1000,
+      'cancelled'
+    );
+    await run();
+    const b = await getBooking('cancelled1');
+    expect(b?.status).toBe('cancelled');
+    expect(b?.autoClosed).toBeUndefined();
+  });
+
+  it('is idempotent: a second run closes nothing new and keeps markers', async () => {
+    await seedInProgressStartedAt('stale', AUTO_CLOSE_AFTER_MS + 60 * 60 * 1000);
+    await run();
+    const first = await getBooking('stale');
+    const firstDoneAt = (first?.doneAt as admin.firestore.Timestamp).toMillis();
+    await run();
+    const second = await getBooking('stale');
+    expect(second?.status).toBe('done');
+    expect(second?.autoClosed).toBe(true);
+    // doneAt was set on the first run and not rewritten on the second.
+    expect((second?.doneAt as admin.firestore.Timestamp).toMillis()).toBe(
+      firstDoneAt
     );
   });
 });

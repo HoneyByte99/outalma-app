@@ -13,26 +13,31 @@ import '../../application/auth/auth_state.dart';
 import '../../application/home/location_providers.dart';
 import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../../application/user/user_providers.dart';
-import '../../core/utils/format_utils.dart';
+import '../shared/service_location_label.dart';
+import '../shared/service_price_label.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
-import '../../domain/enums/price_type.dart';
-import '../../domain/models/review.dart';
 import '../auth/email_verification_banner.dart';
 import '../../domain/models/service.dart';
 import '../../domain/utils/distance.dart';
 import '../../app/app_spacing.dart';
 import '../shared/category_icon.dart';
+import '../shared/category_filter_bar.dart';
+import '../shared/gender_icon.dart';
+import '../shared/identity_trust_signal.dart';
+import '../shared/empty_state_view.dart';
 import '../shared/mode_badge.dart';
 import '../shared/network_image.dart';
 import '../shared/user_avatar.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../domain/utils/text_search.dart';
 
 // ---------------------------------------------------------------------------
-// Filter state — local to this page subtree
+// Filter state - local to this page subtree
 // ---------------------------------------------------------------------------
 
 final _selectedCategoryProvider = StateProvider<CategoryId?>((ref) => null);
@@ -63,23 +68,27 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final authAsync = ref.watch(authNotifierProvider);
-
-    final displayName = authAsync.valueOrNull is AuthAuthenticated
-        ? (authAsync.valueOrNull as AuthAuthenticated).user.displayName
-        : '';
+    final authState = ref.watch(authNotifierProvider).valueOrNull;
+    final isAuthenticated = authState is AuthAuthenticated;
+    final displayName = isAuthenticated ? authState.user.displayName : '';
 
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
         titleSpacing: 0,
         title: const _LocationPill(),
-        actions: const [ModeBadge(), BellIconButton(), SizedBox(width: 4)],
+        // A visitor with no account has no mode to switch and no notifications
+        // to read. Offering the client/provider toggle would advertise a
+        // provider mode they cannot enter, and the bell would badge a private
+        // collection they cannot query: a sign-in entry replaces both.
+        actions: isAuthenticated
+            ? const [ModeBadge(), BellIconButton(), SizedBox(width: 4)]
+            : const [_GuestSignInAction(), SizedBox(width: 4)],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting — compact single line
+          // Greeting - compact single line
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.l,
@@ -88,9 +97,13 @@ class HomePage extends ConsumerWidget {
               AppSpacing.s,
             ),
             child: Text(
-              displayName.isNotEmpty
-                  ? l10n.homeGreeting(displayName)
-                  : l10n.homeGreetingNoName,
+              isAuthenticated
+                  ? (displayName.isNotEmpty
+                        ? l10n.homeGreeting(displayName)
+                        : l10n.homeGreetingNoName)
+                  // "Bonjour" to nobody in particular reads like a bug. Say
+                  // what the screen is for instead.
+                  : l10n.homeGuestGreeting,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -100,7 +113,7 @@ class HomePage extends ConsumerWidget {
           ),
           // Non-blocking email verification nudge (email accounts only).
           const EmailVerificationBanner(),
-          // Search bar — replaces static subtitle
+          // Search bar - replaces static subtitle
           const _SearchBar(),
           // Category chips
           const _CategoryChipsRow(),
@@ -114,7 +127,35 @@ class HomePage extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Location pill — compact AppBar location indicator
+// Guest sign-in action - replaces the mode badge + bell in the AppBar
+// ---------------------------------------------------------------------------
+
+class _GuestSignInAction extends StatelessWidget {
+  const _GuestSignInAction();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+      child: TextButton.icon(
+        // push, not go: the visitor keeps the catalogue behind the sign-in and
+        // can back out of it without losing their place.
+        onPressed: () => context.push(AppRoutes.signIn),
+        icon: const Icon(Icons.login_rounded, size: 18),
+        label: Text(l10n.guestSignIn),
+        style: TextButton.styleFrom(
+          foregroundColor: oc.primary,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Location pill - compact AppBar location indicator
 // ---------------------------------------------------------------------------
 
 class _LocationPill extends ConsumerWidget {
@@ -127,7 +168,7 @@ class _LocationPill extends ConsumerWidget {
     final filter = ref.watch(locationFilterProvider);
     final label = filter != null
         ? '${filter.label}, ${filter.radiusKm.round()} km'
-        : l10n.locationAllFrance;
+        : l10n.locationAllAreas;
 
     return Semantics(
       label: label,
@@ -190,7 +231,7 @@ class _LocationPill extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Location bottom sheet — search + radius + favorites
+// Location bottom sheet - search + radius + favorites
 // ---------------------------------------------------------------------------
 
 class _LocationSheet extends ConsumerStatefulWidget {
@@ -652,7 +693,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
               child: OutlinedButton.icon(
                 onPressed: _clearFilter,
                 icon: const Icon(Icons.public_outlined, size: 18),
-                label: Text(l10n.locationAllFrance),
+                label: Text(l10n.locationAllAreas),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, AppSpacing.minTouchTarget),
                   side: BorderSide(color: oc.border),
@@ -840,87 +881,11 @@ class _CategoryChipsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
     final selected = ref.watch(_selectedCategoryProvider);
-
-    final items = <(String label, IconData icon, CategoryId? value)>[
-      (l10n.categoryAll, Icons.apps_outlined, null),
-      ...CategoryId.values.map((c) => (c.label, c.icon, c)),
-    ];
-
-    return SizedBox(
-      height: AppSpacing.minTouchTarget,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final (label, icon, value) = items[i];
-          final isActive = selected == value;
-          return _CategoryChip(
-            icon: icon,
-            label: label,
-            isActive: isActive,
-            onTap: () =>
-                ref.read(_selectedCategoryProvider.notifier).state = value,
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final oc = context.oc;
-    final color = isActive ? oc.surface : oc.primaryText;
-    return Semantics(
-      label: label,
-      button: true,
-      selected: isActive,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          constraints: const BoxConstraints(
-            minHeight: AppSpacing.minTouchTarget,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: isActive ? oc.primary : oc.surface,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusXLarge),
-            border: Border.all(color: isActive ? oc.primary : oc.border),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return CategoryFilterBar(
+      selected: selected,
+      onSelected: (value) =>
+          ref.read(_selectedCategoryProvider.notifier).state = value,
     );
   }
 }
@@ -937,7 +902,11 @@ class _ServiceGrid extends ConsumerWidget {
     final selectedCategory = ref.watch(_selectedCategoryProvider);
     final locationFilter = ref.watch(locationFilterProvider);
     final rawQuery = ref.watch(_searchQueryProvider);
-    final searchQuery = rawQuery.toLowerCase();
+    // Folded, not just lowercased: on a phone keyboard in Senegal, typing
+    // without accents is the common case, so "menage" has to find "Ménage
+    // complet appartement". BOTH sides are folded below, or the mirror case
+    // (accented query, unaccented title) stays broken.
+    final searchQuery = foldForSearch(rawQuery);
     final servicesAsync = ref.watch(discoverableServicesProvider);
 
     // In client mode, a user must not discover their own provider listings.
@@ -969,7 +938,7 @@ class _ServiceGrid extends ConsumerWidget {
 
         if (searchQuery.isNotEmpty) {
           filtered = filtered
-              .where((s) => s.title.toLowerCase().contains(searchQuery))
+              .where((s) => foldForSearch(s.title).contains(searchQuery))
               .toList();
         }
 
@@ -985,7 +954,17 @@ class _ServiceGrid extends ConsumerWidget {
             const hPad = AppSpacing.l;
             final cardWidth =
                 (width - hPad * 2 - (columns - 1) * spacing) / columns;
-            const infoHeight = 112.0;
+            // Title (2 lines) + price (up to 2 lines, a monthly range needs
+            // them) + the location line + the provider row. Sized for the worst
+            // case rather than for the common one, since the grid height is
+            // fixed.
+            //
+            // 17 of these belong to the location line (a 15 px labelSmall row
+            // plus its 2 px gap). Without that share the row would not overflow
+            // (the image above is Expanded and simply gives up the space) but
+            // every photo in the catalogue would lose 17 px of height to a line
+            // of text, which is a worse trade than a slightly taller card.
+            const infoHeight = 151.0;
             final cardHeight = cardWidth + infoHeight;
             final ratio = cardWidth / cardHeight;
 
@@ -999,7 +978,7 @@ class _ServiceGrid extends ConsumerWidget {
                   final currentLimit = ref.read(serviceListPageSizeProvider);
                   if (services.length >= currentLimit) {
                     // Only request more if we've actually got the previous
-                    // page filled — otherwise we're at the true end.
+                    // page filled - otherwise we're at the true end.
                     ref.read(serviceListPageSizeProvider.notifier).state =
                         currentLimit + 30;
                   }
@@ -1021,7 +1000,7 @@ class _ServiceGrid extends ConsumerWidget {
                 ),
                 itemCount: filtered.length,
                 itemBuilder: (context, i) {
-                  return _ServiceCard(service: filtered[i]);
+                  return ServiceCard(service: filtered[i]);
                 },
               ),
             );
@@ -1036,23 +1015,37 @@ class _ServiceGrid extends ConsumerWidget {
 // Service card
 // ---------------------------------------------------------------------------
 
-class _ServiceCard extends ConsumerWidget {
-  const _ServiceCard({required this.service});
+/// Exposed for tests, like [RatingRow] below and for the same reason: what the
+/// card decides to show about a provider (a name, a trust badge, a gender
+/// pictogram) is only provable on the card itself, and driving the whole
+/// HomePage to reach it would test the grid instead.
+@visibleForTesting
+class ServiceCard extends ConsumerWidget {
+  const ServiceCard({super.key, required this.service});
 
   final Service service;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    // The public projection, NOT users/{uid}: this card is the first thing a
+    // visitor with no account sees, and `users` is gated on signedIn(). Reading
+    // it here is what left every card nameless and avatarless for a guest.
     final providerUser = ref
-        .watch(userByIdProvider(service.providerId))
+        .watch(publicProfileByIdProvider(service.providerId))
         .valueOrNull;
-    final reviews =
-        ref.watch(reviewsForUserProvider(service.providerId)).valueOrNull ?? [];
-    final formattedPrice = formatPriceFromCents(service.price);
-    final priceLabel = service.priceType == PriceType.hourly
-        ? '$formattedPrice/h'
-        : formattedPrice;
+    final l10n = AppLocalizations.of(context)!;
+    final priceLabel = servicePriceLabel(service, l10n);
+
+    // The same filter the grid used to decide this card belongs here. Passing
+    // it on is what turns a silently filtered list into an explained one: the
+    // distance was already computed above, and thrown away.
+    final filter = ref.watch(locationFilterProvider);
+    final locationLabel = serviceLocationLabel(
+      service,
+      l10n,
+      origin: filter == null ? null : (lat: filter.lat, lng: filter.lng),
+    );
 
     return Semantics(
       label: service.title,
@@ -1076,7 +1069,7 @@ class _ServiceCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image — takes all remaining space
+              // Image - takes all remaining space
               Expanded(
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
@@ -1107,7 +1100,7 @@ class _ServiceCard extends ConsumerWidget {
                             ),
                           ),
                           child: Text(
-                            service.categoryId.label,
+                            service.categoryId.labelOf(l10n),
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: Colors.white,
@@ -1120,7 +1113,7 @@ class _ServiceCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              // Info — intrinsic height, never overflows
+              // Info - intrinsic height, never overflows
               // Info block \u2014 hierarchy A.4: title dominant, price+rating
               // secondary on one row, provider name as discreet tertiary.
               Padding(
@@ -1142,23 +1135,107 @@ class _ServiceCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            priceLabel,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: oc.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    // The price gets the full width. Sharing a line with the
+                    // rating left about 85 px at 375 px on two columns, and a
+                    // monthly range needs roughly twice that: the label was
+                    // truncated mid-number, "500 000 F CF...".
+                    Text(
+                      priceLabel,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: oc.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    // Where the service operates, under the price rather than
+                    // beside the provider: location is a decision factor of the
+                    // same kind as price, not part of the provider's identity.
+                    // A pin icon carries the meaning for a client who does not
+                    // read the label, which is a real part of this audience.
+                    //
+                    // The zone name and the distance are TWO boxes, not one
+                    // string: this line has about 140 px on a 375 px phone, and
+                    // an ellipsis always eats the same end. Assembled, it ate
+                    // the distance, so "Dakar Ngor · 6.9 km" sat next to
+                    // "Dakar Grand Yoff Extension Front de T...". The distance
+                    // is what makes a client choose; the name is context they
+                    // just typed into the filter.
+                    if (locationLabel != null) ...[
+                      const SizedBox(height: 2),
+                      // One announcement for the whole line, from the assembled
+                      // form, so what is visually cut is still read out. Two
+                      // Texts would otherwise become two announcements, the
+                      // second of them a bare "· 6.9 km".
+                      Semantics(
+                        label: locationLabel.spoken,
+                        child: ExcludeSemantics(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final style = Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(color: oc.secondaryText);
+                              // What is left for the two texts once the pin and
+                              // the two gaps are paid for. The distance may take
+                              // ALL of it, and no more: at a 200 percent text
+                              // scale it is wider than the whole line on its
+                              // own, and a child that simply refuses to shrink
+                              // overflows the Row instead of the card growing.
+                              final textRoom =
+                                  (constraints.maxWidth - 12 - 2 - 2).clamp(
+                                    0.0,
+                                    double.infinity,
+                                  );
+                              return Row(
+                                children: [
+                                  Icon(
+                                    Icons.place_outlined,
+                                    size: 12,
+                                    color: oc.secondaryText,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  // Flexible, not Expanded: the name gives up
+                                  // the width, and when it is short the distance
+                                  // stays beside it instead of drifting to the
+                                  // far edge.
+                                  Flexible(
+                                    child: Text(
+                                      locationLabel.zone,
+                                      style: style,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  // Laid out before the flexible name, so it
+                                  // takes what it needs and the name lives on
+                                  // the remainder. That is the whole fix. Its
+                                  // own ellipsis is a last resort for the case
+                                  // where even the distance alone does not fit,
+                                  // and there the name has already yielded
+                                  // every pixel it had.
+                                  if (locationLabel.detail != null) ...[
+                                    const SizedBox(width: 2),
+                                    ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxWidth: textRoom,
+                                      ),
+                                      child: Text(
+                                        locationLabel.detail!,
+                                        style: style,
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              );
+                            },
                           ),
                         ),
-                        _RatingRow(reviews: reviews),
-                      ],
-                    ),
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.xs),
                     Row(
                       children: [
@@ -1172,13 +1249,30 @@ class _ServiceCard extends ConsumerWidget {
                           child: Text(
                             providerUser?.displayName.isNotEmpty == true
                                 ? providerUser!.displayName
-                                : '\u2014',
+                                : '-',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: oc.secondaryText),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 2),
+                        // The provider's declared gender, on the line that
+                        // already carries their identity. Renders nothing at
+                        // all when unknown, which is every account created
+                        // before the field shipped, so the line is unchanged
+                        // for them and no width is reserved.
+                        GenderIcon(gender: providerUser?.gender),
+                        const SizedBox(width: 2),
+                        // Beside the name, so a client knows before opening.
+                        // Renders only when the provider is verified, which is
+                        // what makes it readable at all in a catalogue where
+                        // almost nobody is: see IdentityTrustSignal.
+                        IdentityTrustSignal(
+                          providerId: service.providerId,
+                          style: TrustSignalStyle.badge,
+                        ),
+                        RatingRow(providerId: service.providerId),
                       ],
                     ),
                   ],
@@ -1206,20 +1300,28 @@ class _ServiceCard extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Rating row — stars + average or "Nouveau" badge
+// Rating row - stars + average or "Nouveau" badge
 // ---------------------------------------------------------------------------
 
-class _RatingRow extends StatelessWidget {
-  const _RatingRow({required this.reviews});
+@visibleForTesting
+class RatingRow extends ConsumerWidget {
+  const RatingRow({super.key, required this.providerId});
 
-  final List<Review> reviews;
+  final String providerId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
 
-    if (reviews.isEmpty) {
+    final async = ref.watch(providerRatingProvider(providerId));
+    // An unresolved read says nothing. Rendering "Nouveau" while it is in
+    // flight would flash a false claim on a provider rated 4.8, on every
+    // scroll (budget line U1).
+    if (!async.hasValue) return const SizedBox.shrink();
+    final rating = async.value!;
+
+    if (rating.isNew) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1239,15 +1341,16 @@ class _RatingRow extends StatelessWidget {
       );
     }
 
-    final avg = reviews.fold<int>(0, (s, r) => s + r.rating) / reviews.length;
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.star_rounded, size: 12, color: oc.warning),
+        Icon(Icons.star_rounded, size: 12, color: oc.star),
         const SizedBox(width: 2),
         Text(
-          '${avg.toStringAsFixed(1)} (${reviews.length})',
+          // The number alone on the card: the count lives on the detail and on
+          // the reviews page, and every character it takes here is taken from
+          // the provider's name, which has about forty pixels to begin with.
+          rating.average!.toStringAsFixed(1),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: oc.secondaryText,
             fontWeight: FontWeight.w500,
@@ -1304,7 +1407,7 @@ class _ServiceGridLoadingState extends State<_ServiceGridLoading>
         final cardWidth =
             (constraints.maxWidth - hPad * 2 - (columns - 1) * spacing) /
             columns;
-        const infoHeight = 112.0;
+        const infoHeight = 134.0;
         final ratio = cardWidth / (cardWidth + infoHeight);
 
         return AnimatedBuilder(
@@ -1350,46 +1453,41 @@ class _EmptyState extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final oc = context.oc;
-    final message = searchQuery.isNotEmpty
-        ? l10n.homeSearchEmpty(searchQuery)
-        : l10n.servicesEmpty;
+    final selectedCategory = ref.watch(_selectedCategoryProvider);
+
+    // Contextualize the copy: a specific-task empty ("no listings for this task
+    // yet") reads calmer and more informative than a generic failed-search icon.
+    final (IconData icon, String message) = switch ((
+      searchQuery.isNotEmpty,
+      selectedCategory,
+    )) {
+      (true, _) => (
+        Icons.search_off_outlined,
+        l10n.homeSearchEmpty(searchQuery),
+      ),
+      (false, final CategoryId c) => (
+        Icons.inbox_outlined,
+        l10n.homeCategoryEmpty(c.labelOf(l10n)),
+      ),
+      (false, null) => (Icons.search_off_outlined, l10n.servicesEmpty),
+    };
 
     final hasActiveFilters =
-        ref.watch(_selectedCategoryProvider) != null ||
+        selectedCategory != null ||
         ref.watch(_searchQueryProvider).isNotEmpty ||
         ref.watch(locationFilterProvider) != null;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.search_off_outlined, size: 56, color: oc.icons),
-            const SizedBox(height: AppSpacing.l),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: oc.secondaryText),
-            ),
-            if (hasActiveFilters) ...[
-              const SizedBox(height: AppSpacing.l),
-              OutlinedButton.icon(
-                onPressed: () {
-                  ref.read(_selectedCategoryProvider.notifier).state = null;
-                  ref.read(_searchQueryProvider.notifier).state = '';
-                  ref.read(locationFilterProvider.notifier).state = null;
-                },
-                icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-                label: Text(l10n.clearFilters),
-              ),
-            ],
-          ],
-        ),
-      ),
+    return EmptyStateView(
+      icon: icon,
+      message: message,
+      actionLabel: hasActiveFilters ? l10n.clearFilters : null,
+      onAction: hasActiveFilters
+          ? () {
+              ref.read(_selectedCategoryProvider.notifier).state = null;
+              ref.read(_searchQueryProvider.notifier).state = '';
+              ref.read(locationFilterProvider.notifier).state = null;
+            }
+          : null,
     );
   }
 }

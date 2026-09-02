@@ -10,16 +10,17 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
+import '../../application/identity/identity_verification_providers.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
-import '../../core/utils/format_utils.dart';
+import '../shared/service_price_label.dart';
 import '../review/rating_summary.dart';
 import '../shared/mode_badge.dart';
 import '../../domain/enums/category_id.dart';
+import '../../domain/enums/identity_status.dart';
 import '../../domain/models/provider_profile.dart';
 import '../shared/category_icon.dart';
 import '../shared/user_avatar.dart';
-import '../shared/verified_badge.dart';
 import '../../domain/models/service.dart';
 
 class ProviderDashboardPage extends ConsumerWidget {
@@ -35,13 +36,19 @@ class ProviderDashboardPage extends ConsumerWidget {
     // Resolve the dashboard state with explicit priority: profile setup
     // first, then "create first service" if there are none, then the normal
     // services dashboard. Only the screen for the current state shows a
-    // strong CTA — no competing primary actions (security review A.3).
+    // strong CTA - no competing primary actions (security review A.3).
     // Every provider is available by default. The hub card carries a self-
     // service availability toggle (Disponible/En pause) that hides the whole
     // catalogue at once; per-listing on/off lives on each service tile. Profile
     // details (bio / working hours) are edited via the hub's edit pencil.
     final profile = profileAsync.valueOrNull;
-    final servicesCount = servicesAsync.valueOrNull?.length ?? 0;
+    // MVP defensive filter: only surface services whose category is part of the
+    // MVP home-help pool. The service form already prevents creating anything
+    // else, but legacy/off-MVP data must not leak into the provider's view.
+    final visibleServices = (servicesAsync.valueOrNull ?? const <Service>[])
+        .where((s) => s.categoryId.visibleInClientFilter)
+        .toList();
+    final servicesCount = visibleServices.length;
     final showFab = servicesCount > 0;
 
     return Scaffold(
@@ -112,9 +119,9 @@ class ProviderDashboardPage extends ConsumerWidget {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, i) => _ServiceTile(
-                    service: servicesAsync.value![i],
+                    service: visibleServices[i],
                     // When the provider is paused, every listing is hidden from
-                    // clients regardless of its own published flag — reflect
+                    // clients regardless of its own published flag - reflect
                     // that on the tile so the hub/listing hierarchy is clear.
                     providerPaused: profile != null && !profile.active,
                   ),
@@ -141,7 +148,7 @@ class ProviderDashboardPage extends ConsumerWidget {
 // Profile card
 // ---------------------------------------------------------------------------
 
-/// "Mon activité" — the provider hub. Identity row (avatar + name + verified +
+/// "Mon activité" - the provider hub. Identity row (avatar + name + verified +
 /// rating + edit) over an availability control: a pill toggle distinct from the
 /// per-listing switches below. "Disponible" → listings visible & bookable;
 /// "En pause" → the whole catalogue is hidden (non-destructive, instant resume).
@@ -155,7 +162,7 @@ class _ProviderHubCard extends ConsumerStatefulWidget {
 }
 
 class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
-  /// Optimistic availability — reflects the tap immediately, reverts on error.
+  /// Optimistic availability - reflects the tap immediately, reverts on error.
   bool? _pending;
 
   @override
@@ -172,17 +179,34 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
     final available = _pending ?? widget.profile.active;
     final auth = ref.watch(authNotifierProvider).valueOrNull;
     final appUser = auth is AuthAuthenticated ? auth.user : null;
-    final isVerified = appUser?.phoneE164?.isNotEmpty ?? false;
+    // D6-a/E7: the badge reflects the server-owned identity verdict on the
+    // provider's own profile, not a verified phone number.
     final publishedCount =
         ref
             .watch(providerServicesProvider)
             .valueOrNull
-            ?.where((s) => s.published)
+            ?.where((s) => s.published && s.categoryId.visibleInClientFilter)
             .length ??
         0;
     // Toggling "Disponible" only makes sense once at least one listing is live.
     final canToggle = publishedCount > 0;
     final accent = available ? oc.success : oc.warning;
+
+    // The state accent rings the WHOLE card instead of the 3px top strip it
+    // used to paint. What blocked a per-side accent was a border whose sides
+    // DIFFER, which Flutter refuses to combine with a borderRadius; a uniform
+    // Border.all has never had that limitation, so the strip was a workaround
+    // that ended up reading as a decorative tab rather than as a state.
+    // alpha 0.55: at full saturation a 1.5px ring of `success` around the hero
+    // card of the page competes with the availability pill and the CTA; muted
+    // to 0.55 over cardSurface it lands on #73CEB5 (light) / #278458 (dark),
+    // still unmistakably the state colour next to the #CDD8DE / #2B323D
+    // neutral border, but "legerement" as asked.
+    // canToggle false keeps the previous behaviour exactly (the strip was
+    // transparent then): no accent at all, the card falls back to oc.border at
+    // the 1px every other card on this page uses.
+    final borderWidth = canToggle ? 1.5 : 1.0;
+    final borderColor = canToggle ? accent.withValues(alpha: 0.55) : oc.border;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -190,21 +214,16 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
         decoration: BoxDecoration(
           color: oc.cardSurface,
           borderRadius: BorderRadius.circular(16),
-          // Uniform border — a non-uniform border can't be combined with a
-          // borderRadius. The state accent is the clipped top strip below.
-          border: Border.all(color: oc.border),
+          border: Border.all(color: borderColor, width: borderWidth),
         ),
-        // Clip so the accent strip's top corners follow the card radius.
+        // A border insets its child, so the clip radius has to be the OUTER
+        // radius minus the border width, otherwise the rows paint into the
+        // ring at the corners and fray it.
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16 - borderWidth),
           child: Column(
             children: [
-              // Top-edge accent encodes the state before any text is read.
-              Container(
-                height: 3,
-                color: canToggle ? accent : Colors.transparent,
-              ),
-              // Row 1 — identity. The whole row opens the profile editor (like
+              // Row 1 - identity. The whole row opens the profile editor (like
               // tapping a service tile), the pencil is just the affordance.
               Semantics(
                 button: true,
@@ -243,14 +262,19 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  if (isVerified) ...[
-                                    const SizedBox(width: 6),
-                                    const VerifiedBadge(compact: true),
-                                  ],
                                 ],
                               ),
                               const SizedBox(height: 2),
-                              RatingSummary(userId: widget.profile.uid),
+                              // explainBasis, even with no list underneath: on
+                              // the current catalogue 13 of the 15 rated
+                              // providers read "Nouveau" about THEMSELVES here,
+                              // and a bare floor on your own dashboard reads as
+                              // a verdict with no explanation.
+                              RatingSummary(
+                                userId: widget.profile.uid,
+                                source: RatingSource.provider,
+                                explainBasis: true,
+                              ),
                             ],
                           ),
                         ),
@@ -266,7 +290,7 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                 ),
               ),
               Divider(height: 1, color: oc.border),
-              // Row 2 — availability (the whole row is the tap target)
+              // Row 2 - availability (the whole row is the tap target)
               Semantics(
                 button: canToggle,
                 label: available ? l10n.hubSemanticsOn : l10n.hubSemanticsOff,
@@ -323,6 +347,13 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
                     ),
                   ),
                 ),
+              ),
+              Divider(height: 1, color: oc.border),
+              // Row 3: identity verification (E6). The whole row opens the
+              // status/entry screen; it carries the current state at a glance.
+              _IdentityHubLine(
+                onOpen: () =>
+                    GoRouter.of(context).push(AppRoutes.identityStatus),
               ),
             ],
           ),
@@ -434,7 +465,7 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
   }
 }
 
-/// Custom availability pill — deliberately NOT a [Switch], so a provider never
+/// Custom availability pill - deliberately NOT a [Switch], so a provider never
 /// confuses this whole-account control with the per-listing switches below.
 class _AvailabilityPill extends StatelessWidget {
   const _AvailabilityPill({required this.available, required this.enabled});
@@ -496,7 +527,7 @@ class _ServiceTile extends ConsumerStatefulWidget {
   final Service service;
 
   /// When the provider is "En pause", every listing is hidden from clients
-  /// regardless of its own `published` flag — the footer reflects that.
+  /// regardless of its own `published` flag - the footer reflects that.
   final bool providerPaused;
 
   @override
@@ -512,7 +543,7 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
   @override
   void didUpdateWidget(covariant _ServiceTile oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Stream has caught up to our optimistic value — stop overriding it.
+    // Stream has caught up to our optimistic value - stop overriding it.
     if (_pending != null && widget.service.published == _pending) {
       _pending = null;
     }
@@ -523,11 +554,8 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
     final service = widget.service;
     final oc = context.oc;
     final l10n = AppLocalizations.of(context)!;
-    final formattedPrice = formatPriceFromCents(service.price);
-    final priceLabel = service.priceType.name == 'hourly'
-        ? '$formattedPrice/h'
-        : '$formattedPrice (forfait)';
-    // A rejected/pending service can't be toggled live by the provider — the
+    final priceLabel = servicePriceLabel(service, l10n);
+    // A rejected/pending service can't be toggled live by the provider - the
     // moderation flow governs it.
     final moderationLocked =
         service.status == 'rejected' || service.status == 'pending_review';
@@ -589,7 +617,7 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Only moderation states (pending/rejected) — the active/
+                // Only moderation states (pending/rejected) - the active/
                 // inactive state is the toggle below.
                 _ServiceStatusBadge(service: service),
                 Icon(Icons.chevron_right_rounded, color: oc.icons, size: 20),
@@ -597,9 +625,9 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
             ),
             onTap: () => context.push(AppRoutes.serviceEdit(service.id)),
           ),
-          // On/off footer — status (dot + label) on the left, control on the
+          // On/off footer - status (dot + label) on the left, control on the
           // right. Hidden entirely under moderation: the trailing badge already
-          // explains why, and a disabled switch reads as "broken". No divider —
+          // explains why, and a disabled switch reads as "broken". No divider -
           // this is a light footer of the same card, not a separate section.
           if (!moderationLocked)
             Padding(
@@ -649,7 +677,7 @@ class _ServiceTileState extends ConsumerState<_ServiceTile> {
                     label: published
                         ? l10n.serviceToggleDeactivate(service.title)
                         : l10n.serviceToggleActivate(service.title),
-                    // Disabled while the whole profile is paused — a live-looking
+                    // Disabled while the whole profile is paused - a live-looking
                     // switch that does nothing visible to clients would confuse.
                     child: Switch(
                       value: published,
@@ -750,7 +778,7 @@ class _ServiceStatusBadge extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
 
-    // Only the moderation states need a badge — the live/offline state is shown
+    // Only the moderation states need a badge - the live/offline state is shown
     // by the activate/deactivate toggle on the card.
     final (label, color, icon) = switch (service.status) {
       'rejected' => (l10n.serviceStatusRejected, oc.error, Icons.block_rounded),
@@ -871,7 +899,7 @@ class _ErrorState extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Provider stats row (B.5) — KPIs for the provider dashboard.
+// Provider stats row (B.5) - KPIs for the provider dashboard.
 // ---------------------------------------------------------------------------
 
 class _ProviderStatsRow extends ConsumerWidget {
@@ -881,17 +909,14 @@ class _ProviderStatsRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final stats = ref.watch(providerStatsProvider);
-
-    String acceptanceLabel() {
-      final r = stats.acceptanceRate;
-      if (r == null) return '—';
-      return '${(r * 100).round()}%';
-    }
+    // Watch the AsyncValue (M3): while the history loads or if it errors, show a
+    // skeleton or an error+retry rather than "0 / 0 / -", which reads as a real
+    // "no activity" and is simply wrong when the numbers just have not arrived.
+    final statsAsync = ref.watch(providerStatsAsyncProvider);
 
     Widget tile({
       required IconData icon,
-      required String value,
+      required Widget value,
       required String label,
     }) {
       return Expanded(
@@ -907,11 +932,9 @@ class _ProviderStatsRow extends ConsumerWidget {
             children: [
               Icon(icon, size: 18, color: oc.primary),
               const SizedBox(height: 6),
-              Text(
-                value,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              SizedBox(
+                height: 28,
+                child: Align(alignment: Alignment.centerLeft, child: value),
               ),
               const SizedBox(height: 2),
               Text(
@@ -928,6 +951,99 @@ class _ProviderStatsRow extends ConsumerWidget {
       );
     }
 
+    Widget valueText(String v) => Text(
+      v,
+      style: Theme.of(
+        context,
+      ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+    );
+
+    // A muted placeholder bar for the loading state, so the tile has a shape but
+    // no misleading number.
+    Widget skeleton() => Container(
+      width: 32,
+      height: 18,
+      decoration: BoxDecoration(
+        color: oc.secondaryText.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+    );
+
+    final content = statsAsync.when(
+      loading: () => Row(
+        children: [
+          tile(
+            icon: Icons.event_available_rounded,
+            value: skeleton(),
+            label: l10n.dashboardStatsUpcomingWeek,
+          ),
+          const SizedBox(width: AppSpacing.s),
+          tile(
+            icon: Icons.calendar_today_outlined,
+            value: skeleton(),
+            label: l10n.dashboardStatsThisMonth,
+          ),
+          const SizedBox(width: AppSpacing.s),
+          tile(
+            icon: Icons.check_circle_outline_rounded,
+            value: skeleton(),
+            label: l10n.dashboardStatsAcceptanceRate,
+          ),
+        ],
+      ),
+      error: (_, __) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: oc.cardSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: oc.border),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline_rounded, size: 18, color: oc.icons),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l10n.errorGeneral,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+              ),
+            ),
+            TextButton(
+              onPressed: () => ref.invalidate(providerBookingHistoryProvider),
+              child: Text(l10n.retry),
+            ),
+          ],
+        ),
+      ),
+      data: (stats) {
+        final r = stats.acceptanceRate;
+        final acceptance = r == null ? '-' : '${(r * 100).round()}%';
+        return Row(
+          children: [
+            tile(
+              icon: Icons.event_available_rounded,
+              value: valueText('${stats.upcomingThisWeek}'),
+              label: l10n.dashboardStatsUpcomingWeek,
+            ),
+            const SizedBox(width: AppSpacing.s),
+            tile(
+              icon: Icons.calendar_today_outlined,
+              value: valueText('${stats.bookingsThisMonth}'),
+              label: l10n.dashboardStatsThisMonth,
+            ),
+            const SizedBox(width: AppSpacing.s),
+            tile(
+              icon: Icons.check_circle_outline_rounded,
+              value: valueText(acceptance),
+              label: l10n.dashboardStatsAcceptanceRate,
+            ),
+          ],
+        );
+      },
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
@@ -935,26 +1051,123 @@ class _ProviderStatsRow extends ConsumerWidget {
         AppSpacing.xl,
         0,
       ),
-      child: Row(
-        children: [
-          tile(
-            icon: Icons.event_available_rounded,
-            value: '${stats.upcomingThisWeek}',
-            label: l10n.dashboardStatsUpcomingWeek,
+      child: content,
+    );
+  }
+}
+
+/// Third hub line: the identity verification entry (E6).
+///
+/// It watches the public trust projection for a state at a glance (verified,
+/// under way, or not verified) and routes to the full status screen for the
+/// story the projection cannot carry. Loading and read errors collapse to a
+/// neutral "verify" affordance rather than a false negative: the same failure
+/// mode the trust signal uses (design section 2).
+class _IdentityHubLine extends ConsumerWidget {
+  const _IdentityHubLine({required this.onOpen});
+
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    // Read the provider's OWN private file (M7), not the public trust projection:
+    // the projection collapses rejected/revoked to "not started", so on their own
+    // hub a refused provider would see the neutral "verify" CTA with no signal
+    // that action is required. The private record distinguishes those states.
+    final record = ref.watch(myIdentityVerificationProvider).valueOrNull;
+    final status = record?.status ?? IdentityStatus.none;
+
+    final IconData icon;
+    final Color accent;
+    final String label;
+    final String subtitle;
+    switch (status) {
+      case IdentityStatus.approved:
+        icon = Icons.verified_rounded;
+        accent = oc.trustVerifiedText;
+        label = l10n.trustVerifiedLabel;
+        subtitle = l10n.hubIdentityVerifiedSub;
+      case IdentityStatus.pending:
+        icon = Icons.schedule_rounded;
+        accent = oc.trustPendingText;
+        label = l10n.trustPendingLabel;
+        subtitle = l10n.hubIdentityPendingSub;
+      case IdentityStatus.rejected:
+        icon = Icons.error_outline;
+        accent = oc.trustRejectedText;
+        label = l10n.identityStatusRejectedTitle;
+        subtitle = l10n.hubIdentityActionRequiredSub;
+      case IdentityStatus.revoked:
+        icon = Icons.error_outline;
+        accent = oc.trustRejectedText;
+        label = l10n.identityStatusRevokedTitle;
+        subtitle = l10n.hubIdentityActionRequiredSub;
+      case IdentityStatus.none:
+        // Not a state, an INVITATION, and the glyph has to say so. The shield
+        // is the reward of this flow (it is the badge a verified profile
+        // wears), so drawing it greyed out here announced a verdict: "your
+        // badge is off". Same reason the client surfaces show no badge at all
+        // until the identity is verified (decided 01/09). The ID-card glyph
+        // names what the provider is being asked to SUPPLY rather than what
+        // they have not earned, and it is already the icon of the capture flow
+        // this row opens (identity_guide_page, identity_capture_widgets), so
+        // the row and its destination read as one action.
+        // oc.primary and not secondaryText: grey is this card's disabled and
+        // metadata colour, and it is what made the row read as an extinguished
+        // badge. primary is the app's action colour (#1B3A4B light, #6FE8CC
+        // dark) and carries no trust semantics, unlike the trust* colours
+        // which would falsely suggest a verdict has been reached.
+        // The icon slot itself is kept: the storefront row above aligns its
+        // text at 48px (22px icon + 10px gap + 16px padding), and dropping the
+        // glyph would pull this text back to 16px and break the card.
+        icon = Icons.badge_outlined;
+        accent = oc.primary;
+        label = l10n.hubIdentityVerifyCta;
+        subtitle = l10n.hubIdentityVerifySub;
+    }
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              Icon(icon, size: 22, color: accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Label in primaryText, accent lives in the icon only
+                    // (design section 3): the coloured-label grammar fails A1.
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: oc.primaryText,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, color: oc.secondaryText),
+            ],
           ),
-          const SizedBox(width: AppSpacing.s),
-          tile(
-            icon: Icons.calendar_today_outlined,
-            value: '${stats.bookingsThisMonth}',
-            label: l10n.dashboardStatsThisMonth,
-          ),
-          const SizedBox(width: AppSpacing.s),
-          tile(
-            icon: Icons.check_circle_outline_rounded,
-            value: acceptanceLabel(),
-            label: l10n.dashboardStatsAcceptanceRate,
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -12,6 +12,7 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../domain/enums/booking_status.dart';
+import '../shared/booking_status_label.dart';
 import '../../application/service/service_providers.dart';
 import '../../domain/models/blocked_slot.dart';
 import '../../domain/models/booking.dart';
@@ -96,7 +97,9 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
             child: TableCalendar<Object>(
               locale: locale,
               calendarFormat: CalendarFormat.month,
-              availableCalendarFormats: const {CalendarFormat.month: 'Mois'},
+              availableCalendarFormats: {
+                CalendarFormat.month: l10n.calendarFormatMonth,
+              },
               firstDay: DateTime.now().subtract(const Duration(days: 365)),
               lastDay: DateTime.now().add(const Duration(days: 365)),
               focusedDay: _focusedDay,
@@ -172,15 +175,21 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Row(
                 children: [
-                  _LegendDot(color: oc.primary, label: l10n.bookingSchedule),
+                  _LegendDot(
+                    color: oc.primary,
+                    label: l10n.calendarLegendBooking,
+                  ),
                   const SizedBox(width: 16),
-                  _LegendDot(color: oc.error, label: l10n.statusCancelled),
+                  _LegendDot(
+                    color: oc.error,
+                    label: l10n.calendarLegendBlocked,
+                  ),
                 ],
               ),
             ),
           ),
 
-          // Day selection chip — tap X to clear and show all upcoming
+          // Day selection chip: tap X to clear and show all upcoming
           if (_selectedDay != null)
             SliverToBoxAdapter(
               child: Padding(
@@ -241,7 +250,7 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
               ),
             ),
 
-          // Day detail OR upcoming bookings — not both
+          // Day detail OR upcoming bookings: not both
           if (_selectedDay != null)
             _DayDetailSliver(
               day: _selectedDay!,
@@ -262,7 +271,9 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
   ) {
     final events = <Object>[];
     for (final b in bookings) {
-      if (b.scheduledAt != null && isSameDay(b.scheduledAt!, day)) {
+      if (b.scheduledAt != null &&
+          isSameDay(b.scheduledAt!, day) &&
+          b.status.isActive) {
         events.add(b);
       }
     }
@@ -312,7 +323,7 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
 }
 
 // ---------------------------------------------------------------------------
-// Day detail — shows bookings + blocked slots for selected day
+// Day detail: shows bookings + blocked slots for selected day
 // ---------------------------------------------------------------------------
 
 class _DayDetailSliver extends ConsumerWidget {
@@ -330,7 +341,9 @@ class _DayDetailSliver extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
     final dayBookings = bookings.where((b) {
-      return b.scheduledAt != null && isSameDay(b.scheduledAt!, day);
+      return b.scheduledAt != null &&
+          isSameDay(b.scheduledAt!, day) &&
+          b.status.isActive;
     }).toList()..sort((a, b) => a.scheduledAt!.compareTo(b.scheduledAt!));
 
     final daySlots = blockedSlots.where((s) {
@@ -409,7 +422,7 @@ class _DayDetailSliver extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Upcoming bookings — shown when no day is selected
+// Upcoming bookings: shown when no day is selected
 // ---------------------------------------------------------------------------
 
 class _UpcomingBookingsSliver extends StatelessWidget {
@@ -482,6 +495,7 @@ class _UpcomingBookingTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
     final service = ref
         .watch(serviceDetailProvider(booking.serviceId))
@@ -537,7 +551,7 @@ class _UpcomingBookingTile extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    service?.title ?? 'Service',
+                    service?.title ?? l10n.calendarServiceFallback,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -569,6 +583,7 @@ class _BookingTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toString();
     final service = ref
         .watch(serviceDetailProvider(booking.serviceId))
@@ -576,7 +591,7 @@ class _BookingTile extends ConsumerWidget {
     final timeFmt = DateFormat('HH:mm', locale);
     final timeStr = booking.scheduledAt != null
         ? timeFmt.format(booking.scheduledAt!)
-        : '—';
+        : '-';
 
     return GestureDetector(
       onTap: () => context.push(AppRoutes.bookingDeepLink(booking.id)),
@@ -604,7 +619,7 @@ class _BookingTile extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    service?.title ?? 'Service',
+                    service?.title ?? l10n.calendarServiceFallback,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -612,7 +627,7 @@ class _BookingTile extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    '$timeStr \u2014 ${booking.status.value}',
+                    '$timeStr - ${booking.status.labelOf(l10n)}',
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
@@ -641,7 +656,7 @@ class _BlockedSlotTile extends StatelessWidget {
     final timeFmt = DateFormat('HH:mm', locale);
     final label = slot.isFullDay
         ? l10n.calendarFullDay
-        : '${timeFmt.format(slot.date)} \u2013 ${timeFmt.format(slot.endDate!)}';
+        : '${timeFmt.format(slot.date)} - ${timeFmt.format(slot.endDate!)}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -772,7 +787,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
             ),
             const SizedBox(height: 20),
 
-            // Date navigation — no showDatePicker (crashes on web)
+            // Date navigation: no showDatePicker (crashes on web)
             Text(
               l10n.bookingStep2PickDate,
               style: Theme.of(context).textTheme.labelMedium,
@@ -876,7 +891,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: Text(
-                        '\u2013',
+                        '-',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
@@ -960,7 +975,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
   }
 }
 
-/// Simple hour selector — no showTimePicker overlay (crashes on web).
+/// Simple hour selector: no showTimePicker overlay (crashes on web).
 class _HourSelector extends StatelessWidget {
   const _HourSelector({
     required this.label,

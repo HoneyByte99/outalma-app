@@ -8,24 +8,35 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
-import '../../application/provider/provider_providers.dart';
 import '../../application/service/service_providers.dart';
-import '../../application/user/user_providers.dart';
-import '../../core/utils/format_utils.dart';
+import '../../application/user/public_profile_providers.dart';
 import '../../domain/enums/category_id.dart';
-import '../../domain/enums/price_type.dart';
 import '../../domain/models/service.dart';
+import '../shared/category_icon.dart';
+import '../shared/service_price_label.dart';
+import '../auth/auth_prompt.dart';
 import '../booking/booking_request_sheet.dart';
 import '../shared/network_image.dart';
 import '../shared/marketplace_disclaimer.dart';
-import '../shared/verified_badge.dart';
+import '../../application/review/review_providers.dart';
+import '../shared/gender_icon.dart';
+import '../shared/identity_trust_signal.dart';
 import 'service_zones_map.dart';
 import '../shared/user_avatar.dart';
 
 class ServiceDetailPage extends ConsumerWidget {
-  const ServiceDetailPage({super.key, required this.serviceId});
+  const ServiceDetailPage({
+    super.key,
+    required this.serviceId,
+    this.autoOpenBooking = false,
+  });
 
   final String serviceId;
+
+  /// Set from `?book=1` when a visitor signed in from the booking gate. The
+  /// booking sheet reopens by itself, so the account they just created does not
+  /// cost them a second hunt for the button they already pressed.
+  final bool autoOpenBooking;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,7 +49,10 @@ class ServiceDetailPage extends ConsumerWidget {
       ),
       data: (service) {
         if (service == null) return const _ServiceDetailError();
-        return _ServiceDetailContent(service: service);
+        return _ServiceDetailContent(
+          service: service,
+          autoOpenBooking: autoOpenBooking,
+        );
       },
     );
   }
@@ -49,9 +63,13 @@ class ServiceDetailPage extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _ServiceDetailContent extends ConsumerWidget {
-  const _ServiceDetailContent({required this.service});
+  const _ServiceDetailContent({
+    required this.service,
+    this.autoOpenBooking = false,
+  });
 
   final Service service;
+  final bool autoOpenBooking;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,10 +81,7 @@ class _ServiceDetailContent extends ConsumerWidget {
               .id
         : null;
     final isOwner = uid != null && uid == service.providerId;
-    final formattedPrice = formatPriceFromCents(service.price);
-    final priceLabel = service.priceType == PriceType.hourly
-        ? '$formattedPrice/h'
-        : '$formattedPrice (${l10n.priceFixed})';
+    final priceLabel = servicePriceLabel(service, l10n);
 
     return Scaffold(
       backgroundColor: oc.background,
@@ -226,7 +241,10 @@ class _ServiceDetailContent extends ConsumerWidget {
       // ---- Sticky bottom bar ----
       bottomNavigationBar: isOwner
           ? _EditBottomBar(serviceId: service.id)
-          : _BookingBottomBar(service: service),
+          : _BookingBottomBar(
+              service: service,
+              autoOpenBooking: autoOpenBooking,
+            ),
     );
   }
 
@@ -245,7 +263,7 @@ class _ServiceDetailContent extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Hero gallery — swipeable photo carousel with page indicators
+// Hero gallery - swipeable photo carousel with page indicators
 // ---------------------------------------------------------------------------
 
 class _HeroGallery extends StatefulWidget {
@@ -259,7 +277,7 @@ class _HeroGallery extends StatefulWidget {
 }
 
 class _HeroGalleryState extends State<_HeroGallery> {
-  // viewportFraction < 1 lets the next photo peek in from the right — the
+  // viewportFraction < 1 lets the next photo peek in from the right - the
   // primary visual cue that the hero is swipeable (no text needed).
   final _controller = PageController(viewportFraction: 0.92);
   int _current = 0;
@@ -274,10 +292,10 @@ class _HeroGalleryState extends State<_HeroGallery> {
   Widget build(BuildContext context) {
     final photos = widget.photos;
 
-    // Empty state — no photos uploaded.
+    // Empty state - no photos uploaded.
     if (photos.isEmpty) return widget.fallback;
 
-    // Single photo — no carousel chrome needed.
+    // Single photo - no carousel chrome needed.
     if (photos.length == 1) {
       return AppNetworkImage(
         url: photos.first,
@@ -308,7 +326,7 @@ class _HeroGalleryState extends State<_HeroGallery> {
             ),
           ),
         ),
-        // Page indicator dots — anchored to the bottom of the hero.
+        // Page indicator dots - anchored to the bottom of the hero.
         Positioned(
           left: 0,
           right: 0,
@@ -372,6 +390,7 @@ class _CategoryBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.m,
@@ -382,7 +401,7 @@ class _CategoryBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
       ),
       child: Text(
-        categoryId.label,
+        categoryId.labelOf(l10n),
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: oc.primary,
           fontWeight: FontWeight.w600,
@@ -405,16 +424,19 @@ class _ProviderRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final user = ref.watch(userByIdProvider(providerId)).valueOrNull;
-    final providerProfile = ref
-        .watch(providerProfileByIdProvider(providerId))
-        .valueOrNull;
-    final isVerified =
-        providerProfile != null && (user?.phoneE164?.isNotEmpty ?? false);
+    // The public projection, NOT users/{uid}: this screen is reachable without
+    // an account, and `users` is gated on signedIn(). The trust state still
+    // comes from provider_trust (E1), and nothing else on this card needs the
+    // provider profile: one document read less per provider shown.
+    final user = ref.watch(publicProfileByIdProvider(providerId)).valueOrNull;
 
     return Semantics(
-      label: '${user?.displayName ?? ''} — ${l10n.serviceViewProfile}',
+      label: '${user?.displayName ?? ''} - ${l10n.serviceViewProfile}',
       button: true,
+      // The rating link inside is its own target. Without this the two can
+      // merge into a single announced button, and the reviews become
+      // unreachable to a screen reader (budget line A5).
+      explicitChildNodes: true,
       child: InkWell(
         onTap: () => context.push(AppRoutes.providerProfile(providerId)),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
@@ -447,7 +469,7 @@ class _ProviderRow extends ConsumerWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            user?.displayName ?? '—',
+                            user?.displayName ?? '-',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: oc.primaryText,
@@ -457,12 +479,28 @@ class _ProviderRow extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (isVerified) ...[
-                          const SizedBox(width: AppSpacing.xs),
-                          const VerifiedBadge(compact: true),
-                        ],
+                        const SizedBox(width: 4),
+                        // Same pictogram as the catalogue card, same rule: a
+                        // provider whose gender is unknown gets nothing here.
+                        GenderIcon(gender: user?.gender, size: 16),
+                        const SizedBox(width: 4),
+                        // Beside the name, as a badge: the full mention used to
+                        // sit under it and read "Identite non verifiee" by
+                        // default, teaching every client that nobody is
+                        // trustworthy. A trust signal is only ever positive, so
+                        // this renders for a VERIFIED provider and for nobody
+                        // else: no muted glyph stands in for the other states.
+                        IdentityTrustSignal(
+                          providerId: providerId,
+                          style: TrustSignalStyle.badge,
+                        ),
                       ],
                     ),
+                    const SizedBox(height: AppSpacing.xs),
+                    // The rating was on the card and missing HERE, on the very
+                    // screen where the client decides. It is its own tap
+                    // target, 44 high, opening the reviews of this provider.
+                    ProviderRatingLink(providerId: providerId),
                   ],
                 ),
               ),
@@ -559,10 +597,36 @@ class _ExpandableTextState extends State<_ExpandableText> {
 // Sticky booking bottom bar
 // ---------------------------------------------------------------------------
 
-class _BookingBottomBar extends StatelessWidget {
-  const _BookingBottomBar({required this.service});
+class _BookingBottomBar extends ConsumerStatefulWidget {
+  const _BookingBottomBar({
+    required this.service,
+    this.autoOpenBooking = false,
+  });
 
   final Service service;
+  final bool autoOpenBooking;
+
+  @override
+  ConsumerState<_BookingBottomBar> createState() => _BookingBottomBarState();
+}
+
+class _BookingBottomBarState extends ConsumerState<_BookingBottomBar> {
+  @override
+  void initState() {
+    super.initState();
+    // Resuming the intention the sign-in interrupted. This bar is built only
+    // once the service has loaded, so by the first frame everything the sheet
+    // needs is here. Guarded on auth: `?book=1` is just a query parameter, and
+    // a visitor who abandoned the sign-in must not land on a booking form.
+    if (widget.autoOpenBooking) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (ref.read(authNotifierProvider).valueOrNull is AuthAuthenticated) {
+          _openBookingSheet(context);
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -586,7 +650,7 @@ class _BookingBottomBar extends StatelessWidget {
           const MarketplaceDisclaimer(dense: true),
           const SizedBox(height: AppSpacing.m),
           ElevatedButton(
-            onPressed: () => _openBookingSheet(context),
+            onPressed: () => _onBook(context),
             child: Text(l10n.serviceBook),
           ),
         ],
@@ -594,7 +658,31 @@ class _BookingBottomBar extends StatelessWidget {
     );
   }
 
+  /// The one gate on this screen. A visitor with no account gets the invitation
+  /// sheet carrying a return path that reopens THIS booking, so the account is
+  /// asked for at the moment it becomes necessary and not before.
+  ///
+  /// The button stays enabled and keeps its label: a disabled button, or one
+  /// reading "Sign in to book", would tell a visitor the service is out of
+  /// reach before they have read the price.
+  void _onBook(BuildContext context) {
+    final service = widget.service;
+    if (ref.read(authNotifierProvider).valueOrNull is! AuthAuthenticated) {
+      showAuthPrompt(
+        context,
+        reason: AppLocalizations.of(context)!.bookingRequiresLogin,
+        redirect: Uri(
+          path: AppRoutes.serviceDetail(service.id),
+          queryParameters: {'book': '1'},
+        ).toString(),
+      );
+      return;
+    }
+    _openBookingSheet(context);
+  }
+
   void _openBookingSheet(BuildContext context) {
+    final service = widget.service;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -643,7 +731,7 @@ class _EditBottomBar extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Loading state — animated shimmer skeleton
+// Loading state - animated shimmer skeleton
 // ---------------------------------------------------------------------------
 
 class _ServiceDetailLoading extends StatefulWidget {
@@ -777,6 +865,75 @@ class _ServiceDetailError extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(l10n.back),
                 ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The provider's rating, and a way into their reviews.
+///
+/// A tap target of its own (44 high, budget line A2) rather than a link nested
+/// inside the "see profile" row, which would swallow it into one announced
+/// button and leave the reviews unreachable to a screen reader.
+@visibleForTesting
+class ProviderRatingLink extends ConsumerWidget {
+  const ProviderRatingLink({super.key, required this.providerId});
+
+  final String providerId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final oc = context.oc;
+    final async = ref.watch(providerRatingProvider(providerId));
+    if (!async.hasValue) return const SizedBox(height: 44);
+    final rating = async.value!;
+
+    return Semantics(
+      button: true,
+      label: rating.isNew
+          ? '${l10n.serviceSeeReviews}, ${l10n.ratingNew}'
+          : '${l10n.serviceSeeReviews}, ${l10n.reviewsCount(rating.count)}',
+      child: InkWell(
+        onTap: () =>
+            context.push(AppRoutes.userReviews(providerId, asProvider: true)),
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            children: [
+              Icon(
+                rating.isNew ? Icons.star_border_rounded : Icons.star_rounded,
+                size: 16,
+                color: rating.isNew ? oc.secondaryText : oc.star,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                rating.isNew
+                    ? l10n.ratingNew
+                    : '${rating.average!.toStringAsFixed(1)} '
+                          '(${rating.count})',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: oc.secondaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s),
+              // Flexible: at 375 px the row shares its width with "Voir le
+              // profil", and at a raised text scale it would overflow outright.
+              Flexible(
+                child: Text(
+                  l10n.serviceSeeReviews,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: oc.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ],
           ),
         ),

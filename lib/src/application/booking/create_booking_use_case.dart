@@ -22,6 +22,7 @@ class CreateBookingUseCase {
     String? address,
     double? addressLat,
     double? addressLng,
+    String? addressCountryCode,
     String? audioMessageUrl,
   }) async {
     final payload = <String, Object?>{
@@ -39,6 +40,8 @@ class CreateBookingUseCase {
             'lat': addressLat,
             'lng': addressLng,
           },
+          if (addressCountryCode != null && addressCountryCode.isNotEmpty)
+            'countryCode': addressCountryCode,
         },
       if (audioMessageUrl != null && audioMessageUrl.isNotEmpty)
         'audioMessageUrl': audioMessageUrl,

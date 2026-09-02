@@ -13,7 +13,7 @@ export async function clearFirestore(): Promise<void> {
   const host = process.env.FIRESTORE_EMULATOR_HOST;
   if (!host) {
     throw new Error(
-      'FIRESTORE_EMULATOR_HOST is not set — run tests via "npm test" ' +
+      'FIRESTORE_EMULATOR_HOST is not set - run tests via "npm test" ' +
         '(firebase emulators:exec), not bare jest.'
     );
   }
@@ -34,8 +34,11 @@ export async function seedService(
     providerId: opts.providerId,
     published: opts.published ?? true,
     title: 'Test service',
-    priceType: 'fixed',
-    priceCents: 1000,
+    priceType: 'daily',
+    // Whole FCFA (spec decision 3). The former `priceCents` was a dead field
+    // name that appeared nowhere else in the codebase; aligned to `price`, the
+    // canonical field every reader uses. Value sits inside the daily range.
+    price: 5000,
   });
 }
 
@@ -165,7 +168,7 @@ export async function createAuthUser(
   try {
     await admin.auth().deleteUser(uid);
   } catch {
-    // didn't exist — fine
+    // didn't exist - fine
   }
   await admin.auth().createUser({ uid, email: `${uid}@test.dev` });
   if (claims) await admin.auth().setCustomUserClaims(uid, claims);

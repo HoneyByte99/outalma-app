@@ -73,4 +73,20 @@ void main() {
       expect(ReviewerRole.fromString('unknown'), ReviewerRole.client);
     });
   });
+
+  // `hidden` was added for moderation. If copyWith drops it, every future call
+  // silently un-hides a moderated review, and nothing else would notice.
+  test('copyWith carries hidden through', () {
+    final moderated = _base().copyWith(hidden: true);
+    expect(moderated.hidden, isTrue);
+    expect(
+      moderated.copyWith(rating: 2).hidden,
+      isTrue,
+      reason: 'a copy that changes something else must not un-hide',
+    );
+  });
+
+  test('hidden defaults to visible', () {
+    expect(_base().hidden, isFalse);
+  });
 }
