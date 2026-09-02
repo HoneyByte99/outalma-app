@@ -104,12 +104,12 @@ class UserAvatar extends StatelessWidget {
       width: size,
       height: size,
       child: ClipOval(
-        // The 40 assets share one background, and it is a THEME-INDEPENDENT
-        // constant on purpose: `oc.surfaceVariant` becomes #252C37 in the dark
-        // theme, where the black line art of the drawing would vanish. An
-        // avatar is a picture, and pictures do not invert.
+        // The background BAKED INTO the assets, so the disc and the drawing
+        // cannot show a seam. Deliberately not `oc.surfaceVariant`, which
+        // becomes #252C37 in the dark theme and would swallow the black line
+        // art: an avatar is a picture, and pictures do not invert.
         child: ColoredBox(
-          color: AppColors.surfaceVariant,
+          color: const Color(AvatarCatalog.tileBackgroundArgb),
           child: SvgPicture.asset(
             ref.assetPath,
             width: size,

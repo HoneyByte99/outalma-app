@@ -44,7 +44,7 @@ class FirestoreUserRepository implements UserRepository {
     //
     // Only these two keys are sent, so nothing else on the document can be
     // clobbered by a stale in-memory copy.
-    await _db.collection('users').doc(userId).set({
+    await FirestoreCollections.usersRaw(_db).doc(userId).set({
       'photoPath': photoPath ?? FieldValue.delete(),
       'avatarId': avatarId ?? FieldValue.delete(),
     }, SetOptions(merge: true));

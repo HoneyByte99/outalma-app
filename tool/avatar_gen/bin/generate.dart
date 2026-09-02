@@ -10,12 +10,10 @@
 /// Three guards, each of which has to hold before a single file is written.
 ///
 ///  1. INTENT. For every entry, the options DiceBear actually resolved are
-///     compared to the intent recorded in the manifest. This is the guard that
-///     matters: since DiceBear 10 a component option is suffixed `Variant`, and
-///     writing `head:` instead of `headVariant:` is accepted and ignored in
-///     silence, leaving the component to the seeded draw. A guard that checked
-///     key NAMES would pass that happily, because `head` is a legal component
-///     name. Comparing resolved options against intent cannot.
+///     compared to the intent recorded in the manifest, and an option that
+///     resolved to NOTHING is a failure. That catches a wrong VALUE for a
+///     legal key: the library already refuses an unknown key itself, see the
+///     note on the Variant suffix below.
 ///
 ///  2. SENTINEL COVERAGE, differentially. Each human is rendered TWICE with two
 ///     different sentinel skin colours, and the two outputs must be identical
@@ -136,12 +134,23 @@ void main(List<String> args) {
         return;
       }
 
-      // A colour the chosen component never references resolves to null. That
-      // is legitimate (see `afro`), so it is listed at the end rather than
-      // failing the run, EXCEPT for the elders below where the hair colour is
-      // the whole point.
       if (got == null) {
-        unusedColours.add('${entry.id}: $key');
+        // A COLOUR the chosen component never references resolves to null, and
+        // that is legitimate: `afro` draws its hair with the ink colour and
+        // ignores headContrastColor. Listed at the end rather than failed,
+        // except for the elders below where the hair colour is the point.
+        if (key.endsWith('Color')) {
+          unusedColours.add('${entry.id}: $key');
+          return;
+        }
+        // Anything else resolving to nothing means the option did not reach
+        // DiceBear at all. Failing here rather than warning is what makes this
+        // guard own its share of the suffix trap instead of leaving all of it
+        // to the key-name check above.
+        failures.add(
+          '${entry.id}: $key resolved to nothing, so it never reached '
+          'DiceBear. Component options are suffixed Variant since 10.',
+        );
         return;
       }
       if (!_matches(intended, got)) {

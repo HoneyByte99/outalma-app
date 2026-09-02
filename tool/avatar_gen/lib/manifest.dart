@@ -9,12 +9,25 @@
 /// Two traps this file exists to avoid, both of which cost a full pass when
 /// missed:
 ///
-///  1. Since DiceBear 10 a component option is suffixed `Variant`. Writing
-///     `head:` instead of `headVariant:` is accepted, ignored IN SILENCE, and
-///     leaves the component to the seeded draw. The generator therefore does
-///     not validate key names (`head` is a legal component name); it compares
-///     the RESOLVED options against the intent recorded here, which is the only
-///     check a wrong suffix cannot pass.
+///  1. Since DiceBear 10 a component option is suffixed `Variant`. The trap that
+///     name is guarding against is REAL, but it lives in the HTTP API, not here:
+///     `api.dicebear.com/10.x/open-peeps/svg?seed=Test&head=afro` returns 200 and
+///     draws `head-grayBun`, a seeded draw, because the API ignores unknown query
+///     parameters. Verified against the live API.
+///
+///     The Dart library does NOT: `Options._validateAndCopy` refuses an unknown
+///     key outright, so `'head': ['afro']` in the manifest throws
+///     `Invalid options: unallowed additional property head` before any guard in
+///     this file runs. Verified by mutation.
+///
+///     This comment is on its third revision and each one was wrong in a way worth
+///     recording: it first credited the resolved-options check with catching the
+///     suffix (it would only have warned), then the key-name check (which does
+///     refuse it, but never gets the chance), and the truth is that the library
+///     fails loudly on its own. The two generator guards are therefore BELTS, and
+///     they still earn their place on what the library does not check: a legal key
+///     carrying a wrong value, and a `*Variant` that resolves to nothing.
+///
 ///  2. `headContrastColor` is the hair colour, and only `#e8e1e1` of its ten
 ///     palette values reads as grey. Left unpinned, an elder comes out
 ///     brown-haired nine times out of ten and the category vanishes without a

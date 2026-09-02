@@ -108,24 +108,40 @@ void main() {
     }
   });
 
-  test('all 12 animals share one background, equal to the humans', () {
-    // A Critters background is NOT transparent: it ships an opaque full-canvas
-    // rect, and left to the seeded draw it would be one of twelve saturated
-    // colours behind the ink. Pinned at generation; asserted here so a
-    // regeneration cannot quietly bring the draw back.
-    final backgrounds = <String>{};
+  test('all 40 assets carry the SAME full-canvas background', () {
+    // Rewritten after a code review: the previous version was green for the
+    // wrong reason. It matched `<rect width="100%?"`, which only ever hit the
+    // animals (a human viewBox is 704x704, an animal 100x100), and its
+    // fallback hardcoded the expected colour, so it could not fail. A
+    // regeneration that gave every file a red background would have passed
+    // while the widget kept painting the old colour behind it, showing a seam
+    // on all 40 tiles.
+    //
+    // Now: every file must MATCH, the width and height must agree, and the one
+    // colour collected must be the constant the widget paints.
+    final expected =
+        '#'
+        '${(AvatarCatalog.tileBackgroundArgb & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+    final backgrounds = <String, String>{};
     for (final f in files) {
-      final match =
-          RegExp(
-            r'<rect width="100%?"[^>]*fill="(#[0-9a-f]{6})"',
-          ).firstMatch(read(f)) ??
-          RegExp(r'fill="(#edf2f5)"').firstMatch(read(f));
-      if (match != null) backgrounds.add(match.group(1)!);
+      final match = RegExp(
+        r'<rect width="(100|704)" height="\1" fill="(#[0-9a-f]{6})"',
+      ).firstMatch(read(f));
+      expect(
+        match,
+        isNotNull,
+        reason: '${idOf(f)} has no full-canvas background rect',
+      );
+      backgrounds[idOf(f)] = match!.group(2)!;
     }
+
+    expect(backgrounds, hasLength(AvatarCatalog.allIds.length));
     expect(
-      backgrounds,
-      hasLength(1),
-      reason: 'the 40 tiles must share a single background, got $backgrounds',
+      backgrounds.values.toSet(),
+      {expected},
+      reason:
+          'the 40 tiles must all carry $expected, the colour '
+          'UserAvatar paints behind them; got ${backgrounds.values.toSet()}',
     );
   });
 

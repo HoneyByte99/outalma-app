@@ -28,6 +28,14 @@ import 'firestore_serialization.dart';
 class FirestoreCollections {
   const FirestoreCollections._();
 
+  /// The UNTYPED users collection. Needed by the one write that has to send a
+  /// `FieldValue.delete()`, which cannot travel through the typed converter.
+  /// Here rather than as a bare `db.collection('users')` at the call site so
+  /// this file stays the only place that spells the collection name.
+  static CollectionReference<Map<String, dynamic>> usersRaw(
+    FirebaseFirestore db,
+  ) => db.collection('users');
+
   static CollectionReference<AppUser> users(FirebaseFirestore db) {
     return db
         .collection('users')

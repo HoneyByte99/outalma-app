@@ -168,25 +168,32 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
     final l10n = AppLocalizations.of(context)!;
     setState(() => _uploading = true);
     try {
+      // ORDER MATTERS, and getting it wrong destroys data. The Firestore write
+      // comes FIRST because deleting the Storage object is irreversible: with
+      // the delete first, a write that then fails on a flaky connection would
+      // leave the photo permanently gone, the state rolled back to "has a
+      // photo", and a snackbar telling the user nothing was saved. They would
+      // believe nothing happened while their photo was destroyed.
+      await ref
+          .read(authNotifierProvider.notifier)
+          .setProfileImage(avatarId: avatarId);
+
+      // Only once the document no longer references it. Best effort, and the
+      // provider READ is inside this try rather than outside it, because it
+      // builds FirebaseStorage.instance and that throws outright with no
+      // Firebase app: an orphan file is a cost, not an outage, and neither a
+      // failed delete nor an unbuildable storage client may undo a choice that
+      // is already saved.
+      //
       // Read from the page, never from the notifier: avatarUploadServiceProvider
       // watches authNotifierProvider, so a notifier reading it back would be
       // its own ancestor and Riverpod would throw CircularDependencyError in
       // every debug run and every test.
-      //
-      // The provider READ is inside this inner try, not outside it, and that
-      // matters: it builds FirebaseStorage.instance, which throws outright
-      // when there is no Firebase app. Choosing an avatar must not fail
-      // because the storage client could not even be constructed, and an
-      // orphan file is a cost rather than an outage.
       try {
         await ref.read(avatarUploadServiceProvider)?.deleteAvatar();
       } catch (e) {
         debugPrint('Old profile photo delete failed, ignoring: $e');
       }
-
-      await ref
-          .read(authNotifierProvider.notifier)
-          .setProfileImage(avatarId: avatarId);
     } catch (e) {
       debugPrint('Avatar choice failed: $e');
       if (mounted) {

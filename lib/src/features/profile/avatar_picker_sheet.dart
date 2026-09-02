@@ -278,7 +278,10 @@ class _ToneRow extends StatelessWidget {
                     i + 1,
                     AvatarCatalog.skinTones.length,
                   ),
-                  child: InkShape(
+                  child: _TouchTarget(
+                    // Keyed so a test can reach a specific swatch without
+                    // depending on a private widget type or on tile order.
+                    key: ValueKey('avatar-tone-$i'),
                     onTap: () => onSelected(i),
                     child: Center(
                       child: Container(
@@ -314,10 +317,11 @@ class _ToneRow extends StatelessWidget {
   }
 }
 
-/// A 44x44 tap target wrapping a smaller visual, so A2 holds without making
-/// the swatch itself huge.
-class InkShape extends StatelessWidget {
-  const InkShape({super.key, required this.onTap, required this.child});
+/// Wraps a smaller visual in a tap target of at least
+/// [AppSpacing.minTouchTarget], so A2 holds without making the swatch itself
+/// huge. Private: it is used once, in this file.
+class _TouchTarget extends StatelessWidget {
+  const _TouchTarget({super.key, required this.onTap, required this.child});
 
   final VoidCallback onTap;
   final Widget child;

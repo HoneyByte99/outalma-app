@@ -29,13 +29,18 @@ impossible for a file under `lib/` to import a package this young.
 The generator writes nothing unless all of the following hold. Each guard is
 here because its absence is silent.
 
-**1. Resolved options must equal the intent.** Since DiceBear 10 a component
-option is suffixed `Variant`. Writing `head:` instead of `headVariant:` is
-accepted, ignored **in silence**, and leaves the component to the seeded draw:
-40 random avatars, no exception, no failing test. A guard on key NAMES would
-pass that happily, because `head` is a legal component name. So the generator
-compares what DiceBear actually resolved (`Avatar.resolvedOptions`) against what
-the manifest asked for, which a wrong suffix cannot pass.
+**1. Resolved options must equal the intent.** For every entry, what DiceBear
+actually resolved is compared to what the manifest asked for, and an option that
+resolved to NOTHING is a failure rather than a warning.
+
+What this does NOT do, corrected after a code review and a mutation: it is not
+what catches `head:` written instead of `headVariant:`. That trap is real, but
+it belongs to the HTTP API, which ignores unknown query parameters:
+`?seed=Test&head=afro` returns 200 and draws `head-grayBun`, a seeded draw.
+The Dart library validates instead, and `'head': [...]` in the manifest throws
+`Invalid options: unallowed additional property head` before any guard here
+runs. So this guard earns its place on what the library does not check: a legal
+key carrying a wrong value, and a `*Variant` that resolves to nothing.
 
 Shapes worth knowing before reading that code, all verified on the package: a
 `*Variant` resolves to a bare string, a `*Color` resolves to a LIST, a

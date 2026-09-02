@@ -398,12 +398,18 @@ describe('isValidAvatarId', () => {
     expect(isValidAvatarId(value)).toBe(false);
   });
 
-  it('refuses a trailing newline, which `$` alone would accept', () => {
-    // The ONLY test that proves the two guards say the same thing. In
-    // JavaScript, without the `m` flag, `$` still matches before a trailing
-    // newline, so /^...$/ would accept this while the RE2 whole-string
-    // `matches()` in firestore.rules refuses it. Mutating the terminator back
-    // to `$` must turn THIS red and nothing else.
+  it('refuses a trailing newline, so the `m` flag can never be added', () => {
+    // Corrected after a mutation pass caught the comment that used to sit
+    // here, which claimed that in JavaScript `$` without the `m` flag still
+    // matches before a trailing newline. That is Python. In JavaScript
+    // /^abc$/.test("abc\n") is FALSE, verified in node, which is why the
+    // source now uses the plain `$` instead of a `(?![\s\S])` terminator
+    // defended by a false reason.
+    //
+    // The test keeps its value all the same: adding the `m` flag WOULD make
+    // this pass, and that is the one change that would break agreement with
+    // the RE2 whole-string `matches()` in firestore.rules. Mutating the
+    // pattern to `/.../m` turns THIS red and nothing else.
     expect(isValidAvatarId('human_afro1_t2\n')).toBe(false);
   });
 

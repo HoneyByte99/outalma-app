@@ -171,7 +171,7 @@ void main() {
     expect(skinOf(0), Color(AvatarCatalog.skinTones[1]));
 
     // The lightest swatch is the sixth.
-    await tester.tap(find.byType(InkShape).last);
+    await tester.tap(find.byKey(const ValueKey('avatar-tone-5')));
     // ONE frame only: the point is what the user sees immediately after the
     // tap, since every visible tile just missed the SVG cache.
     await tester.pump();
@@ -274,12 +274,12 @@ void main() {
     // A2, measured rather than asserted by eye.
     await _openSheet(tester);
 
-    for (final size
-        in tester
-            .widgetList<InkShape>(find.byType(InkShape))
-            .map((_) => tester.getSize(find.byType(InkShape).first))) {
-      expect(size.width, greaterThanOrEqualTo(44));
-      expect(size.height, greaterThanOrEqualTo(44));
+    // Measured per swatch, by key. The previous loop measured the FIRST widget
+    // once per iteration, so it proved nothing about the other five.
+    for (var i = 0; i < AvatarCatalog.skinTones.length; i++) {
+      final size = tester.getSize(find.byKey(ValueKey('avatar-tone-$i')));
+      expect(size.width, greaterThanOrEqualTo(44), reason: 'swatch $i');
+      expect(size.height, greaterThanOrEqualTo(44), reason: 'swatch $i');
     }
 
     final row = tester.getSize(find.text('Importer une photo'));

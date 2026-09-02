@@ -2,6 +2,12 @@ import '../enums/active_mode.dart';
 import '../enums/gender.dart';
 
 class AppUser {
+  /// Any field added here must ALSO be carried by hand in
+  /// `AuthNotifier.setProfileImage`, which rebuilds the user through this
+  /// constructor because `copyWith` cannot express an erasure, and asserted in
+  /// its "it carries EVERY other field across" test. The compiler only
+  /// protects the six required parameters, so an optional field added here and
+  /// forgotten there is dropped in silence on every avatar change.
   const AppUser({
     required this.id,
     required this.displayName,

@@ -40,6 +40,14 @@ abstract final class AvatarCatalog {
   /// uses it, which the generator proves differentially rather than assuming.
   static const int skinSentinelArgb = 0xFFFF00FF;
 
+  /// The background baked into all 40 assets by the generator. A FACT of the
+  /// files, not a theme token: the widget paints it behind the drawing so the
+  /// disc and the artwork cannot show a seam, and it stays the same in both
+  /// themes because a picture does not invert. Changing it means regenerating
+  /// the catalogue, which is why `avatar_assets_test.dart` asserts the shipped
+  /// files really carry this exact value.
+  static const int tileBackgroundArgb = 0xFFEDF2F5;
+
   /// Six tones, darkest first. Frozen: the id stores an INDEX, so changing a
   /// value here silently changes the appearance of everyone who picked it.
   static const List<int> skinTones = <int>[
