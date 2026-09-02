@@ -1920,6 +1920,16 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vous pouvez aussi prendre la photo vous-même.';
 
   @override
+  String get identityCaptureNoDocument =>
+      'Placez votre carte d\'identité dans le cadre.';
+
+  @override
+  String get identityCaptureTooSmall => 'Rapprochez la carte.';
+
+  @override
+  String get identityCaptureTooClose => 'Éloignez un peu la carte.';
+
+  @override
   String identityStepProgress(int current, int total) {
     return 'Étape $current sur $total';
   }

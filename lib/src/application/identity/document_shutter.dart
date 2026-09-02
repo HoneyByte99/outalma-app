@@ -18,6 +18,8 @@
 /// action that asks for no gesture must still require that a gesture happened.
 library;
 
+import '../../domain/identity/document_quad.dart';
+
 /// Why the shutter is doing what it is doing. The screen renders an icon per
 /// value, never colour alone (A3).
 enum DocumentShutterReason {
@@ -42,6 +44,20 @@ enum DocumentShutterReason {
   /// A photo was taken and refused downstream. Held for a while so a person who
   /// cannot read still sees that something happened and was not kept.
   refused,
+
+  /// Sharp and still, but the contour detector sees no credible card. Includes
+  /// a shape that is not a card's: that is the ABSENCE of a card, not a badly
+  /// framed one.
+  noDocument,
+
+  /// A card, too far away to be read. "Come closer."
+  tooSmall,
+
+  /// A card, too close: it touches or overflows the frame. "Back off." Never
+  /// confused with [tooSmall], because telling someone who fills the screen to
+  /// come closer is exactly the kind of nonsense a person who cannot read has
+  /// no way to recover from.
+  tooClose,
 }
 
 /// Immutable shutter state, threaded frame to frame by [evaluateDocumentShutter].
@@ -53,6 +69,7 @@ class DocumentShutterState {
     this.reason = DocumentShutterReason.noFrame,
     this.progress = 0,
     this.shouldCapture = false,
+    this.badFramingSinceMs,
   });
 
   /// The state a screen starts from, and returns to after every capture.
@@ -88,6 +105,20 @@ class DocumentShutterState {
 
   /// True on the single transition where the screen must shoot.
   final bool shouldCapture;
+
+  /// When the current UNINTERRUPTED run of bad framing began.
+  ///
+  /// The carrier of the grace clock, and it is relayed by EVERY branch. Without
+  /// that a single blurred frame, one hand tremor, would reset it and the
+  /// fallback would never fire, which would make "never blocking" a claim
+  /// rather than a behaviour.
+  ///
+  /// It is emphatically NOT the same as [steadySinceMs], which is relayed by
+  /// one branch only. That one guards an UNINTERRUPTED sharp-and-still stretch:
+  /// carrying it through `tooBlurred` and `moving` would turn "800 ms without
+  /// interruption" into "800 ms, tremors tolerated", on the default path, and
+  /// two shipped tests hold it to the stricter meaning.
+  final int? badFramingSinceMs;
 }
 
 /// Advances the shutter by one analysed frame.
@@ -105,10 +136,29 @@ DocumentShutterState evaluateDocumentShutter({
   required double motionThreshold,
   required int steadyHoldMs,
   required int refusedHoldMs,
+  DocumentFraming framing = DocumentFraming.unknown,
+  int framingGraceMs = 4000,
 }) {
   // A refusal owns the screen for its hold, anchored on the first frame that
   // arrives after the resume. Nothing can fire during it.
   final moved = motion > motionThreshold;
+
+  // The grace anchor, computed ONCE and relayed unchanged by every branch
+  // below. One calculation rather than two competing rules: "every branch
+  // relays it" and "good or unknown clears it" would contradict each other on a
+  // frame that is well framed but blurred.
+  final badSince =
+      (framing == DocumentFraming.good || framing == DocumentFraming.unknown)
+      ? null
+      : (prev.badFramingSinceMs ?? nowMs);
+
+  // The fallback, and it is what makes "never blocking" true rather than
+  // declarative: once the bad framing has lasted its grace, the framing is
+  // DOWNGRADED to unknown and the frame is read exactly as it was before this
+  // feature existed. It never bypasses the sharpness or motion gates, so a
+  // blurred frame at expiry is still refused.
+  final graceExpired = badSince != null && nowMs - badSince >= framingGraceMs;
+  final effective = graceExpired ? DocumentFraming.unknown : framing;
 
   if (prev.reason == DocumentShutterReason.refused) {
     final since = prev.refusedSinceMs ?? nowMs;
@@ -120,6 +170,7 @@ DocumentShutterState evaluateDocumentShutter({
         armed: prev.armed || moved,
         refusedSinceMs: since,
         reason: DocumentShutterReason.refused,
+        badFramingSinceMs: badSince,
       );
     }
     // The hold is over: read this frame normally, carrying whatever arming the
@@ -131,22 +182,47 @@ DocumentShutterState evaluateDocumentShutter({
   // Disarmed: the scene has not moved since this screen was entered, so what is
   // in frame is whatever was already there. Never shoot it.
   if (!armed) {
-    return const DocumentShutterState(
+    return DocumentShutterState(
       reason: DocumentShutterReason.waitingForMotion,
+      badFramingSinceMs: badSince,
     );
   }
 
   if (sharpness < sharpnessThreshold) {
-    return const DocumentShutterState(
+    return DocumentShutterState(
       armed: true,
       reason: DocumentShutterReason.tooBlurred,
+      badFramingSinceMs: badSince,
     );
   }
 
   if (moved) {
-    return const DocumentShutterState(
+    return DocumentShutterState(
       armed: true,
       reason: DocumentShutterReason.moving,
+      badFramingSinceMs: badSince,
+    );
+  }
+
+  // Sharp and still, but the framing is readable and wrong. The hold is anchored
+  // HERE, and this is the only branch that carries `steadySinceMs` forward,
+  // which is legitimate precisely because this branch is by definition sharp
+  // and still. The ring keeps filling on the grace, so a person who cannot read
+  // still sees that something is running rather than a ring that jumps from
+  // nothing to full at expiry.
+  if (effective != DocumentFraming.unknown &&
+      effective != DocumentFraming.good) {
+    final graceHeld = badSince == null ? 0 : nowMs - badSince;
+    return DocumentShutterState(
+      armed: true,
+      steadySinceMs: prev.steadySinceMs ?? nowMs,
+      badFramingSinceMs: badSince,
+      reason: switch (effective) {
+        DocumentFraming.tooSmall => DocumentShutterReason.tooSmall,
+        DocumentFraming.tooClose => DocumentShutterReason.tooClose,
+        _ => DocumentShutterReason.noDocument,
+      },
+      progress: (graceHeld / framingGraceMs).clamp(0.0, 1.0),
     );
   }
 
@@ -156,6 +232,7 @@ DocumentShutterState evaluateDocumentShutter({
     return DocumentShutterState(
       armed: true,
       steadySinceMs: since,
+      badFramingSinceMs: badSince,
       reason: DocumentShutterReason.ready,
       progress: 1,
       shouldCapture: true,
@@ -165,6 +242,7 @@ DocumentShutterState evaluateDocumentShutter({
   return DocumentShutterState(
     armed: true,
     steadySinceMs: since,
+    badFramingSinceMs: badSince,
     reason: DocumentShutterReason.steadying,
     progress: held / steadyHoldMs,
   );

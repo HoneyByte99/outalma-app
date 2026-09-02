@@ -123,6 +123,14 @@ class CaptureConfig {
     /// [acquireFrames]: losing slower than acquiring is what stops a single
     /// dropped frame from blanking the screen.
     this.loseFrames = 5,
+
+    /// How long a readable-but-wrong framing may hold the shutter before the
+    /// framing is DOWNGRADED to unknown and the photo is taken anyway.
+    ///
+    /// This is what makes "the contour never blocks anyone" true rather than
+    /// declarative: a card on a dark table, where no contour can be found, is
+    /// still photographed. A mutated guard (T3).
+    this.framingGraceMs = 4000,
   }) : assert(
          rectoSharpnessThreshold > versoSharpnessThreshold,
          'the recto must be strictly harder than the verso (AC-C06)',
@@ -156,7 +164,11 @@ class CaptureConfig {
          'smoothing is a weight on the new position',
        ),
        assert(acquireFrames >= 1, 'at least one detection to appear'),
-       assert(loseFrames >= 1, 'at least one miss to disappear');
+       assert(loseFrames >= 1, 'at least one miss to disappear'),
+       assert(
+         framingGraceMs > 0,
+         'a grace of zero would never let a bad framing be overridden',
+       );
 
   final double rectoSharpnessThreshold;
   final double versoSharpnessThreshold;
@@ -180,6 +192,7 @@ class CaptureConfig {
   final double contourSmoothing;
   final int acquireFrames;
   final int loseFrames;
+  final int framingGraceMs;
 
   /// Whether any contour work should happen at all this frame.
   ///

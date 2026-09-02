@@ -52,13 +52,26 @@ class DocumentFrameOverlay extends StatelessWidget {
     DocumentShutterReason.steadying => Icons.pan_tool,
     DocumentShutterReason.ready => Icons.check_circle,
     DocumentShutterReason.refused => Icons.flip_camera_android,
+    DocumentShutterReason.noDocument => Icons.crop_free,
+    DocumentShutterReason.tooSmall => Icons.zoom_in,
+    DocumentShutterReason.tooClose => Icons.zoom_out,
   };
 
+  // The three new reasons are listed EXPLICITLY, unlike the icon switch which
+  // the compiler would have forced. This one ends in a default, so they would
+  // silently have inherited white and the A3 icon-plus-label pair would sit on
+  // a colour that says nothing.
   Color get _color => switch (reason) {
     DocumentShutterReason.steadying => AppColors.accent,
     DocumentShutterReason.ready => AppColors.accent,
     DocumentShutterReason.refused => AppColors.warning,
-    _ => Colors.white,
+    DocumentShutterReason.noDocument => Colors.white,
+    DocumentShutterReason.tooSmall => AppColors.warning,
+    DocumentShutterReason.tooClose => AppColors.warning,
+    DocumentShutterReason.noFrame => Colors.white,
+    DocumentShutterReason.waitingForMotion => Colors.white,
+    DocumentShutterReason.tooBlurred => Colors.white,
+    DocumentShutterReason.moving => Colors.white,
   };
 
   @override

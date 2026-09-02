@@ -842,6 +842,9 @@
   "identityCaptureHoldStill": "Restez immobile, la photo arrive.",
   "identityCaptureRefused": "Photo non retenue. Recadrez la carte.",
   "identityCaptureManualHint": "Vous pouvez aussi prendre la photo vous-même.",
+  "identityCaptureNoDocument": "Placez votre carte d'identité dans le cadre.",
+  "identityCaptureTooSmall": "Rapprochez la carte.",
+  "identityCaptureTooClose": "Éloignez un peu la carte.",
   "identityStepProgress": "Étape {current} sur {total}",
   "@identityStepProgress": {
     "placeholders": {

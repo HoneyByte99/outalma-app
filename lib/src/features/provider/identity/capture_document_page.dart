@@ -208,19 +208,21 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     );
   }
 
-  /// Runs the contour detection for one frame and drives the overlay.
+  /// Runs the contour detection for one frame, drives the overlay, and returns
+  /// what the shutter should be told about the framing.
   ///
-  /// It deliberately tells the shutter NOTHING in this slice: the contour ships
-  /// as pure display first, so it can be checked against a real card and a real
-  /// phone before any capture behaviour depends on an uncalibrated threshold.
-  void _analyseContour(LumaFrame frame, CaptureConfig config) {
+  /// Returns [DocumentFraming.unknown] on every path that is not a confident
+  /// reading, and whenever `contourFramingEnabled` is off. That is what keeps
+  /// this purely additive: `unknown` reproduces the pre-contour behaviour bit
+  /// for bit.
+  DocumentFraming _analyseContour(LumaFrame frame, CaptureConfig config) {
     // Both flags off: no grid, no Sobel, no cost. "Inert" has to mean inert in
     // milliseconds too, or the P1 and P5 budget lines move while the feature is
     // supposedly switched off.
-    if (!config.contourWorkNeeded) return;
+    if (!config.contourWorkNeeded) return DocumentFraming.unknown;
 
     final geometry = _source.previewGeometry;
-    if (geometry == null) return;
+    if (geometry == null) return DocumentFraming.unknown;
 
     // The premise nothing in the platform guarantees: on Android the plugin
     // binds Preview and ImageAnalysis without a shared ViewPort, so a 16:9
@@ -233,7 +235,7 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     )) {
       _contour.value = const DocumentTrackState.initial();
       _projected.value = null;
-      return;
+      return DocumentFraming.unknown;
     }
 
     final grid = LumaGrid.sample(
@@ -281,6 +283,10 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       // on screen either way.
       _projected.value = _mostlyInside(projected) ? projected : null;
     }
+
+    return config.contourFramingEnabled
+        ? observation.framing
+        : DocumentFraming.unknown;
   }
 
   /// Whether a projected quad sits mostly within the overlay rectangle.
@@ -338,7 +344,7 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     );
     _sharpnessKnown = true;
 
-    _analyseContour(frame, config);
+    final framing = _analyseContour(frame, config);
 
     var previousState = _shutter.value;
     if (_awaitingResumeAnchor) {
@@ -358,6 +364,8 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       motionThreshold: config.motionThreshold,
       steadyHoldMs: config.steadyHoldMs,
       refusedHoldMs: config.refusedHoldMs,
+      framing: framing,
+      framingGraceMs: config.framingGraceMs,
     );
     _shutter.value = next;
 
@@ -538,6 +546,9 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       DocumentShutterReason.steadying => l10n.identityCaptureHoldStill,
       DocumentShutterReason.ready => l10n.identityCaptureHoldStill,
       DocumentShutterReason.refused => l10n.identityCaptureRefused,
+      DocumentShutterReason.noDocument => l10n.identityCaptureNoDocument,
+      DocumentShutterReason.tooSmall => l10n.identityCaptureTooSmall,
+      DocumentShutterReason.tooClose => l10n.identityCaptureTooClose,
     };
   }
 
