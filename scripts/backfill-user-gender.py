@@ -95,6 +95,12 @@ MALE_HIGH = [
     "malick", "mamadou", "modou", "mohamed", "mouhamed", "mouhamadou",
     "moussa", "ousmane", "oumar", "papa", "pape", "saliou", "samba",
     "serigne", "seydou", "sidy", "souleymane", "tapha", "thierno", "youssou",
+    # "doudou": not a derivation, an explicit owner ruling (2026-09-02). The
+    # name is genuinely ambiguous (masculine Senegalese diminutive of
+    # Mamadou/Ahmadou, but also a genderless French term of endearment); the
+    # owner settled the one live account by hand rather than the table
+    # guessing.
+    "doudou",
 ]
 MALE_MEDIUM = [
     # French / European given names present in the corpus. Unambiguous as
@@ -129,13 +135,6 @@ AMBIGUOUS = {
     "khadim": "male, occasionally given to girls in Mouride families",
     "dominique": "used for both in French",
     "claude": "used for both in French",
-    # The one name the live corpus contains that this script refuses to settle.
-    # Read as male in Senegalese usage (a diminutive of Mamadou or Ahmadou:
-    # Doudou Ndiaye Rose), but it is also a French term of endearment with no
-    # gender at all, and it is the only entry standing between this run and a
-    # complete corpus, so it is worth one human answer rather than a guess.
-    "doudou": "male in Senegalese usage (short for Mamadou/Ahmadou), but a "
-              "genderless term of endearment in French. RECOMMENDED: male",
 }
 
 TABLE = {}
