@@ -41,7 +41,12 @@ import '../../domain/utils/distance.dart';
 /// labelling. See [zoneIsLocatable]: those coordinates mean the provider typed a
 /// place name that never resolved to a position. The name is still true and
 /// still worth showing; only the arithmetic on it would be false.
-String? serviceLocationLabel(
+///
+/// ## Why two parts instead of one string
+///
+/// See [ServiceLocationLabel]. This used to return the assembled line, and a
+/// card is too narrow to show all of it.
+ServiceLocationLabel? serviceLocationLabel(
   Service service,
   AppLocalizations l10n, {
   ({double lat, double lng})? origin,
@@ -55,9 +60,11 @@ String? serviceLocationLabel(
         ? null
         : closestZoneKm(locatable, origin.lat, origin.lng);
     if (closest != null) {
-      return l10n.serviceZoneWithDistance(
-        closest.zone.label,
-        formatDistanceKm(closest.km),
+      final km = formatDistanceKm(closest.km);
+      return ServiceLocationLabel(
+        zone: closest.zone.label,
+        detail: l10n.serviceZoneDistancePart(km),
+        spoken: l10n.serviceZoneWithDistance(closest.zone.label, km),
       );
     }
     // A filter is set but no zone of this service can be measured against it.
@@ -66,5 +73,49 @@ String? serviceLocationLabel(
 
   final first = zones.first.label;
   final others = zones.length - 1;
-  return others == 0 ? first : l10n.serviceZoneWithMore(first, others);
+  if (others == 0) {
+    // Nothing to put after the name, so no detail at all: an empty tail would
+    // still cost the separator and the gap that go with it.
+    return ServiceLocationLabel(zone: first, detail: null, spoken: first);
+  }
+  return ServiceLocationLabel(
+    zone: first,
+    detail: l10n.serviceZoneMorePart(others),
+    spoken: l10n.serviceZoneWithMore(first, others),
+  );
+}
+
+/// That line split where it has to be cut: the part that may be truncated, and
+/// the part that may not.
+///
+/// A catalogue card is about 140 px wide for this line on a 375 px phone. One
+/// pre-assembled "<zone> · <km>" string in one ellipsed `Text` fits neither
+/// part reliably, and the ellipsis always eats the SAME end: the tail, which is
+/// the distance. That produced two cards side by side where one read "Dakar
+/// Ngor · 6.9 km" and the other "Dakar Grand Yoff Extension Front de T...",
+/// informative next to useless, the difference being nothing but the length of
+/// a name the client usually typed into the filter themselves.
+///
+/// So the caller renders [zone] and [detail] as two separate boxes and decides
+/// which one gives up width. Distance beats name: it is what makes a client
+/// choose between two providers, the name is context.
+class ServiceLocationLabel {
+  const ServiceLocationLabel({
+    required this.zone,
+    required this.detail,
+    required this.spoken,
+  });
+
+  /// The zone name. The context, and the part that ellipses.
+  final String zone;
+
+  /// The short decisive tail: a distance, or a count of the other zones the
+  /// provider covers. Null when neither applies (one zone, no filter), and
+  /// then the caller renders nothing after the name.
+  final String? detail;
+
+  /// The whole line as one string, for a screen reader. What is visually
+  /// truncated is still announced in full, so an ellipsis stays a layout
+  /// decision and never becomes a loss of information.
+  final String spoken;
 }

@@ -1153,26 +1153,87 @@ class ServiceCard extends ConsumerWidget {
                     // same kind as price, not part of the provider's identity.
                     // A pin icon carries the meaning for a client who does not
                     // read the label, which is a real part of this audience.
+                    //
+                    // The zone name and the distance are TWO boxes, not one
+                    // string: this line has about 140 px on a 375 px phone, and
+                    // an ellipsis always eats the same end. Assembled, it ate
+                    // the distance, so "Dakar Ngor · 6.9 km" sat next to
+                    // "Dakar Grand Yoff Extension Front de T...". The distance
+                    // is what makes a client choose; the name is context they
+                    // just typed into the filter.
                     if (locationLabel != null) ...[
                       const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.place_outlined,
-                            size: 12,
-                            color: oc.secondaryText,
+                      // One announcement for the whole line, from the assembled
+                      // form, so what is visually cut is still read out. Two
+                      // Texts would otherwise become two announcements, the
+                      // second of them a bare "· 6.9 km".
+                      Semantics(
+                        label: locationLabel.spoken,
+                        child: ExcludeSemantics(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final style = Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(color: oc.secondaryText);
+                              // What is left for the two texts once the pin and
+                              // the two gaps are paid for. The distance may take
+                              // ALL of it, and no more: at a 200 percent text
+                              // scale it is wider than the whole line on its
+                              // own, and a child that simply refuses to shrink
+                              // overflows the Row instead of the card growing.
+                              final textRoom =
+                                  (constraints.maxWidth - 12 - 2 - 2).clamp(
+                                    0.0,
+                                    double.infinity,
+                                  );
+                              return Row(
+                                children: [
+                                  Icon(
+                                    Icons.place_outlined,
+                                    size: 12,
+                                    color: oc.secondaryText,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  // Flexible, not Expanded: the name gives up
+                                  // the width, and when it is short the distance
+                                  // stays beside it instead of drifting to the
+                                  // far edge.
+                                  Flexible(
+                                    child: Text(
+                                      locationLabel.zone,
+                                      style: style,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  // Laid out before the flexible name, so it
+                                  // takes what it needs and the name lives on
+                                  // the remainder. That is the whole fix. Its
+                                  // own ellipsis is a last resort for the case
+                                  // where even the distance alone does not fit,
+                                  // and there the name has already yielded
+                                  // every pixel it had.
+                                  if (locationLabel.detail != null) ...[
+                                    const SizedBox(width: 2),
+                                    ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxWidth: textRoom,
+                                      ),
+                                      child: Text(
+                                        locationLabel.detail!,
+                                        style: style,
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              );
+                            },
                           ),
-                          const SizedBox(width: 2),
-                          Expanded(
-                            child: Text(
-                              locationLabel,
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(color: oc.secondaryText),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                     const SizedBox(height: AppSpacing.xs),

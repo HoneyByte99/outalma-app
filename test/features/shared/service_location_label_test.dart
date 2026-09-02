@@ -5,6 +5,12 @@
 // tests pin down what is now displayed instead, and above all the two ways it
 // could lie: a distance shown with no reference point, and a distance measured
 // from a zone that was never located.
+//
+// The line comes back in two parts, [ServiceLocationLabel.zone] and
+// [ServiceLocationLabel.detail], because a card is too narrow to show both and
+// the caller has to choose which one gives up width. These tests check the
+// split; service_card_location_line_test checks that the card then renders the
+// distance whole at a real column width.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outalma_app/l10n/app_localizations.dart';
@@ -67,24 +73,31 @@ void main() {
 
   group('no location filter: the zone alone', () {
     test('a single zone shows its label and NO distance', () {
-      final label = serviceLocationLabel(_service([_plateau]), l10n);
-      expect(label, 'Dakar Plateau');
+      final label = serviceLocationLabel(_service([_plateau]), l10n)!;
+      expect(label.zone, 'Dakar Plateau');
+      expect(label.spoken, 'Dakar Plateau');
       expect(
-        label,
-        isNot(contains('km')),
+        label.detail,
+        isNull,
         reason:
             'a distance with no reference point would read as "from you" '
-            'while meaning "from the first zone in the list"',
+            'while meaning "from the first zone in the list", and an empty '
+            'detail would still cost the card its separator and gap',
       );
     });
 
     test('several zones show the first plus a count of the others', () {
       // Dropping the count would let a client read "Dakar Plateau" and
       // conclude the provider does not cover Rufisque, when they do.
-      expect(
-        serviceLocationLabel(_service([_plateau, _rufisque, _pikine]), l10n),
-        'Dakar Plateau +2',
-      );
+      final label = serviceLocationLabel(
+        _service([_plateau, _rufisque, _pikine]),
+        l10n,
+      )!;
+      expect(label.zone, 'Dakar Plateau');
+      // The count travels in the detail, the part the card never truncates:
+      // it is short and decisive, exactly like a distance.
+      expect(label.detail, '+2');
+      expect(label.spoken, 'Dakar Plateau +2');
     });
 
     test('a service with no zone at all returns null, not an empty line', () {
@@ -99,8 +112,11 @@ void main() {
         _service([_plateau]),
         l10n,
         origin: (lat: 14.6693, lng: -17.4381),
-      );
-      expect(label, 'Dakar Plateau · 0.0 km');
+      )!;
+      expect(label.zone, 'Dakar Plateau');
+      expect(label.detail, '· 0.0 km');
+      // The two parts, reassembled, are what a screen reader gets.
+      expect(label.spoken, 'Dakar Plateau · 0.0 km');
     });
 
     test('multi-zone: the zone nearest the filter wins, not the first', () {
@@ -111,10 +127,11 @@ void main() {
         _service([_plateau, _pikine, _rufisque]),
         l10n,
         origin: (lat: 14.7167, lng: -17.2667),
-      );
-      expect(label, startsWith('Rufisque · '));
-      expect(label, isNot(contains('Dakar Plateau')));
-      expect(label, isNot(contains('Pikine')));
+      )!;
+      expect(label.zone, 'Rufisque');
+      expect(label.detail, startsWith('· '));
+      expect(label.spoken, isNot(contains('Dakar Plateau')));
+      expect(label.spoken, isNot(contains('Pikine')));
     });
 
     test('the count of other zones is dropped once a distance is shown', () {
@@ -124,9 +141,10 @@ void main() {
         _service([_plateau, _rufisque, _pikine]),
         l10n,
         origin: (lat: 14.6693, lng: -17.4381),
-      );
-      expect(label, 'Dakar Plateau · 0.0 km');
-      expect(label, isNot(contains('+')));
+      )!;
+      expect(label.zone, 'Dakar Plateau');
+      expect(label.detail, '· 0.0 km');
+      expect(label.spoken, isNot(contains('+')));
     });
 
     test('an UNLOCATED zone never wins the closest contest', () {
@@ -139,9 +157,10 @@ void main() {
         _service([_unlocated, _plateau]),
         l10n,
         origin: (lat: 14.6693, lng: -17.4381),
-      );
-      expect(label, 'Dakar Plateau · 0.0 km');
-      expect(label, isNot(contains('Saint-Louis')));
+      )!;
+      expect(label.zone, 'Dakar Plateau');
+      expect(label.detail, '· 0.0 km');
+      expect(label.spoken, isNot(contains('Saint-Louis')));
     });
 
     test('all zones unlocated: the label survives, the distance does not', () {
@@ -151,9 +170,10 @@ void main() {
         _service([_unlocated]),
         l10n,
         origin: (lat: 14.6693, lng: -17.4381),
-      );
-      expect(label, 'Saint-Louis');
-      expect(label, isNot(contains('km')));
+      )!;
+      expect(label.zone, 'Saint-Louis');
+      expect(label.detail, isNull);
+      expect(label.spoken, 'Saint-Louis');
     });
   });
 

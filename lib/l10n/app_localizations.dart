@@ -1388,6 +1388,18 @@ abstract class AppLocalizations {
   /// **'{label} +{count}'**
   String serviceZoneWithMore(String label, int count);
 
+  /// Service card: the distance part of the location line ALONE, rendered in its own box beside the zone name so the ellipsis can never eat it. Keep it identical to the tail of serviceZoneWithDistance, which is the same line assembled for screen readers.
+  ///
+  /// In en, this message translates to:
+  /// **'· {km} km'**
+  String serviceZoneDistancePart(String km);
+
+  /// Service card: the count of other zones ALONE, rendered in its own box beside the zone name so the ellipsis can never eat it. Keep it identical to the tail of serviceZoneWithMore.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count}'**
+  String serviceZoneMorePart(int count);
+
   /// No description provided for @bookingOpenDirections.
   ///
   /// In en, this message translates to:

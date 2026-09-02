@@ -9,6 +9,11 @@
 // These assertions render HomePage rather than a replica of the card. A replica
 // would keep passing after the real card changed, which is the failure mode
 // this file exists to prevent.
+//
+// The line is now two boxes, a zone name that ellipses and a distance that does
+// not, so the assertions below look for two Texts where they used to look for
+// one assembled string. Which of the two the ellipsis is allowed to eat is
+// proved in service_card_location_line_test.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -146,7 +151,10 @@ void main() {
         _wrap(services: [_service('Menage')], filter: _plateauFilter),
       );
 
-      expect(find.text('Dakar Plateau · 0.0 km'), findsOneWidget);
+      // Two Texts, not one string: the zone name ellipses, the distance never
+      // does. See service_card_location_line_test for why.
+      expect(find.text('Dakar Plateau'), findsOneWidget);
+      expect(find.text('· 0.0 km'), findsOneWidget);
     });
 
     testWidgets('multi-zone with a filter: the CLOSEST zone is the one shown', (
@@ -163,7 +171,8 @@ void main() {
         ),
       );
 
-      expect(find.textContaining('Dakar Plateau ·'), findsOneWidget);
+      expect(find.text('Dakar Plateau'), findsOneWidget);
+      expect(find.textContaining('· 0.0 km'), findsOneWidget);
       expect(find.textContaining('Rufisque'), findsNothing);
     });
 
@@ -179,7 +188,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Rufisque +1'), findsOneWidget);
+      expect(find.text('Rufisque'), findsOneWidget);
+      expect(find.text('+1'), findsOneWidget);
     });
 
     testWidgets('a service with no zone renders no location line at all', (

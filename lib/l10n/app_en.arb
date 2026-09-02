@@ -354,6 +354,24 @@
       }
     }
   },
+  "serviceZoneDistancePart": "\u00b7 {km} km",
+  "@serviceZoneDistancePart": {
+    "description": "Service card: the distance part of the location line ALONE, rendered in its own box beside the zone name so the ellipsis can never eat it. Keep it identical to the tail of serviceZoneWithDistance, which is the same line assembled for screen readers.",
+    "placeholders": {
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceZoneMorePart": "+{count}",
+  "@serviceZoneMorePart": {
+    "description": "Service card: the count of other zones ALONE, rendered in its own box beside the zone name so the ellipsis can never eat it. Keep it identical to the tail of serviceZoneWithMore.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "bookingOpenDirections": "Directions",
   "bookingContact": "Contact",
   "bookingPhoneNotShared": "Phone number not yet shared",

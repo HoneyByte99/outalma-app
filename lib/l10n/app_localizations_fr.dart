@@ -724,6 +724,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String serviceZoneDistancePart(String km) {
+    return '· $km km';
+  }
+
+  @override
+  String serviceZoneMorePart(int count) {
+    return '+$count';
+  }
+
+  @override
   String get bookingOpenDirections => 'Itinéraire';
 
   @override
