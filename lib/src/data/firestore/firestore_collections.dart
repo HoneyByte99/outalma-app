@@ -260,13 +260,12 @@ class FirestoreCollections {
       // document feeds the catalogue card a guest sees, and 50 of the 50
       // production documents predate the field.
       gender: Gender.tryParse(data['gender']),
-      // Read defensively, unlike the `as String?` neighbours above. A
-      // non-string here would throw inside the converter, and on the `users`
-      // path that throw is swallowed by _resolveState's catch, which returns
-      // AuthUnauthenticated: the owner would be signed out of their own
-      // account by a bad value in a decorative field. The rule and the
-      // projection both refuse a non-string, so this only ever fires on a
-      // value written before those guards existed.
+      // Read defensively, like the `users` converter above but for a
+      // different consequence: this document feeds surfaces a VISITOR is
+      // looking at, so a throw here would break a page for somebody with no
+      // account and no way to fix it. The projection only ever publishes a
+      // well-formed token, so this fires solely on a value written before that
+      // guard existed.
       avatarId: data['avatarId'] is String ? data['avatarId'] as String : null,
     );
   }
