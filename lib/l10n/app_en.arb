@@ -259,7 +259,7 @@
   "serviceDeleteBody": "This listing will be permanently removed.",
   "serviceDeleted": "Service deleted",
   "ratingNew": "New",
-  "ratingFromClients": "{count, plural, =1{\u00b7 1 client review} other{\u00b7 {count} client reviews}}",
+  "ratingFromClients": "{count, plural, =1{· 1 client review} other{· {count} client reviews}}",
   "@ratingFromClients": {
     "placeholders": {
       "count": {
@@ -267,7 +267,7 @@
       }
     }
   },
-  "ratingFloorHintClients": "\u00b7 fewer than {count} client reviews",
+  "ratingFloorHintClients": "· fewer than {count} client reviews",
   "@ratingFloorHintClients": {
     "placeholders": {
       "count": {
@@ -275,7 +275,7 @@
       }
     }
   },
-  "ratingFloorHint": "\u00b7 fewer than {count} reviews",
+  "ratingFloorHint": "· fewer than {count} reviews",
   "@ratingFloorHint": {
     "placeholders": {
       "count": {
@@ -330,7 +330,7 @@
       }
     }
   },
-  "serviceZoneWithDistance": "{label} \u00b7 {km} km",
+  "serviceZoneWithDistance": "{label} · {km} km",
   "@serviceZoneWithDistance": {
     "description": "Service card: the closest intervention zone and its distance from the active location filter.",
     "placeholders": {
@@ -1004,5 +1004,46 @@
   "bookingRequiresLogin": "Create an account to request this service",
   "guestLockedSectionLogin": "Sign in to open this section",
   "introContinueAsGuest": "Browse without an account",
-  "introAlreadyHaveAccount": "I already have an account"
+  "introAlreadyHaveAccount": "I already have an account",
+  "avatarSheetTitle": "Profile picture",
+  "avatarImportPhoto": "Import a photo",
+  "avatarRemove": "Remove, back to initials",
+  "avatarSkinToneLabel": "Skin tone",
+  "avatarSectionAnimals": "Animals",
+  "avatarErrorSave": "Could not save your choice. Please try again.",
+  "profileChangeAvatarA11y": "Change profile picture",
+  "avatarItemLabel": "Avatar {index} of {total}",
+  "@avatarItemLabel": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "avatarAnimalLabel": "Animal {index} of {total}",
+  "@avatarAnimalLabel": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "avatarSkinToneItem": "Skin tone {index} of {total}",
+  "@avatarSkinToneItem": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "avatarSheetClose": "Close"
 }

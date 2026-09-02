@@ -2219,4 +2219,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get introAlreadyHaveAccount => 'I already have an account';
+
+  @override
+  String get avatarSheetTitle => 'Profile picture';
+
+  @override
+  String get avatarImportPhoto => 'Import a photo';
+
+  @override
+  String get avatarRemove => 'Remove, back to initials';
+
+  @override
+  String get avatarSkinToneLabel => 'Skin tone';
+
+  @override
+  String get avatarSectionAnimals => 'Animals';
+
+  @override
+  String get avatarErrorSave => 'Could not save your choice. Please try again.';
+
+  @override
+  String get profileChangeAvatarA11y => 'Change profile picture';
+
+  @override
+  String avatarItemLabel(int index, int total) {
+    return 'Avatar $index of $total';
+  }
+
+  @override
+  String avatarAnimalLabel(int index, int total) {
+    return 'Animal $index of $total';
+  }
+
+  @override
+  String avatarSkinToneItem(int index, int total) {
+    return 'Skin tone $index of $total';
+  }
+
+  @override
+  String get avatarSheetClose => 'Close';
 }

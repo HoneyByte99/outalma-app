@@ -4129,6 +4129,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I already have an account'**
   String get introAlreadyHaveAccount;
+
+  /// No description provided for @avatarSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile picture'**
+  String get avatarSheetTitle;
+
+  /// No description provided for @avatarImportPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a photo'**
+  String get avatarImportPhoto;
+
+  /// No description provided for @avatarRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove, back to initials'**
+  String get avatarRemove;
+
+  /// No description provided for @avatarSkinToneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Skin tone'**
+  String get avatarSkinToneLabel;
+
+  /// No description provided for @avatarSectionAnimals.
+  ///
+  /// In en, this message translates to:
+  /// **'Animals'**
+  String get avatarSectionAnimals;
+
+  /// No description provided for @avatarErrorSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save your choice. Please try again.'**
+  String get avatarErrorSave;
+
+  /// No description provided for @profileChangeAvatarA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'Change profile picture'**
+  String get profileChangeAvatarA11y;
+
+  /// No description provided for @avatarItemLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar {index} of {total}'**
+  String avatarItemLabel(int index, int total);
+
+  /// No description provided for @avatarAnimalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Animal {index} of {total}'**
+  String avatarAnimalLabel(int index, int total);
+
+  /// No description provided for @avatarSkinToneItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Skin tone {index} of {total}'**
+  String avatarSkinToneItem(int index, int total);
+
+  /// No description provided for @avatarSheetClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get avatarSheetClose;
 }
 
 class _AppLocalizationsDelegate

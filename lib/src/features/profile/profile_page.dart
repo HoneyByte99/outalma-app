@@ -19,6 +19,7 @@ import '../../application/review/review_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../application/user/user_providers.dart';
 import '../../data/services/avatar_upload_service.dart';
+import 'avatar_picker_sheet.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/identity_status.dart';
 import '../../domain/models/app_user.dart';
@@ -133,7 +134,76 @@ class _EditableUserHeader extends ConsumerStatefulWidget {
 class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
   bool _uploading = false;
 
-  Future<void> _pickAvatar() async {
+  /// Opens the picker and routes its three outcomes. One entry point, no
+  /// intermediate action menu: the sheet itself carries the choices.
+  Future<void> _openAvatarSheet() async {
+    final authState = ref.read(authNotifierProvider).valueOrNull;
+    if (authState is! AuthAuthenticated) return;
+    final user = authState.user;
+
+    final pick = await showAvatarPickerSheet(
+      context,
+      currentAvatarId: user.avatarId,
+      hasPhoto: user.photoPath != null && user.photoPath!.isNotEmpty,
+    );
+    if (pick == null || !mounted) return;
+
+    switch (pick) {
+      case PickPhoto():
+        await _uploadPhoto();
+      case PickAvatar(:final avatarId):
+        await _saveChoice(avatarId: avatarId);
+      case PickNone():
+        await _saveChoice(avatarId: null);
+    }
+  }
+
+  /// Writes an avatar choice, or clears both fields when [avatarId] is null.
+  ///
+  /// The Storage object of a previously imported photo is deleted first, and a
+  /// failure there is logged and swallowed: an orphan file is a cost, not an
+  /// outage, and the user must not see their avatar choice fail because an old
+  /// file resisted.
+  Future<void> _saveChoice({required String? avatarId}) async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _uploading = true);
+    try {
+      // Read from the page, never from the notifier: avatarUploadServiceProvider
+      // watches authNotifierProvider, so a notifier reading it back would be
+      // its own ancestor and Riverpod would throw CircularDependencyError in
+      // every debug run and every test.
+      //
+      // The provider READ is inside this inner try, not outside it, and that
+      // matters: it builds FirebaseStorage.instance, which throws outright
+      // when there is no Firebase app. Choosing an avatar must not fail
+      // because the storage client could not even be constructed, and an
+      // orphan file is a cost rather than an outage.
+      try {
+        await ref.read(avatarUploadServiceProvider)?.deleteAvatar();
+      } catch (e) {
+        debugPrint('Old profile photo delete failed, ignoring: $e');
+      }
+
+      await ref
+          .read(authNotifierProvider.notifier)
+          .setProfileImage(avatarId: avatarId);
+    } catch (e) {
+      debugPrint('Avatar choice failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.avatarErrorSave),
+            backgroundColor: context.oc.error,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _uploadPhoto() async {
     // Read current user at call time , don't depend on widget prop
     final authState = ref.read(authNotifierProvider).valueOrNull;
     if (authState is! AuthAuthenticated) return;
@@ -147,12 +217,14 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
       final url = await service.pickAndUpload();
       if (url == null) return; // user cancelled
 
+      // setProfileImage and NOT updateProfile: importing a photo has to CLEAR
+      // the avatar, and updateProfile cannot express a passage to null. Left
+      // as updateProfile, the photo would be stored while the old avatar
+      // stayed on the document, and the display order (photo first) would just
+      // happen to hide the inconsistency.
       await ref
           .read(authNotifierProvider.notifier)
-          .updateProfile(
-            displayName: authState.user.displayName,
-            photoPath: url,
-          );
+          .setProfileImage(photoPath: url);
     } catch (e) {
       // Keep the technical detail in the logs, never on screen (m3): the target
       // audience reads a generic localized message, not a raw exception string.
@@ -192,48 +264,54 @@ class _EditableUserHeaderState extends ConsumerState<_EditableUserHeader> {
       child: Row(
         children: [
           // Tappable avatar with camera overlay
-          GestureDetector(
-            onTap: _uploading ? null : _pickAvatar,
-            child: Stack(
-              children: [
-                _uploading
-                    ? SizedBox(
-                        width: 60,
-                        height: 60,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: oc.primary,
+          Semantics(
+            button: true,
+            label: AppLocalizations.of(context)!.profileChangeAvatarA11y,
+            child: GestureDetector(
+              onTap: _uploading ? null : _openAvatarSheet,
+              child: Stack(
+                children: [
+                  _uploading
+                      ? SizedBox(
+                          width: 60,
+                          height: 60,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: oc.primary,
+                          ),
+                        )
+                      : UserAvatar(
+                          // Keyed on BOTH, otherwise switching from a photo to an avatar (or
+                          // between two avatars) leaves the old subtree in place.
+                          key: ValueKey('${user.photoPath}|${user.avatarId}'),
+                          displayName: user.displayName,
+                          photoPath: user.photoPath,
+                          avatarId: user.avatarId,
+                          radius: 30,
                         ),
-                      )
-                    : UserAvatar(
-                        // Keyed on BOTH, otherwise switching from a photo to an avatar (or
-                        // between two avatars) leaves the old subtree in place.
-                        key: ValueKey('${user.photoPath}|${user.avatarId}'),
-                        displayName: user.displayName,
-                        photoPath: user.photoPath,
-                        avatarId: user.avatarId,
-                        radius: 30,
-                      ),
-                if (!_uploading)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: oc.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: oc.surface, width: 2),
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt_rounded,
-                        size: 11,
-                        color: Colors.white,
+                  if (!_uploading)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: oc.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: oc.surface, width: 2),
+                        ),
+                        // Not a camera any more: the tap opens a CHOICE, and an
+                        // affordance that promises the gallery would lie.
+                        child: const Icon(
+                          Icons.edit_rounded,
+                          size: 11,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
 
