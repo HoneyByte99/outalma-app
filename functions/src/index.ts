@@ -2606,16 +2606,66 @@ async function incrementStatIdempotent(
   });
 }
 
+/**
+ * Atomically subtract from stats fields, floored at zero, guarded by the same
+ * dedup event document as the increments.
+ *
+ * FieldValue.increment(-1) is deliberately NOT used here. The counters predate
+ * their delete triggers and have already been repaired by hand once, so the
+ * live document holds a number that does not match the collection sizes. A
+ * blind decrement would happily drive a field below zero and leave it there
+ * for good, which is worse than the over-count it is meant to fix. The
+ * transaction reads the current value first and floors every field at 0.
+ *
+ * `fields` carries POSITIVE amounts to subtract (`{ totalUsers: 1 }`).
+ */
+async function decrementStatIdempotent(
+  eventId: string,
+  eventType: string,
+  fields: Record<string, number>,
+): Promise<void> {
+  const dedupRef = db.doc(`processed_events/${eventId}`);
+  await db.runTransaction(async (tx) => {
+    // Both reads happen before any write: a Firestore transaction forbids the
+    // reverse order.
+    const dedup = await tx.get(dedupRef);
+    if (dedup.exists) return; // already processed : Firebase retry guard
+    const current = ((await tx.get(STATS_REF)).data() ?? {}) as Record<string, unknown>;
+
+    const update: Record<string, unknown> = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    for (const [field, amount] of Object.entries(fields)) {
+      const value = typeof current[field] === 'number' ? (current[field] as number) : 0;
+      update[field] = Math.max(0, value - amount);
+    }
+
+    tx.set(dedupRef, {
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      type: eventType,
+    });
+    tx.set(STATS_REF, update, { merge: true });
+  });
+}
+
 export const onUserCreated = onDocumentCreated('users/{userId}', async (event) => {
   await incrementStatIdempotent(event.id, 'user_created', {
     totalUsers: admin.firestore.FieldValue.increment(1),
   });
 });
 
+export const onUserDeleted = onDocumentDeleted('users/{userId}', async (event) => {
+  await decrementStatIdempotent(event.id, 'user_deleted', { totalUsers: 1 });
+});
+
 export const onProviderCreated = onDocumentCreated('providers/{providerId}', async (event) => {
   await incrementStatIdempotent(event.id, 'provider_created', {
     totalProviders: admin.firestore.FieldValue.increment(1),
   });
+});
+
+export const onProviderDeleted = onDocumentDeleted('providers/{providerId}', async (event) => {
+  await decrementStatIdempotent(event.id, 'provider_deleted', { totalProviders: 1 });
 });
 
 export const onServiceCreated = onDocumentCreated('services/{serviceId}', async (event) => {
@@ -2644,6 +2694,14 @@ export const onServiceCreated = onDocumentCreated('services/{serviceId}', async 
       );
     }
   }
+});
+
+export const onServiceDeleted = onDocumentDeleted('services/{serviceId}', async (event) => {
+  await decrementStatIdempotent(event.id, 'service_deleted', { totalServices: 1 });
+  // The providers/{providerId} document created as a side effect of
+  // onServiceCreated is deliberately left alone: it carries a profile (bio,
+  // serviceArea, suspended) that outlives any single service, and the provider
+  // may still have others.
 });
 
 export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async (event) => {
@@ -2760,7 +2818,26 @@ export const onBookingUpdatedStats = onDocumentUpdated('bookings/{bookingId}', a
     await incrementStatIdempotent(event.id, 'booking_done', {
       totalBookingsDone: admin.firestore.FieldValue.increment(1),
     });
+    return;
   }
+
+  // Symmetric leg. The increment above fires on every transition INTO done, so
+  // a booking reopened and completed again (done -> disputed -> done) counted
+  // twice with nothing ever giving the point back. Decrementing when a booking
+  // LEAVES done makes totalBookingsDone a consistent count of the bookings
+  // currently done, the same semantics totalReportsPending already has.
+  if (before.status === 'done' && after.status !== 'done') {
+    await decrementStatIdempotent(event.id, 'booking_undone', { totalBookingsDone: 1 });
+  }
+});
+
+export const onBookingDeleted = onDocumentDeleted('bookings/{bookingId}', async (event) => {
+  const booking = event.data?.data() as { status?: string } | undefined;
+  await decrementStatIdempotent(event.id, 'booking_deleted', {
+    totalBookings: 1,
+    // A deleted booking that was done also stops counting as done.
+    ...(booking?.status === 'done' ? { totalBookingsDone: 1 } : {}),
+  });
 });
 
 export const onReportCreatedStats = onDocumentCreated('reports/{reportId}', async (event) => {
@@ -2776,10 +2853,29 @@ export const onReportUpdatedStats = onDocumentUpdated('reports/{reportId}', asyn
   if (!before || !after || before.status === after.status) return;
 
   if (before.status === 'open' && after.status !== 'open') {
-    await incrementStatIdempotent(event.id, 'report_closed', {
-      totalReportsPending: admin.firestore.FieldValue.increment(-1),
+    // Was a raw increment(-1), which drove the field negative whenever a report
+    // was closed on a stats document that had not counted its creation (every
+    // report that predates these triggers). Same clamped path as the deletes.
+    await decrementStatIdempotent(event.id, 'report_closed', { totalReportsPending: 1 });
+    return;
+  }
+
+  // Reopening a closed report puts it back in the pending queue.
+  if (before.status !== 'open' && after.status === 'open') {
+    await incrementStatIdempotent(event.id, 'report_reopened', {
+      totalReportsPending: admin.firestore.FieldValue.increment(1),
     });
   }
+});
+
+export const onReportDeleted = onDocumentDeleted('reports/{reportId}', async (event) => {
+  const report = event.data?.data() as { status?: string } | undefined;
+  await decrementStatIdempotent(event.id, 'report_deleted', {
+    totalReports: 1,
+    // Only a still-open report was being counted as pending; a closed one
+    // already gave its point back through onReportUpdatedStats.
+    ...(report?.status === 'open' ? { totalReportsPending: 1 } : {}),
+  });
 });
 
 // ---------------------------------------------------------------------------
