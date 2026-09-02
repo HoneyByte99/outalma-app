@@ -47,12 +47,14 @@ Firestore collection: `users/{uid}`
 |---|---|---|
 | `id` | String | Firebase Auth UID (document ID) |
 | `displayName` | String | Public display name |
-| `photoPath` | String? | Firebase Storage path (not URL) |
+| `photoPath` | String? | The HTTPS download URL of the uploaded photo, not a Storage path. The name is a legacy misnomer; corrected here on 2026-09-02 after being wrong since the field shipped. |
 | `email` | String | From Firebase Auth |
 | `phoneE164` | String? | Private : never exposed publicly |
 | `country` | String | "FR" or "SN" |
 | `activeMode` | String | "client" or "provider", the current UI switch state |
 | `pushToken` | String? | FCM token for notifications |
+| `gender` | String? | "male" or "female", declared at sign-up. Null means an account that predates the field. |
+| `avatarId` | String? | Illustrated avatar chosen from the catalogue, e.g. `human_afro1_t2`. An opaque token resolved by `AvatarCatalog.parse`, never a path. Display order: photo, then avatar, then initials. |
 | `createdAt` | Timestamp | UTC |
 
 `activeMode` is the Turo-style switch. It is separate from whether the user has an
@@ -60,6 +62,38 @@ active provider profile. A user can be `activeMode=provider` only if `providers/
 and `active=true`.
 
 ---
+
+## PublicProfile (`public_profiles/{uid}`)
+
+A PII-free mirror of `users`, **world readable**, because a visitor with no
+account browses the catalogue and every card, service detail and review row
+carries a name and an avatar. Reading `users` there returns PERMISSION_DENIED,
+and opening `users` would have published every address and phone number.
+
+No client can write it, not even an admin: `allow write: if false`. It is
+derived from `users/{uid}` by the `mirrorPublicProfile` trigger (Admin SDK,
+which bypasses the rules). A client-writable projection would let anyone
+publish any name next to any service.
+
+| Field | Type | Notes |
+|---|---|---|
+| `displayName` | String | Falls back to "" if the source is not a string |
+| `photoPath` | String? | Omitted when absent or empty, never written as null |
+| `avatarId` | String? | Omitted unless it matches the catalogue grammar: the projection VALUE-checks this one rather than type-checking it |
+| `country` | String? | Omitted when absent or empty |
+| `phoneVerified` | bool | Derived, whether a number is on file. Never the number. |
+| `gender` | String? | Omitted unless "male" or "female" |
+
+The projection is an ALLOWLIST built key by key, never a copy of the source with
+a few keys deleted: a deny list would leak the next PII field someone adds to
+`users`. Two of the six fields are value-checked and not merely type-checked
+(`avatarId`, `gender`), because both are enums the interface turns into a
+drawing rather than free text the user owns.
+
+Anything added to the projection must ALSO be added to `projectionsEqual`,
+which short-circuits the write when the projection has not changed. A field
+missing there means a change to that field alone never reaches the public
+document, with no error and a green suite.
 
 ## Provider
 

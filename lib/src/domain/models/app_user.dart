@@ -14,6 +14,7 @@ class AppUser {
     this.pushToken,
     this.termsAcceptedAt,
     this.gender,
+    this.avatarId,
   });
 
   final String id;
@@ -35,6 +36,12 @@ class AppUser {
   /// displays nothing, never a default.
   final Gender? gender;
 
+  /// The illustrated avatar chosen from the catalogue, for people who have no
+  /// photo. An opaque catalogue token, resolved by
+  /// `AvatarCatalog.parse`, never a path. NULL means "no avatar chosen", and
+  /// the display order is photo, then avatar, then initials.
+  final String? avatarId;
+
   AppUser copyWith({
     String? displayName,
     String? email,
@@ -46,6 +53,7 @@ class AppUser {
     DateTime? createdAt,
     DateTime? termsAcceptedAt,
     Gender? gender,
+    String? avatarId,
   }) {
     return AppUser(
       id: id,
@@ -59,6 +67,11 @@ class AppUser {
       createdAt: createdAt ?? this.createdAt,
       termsAcceptedAt: termsAcceptedAt ?? this.termsAcceptedAt,
       gender: gender ?? this.gender,
+      // Present for the same reason as every field above: switchMode and
+      // updateProfile both rebuild the user through copyWith, so a missing
+      // parameter here would reset the avatar to null on a mode toggle or a
+      // name edit, which is the most ordinary path in the profile page.
+      avatarId: avatarId ?? this.avatarId,
     );
   }
 }

@@ -191,6 +191,14 @@ class FirestoreCollections {
       // Absent on every account created before the field shipped, and left
       // null for them rather than defaulted: see Gender.tryParse.
       gender: Gender.tryParse(data['gender']),
+      // Read defensively, unlike the `as String?` neighbours above. A
+      // non-string here would throw inside the converter, and on the `users`
+      // path that throw is swallowed by _resolveState's catch, which returns
+      // AuthUnauthenticated: the owner would be signed out of their own
+      // account by a bad value in a decorative field. The rule and the
+      // projection both refuse a non-string, so this only ever fires on a
+      // value written before those guards existed.
+      avatarId: data['avatarId'] is String ? data['avatarId'] as String : null,
     );
   }
 
@@ -218,6 +226,13 @@ class FirestoreCollections {
       // would erase the declared gender of every account whose in-memory copy
       // predates a reload, exactly like the pushToken case above.
       if (user.gender != null) 'gender': user.gender!.name,
+      // Conditional for exactly the reason the two comments above give: this
+      // map goes out as a whole-document merge from switchMode and
+      // updateProfile, and an explicit null would erase the avatar of every
+      // account whose in-memory copy predates a reload. Erasing is therefore
+      // NOT done from here: UserRepository.setProfileImage writes the two
+      // image fields on their own, with FieldValue.delete() for a null.
+      if (user.avatarId != null) 'avatarId': user.avatarId,
       'createdAt': dateTimeToFirestore(user.createdAt),
     };
   }
@@ -245,6 +260,14 @@ class FirestoreCollections {
       // document feeds the catalogue card a guest sees, and 50 of the 50
       // production documents predate the field.
       gender: Gender.tryParse(data['gender']),
+      // Read defensively, unlike the `as String?` neighbours above. A
+      // non-string here would throw inside the converter, and on the `users`
+      // path that throw is swallowed by _resolveState's catch, which returns
+      // AuthUnauthenticated: the owner would be signed out of their own
+      // account by a bad value in a decorative field. The rule and the
+      // projection both refuse a non-string, so this only ever fires on a
+      // value written before those guards existed.
+      avatarId: data['avatarId'] is String ? data['avatarId'] as String : null,
     );
   }
 

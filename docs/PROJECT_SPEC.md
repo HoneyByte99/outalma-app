@@ -122,11 +122,13 @@ Collection de référence — définit les catégories de services autorisées. 
 |---|---|---|
 | `displayName` | String | Nom public |
 | `email` | String | Sync depuis Firebase Auth (vide pour les comptes créés via OTP téléphone) |
-| `photoPath` | String? | Chemin Firebase Storage (pas d'URL) |
+| `photoPath` | String? | URL HTTPS de telechargement de la photo importee, et non un chemin Storage. Le nom est un abus de langage historique, corrige ici le 2026-09-02. |
 | `phoneE164` | String? | Privé — jamais exposé publiquement |
 | `country` | String | "FR" ou "SN" |
 | `activeMode` | String | "client" ou "provider" |
 | `pushToken` | String? | Token FCM pour les notifications |
+| `gender` | String? | "male" ou "female", declare a l'inscription. Null pour un compte anterieur au champ. |
+| `avatarId` | String? | Avatar illustre choisi dans le catalogue, par exemple `human_afro1_t2`. Jeton opaque resolu par `AvatarCatalog.parse`, jamais un chemin. Ordre d'affichage : photo, puis avatar, puis initiales. |
 | `createdAt` | Timestamp | UTC |
 
 ### `providers/{uid}`
