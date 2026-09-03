@@ -383,6 +383,59 @@ void main() {
     });
   });
 
+  group('plausibleRect (m3)', () {
+    test('ties on cost break by the LARGER area, not by insertion order', () {
+      // Two candidates of EQUAL cost (li=0,ri=1 and li=1,ri=0, both summing
+      // to 1): width 120 (area 9600), inserted FIRST by the li/ri loop order,
+      // and width 134 (area 10720), inserted second. left=0/right=0 and
+      // left=1/right=1 (cost 0 and 2) are deliberately implausible (aspect
+      // 1.925 and 1.25, both outside a +/-10% tolerance around idCardAspect),
+      // so only the tied pair can be returned, isolating the tie-break.
+      //
+      // `List.sort` is not stable, so a plain `a.cost.compareTo(b.cost)`
+      // leaves which of two equal-cost candidates comes out first to the
+      // engine's sort implementation rather than to any rule this file
+      // states; on a short list Dart's sort happens to preserve insertion
+      // order today, which is what makes the mutation below reliably return
+      // the SMALLER (first-inserted) rect instead.
+      final rect = plausibleRect(
+        lefts: [10, 30],
+        rights: [164, 130],
+        tops: [10],
+        bottoms: [90],
+        cols: 200,
+        rows: 100,
+        planeWidth: 200,
+        planeHeight: 100,
+        aspectTolerance: 0.1,
+      );
+
+      expect(rect, isNotNull);
+      expect(
+        (left: rect!.left, right: rect.right),
+        (left: 30, right: 164),
+        reason:
+            'the larger (width 134, area 10720) of the two tied '
+            'candidates must win, not the smaller (width 120, area 9600)',
+      );
+    });
+
+    test('replaying the same candidates twice picks the same rectangle', () {
+      EdgeRect? run() => plausibleRect(
+        lefts: [10, 30],
+        rights: [164, 130],
+        tops: [10],
+        bottoms: [90],
+        cols: 200,
+        rows: 100,
+        planeWidth: 200,
+        planeHeight: 100,
+        aspectTolerance: 0.1,
+      );
+      expect(run(), run());
+    });
+  });
+
   group('both real plane layouts', () {
     // A platform branch would be a bug factory here, so the ratio is measured
     // long-over-short in plane pixels. Both layouts must score `good` for the

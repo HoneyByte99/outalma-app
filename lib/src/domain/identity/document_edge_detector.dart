@@ -39,6 +39,8 @@ library;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:meta/meta.dart';
+
 import 'document_quad.dart';
 
 /// The ID-1 ratio of a national identity card (85.6 x 54 mm).
@@ -176,7 +178,7 @@ DocumentEdgeObservation detectDocumentEdges({
   final tops = horizontal.take(maxCandidates).toList();
   final bottoms = horizontal.reversed.take(maxCandidates).toList();
 
-  final rect = _plausibleRect(
+  final rect = plausibleRect(
     lefts: lefts,
     rights: rights,
     tops: tops,
@@ -411,7 +413,7 @@ List<int> _peaks(Float32List profile, double threshold) {
   return found;
 }
 
-typedef _Rect = ({int left, int top, int right, int bottom});
+typedef EdgeRect = ({int left, int top, int right, int bottom});
 
 /// The outermost candidate rectangle whose shape could be a card.
 ///
@@ -419,7 +421,12 @@ typedef _Rect = ({int left, int top, int right, int bottom});
 /// the first plausible one wins. That ordering IS the "walk inwards while
 /// implausible" rule: it keeps a genuine card border ahead of an inner text
 /// column, while still stepping past a table edge outside the card.
-_Rect? _plausibleRect({
+///
+/// `@visibleForTesting` so the tie-break rule below can be pinned directly,
+/// without needing a full frame that happens to produce two equal-cost
+/// candidates.
+@visibleForTesting
+EdgeRect? plausibleRect({
   required List<int> lefts,
   required List<int> rights,
   required List<int> tops,
@@ -431,7 +438,7 @@ _Rect? _plausibleRect({
   required double aspectTolerance,
 }) {
   const minSpan = 4;
-  final combos = <({int cost, _Rect rect})>[];
+  final combos = <({int cost, EdgeRect rect})>[];
   for (var li = 0; li < lefts.length; li++) {
     for (var ri = 0; ri < rights.length; ri++) {
       for (var ti = 0; ti < tops.length; ti++) {
@@ -449,7 +456,18 @@ _Rect? _plausibleRect({
       }
     }
   }
-  combos.sort((a, b) => a.cost.compareTo(b.cost));
+  // A total order, not just a cost order: `List.sort` is not stable, and two
+  // combinations of equal cost (e.g. (1,0,0,0) and (0,1,0,0)) would otherwise
+  // be told apart arbitrarily, so the same frame analysed twice could hand
+  // `plausibleRect` a different first plausible rectangle and the contour
+  // would jump between two candidates with nothing in the scene having
+  // changed. Ties break on the LARGER area, consistent with "outermost
+  // first" above.
+  int area(EdgeRect r) => (r.right - r.left) * (r.bottom - r.top);
+  combos.sort((a, b) {
+    final byCost = a.cost.compareTo(b.cost);
+    return byCost != 0 ? byCost : area(b.rect).compareTo(area(a.rect));
+  });
 
   for (final combo in combos) {
     final quad = _rectToQuad(combo.rect, cols, rows);
@@ -461,7 +479,7 @@ _Rect? _plausibleRect({
   return null;
 }
 
-DocumentQuad _rectToQuad(_Rect rect, int cols, int rows) {
+DocumentQuad _rectToQuad(EdgeRect rect, int cols, int rows) {
   final l = _norm(rect.left, cols);
   final r = _norm(rect.right, cols);
   final t = _norm(rect.top, rows);
@@ -485,7 +503,7 @@ _Refined? _refine({
   required Float32List gy,
   required int cols,
   required int rows,
-  required _Rect rect,
+  required EdgeRect rect,
   required double edgeThreshold,
   required double maxRotationDeg,
 }) {
