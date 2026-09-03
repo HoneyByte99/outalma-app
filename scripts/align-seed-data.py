@@ -80,7 +80,7 @@ BUCKET = "outalmaservice-d1e59.firebasestorage.app"
 # invented human faces. CC0 means no attribution obligation in a shipped app.
 AVATAR_STYLE = "open-peeps"
 AVATAR_API = ("https://api.dicebear.com/9.x/{style}/png?seed={seed}&size=256"
-              "&head={heads}&facialHairProbability={fhp}")
+              "&head={heads}&facialHairProbability={fhp}&maskProbability=0")
 AVATAR_PATH = "seed/avatars/{uid}.png"
 
 # open-peeps `head` enum (api.dicebear.com/9.x/open-peeps/schema.json), split by
@@ -89,16 +89,25 @@ AVATAR_PATH = "seed/avatars/{uid}.png"
 # being forced into one; a woman in `shaved1` or a man in `hijab` is a real
 # provider in this corpus, but assigning THOSE at random is exactly today's bug,
 # so they are excluded here and only the unambiguous styles are split.
-_HEAD_NEUTRAL = ["afro", "twists", "twists2", "dreads1", "dreads2"]
+#
+# The split below is read off the RENDERED art (dicebear.com/9.x/open-peeps),
+# not off the enum names: `cornrows` draws a long side ponytail and `turban` a
+# fabric headwrap, both unambiguously feminine like `hijab` beside them;
+# `noHair1` is a plain bald head with no gendered cue at all, so it joins the
+# neutral pool instead of staying forced male; `twists` and `bantuKnots` both
+# draw a short cropped fade that reads masculine, the opposite of where a name
+# match would put them.
+_HEAD_NEUTRAL = ["afro", "twists2", "dreads1", "dreads2", "noHair1"]
 _HEAD_FEMALE = _HEAD_NEUTRAL + [
-    "bangs", "bangs2", "bantuKnots", "bun", "bun2", "buns", "hijab", "long",
+    "bangs", "bangs2", "bun", "bun2", "buns", "cornrows", "hijab", "long",
     "longAfro", "longBangs", "longCurly", "medium1", "medium2", "medium3",
     "mediumBangs", "mediumBangs2", "mediumBangs3", "mediumStraight", "grayBun",
+    "turban",
 ]
 _HEAD_MALE = _HEAD_NEUTRAL + [
-    "bear", "cornrows", "cornrows2", "flatTop", "flatTopLong", "mohawk",
-    "mohawk2", "noHair1", "noHair2", "noHair3", "pomp", "shaved1", "shaved2",
-    "shaved3", "short1", "short2", "short3", "short4", "short5", "turban",
+    "bantuKnots", "bear", "cornrows2", "flatTop", "flatTopLong", "mohawk",
+    "mohawk2", "noHair2", "noHair3", "pomp", "shaved1", "shaved2",
+    "shaved3", "short1", "short2", "short3", "short4", "short5", "twists",
     "grayMedium", "grayShort",
 ]
 # Facial hair is the one open-peeps feature with no unisex reading at all, so it
