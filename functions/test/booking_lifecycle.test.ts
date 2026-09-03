@@ -1,4 +1,4 @@
-// Booking state machine — server-authoritative transitions (the core the whole
+// Booking state machine, server-authoritative transitions (the core the whole
 // product trusts). Runs against the Firestore emulator via `npm test`.
 import functionsTest from 'firebase-functions-test';
 
@@ -151,19 +151,26 @@ describe('createBooking', () => {
       published: true,
       serviceZones: [{ label: 'Dakar', lat: 14.69, lng: -17.44, radiusKm: 10 }],
     });
-    await expectReject(
-      call(
-        fns.createBooking,
-        {
-          providerId: provider,
-          serviceId: 'svcZone',
-          requestMessage: 'hi',
-          addressSnapshot: { address: 'Paris', lat: 48.85, lng: 2.35 },
-        },
-        { uid: customer }
-      ),
-      'failed-precondition'
+    const p = call(
+      fns.createBooking,
+      {
+        providerId: provider,
+        serviceId: 'svcZone',
+        requestMessage: 'hi',
+        // Tambacounda: inside Senegal (so this exercises the zone gate, not
+        // the country gate that assertServiceLocationInSenegal runs first),
+        // but ~340km from the Dakar zone above, well past its 10km radius.
+        addressSnapshot: { address: 'Tambacounda', lat: 13.77, lng: -13.67 },
+      },
+      { uid: customer }
     );
+    // The client never parses the English message below: it classifies the
+    // refusal from this stable `details.code`, the same pattern already used
+    // for the identity-submit refusals.
+    await expect(p).rejects.toMatchObject({
+      code: expect.stringContaining('failed-precondition'),
+      details: { code: 'BOOKING_OUTSIDE_ZONES' },
+    });
   });
 
   it('accepts a booking whose address is inside a service zone', async () => {
