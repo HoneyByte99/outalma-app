@@ -7,6 +7,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/onboarding/onboarding_provider.dart';
+import '../shared/app_logo.dart';
 import '../shared/marketplace_disclaimer.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
@@ -385,10 +386,7 @@ class _Slide extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Logo at top of every slide
-                  Image.asset(
-                    'assets/images/logo_icon_cropped.png',
-                    height: 72,
-                  ),
+                  const AppLogo(height: 72),
                   const SizedBox(height: 40),
                   Container(
                     width: 96,

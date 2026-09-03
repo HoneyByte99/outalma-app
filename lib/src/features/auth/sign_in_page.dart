@@ -14,6 +14,7 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import 'auth_prompt.dart';
+import '../shared/app_logo.dart';
 import '../shared/phone_field.dart';
 
 // ---------------------------------------------------------------------------
@@ -555,7 +556,7 @@ class _AuthModeToggle extends StatelessWidget {
 class _AuthLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Image.asset('assets/images/logo_icon_cropped.png', height: 160);
+    return const AppLogo(height: 160);
   }
 }
 

@@ -16,6 +16,7 @@ import '../shared/category_icon.dart';
 import '../shared/service_price_label.dart';
 import '../auth/auth_prompt.dart';
 import '../booking/booking_request_sheet.dart';
+import '../shared/app_logo.dart';
 import '../shared/network_image.dart';
 import '../shared/marketplace_disclaimer.dart';
 import '../../application/review/review_providers.dart';
@@ -251,13 +252,7 @@ class _ServiceDetailContent extends ConsumerWidget {
   Widget _heroFallback(OutalmaColors oc) {
     return ColoredBox(
       color: oc.border,
-      child: Center(
-        child: Image.asset(
-          'assets/images/logo_icon_cropped.png',
-          height: 100,
-          fit: BoxFit.contain,
-        ),
-      ),
+      child: const Center(child: AppLogo(height: 100)),
     );
   }
 }
