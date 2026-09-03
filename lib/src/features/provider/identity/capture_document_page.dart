@@ -556,9 +556,15 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
         // over the whole rectangle and normalised plane coordinates map onto it
         // linearly. Wrapping this in a Center or an AspectRatio would introduce
         // the very letterbox it looks like it is correcting.
-        ValueListenableBuilder<DocumentQuad?>(
-          valueListenable: _projected,
-          builder: (context, quad, _) => DocumentContourOverlay(quad: quad),
+        ValueListenableBuilder<DocumentShutterState>(
+          valueListenable: _shutter,
+          builder: (context, state, _) => ValueListenableBuilder<DocumentQuad?>(
+            valueListenable: _projected,
+            builder: (context, quad, _) => DocumentContourOverlay(
+              quad: quad,
+              color: colorFor(state.reason),
+            ),
+          ),
         ),
         ValueListenableBuilder<DocumentShutterState>(
           valueListenable: _shutter,

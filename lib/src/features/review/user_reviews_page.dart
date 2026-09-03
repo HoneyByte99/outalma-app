@@ -6,6 +6,7 @@ import '../../application/review/review_providers.dart';
 import '../../application/user/public_profile_providers.dart';
 import '../../domain/models/review.dart';
 import '../shared/category_icon.dart';
+import '../shared/gender_icon.dart';
 import '../shared/user_avatar.dart';
 import 'rating_summary.dart';
 import '../../../l10n/app_localizations.dart';
@@ -79,10 +80,27 @@ class UserReviewsPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          user?.displayName ?? '-',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                user?.displayName ?? '-',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (source == RatingSource.provider) ...[
+                              const SizedBox(width: 6),
+                              // Same pictogram as the catalogue and the
+                              // service detail, same rule: nothing at all for
+                              // an unknown gender. Only on the provider
+                              // reputation, gender has no place next to a
+                              // client's.
+                              GenderIcon(gender: user?.gender, size: 14),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 2),
                         // explainBasis: this screen shows the list right

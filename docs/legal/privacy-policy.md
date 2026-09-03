@@ -1,12 +1,11 @@
 # Politique de confidentialité d'Outalma Service
 
-_Dernière mise à jour : 16 mai 2026_
+Dernière mise à jour : 16 mai 2026
 
 La présente politique décrit comment **KAYZEN TECHNOLOGY** (« nous », « notre »), éditeur de l'application Outalma Service, collecte, utilise et protège vos données personnelles lorsque vous utilisez notre application mobile et notre site web (ensemble, « l'Application »). Outalma Service est une place de marché de services pour des utilisateurs basés en France et au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
 
 Nous nous engageons à respecter le Règlement Général sur la Protection des Données (UE 2016/679, « RGPD »), la loi française « Informatique et Libertés », ainsi que la **loi sénégalaise n° 2008-12 du 25 janvier 2008** sur la protection des données à caractère personnel.
 
----
 
 ## 1. Identité du responsable de traitement
 
@@ -18,7 +17,6 @@ Le responsable de traitement est :
 - **Email de contact** : contact@outalma.com
 - **Délégué à la protection des données (DPO)** : non désigné à ce jour
 
----
 
 ## 2. Données que nous collectons
 
@@ -33,7 +31,7 @@ Nous limitons la collecte aux données nécessaires au fonctionnement du service
 - Adresse email
 - Numéro de téléphone (format international E.164)
 
-> Votre numéro de téléphone n'est **jamais affiché publiquement**. Il n'est rendu visible qu'entre un client et un prestataire **après l'acceptation d'une réservation**, afin de faciliter la coordination du service (modèle inspiré de BlaBlaCar).
+Votre numéro de téléphone n'est **jamais affiché publiquement**. Il n'est rendu visible qu'entre un client et un prestataire **après l'acceptation d'une réservation**, afin de faciliter la coordination du service (modèle inspiré de BlaBlaCar).
 
 ### 2.3 Contenu utilisateur
 - Fiches de services publiées (titre, description, tarifs, photos)
@@ -51,7 +49,6 @@ Nous limitons la collecte aux données nécessaires au fonctionnement du service
 - Journaux de plantage anonymisés (Firebase Crashlytics)
 - Adresse IP (transitoirement, lors des appels aux services backend)
 
----
 
 ## 3. Finalités du traitement
 
@@ -64,7 +61,6 @@ Vos données sont utilisées pour :
 5. **Amélioration du service** : corriger les bugs (via Crashlytics) et améliorer l'ergonomie. Nous n'utilisons **aucun outil d'analyse comportementale tiers**.
 6. **Conformité légale** : répondre à une obligation légale, réglementaire, ou à une réquisition judiciaire.
 
----
 
 ## 4. Bases légales (RGPD Article 6)
 
@@ -79,7 +75,6 @@ Vos données sont utilisées pour :
 
 Au Sénégal, ces traitements reposent sur les bases prévues aux articles 33 et suivants de la loi n° 2008-12 (consentement, exécution contractuelle, intérêt légitime, obligation légale).
 
----
 
 ## 5. Sous-traitants et destinataires
 
@@ -93,7 +88,6 @@ Nous ne **vendons jamais** vos données. Nous ne diffusons **aucune publicité**
 
 Les autres destinataires sont les **utilisateurs eux-mêmes** : les informations publiques d'un profil (prénom, photo, services proposés, avis) sont visibles par les autres utilisateurs. Le numéro de téléphone n'est partagé qu'entre les deux participants d'une réservation acceptée.
 
----
 
 ## 6. Durée de conservation
 
@@ -108,7 +102,6 @@ Les autres destinataires sont les **utilisateurs eux-mêmes** : les informations
 
 Vous pouvez à tout moment demander la suppression de votre compte depuis l'Application. Les données seront effacées sauf obligation légale de conservation.
 
----
 
 ## 7. Vos droits
 
@@ -125,7 +118,6 @@ Conformément au RGPD et à la loi sénégalaise n° 2008-12, vous disposez des 
 
 Pour exercer ces droits, écrivez-nous à : **contact@outalma.com**. Une réponse vous sera apportée dans un délai d'**un mois**. Une preuve d'identité peut être demandée en cas de doute raisonnable.
 
----
 
 ## 8. Transferts hors Union européenne
 
@@ -137,7 +129,6 @@ Certains sous-traitants (Google, Twilio) sont susceptibles de traiter vos donné
 
 Pour les utilisateurs sénégalais, les transferts internationaux respectent les articles 49 et suivants de la loi n° 2008-12 et requièrent un niveau de protection adéquat.
 
----
 
 ## 9. Sécurité des données
 
@@ -152,7 +143,6 @@ Nous mettons en œuvre des mesures techniques et organisationnelles raisonnables
 
 Aucun système n'étant infaillible, nous nous engageons à vous notifier toute violation de données susceptible d'engendrer un risque élevé pour vos droits, dans les **72 heures** après en avoir pris connaissance, conformément à l'article 33 du RGPD.
 
----
 
 ## 10. Cookies et traceurs (site web)
 
@@ -165,13 +155,11 @@ Nous n'utilisons **aucun cookie publicitaire, aucun pixel de suivi, aucun traceu
 
 Aucun bandeau de consentement n'est donc requis pour les cookies non-essentiels, puisque nous n'en posons pas. Vous pouvez à tout moment supprimer les cookies depuis les réglages de votre navigateur.
 
----
 
 ## 11. Données des mineurs
 
 L'Application est réservée aux personnes âgées d'au moins **16 ans**. Nous ne collectons pas sciemment de données concernant des mineurs de moins de 16 ans. Si vous pensez qu'un mineur de moins de 16 ans nous a transmis des données, contactez-nous : nous procéderons à la suppression du compte concerné.
 
----
 
 ## 12. Modification de la politique
 
@@ -179,7 +167,6 @@ Cette politique peut être amenée à évoluer (nouvelles fonctionnalités, chan
 
 La date en haut de ce document indique toujours la version en vigueur.
 
----
 
 ## 13. Contact et réclamation
 
@@ -193,7 +180,6 @@ Si vous estimez que vos droits ne sont pas respectés, vous pouvez introduire un
 - **France** : Commission Nationale de l'Informatique et des Libertés (CNIL), 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07. Site : [www.cnil.fr](https://www.cnil.fr)
 - **Sénégal** : Commission des Données Personnelles (CDP), Immeuble Y2K, 1er étage, Rond-Point OMVS, Dakar. Site : [www.cdp.sn](https://www.cdp.sn)
 
----
 
 ## 14. Date d'effet
 

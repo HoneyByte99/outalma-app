@@ -31,6 +31,42 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
+  group('colorFor', () {
+    // Extracted from DocumentFrameOverlay's private `_color` so the live
+    // contour (DocumentContourOverlay, in capture_document_page.dart) can
+    // paint the SAME state colour instead of always falling back to its own
+    // white default. Every reason listed explicitly: a missing branch here
+    // is a reason silently painted white on both widgets.
+    test('every reason maps to a colour, and every reason is covered', () {
+      for (final reason in DocumentShutterReason.values) {
+        expect(colorFor(reason), isNotNull, reason: '$reason');
+      }
+    });
+
+    test('steadying and ready both signal the accent colour', () {
+      expect(colorFor(DocumentShutterReason.steadying), AppColors.accent);
+      expect(colorFor(DocumentShutterReason.ready), AppColors.accent);
+    });
+
+    test('the three "fix the framing" reasons all warn', () {
+      expect(colorFor(DocumentShutterReason.refused), AppColors.warning);
+      expect(colorFor(DocumentShutterReason.tooSmall), AppColors.warning);
+      expect(colorFor(DocumentShutterReason.tooClose), AppColors.warning);
+    });
+
+    test('the neutral/unknown reasons stay white', () {
+      for (final reason in [
+        DocumentShutterReason.noFrame,
+        DocumentShutterReason.waitingForMotion,
+        DocumentShutterReason.tooBlurred,
+        DocumentShutterReason.moving,
+        DocumentShutterReason.noDocument,
+      ]) {
+        expect(colorFor(reason), Colors.white, reason: '$reason');
+      }
+    });
+  });
+
   testWidgets('every reason renders an icon, the three new ones included', (
     tester,
   ) async {
@@ -72,8 +108,16 @@ void main() {
     tester,
   ) async {
     // Two rectangles saying different things disorient someone who cannot read.
-    // The template is not removed, it stops speaking: the state colour moves
-    // onto the contour and the ring stops running.
+    // The template is not removed, it stops speaking in colour: it fades to a
+    // fixed white while the state colour moves onto the contour (painted by
+    // the caller with colorFor, see capture_document_page.dart). The ring
+    // itself keeps turning either way, since it is the hold's main signal
+    // (document_shutter_framing_test.dart); it must not disappear at the exact
+    // moment detection starts working. Verifying the painter actually differs
+    // is as far as a widget test can see (`_DocumentFramePainter` is private
+    // to the library); the one-line `progress: value` fix itself is covered
+    // by `colorFor` staying wired through both overlays in
+    // document_contour_geometry_test.dart.
     await tester.pumpWidget(
       _wrap(
         const DocumentFrameOverlay(

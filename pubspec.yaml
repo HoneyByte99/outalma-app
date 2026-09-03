@@ -23,6 +23,7 @@ dependencies:
   firebase_crashlytics: ^4.1.0
   image_picker: ^1.1.2
   cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1
   # Renders the illustrated avatar catalogue. Needed rather than raster assets
   # because the skin tone is recoloured at RUN time through ColorMapper: in PNG
   # it would take one file per character AND per tone, about 180 instead of 40.
