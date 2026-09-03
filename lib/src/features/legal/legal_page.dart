@@ -19,7 +19,7 @@ enum LegalDoc {
 /// In-app viewer for legal documents (CGU / privacy policy).
 ///
 /// Loads the Markdown source from a bundled asset and renders it with a
-/// lightweight renderer — no remote link, works fully offline.
+/// lightweight renderer (no remote link, works fully offline).
 class LegalPage extends StatelessWidget {
   const LegalPage({super.key, required this.doc, required this.title});
 
@@ -75,7 +75,7 @@ class LegalPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Visual cue at the top of the document (shield = privacy,
-                // handshake = terms) — helps low-literacy users orient.
+                // handshake = terms), helps low-literacy users orient.
                 Center(
                   child: Container(
                     margin: const EdgeInsets.only(top: 4, bottom: 8),
@@ -105,12 +105,14 @@ class LegalPage extends StatelessWidget {
 }
 
 /// Minimal Markdown renderer covering the subset used in our legal docs:
-/// headings (#, ##, ###), paragraphs, bullet/numbered lists, blockquotes (>),
-/// horizontal rules (---), and inline bold (**...**).
+/// headings (#, ##, ###), paragraphs, bullet/numbered lists, the "last
+/// updated" date line, and inline bold (**...**).
 class _MarkdownView extends StatelessWidget {
   const _MarkdownView({required this.source});
 
   final String source;
+
+  static const _lastUpdatedPrefix = 'Dernière mise à jour';
 
   @override
   Widget build(BuildContext context) {
@@ -125,16 +127,6 @@ class _MarkdownView extends StatelessWidget {
 
       if (trimmed.isEmpty) {
         widgets.add(const SizedBox(height: 10));
-        continue;
-      }
-
-      if (trimmed == '---') {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Divider(color: oc.border, height: 1),
-          ),
-        );
         continue;
       }
 
@@ -178,20 +170,15 @@ class _MarkdownView extends StatelessWidget {
         continue;
       }
 
-      if (trimmed.startsWith('> ')) {
+      if (trimmed.startsWith(_lastUpdatedPrefix)) {
         widgets.add(
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-            decoration: BoxDecoration(
-              color: oc.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border(left: BorderSide(color: oc.primary, width: 3)),
+          _block(
+            text: trimmed,
+            style: theme.bodySmall?.copyWith(
+              color: oc.secondaryText,
+              fontStyle: FontStyle.italic,
             ),
-            child: _richLine(
-              trimmed.substring(2),
-              theme.bodyMedium?.copyWith(color: oc.secondaryText, height: 1.5),
-            ),
+            top: 2,
           ),
         );
         continue;
