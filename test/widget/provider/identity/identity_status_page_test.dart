@@ -2,11 +2,15 @@
 // the reviewer's reason verbatim (AC-C17), and offers a capture path only where
 // a new submission is allowed (AC-C18/AC-C19). The record provider is overridden
 // so no Firestore or auth is touched.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:outalma_app/l10n/app_localizations.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
+import 'package:outalma_app/src/app/router.dart';
 import 'package:outalma_app/src/application/identity/identity_verification_providers.dart';
 import 'package:outalma_app/src/domain/enums/identity_status.dart';
 import 'package:outalma_app/src/domain/models/identity_verification_record.dart';
@@ -24,6 +28,25 @@ Widget _wrap(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: IdentityStatusPage(onStartVerification: onStart ?? () {}),
+    ),
+  );
+}
+
+/// Router-backed harness for the two exit tests below: the leading button
+/// calls `GoRouter.of(context)`, which needs a real GoRouter ancestor
+/// (`MaterialApp`'s plain `home:` above has none).
+Widget _wrapWithRouter(
+  Stream<IdentityVerificationRecord?> stream,
+  GoRouter router,
+) {
+  return ProviderScope(
+    overrides: [myIdentityVerificationProvider.overrideWith((ref) => stream)],
+    child: MaterialApp.router(
+      locale: const Locale('fr'),
+      theme: AppTheme.light(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      routerConfig: router,
     ),
   );
 }
@@ -143,5 +166,103 @@ void main() {
     await tester.tap(find.text('Vérifier mon identité'));
     await tester.pump();
     expect(started, isTrue);
+  });
+
+  // Regression: router.dart used go() (not push()) to reach this screen after
+  // capture, which clears the whole navigation stack. A cold-start deep link
+  // (e.g. a notification) produces the exact same "no stack" situation. Either
+  // way, canPop() is false and, before this fix, the AppBar had no leading:
+  // automaticallyImplyLeading had nothing to imply, and the screen had no
+  // bottom nav (it lives outside the shell) - a dead end the user could only
+  // escape by killing the app. This is the test that would have caught it.
+  testWidgets(
+    'no poppable stack (e.g. cold-start deep link): the leading button still '
+    'exits, landing on the provider dashboard anchor',
+    (tester) async {
+      final router = GoRouter(
+        initialLocation: AppRoutes.identityStatus,
+        routes: [
+          GoRoute(
+            path: AppRoutes.identityStatus,
+            builder: (_, __) => IdentityStatusPage(onStartVerification: () {}),
+          ),
+          GoRoute(
+            path: AppRoutes.providerHome,
+            builder: (_, __) =>
+                const Scaffold(body: Text('provider dashboard')),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        _wrapWithRouter(
+          Stream.value(_record(status: IdentityStatus.pending)),
+          router,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        router.canPop(),
+        isFalse,
+        reason: 'sets up the exact trap: a single, unpoppable route',
+      );
+
+      await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('provider dashboard'), findsOneWidget);
+    },
+  );
+
+  testWidgets('a poppable stack (e.g. pushed from the dashboard hub line): the '
+      'leading button pops back instead of leaving to the anchor', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      initialLocation: '/dashboard-stub',
+      routes: [
+        GoRoute(
+          path: '/dashboard-stub',
+          builder: (_, __) => const Scaffold(body: Text('dashboard stub')),
+        ),
+        GoRoute(
+          path: AppRoutes.identityStatus,
+          builder: (_, __) => IdentityStatusPage(onStartVerification: () {}),
+        ),
+        GoRoute(
+          path: AppRoutes.providerHome,
+          builder: (_, __) => const Scaffold(body: Text('provider dashboard')),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _wrapWithRouter(
+        Stream.value(_record(status: IdentityStatus.pending)),
+        router,
+      ),
+    );
+    await tester.pump();
+    // Not awaited: push()'s Future only completes when the pushed route is
+    // later popped (like Navigator.push), and that pop is exactly what the
+    // tap below triggers - awaiting it here would deadlock the test on
+    // itself.
+    unawaited(router.push(AppRoutes.identityStatus));
+    // Not pumpAndSettle: the stream provider is briefly in its loading state,
+    // which renders an indeterminate CircularProgressIndicator whose
+    // AnimationController repeats forever and would hang pumpAndSettle until
+    // the data resolves. Two explicit pumps give the single-value stream's
+    // microtask time to fire first (same reasoning as the "loading shows a
+    // spinner" case above, which never calls pumpAndSettle either).
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('dashboard stub'), findsOneWidget);
+    expect(find.text('provider dashboard'), findsNothing);
   });
 }

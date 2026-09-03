@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../../app/app_spacing.dart';
 import '../../../app/app_theme.dart';
+import '../../../app/router.dart';
 import '../../../application/identity/identity_verification_providers.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../domain/enums/identity_status.dart';
@@ -32,7 +34,29 @@ class IdentityStatusPage extends ConsumerWidget {
     final async = ref.watch(myIdentityVerificationProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.identityStatusTitle)),
+      appBar: AppBar(
+        title: Text(l10n.identityStatusTitle),
+        // Explicit, not automatic: this screen is reached both by push() (a
+        // poppable stack, e.g. from the dashboard hub line) and by go() or a
+        // cold-start deep link (no stack at all, e.g. after finishing capture
+        // or opening a notification). automaticallyImplyLeading only covers
+        // the first case, which is exactly how a provider could submit their
+        // ID and land on "verification pending" with no way out but killing
+        // the app. Falls back to the provider dashboard, the mode this screen
+        // lives in, when there is nothing to pop to.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          onPressed: () {
+            final router = GoRouter.of(context);
+            if (router.canPop()) {
+              router.pop();
+            } else {
+              router.go(AppRoutes.providerHome);
+            }
+          },
+        ),
+      ),
       body: SafeArea(
         child: async.when(
           loading: () => const Center(child: CircularProgressIndicator()),
