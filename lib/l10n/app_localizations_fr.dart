@@ -950,10 +950,18 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bookingStep3Subtitle =>
-      'Où souhaitez-vous que le prestataire intervienne ? (optionnel)';
+      'Où souhaitez-vous que le prestataire intervienne ?';
 
   @override
   String get bookingStep3Hint => 'Ex: Rue 10, Point E, Dakar';
+
+  @override
+  String get bookingAddressRequiredHint =>
+      'L\'adresse est requise : le prestataire se déplace toujours pour intervenir.';
+
+  @override
+  String get bookingAddressNotResolved =>
+      'Adresse introuvable. Choisissez une suggestion dans la liste ou utilisez votre position.';
 
   @override
   String get bookingBack => 'Retour';

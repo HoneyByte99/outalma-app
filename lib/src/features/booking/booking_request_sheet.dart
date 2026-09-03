@@ -260,7 +260,11 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
             false;
         return !paused;
       case 2:
-        return true; // address is optional
+        // The provider always travels to the client (no remote/on-site mode
+        // exists on Service), so an address is mandatory: without it there is
+        // neither placeId nor coordinates, and the zone gate below has no
+        // signal to run against.
+        return _addressController.text.trim().isNotEmpty;
       default:
         return false;
     }
@@ -282,6 +286,25 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     return null;
   }
 
+  /// Geocodes the hand-typed address text via the same autocomplete-then-
+  /// lookup path `_StepAddress._selectSuggestion` uses for a picked
+  /// suggestion, so a submitted address is always exploitable (has
+  /// coordinates the zone/Senegal gates can judge) even when the user never
+  /// opened or picked from the suggestion list. Returns null when nothing
+  /// resolves.
+  Future<({double lat, double lng, String? countryCode})?>
+  _geocodeTypedAddress() async {
+    final addressText = _addressController.text.trim();
+    try {
+      final geocoding = ref.read(geocodingServiceProvider);
+      final suggestions = await geocoding.autocomplete(addressText);
+      if (suggestions.isEmpty) return null;
+      return await geocoding.getPlaceLatLng(suggestions.first.placeId);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context)!;
     final successMsg = l10n.bookingSentSuccess;
@@ -301,13 +324,21 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     }
 
     // Coordinates already resolved when the address was picked (suggestion,
-    // "use my location", or a saved address); a hand-typed address that never
-    // resolved has none, and both gates below then let it through (no signal
-    // to judge by), same as the server.
-    final resolved = _resolvedLocation;
-    final lat = resolved?.lat;
-    final lng = resolved?.lng;
-    final countryCode = resolved?.countryCode;
+    // "use my location", or a saved address). A hand-typed address that was
+    // never picked from the list has none yet: geocode it now so the
+    // zone/Senegal gates below always have a signal to judge by, instead of
+    // silently letting an unverified address through.
+    final resolved = _resolvedLocation ?? await _geocodeTypedAddress();
+    if (resolved == null) {
+      _showError(l10n.bookingAddressNotResolved);
+      return;
+    }
+    if (_resolvedLocation == null && mounted) {
+      setState(() => _resolvedLocation = resolved);
+    }
+    final lat = resolved.lat;
+    final lng = resolved.lng;
+    final countryCode = resolved.countryCode;
 
     // CADRAGE section 5: the prestation must be in Senegal. Block with an
     // explicit message when we can prove the address is elsewhere. The server
@@ -585,7 +616,9 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                               child: Text(l10n.bookingContinue),
                             )
                           : ElevatedButton(
-                              onPressed: _loading ? null : _submit,
+                              onPressed: (_loading || !_canAdvance)
+                                  ? null
+                                  : _submit,
                               child: _loading
                                   ? SizedBox(
                                       height: 20,
@@ -1471,6 +1504,16 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
           ),
           onChanged: _onChanged,
         ),
+        if (widget.controller.text.trim().isEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            key: const Key('bookingAddressRequiredHint'),
+            l10n.bookingAddressRequiredHint,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: oc.error),
+          ),
+        ],
         if (_suggestions.isNotEmpty) ...[
           const SizedBox(height: 4),
           Container(

@@ -210,6 +210,15 @@ void main() {
       tester,
     ) async {
       final useCase = _MockCreateBookingUseCase();
+      final geocoding = _MockGeocodingService();
+      when(() => geocoding.autocomplete(any())).thenAnswer(
+        (_) async => const [
+          PlaceSuggestion(placeId: 'p1', description: 'Saint-Louis, Senegal'),
+        ],
+      );
+      when(
+        () => geocoding.getPlaceLatLng('p1'),
+      ).thenAnswer((_) async => (lat: 16.02, lng: -16.49, countryCode: 'SN'));
       when(
         () => useCase.call(
           providerId: any(named: 'providerId'),
@@ -227,10 +236,20 @@ void main() {
 
       await _pumpSheet(
         tester,
-        overrides: _baseOverrides(useCase: useCase),
+        overrides: _baseOverrides(useCase: useCase, geocoding: geocoding),
         serviceZones: const [_dakarZone],
       );
       await _goToAddressStep(tester);
+      // An address is now mandatory (booking-ux wave 3): pick a suggestion so
+      // it resolves, exactly like a real user would before the submit button
+      // (gated on a non-empty address) is even enabled.
+      await tester.enterText(
+        find.byKey(const Key('bookingAddressField')),
+        'Saint-Louis',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Saint-Louis, Senegal'));
+      await tester.pump();
 
       await tester.tap(find.text('Envoyer la demande'));
       await tester.pump();
@@ -356,6 +375,15 @@ void main() {
       tester,
     ) async {
       final useCase = _MockCreateBookingUseCase();
+      final geocoding = _MockGeocodingService();
+      when(() => geocoding.autocomplete(any())).thenAnswer(
+        (_) async => const [
+          PlaceSuggestion(placeId: 'p1', description: '12 Rue Test, Senegal'),
+        ],
+      );
+      when(
+        () => geocoding.getPlaceLatLng('p1'),
+      ).thenAnswer((_) async => (lat: 14.70, lng: -17.45, countryCode: 'SN'));
       when(
         () => useCase.call(
           providerId: any(named: 'providerId'),
@@ -377,12 +405,16 @@ void main() {
         ),
       );
 
-      await _pumpSheet(tester, overrides: _baseOverrides(useCase: useCase));
+      await _pumpSheet(
+        tester,
+        overrides: _baseOverrides(useCase: useCase, geocoding: geocoding),
+      );
       await _goToAddressStep(tester);
-      // A hand-typed address with no picked suggestion: the client has no
-      // resolved coordinates, so the client-side gates let it through (no
-      // signal) and the refusal comes from the server, exactly the race this
-      // classification exists for.
+      // A hand-typed address with no picked suggestion: the client resolves
+      // it itself at submit time (booking-ux wave 3, address must be
+      // exploitable), no declared zone here lets the resolved coordinates
+      // through client-side, and the refusal comes from the server, exactly
+      // the race this classification exists for.
       await tester.enterText(
         find.byKey(const Key('bookingAddressField')),
         '12 Rue Test',
@@ -404,6 +436,15 @@ void main() {
       tester,
     ) async {
       final useCase = _MockCreateBookingUseCase();
+      final geocoding = _MockGeocodingService();
+      when(() => geocoding.autocomplete(any())).thenAnswer(
+        (_) async => const [
+          PlaceSuggestion(placeId: 'p1', description: 'Plateau, Dakar'),
+        ],
+      );
+      when(
+        () => geocoding.getPlaceLatLng('p1'),
+      ).thenAnswer((_) async => (lat: 14.70, lng: -17.45, countryCode: 'SN'));
       when(
         () => useCase.call(
           providerId: any(named: 'providerId'),
@@ -424,8 +465,21 @@ void main() {
         ),
       );
 
-      await _pumpSheet(tester, overrides: _baseOverrides(useCase: useCase));
+      await _pumpSheet(
+        tester,
+        overrides: _baseOverrides(useCase: useCase, geocoding: geocoding),
+      );
       await _goToAddressStep(tester);
+      // Address is now mandatory: fill it in before the send button, gated on
+      // a non-empty address, is even enabled.
+      await tester.enterText(
+        find.byKey(const Key('bookingAddressField')),
+        'Plateau',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Plateau, Dakar'));
+      await tester.pump();
+
       await tester.tap(find.text('Envoyer la demande'));
       await tester.pump();
 
@@ -497,6 +551,112 @@ void main() {
         await tester.pump();
 
         expect(find.text('Ouakam, Dakar'), findsOneWidget);
+      },
+    );
+  });
+
+  // ---------------------------------------------------------------------
+  // Booking-ux wave 3: the address is mandatory (the provider always
+  // travels to the client, CADRAGE) and must be exploitable (geocoded), not
+  // merely non-empty, because the zone/Senegal gates need coordinates to run.
+  // ---------------------------------------------------------------------
+  group('address required and exploitable (booking-ux wave 3)', () {
+    testWidgets(
+      'the send button stays disabled with an empty address, and re-enables '
+      'once text is entered',
+      (tester) async {
+        await _pumpSheet(
+          tester,
+          overrides: _baseOverrides(useCase: _MockCreateBookingUseCase()),
+        );
+        await _goToAddressStep(tester);
+
+        ElevatedButton sendButton() => tester.widget<ElevatedButton>(
+          find.widgetWithText(ElevatedButton, 'Envoyer la demande'),
+        );
+
+        expect(
+          sendButton().onPressed,
+          isNull,
+          reason: 'no address yet: the request cannot be planned',
+        );
+
+        await tester.enterText(
+          find.byKey(const Key('bookingAddressField')),
+          'Plateau',
+        );
+        await tester.pump();
+
+        expect(sendButton().onPressed, isNotNull);
+      },
+    );
+
+    testWidgets(
+      'a disabled send button tells the user the address is missing, not '
+      'just a dead control',
+      (tester) async {
+        await _pumpSheet(
+          tester,
+          overrides: _baseOverrides(useCase: _MockCreateBookingUseCase()),
+        );
+        await _goToAddressStep(tester);
+
+        // Empty field: the reason the button is dead is spelled out on
+        // screen, the exact defect Amath flagged and the previous wave fixed
+        // for the error banner (point 1) must not come back here.
+        expect(
+          find.byKey(const Key('bookingAddressRequiredHint')),
+          findsOneWidget,
+        );
+
+        await tester.enterText(
+          find.byKey(const Key('bookingAddressField')),
+          'Plateau',
+        );
+        await tester.pump();
+
+        expect(
+          find.byKey(const Key('bookingAddressRequiredHint')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'a hand-typed address that cannot be geocoded blocks submission with '
+      'an explanation, and never reaches createBooking',
+      (tester) async {
+        final useCase = _MockCreateBookingUseCase();
+        final geocoding = _MockGeocodingService();
+        // Autocomplete finds nothing for this text: geocoding at submit time
+        // (the same fallback _selectSuggestion's path feeds) has nothing to
+        // resolve, so the address stays unexploitable.
+        when(
+          () => geocoding.autocomplete(any()),
+        ).thenAnswer((_) async => const []);
+
+        await _pumpSheet(
+          tester,
+          overrides: _baseOverrides(useCase: useCase, geocoding: geocoding),
+        );
+        await _goToAddressStep(tester);
+        await tester.enterText(
+          find.byKey(const Key('bookingAddressField')),
+          'Zzqxvw Unfindable Street',
+        );
+        await tester.pump();
+
+        await tester.tap(find.text('Envoyer la demande'));
+        await tester.pump();
+
+        expect(
+          find.text(
+            'Adresse introuvable. Choisissez une suggestion dans la liste '
+            'ou utilisez votre position.',
+          ),
+          findsOneWidget,
+        );
+        verifyZeroInteractions(useCase);
       },
     );
   });
