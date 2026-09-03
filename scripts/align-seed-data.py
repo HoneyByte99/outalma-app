@@ -164,9 +164,15 @@ FIRST_M = {"mouhamed", "mohamed", "ibrahima", "moussa", "oumar", "cheikh",
            "modou", "alioune", "mamadou", "ousmane", "amath", "ahmed",
            "lamine", "abdou", "pierre", "babacar", "malick", "serigne"}
 
+# `gender` is deliberately NOT in this list. It stopped being a FlutterFlow
+# residual on 2026-09-02: it is now a live, required field (firestore.rules
+# `isGenderSafe()`, the `mirrorPublicProfile` trigger, the production
+# `verifyPhoneOtpAndSignUp` callable which rejects sign-up without it, and a
+# client-facing pictogram). Dropping it here would silently break all three.
+# Do not add it back without re-checking those call sites first.
 LEGACY_FIELDS = [
     "first_name", "last_name", "display_name", "phone_number", "birth_date",
-    "gender", "created_time", "email_sign_up", "sign_up", "in_service",
+    "created_time", "email_sign_up", "sign_up", "in_service",
     "uid", "id",
 ]
 # Legacy field -> current field. Everything absent from this map is dropped,
