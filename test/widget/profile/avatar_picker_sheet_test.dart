@@ -57,6 +57,44 @@ List<String> _renderedIds(WidgetTester tester) => tester
     .map((p) => (p.bytesLoader as SvgAssetLoader).assetName)
     .toList();
 
+/// Mounts the sheet behind an "open" button, the way the app does. Shared by
+/// point-5 tests that only need the sheet open, not its eventual result: the
+/// future `showAvatarPickerSheet` returns cannot resolve until the sheet
+/// pops, so a snapshot taken right after opening is trivially null, and tests
+/// that DO need the result declare their own `captured` in-body, where later
+/// awaits can still observe it resolve.
+Future<void> _openSheetForStaging(WidgetTester tester) async {
+  // Same rationale as _openSheet's own setSurfaceSize above: on the default
+  // 800x600 test surface the grid's later tiles sit off-screen and a tap
+  // there silently misses.
+  await tester.binding.setSurfaceSize(const Size(420, 1800));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  await tester.pumpWidget(
+    MaterialApp(
+      locale: const Locale('fr'),
+      theme: AppTheme.light(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showAvatarPickerSheet(
+                context,
+                currentAvatarId: null,
+                hasPhoto: false,
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('it offers the photo path and both grids', (tester) async {
     await _openSheet(tester);
@@ -196,9 +234,80 @@ void main() {
     }
   });
 
-  testWidgets('choosing an avatar pops PickAvatar with the composed id', (
+  // -------------------------------------------------------------------------
+  // Point 5 (CADRAGE booking-ux): the avatar grid stages its choice on the
+  // same footing as the tone swatch, instead of writing on the first tap.
+  // -------------------------------------------------------------------------
+
+  testWidgets('tapping a tile stages the choice without closing the sheet', (
     tester,
   ) async {
+    await _openSheetForStaging(tester);
+
+    await tester.tap(find.byType(SvgPicture).first);
+    await tester.pump();
+
+    // Still open: staging a character is not a write.
+    expect(find.text('Enregistrer'), findsOneWidget);
+    expect(find.byType(SvgPicture), findsWidgets);
+  });
+
+  testWidgets('Enregistrer commits the staged character and tone', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(420, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    AvatarPick? captured;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('fr'),
+        theme: AppTheme.light(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  captured = await showAvatarPickerSheet(
+                    context,
+                    currentAvatarId: null,
+                    hasPhoto: false,
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // Pick the lightest swatch, THEN the first tile: the commit must reflect
+    // whichever tone was staged when Enregistrer is pressed, not the tone the
+    // sheet opened on.
+    await tester.tap(find.byKey(const ValueKey('avatar-tone-5')));
+    await tester.pump();
+    await tester.tap(find.byType(SvgPicture).first);
+    await tester.pump();
+
+    expect(captured, isNull, reason: 'staged, not yet committed');
+
+    await tester.tap(find.text('Enregistrer'));
+    await tester.pumpAndSettle();
+
+    expect(captured, isA<PickAvatar>());
+    expect(
+      (captured! as PickAvatar).avatarId,
+      AvatarCatalog.composeId(AvatarCatalog.humanIds.first, 5),
+    );
+  });
+
+  testWidgets('the close button discards a staged choice', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(420, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     AvatarPick? captured;
     await tester.pumpWidget(
       MaterialApp(
@@ -228,16 +337,35 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(SvgPicture).first);
+    await tester.pump();
+    // A character is now staged (Enregistrer is enabled)...
+    expect(
+      tester
+          .widget<ElevatedButton>(
+            find.widgetWithText(ElevatedButton, 'Enregistrer'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+
+    // ...but closing via the X writes nothing: cancelling never persists a
+    // pending grid choice, exactly like it already never persisted a pending
+    // tone.
+    await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pumpAndSettle();
 
-    expect(captured, isA<PickAvatar>());
-    expect(
-      (captured! as PickAvatar).avatarId,
-      AvatarCatalog.composeId(
-        AvatarCatalog.humanIds.first,
-        AvatarCatalog.defaultToneIndex,
-      ),
+    expect(captured, isNull);
+  });
+
+  testWidgets('Enregistrer is disabled until a character is staged', (
+    tester,
+  ) async {
+    await _openSheetForStaging(tester);
+
+    final button = tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, 'Enregistrer'),
     );
+    expect(button.onPressed, isNull);
   });
 
   testWidgets('every tile and swatch carries a screen-reader label', (

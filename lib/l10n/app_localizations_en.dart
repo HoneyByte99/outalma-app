@@ -922,6 +922,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'The service must take place in Senegal. Please choose an address in Senegal.';
 
   @override
+  String bookingAddressOutsideZones(String zones) {
+    return 'This provider does not serve this address. Zones covered: $zones.';
+  }
+
+  @override
+  String get bookingSaveAddress => 'Save this address';
+
+  @override
   String get marketplaceDisclaimer =>
       'Outalma only connects clients and independent providers. Any agreement and payment is made directly between you, outside the app and at your own risk. Always check who you are dealing with.';
 
@@ -929,11 +937,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookingStep3Title => 'Service address';
 
   @override
-  String get bookingStep3Subtitle =>
-      'Where should the provider intervene? (optional)';
+  String get bookingStep3Subtitle => 'Where should the provider intervene?';
 
   @override
   String get bookingStep3Hint => 'E.g. Rue 10, Point E, Dakar';
+
+  @override
+  String get bookingAddressRequiredHint =>
+      'Address required: the provider always travels to the service location.';
+
+  @override
+  String get bookingAddressNotResolved =>
+      'Address not found. Choose a suggestion from the list or use your location.';
 
   @override
   String get bookingBack => 'Back';
@@ -2235,6 +2250,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get avatarSheetTitle => 'Profile picture';
+
+  @override
+  String get avatarPreviewLabel => 'Preview';
 
   @override
   String get avatarImportPhoto => 'Import a photo';

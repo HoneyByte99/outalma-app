@@ -19,8 +19,14 @@ import '../../application/booking/booking_providers.dart';
 import '../../application/provider/provider_providers.dart';
 import '../../data/services/chat_media_service.dart';
 import '../../data/services/geocoding_service.dart';
+import '../../data/services/saved_locations_service.dart';
 import '../../data/services/senegal_location.dart';
+import '../../domain/booking/booking_submit_error.dart';
 import '../../domain/models/provider_profile.dart';
+import '../../domain/models/service_zone.dart';
+import '../../domain/utils/current_position.dart';
+import '../../domain/utils/service_zone_check.dart';
+import '../shared/current_position_messages.dart';
 import '../shared/marketplace_disclaimer.dart';
 
 class BookingRequestSheet extends ConsumerStatefulWidget {
@@ -29,11 +35,18 @@ class BookingRequestSheet extends ConsumerStatefulWidget {
     required this.serviceId,
     required this.providerId,
     required this.serviceTitle,
+    this.serviceZones = const [],
   });
 
   final String serviceId;
   final String providerId;
   final String serviceTitle;
+
+  /// The provider's declared intervention zones for this service, so step 3
+  /// can refuse an out-of-zone address before the round trip (CADRAGE
+  /// booking-ux point 2). Empty when the service declares none, in which case
+  /// the zone gate never fires (provider discretion), exactly like the server.
+  final List<ServiceZone> serviceZones;
 
   @override
   ConsumerState<BookingRequestSheet> createState() =>
@@ -67,11 +80,24 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   List<int> _availableSlots = const [];
   bool _slotsLoading = false;
 
-  // Place id of the selected suggestion, if any. Cleared as soon as the user
-  // edits the address text by hand.
-  String? _selectedPlaceId;
+  // Coordinates resolved for the CURRENT address text: from a picked
+  // suggestion, "use my location", or a saved address. Cleared as soon as the
+  // user edits the address text by hand, since the resolution no longer
+  // applies to what is typed.
+  ({double lat, double lng, String? countryCode})? _resolvedLocation;
 
   bool _defaultMessageSet = false;
+
+  // Point 1 (CADRAGE booking-ux): every error path of this sheet surfaces
+  // through this in-sheet banner, never a ScaffoldMessenger SnackBar, which
+  // draws BELOW the modal bottom sheet (so it stays invisible until the sheet
+  // is closed, by which point the user has already left the screen where the
+  // error could be fixed).
+  String? _errorBanner;
+
+  void _showError(String message) {
+    if (mounted) setState(() => _errorBanner = message);
+  }
 
   @override
   void initState() {
@@ -133,14 +159,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     } catch (_) {
       if (mounted) {
         setState(() => _voiceMode = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.bookingVoicePermissionDenied,
-            ),
-            backgroundColor: context.oc.error,
-          ),
-        );
+        _showError(AppLocalizations.of(context)!.bookingVoicePermissionDenied);
       }
     }
   }
@@ -159,14 +178,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       // guard in chat_page.dart.
       if (bytes.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context)!.bookingVoiceUploadFailed,
-              ),
-              backgroundColor: context.oc.error,
-            ),
-          );
+          _showError(AppLocalizations.of(context)!.bookingVoiceUploadFailed);
         }
         return;
       }
@@ -248,9 +260,48 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
             false;
         return !paused;
       case 2:
-        return true; // address is optional
+        // The provider always travels to the client (no remote/on-site mode
+        // exists on Service), so an address is mandatory: without it there is
+        // neither placeId nor coordinates, and the zone gate below has no
+        // signal to run against.
+        return _addressController.text.trim().isNotEmpty;
       default:
         return false;
+    }
+  }
+
+  /// "Ce prestataire n'intervient pas a cette adresse.", plus the zones it DOES
+  /// cover, so the refusal is actionable rather than a dead end (point 2).
+  String _zoneCoverageMessage(AppLocalizations l10n) {
+    final names = widget.serviceZones.map((z) => z.label).join(', ');
+    return l10n.bookingAddressOutsideZones(names);
+  }
+
+  /// Reads `details.code` when the server sends it (E11 form), the same
+  /// extraction `FunctionsIdentitySubmitService` uses for identity refusals.
+  static String? _detailsCode(Object? details) {
+    if (details is Map && details['code'] is String) {
+      return details['code'] as String;
+    }
+    return null;
+  }
+
+  /// Geocodes the hand-typed address text via the same autocomplete-then-
+  /// lookup path `_StepAddress._selectSuggestion` uses for a picked
+  /// suggestion, so a submitted address is always exploitable (has
+  /// coordinates the zone/Senegal gates can judge) even when the user never
+  /// opened or picked from the suggestion list. Returns null when nothing
+  /// resolves.
+  Future<({double lat, double lng, String? countryCode})?>
+  _geocodeTypedAddress() async {
+    final addressText = _addressController.text.trim();
+    try {
+      final geocoding = ref.read(geocodingServiceProvider);
+      final suggestions = await geocoding.autocomplete(addressText);
+      if (suggestions.isEmpty) return null;
+      return await geocoding.getPlaceLatLng(suggestions.first.placeId);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -258,7 +309,6 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     final l10n = AppLocalizations.of(context)!;
     final successMsg = l10n.bookingSentSuccess;
     final errorMsg = l10n.errorGeneral;
-    final errorColor = context.oc.error;
 
     // Provider is "En pause": block the request client-side with a clear
     // message. The server (createBooking) also refuses: this is just UX.
@@ -269,55 +319,50 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
             ?.active ==
         false;
     if (providerPaused) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.bookingProviderUnavailable),
-          backgroundColor: errorColor,
-        ),
-      );
+      _showError(l10n.bookingProviderUnavailable);
+      return;
+    }
+
+    // Coordinates already resolved when the address was picked (suggestion,
+    // "use my location", or a saved address). A hand-typed address that was
+    // never picked from the list has none yet: geocode it now so the
+    // zone/Senegal gates below always have a signal to judge by, instead of
+    // silently letting an unverified address through.
+    final resolved = _resolvedLocation ?? await _geocodeTypedAddress();
+    if (resolved == null) {
+      _showError(l10n.bookingAddressNotResolved);
+      return;
+    }
+    if (_resolvedLocation == null && mounted) {
+      setState(() => _resolvedLocation = resolved);
+    }
+    final lat = resolved.lat;
+    final lng = resolved.lng;
+    final countryCode = resolved.countryCode;
+
+    // CADRAGE section 5: the prestation must be in Senegal. Block with an
+    // explicit message when we can prove the address is elsewhere. The server
+    // (createBooking) enforces the same rule as the source of truth.
+    if (evaluateSenegalLocation(countryCode: countryCode, lat: lat, lng: lng) ==
+        SenegalLocationResult.outside) {
+      _showError(l10n.bookingAddressNotInSenegal);
+      return;
+    }
+
+    // Point 2: the same zone-coverage rule the server enforces, checked here
+    // BEFORE any network call, so a doomed request never leaves the device.
+    if (evaluateServiceZoneCoverage(
+          zones: widget.serviceZones,
+          lat: lat,
+          lng: lng,
+        ) ==
+        ServiceZoneCoverage.outside) {
+      _showError(_zoneCoverageMessage(l10n));
       return;
     }
 
     setState(() => _loading = true);
     try {
-      double? lat;
-      double? lng;
-      String? countryCode;
-      final placeId = _selectedPlaceId;
-      if (placeId != null && placeId.isNotEmpty) {
-        try {
-          final geocoding = ref.read(geocodingServiceProvider);
-          final coords = await geocoding.getPlaceLatLng(placeId);
-          if (coords != null) {
-            lat = coords.lat;
-            lng = coords.lng;
-            countryCode = coords.countryCode;
-          }
-        } catch (_) {
-          // Non-blocking: the booking can still be created without coords.
-        }
-      }
-
-      // CADRAGE section 5: the prestation must be in Senegal. Block with an
-      // explicit message when we can prove the address is elsewhere. The server
-      // (createBooking) enforces the same rule as the source of truth.
-      if (evaluateSenegalLocation(
-            countryCode: countryCode,
-            lat: lat,
-            lng: lng,
-          ) ==
-          SenegalLocationResult.outside) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.bookingAddressNotInSenegal),
-            backgroundColor: errorColor,
-          ),
-        );
-        setState(() => _loading = false);
-        return;
-      }
-
       String requestMessage;
       String? audioMessageUrl;
       if (_voiceMode && _recordedBytes != null) {
@@ -326,12 +371,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
           audioMessageUrl = await media.uploadBookingVoice(_recordedBytes!);
         } catch (_) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.bookingVoiceUploadFailed),
-                backgroundColor: errorColor,
-              ),
-            );
+            _showError(l10n.bookingVoiceUploadFailed);
             setState(() => _loading = false);
           }
           return;
@@ -361,18 +401,21 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       }
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message ?? errorMsg),
-            backgroundColor: errorColor,
-          ),
+        // Point 3: the zone refusal is classified from its stable
+        // `details.code` and shown in French; anything else falls back to the
+        // server's own message (already French for every other refusal).
+        final kind = classifyBookingSubmitError(
+          detailsCode: _detailsCode(e.details),
+        );
+        _showError(
+          kind == BookingSubmitErrorKind.outsideZones
+              ? _zoneCoverageMessage(l10n)
+              : (e.message ?? errorMsg),
         );
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg), backgroundColor: errorColor),
-        );
+        _showError(errorMsg);
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -526,6 +569,14 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                 ),
                 const SizedBox(height: 20),
 
+                if (_errorBanner != null) ...[
+                  _ErrorBanner(
+                    message: _errorBanner!,
+                    onDismiss: () => setState(() => _errorBanner = null),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Step content
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
@@ -544,7 +595,10 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                         child: OutlinedButton(
                           onPressed: _loading
                               ? null
-                              : () => setState(() => _step--),
+                              : () => setState(() {
+                                  _step--;
+                                  _errorBanner = null;
+                                }),
                           child: Text(l10n.bookingBack),
                         ),
                       ),
@@ -554,12 +608,17 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                       child: _step < 2
                           ? ElevatedButton(
                               onPressed: _canAdvance
-                                  ? () => setState(() => _step++)
+                                  ? () => setState(() {
+                                      _step++;
+                                      _errorBanner = null;
+                                    })
                                   : null,
                               child: Text(l10n.bookingContinue),
                             )
                           : ElevatedButton(
-                              onPressed: _loading ? null : _submit,
+                              onPressed: (_loading || !_canAdvance)
+                                  ? null
+                                  : _submit,
                               child: _loading
                                   ? SizedBox(
                                       height: 20,
@@ -625,8 +684,9 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         return _StepAddress(
           controller: _addressController,
           focus: _addressFocus,
-          onPlaceSelected: (placeId) =>
-              setState(() => _selectedPlaceId = placeId),
+          resolvedLocation: _resolvedLocation,
+          onLocationResolved: (loc) => setState(() => _resolvedLocation = loc),
+          onError: _showError,
         );
       default:
         return const SizedBox.shrink();
@@ -661,6 +721,56 @@ class _StepIndicator extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Error banner (point 1): every error path of this sheet renders here,
+// inside the sheet itself, never a SnackBar the sheet would draw over.
+// ---------------------------------------------------------------------------
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message, required this.onDismiss});
+
+  final String message;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return Container(
+      key: const Key('bookingErrorBanner'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: oc.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: oc.error.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline_rounded, size: 20, color: oc.error),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: oc.error,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: onDismiss,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: Icon(Icons.close_rounded, size: 18, color: oc.error),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1191,15 +1301,28 @@ class _StepAddress extends ConsumerStatefulWidget {
   const _StepAddress({
     required this.controller,
     required this.focus,
-    required this.onPlaceSelected,
+    required this.resolvedLocation,
+    required this.onLocationResolved,
+    required this.onError,
   });
 
   final TextEditingController controller;
   final FocusNode focus;
 
-  /// Called with the selected suggestion's placeId, or null when the user
-  /// edits the address by hand (so the cached id is no longer valid).
-  final ValueChanged<String?> onPlaceSelected;
+  /// Coordinates resolved for the CURRENT text in [controller], owned by the
+  /// parent sheet so the submit-time zone/Senegal gates (point 2) and the
+  /// "save this address" affordance here read the same value.
+  final ({double lat, double lng, String? countryCode})? resolvedLocation;
+
+  /// Called with newly resolved coordinates (a suggestion pick, "use my
+  /// location", or a saved address), or null when the user edits the address
+  /// by hand and the previous resolution no longer applies.
+  final ValueChanged<({double lat, double lng, String? countryCode})?>
+  onLocationResolved;
+
+  /// Point 1: failures from this step (GPS denied, service off) surface
+  /// through the sheet's banner, never a SnackBar a bottom sheet would hide.
+  final ValueChanged<String> onError;
 
   @override
   ConsumerState<_StepAddress> createState() => _StepAddressState();
@@ -1207,10 +1330,11 @@ class _StepAddress extends ConsumerStatefulWidget {
 
 class _StepAddressState extends ConsumerState<_StepAddress> {
   List<PlaceSuggestion> _suggestions = [];
+  bool _geoLoading = false;
 
   Future<void> _onChanged(String input) async {
-    // Manual edits invalidate the previously selected place.
-    widget.onPlaceSelected(null);
+    // Manual edits invalidate the previously resolved location.
+    widget.onLocationResolved(null);
     if (input.trim().length < 3) {
       setState(() => _suggestions = []);
       return;
@@ -1222,16 +1346,134 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
     } catch (_) {}
   }
 
-  void _selectSuggestion(PlaceSuggestion s) {
+  Future<void> _selectSuggestion(PlaceSuggestion s) async {
     widget.controller.text = s.description;
-    widget.onPlaceSelected(s.placeId);
     setState(() => _suggestions = []);
+    try {
+      final geocoding = ref.read(geocodingServiceProvider);
+      final coords = await geocoding.getPlaceLatLng(s.placeId);
+      if (coords == null || !mounted) return;
+      widget.onLocationResolved((
+        lat: coords.lat,
+        lng: coords.lng,
+        countryCode: coords.countryCode,
+      ));
+    } catch (_) {
+      // Non-blocking: the address text is kept, only the coordinates are
+      // missing, so the zone/Senegal gates simply have no signal to judge by.
+    }
+  }
+
+  Future<void> _useMyLocation() async {
+    setState(() => _geoLoading = true);
+    try {
+      final result = await resolveCurrentPosition();
+      if (!mounted) return;
+      final position = result.position;
+      if (position == null) {
+        widget.onError(
+          currentPositionFailureMessage(
+            result.failure!,
+            AppLocalizations.of(context)!,
+          ),
+        );
+        return;
+      }
+      final geocoding = ref.read(geocodingServiceProvider);
+      final label = await geocoding.reverseGeocode(
+        position.latitude,
+        position.longitude,
+      );
+      if (!mounted) return;
+      widget.controller.text =
+          label ?? AppLocalizations.of(context)!.locationMyPosition;
+      setState(() => _suggestions = []);
+      widget.onLocationResolved((
+        lat: position.latitude,
+        lng: position.longitude,
+        countryCode: null,
+      ));
+    } finally {
+      if (mounted) setState(() => _geoLoading = false);
+    }
+  }
+
+  void _applySavedLocation(SavedLocation loc) {
+    widget.controller.text = loc.address;
+    setState(() => _suggestions = []);
+    widget.onLocationResolved((lat: loc.lat, lng: loc.lng, countryCode: null));
+  }
+
+  void _saveCurrentAddress() {
+    final loc = widget.resolvedLocation;
+    final address = widget.controller.text.trim();
+    if (loc == null || address.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
+    final nameController = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.locationAddressName,
+                style: Theme.of(
+                  ctx,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                decoration: InputDecoration(hintText: l10n.locationAddressHint),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  final name = nameController.text.trim();
+                  if (name.isEmpty) return;
+                  ref
+                      .read(savedLocationsProvider.notifier)
+                      .add(
+                        SavedLocation(
+                          label: name,
+                          address: address,
+                          lat: loc.lat,
+                          lng: loc.lng,
+                          // No radius concept for a booking address; matches
+                          // the default the home page's own filter starts at.
+                          radiusKm: 30,
+                        ),
+                      );
+                  Navigator.of(ctx).pop();
+                },
+                child: Text(l10n.save),
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(l10n.cancel),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+    final savedLocations = ref.watch(savedLocationsProvider);
+    final canSave =
+        widget.resolvedLocation != null &&
+        widget.controller.text.trim().isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1248,6 +1490,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
         ),
         const SizedBox(height: 12),
         TextFormField(
+          key: const Key('bookingAddressField'),
           controller: widget.controller,
           focusNode: widget.focus,
           textInputAction: TextInputAction.done,
@@ -1261,6 +1504,16 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
           ),
           onChanged: _onChanged,
         ),
+        if (widget.controller.text.trim().isEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            key: const Key('bookingAddressRequiredHint'),
+            l10n.bookingAddressRequiredHint,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: oc.error),
+          ),
+        ],
         if (_suggestions.isNotEmpty) ...[
           const SizedBox(height: 4),
           Container(
@@ -1311,6 +1564,64 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
                 );
               },
             ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _geoLoading ? null : _useMyLocation,
+                icon: _geoLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        Icons.my_location_rounded,
+                        size: 18,
+                        color: oc.primary,
+                      ),
+                label: Text(l10n.locationUseMyPosition),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, AppSpacing.minTouchTarget),
+                  side: BorderSide(color: oc.primary.withValues(alpha: 0.4)),
+                ),
+              ),
+            ),
+            if (canSave) ...[
+              const SizedBox(width: 8),
+              Semantics(
+                button: true,
+                label: l10n.bookingSaveAddress,
+                child: IconButton(
+                  onPressed: _saveCurrentAddress,
+                  icon: Icon(Icons.bookmark_add_outlined, color: oc.primary),
+                  tooltip: l10n.bookingSaveAddress,
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (savedLocations.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.m),
+          Text(
+            l10n.locationMyAddresses,
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final loc in savedLocations)
+                ActionChip(
+                  avatar: const Icon(Icons.star_rounded, size: 16),
+                  label: Text(loc.label),
+                  onPressed: () => _applySavedLocation(loc),
+                ),
+            ],
           ),
         ],
         const SizedBox(height: 20),

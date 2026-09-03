@@ -449,10 +449,21 @@
   "bookingNoSlots": "Aucun créneau libre ce jour-là. Essayez une autre date.",
   "bookingProviderUnavailable": "Ce prestataire est indisponible pour le moment.",
   "bookingAddressNotInSenegal": "La prestation doit se situer au Sénégal. Choisissez une adresse au Sénégal.",
+  "bookingAddressOutsideZones": "Ce prestataire n'intervient pas à cette adresse. Zones couvertes : {zones}.",
+  "@bookingAddressOutsideZones": {
+    "placeholders": {
+      "zones": {
+        "type": "String"
+      }
+    }
+  },
+  "bookingSaveAddress": "Enregistrer cette adresse",
   "marketplaceDisclaimer": "Outalma met uniquement en relation des clients et des prestataires indépendants. Tout accord et paiement se fait directement entre vous, hors de l'application et sous votre responsabilité. Vérifiez toujours à qui vous avez affaire.",
   "bookingStep3Title": "Adresse d'intervention",
-  "bookingStep3Subtitle": "Où souhaitez-vous que le prestataire intervienne ? (optionnel)",
+  "bookingStep3Subtitle": "Où souhaitez-vous que le prestataire intervienne ?",
   "bookingStep3Hint": "Ex: Rue 10, Point E, Dakar",
+  "bookingAddressRequiredHint": "L'adresse est requise : le prestataire se déplace toujours pour intervenir.",
+  "bookingAddressNotResolved": "Adresse introuvable. Choisissez une suggestion dans la liste ou utilisez votre position.",
   "bookingBack": "Retour",
   "bookingContinue": "Continuer",
   "bookingSend": "Envoyer la demande",
@@ -969,6 +980,7 @@
   "introContinueAsGuest": "Explorer sans compte",
   "introAlreadyHaveAccount": "J'ai déjà un compte",
   "avatarSheetTitle": "Photo de profil",
+  "avatarPreviewLabel": "Aperçu",
   "avatarImportPhoto": "Importer une photo",
   "avatarRemove": "Retirer, revenir aux initiales",
   "avatarSkinToneLabel": "Teinte de peau",

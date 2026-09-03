@@ -100,20 +100,6 @@ Future<void> _presentCard(
   }
 }
 
-/// Brings the screen to the state where the manual shutter is offered, by
-/// letting the one-shot fallback timer run out.
-///
-/// The button is no longer there from the first millisecond: the photo is meant
-/// to be taken automatically, and the button is the fallback for when that does
-/// not happen. No pumpAndSettle, and it tolerates a button that is already
-/// present, so the same helper is green before and after the shutter is wired.
-Future<void> revealManualShutter(
-  WidgetTester tester, {
-  Duration fallbackAfter = const Duration(seconds: 10),
-}) async {
-  await tester.pump(fallbackAfter);
-}
-
 void main() {
   testWidgets('shows the permission-denied state when denied (AC-C11)', (
     tester,
@@ -152,7 +138,6 @@ void main() {
     source.emitLuma(_blurryFrame());
     await tester.pump();
 
-    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pump();
 
@@ -178,7 +163,6 @@ void main() {
     source.emitLuma(_sharpFrame());
     await tester.pump();
 
-    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pumpAndSettle();
 
@@ -201,7 +185,6 @@ void main() {
     await tester.pump();
 
     // Two consecutive blur refusals on the same still.
-    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pump();
     expect(find.text('Envoyer quand même, un humain relira'), findsNothing);
@@ -235,7 +218,6 @@ void main() {
     source.emitLuma(_sharpFrame());
     await tester.pump();
 
-    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pumpAndSettle();
 
@@ -268,7 +250,6 @@ void main() {
     source.emitLuma(_blurryFrame());
     await tester.pump();
 
-    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pump();
     await tester.tap(find.text('Prendre la photo'));
@@ -303,7 +284,6 @@ void main() {
     source.emitLuma(_sharpFrame());
     await tester.pump();
 
-    await revealManualShutter(tester);
     await tester.tap(find.text('Prendre la photo'));
     await tester.pumpAndSettle();
 
@@ -379,39 +359,40 @@ void main() {
     expect(find.text('Retournez la carte.'), findsOneWidget);
   });
 
-  testWidgets('the manual button is absent until the fallback is due', (
-    tester,
-  ) async {
-    final source = FakeCaptureSource();
-    addTearDown(source.dispose);
+  testWidgets(
+    'the manual button is offered immediately on arrival (point 6: manual '
+    'is the principal path, not a fallback promoted after a timer)',
+    (tester) async {
+      final source = FakeCaptureSource();
+      addTearDown(source.dispose);
 
-    await tester.pumpWidget(_wrap(source, onCaptured: (_) {}));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(source, onCaptured: (_) {}));
+      await tester.pumpAndSettle();
 
-    expect(
-      find.text('Prendre la photo'),
-      findsNothing,
-      reason: 'the photo is meant to be taken automatically',
-    );
+      expect(
+        find.text('Prendre la photo'),
+        findsOneWidget,
+        reason:
+            'the provider must never stare at ten seconds of nothing before '
+            'a command appears',
+      );
+    },
+  );
 
-    await revealManualShutter(tester);
-    expect(find.text('Prendre la photo'), findsOneWidget);
-  });
+  testWidgets(
+    'the manual button stays available even when no frame ever arrives',
+    (tester) async {
+      // A stream that opens and then delivers nothing: the user must not be left
+      // without any command at all.
+      final source = FakeCaptureSource();
+      addTearDown(source.dispose);
 
-  testWidgets('the fallback is offered even when no frame ever arrives', (
-    tester,
-  ) async {
-    // A stream that opens and then delivers nothing: the user must not be left
-    // without any command at all.
-    final source = FakeCaptureSource();
-    addTearDown(source.dispose);
+      await tester.pumpWidget(_wrap(source, onCaptured: (_) {}));
+      await tester.pumpAndSettle();
 
-    await tester.pumpWidget(_wrap(source, onCaptured: (_) {}));
-    await tester.pumpAndSettle();
-
-    await revealManualShutter(tester);
-    expect(find.text('Prendre la photo'), findsOneWidget);
-  });
+      expect(find.text('Prendre la photo'), findsOneWidget);
+    },
+  );
 
   testWidgets('a refused shot shows the refusal, then the stream comes back', (
     tester,
@@ -638,7 +619,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await revealManualShutter(tester);
       expect(
         find.text('Prendre la photo'),
         findsOneWidget,

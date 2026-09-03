@@ -23,9 +23,14 @@ import 'identity_capture_widgets.dart';
 
 /// One document side captured live (archi 5.3, slice 4, AC-C05/C06/C11).
 ///
-/// The photo is taken AUTOMATICALLY once the framing settles, so a provider who
-/// cannot read has nothing to read and no button to find: a ring fills as the
-/// hold runs, the shot flashes and buzzes, and an icon says what to do next.
+/// The manual shutter button is the PRINCIPAL path (CADRAGE booking-ux point
+/// 6, Amath's arbitrage): it is offered from the first frame, never gated
+/// behind a fallback timer, because a provider staring at an obturator that
+/// refuses to fire for ten seconds concludes the app is broken. The
+/// automatic shutter is the BONUS: it still fires on its own once the
+/// framing settles, a ring fills as the hold runs, the shot flashes and
+/// buzzes, and an icon says what to do next, but nothing in the journey
+/// depends on it happening.
 ///
 /// Two things guard that automation.
 ///
@@ -34,9 +39,7 @@ import 'identity_capture_widgets.dart';
 /// motionless, the readable-text gate would accept it since a recto carries
 /// text, and the batch would ship two rectos.
 ///
-/// The manual button stays as a FALLBACK, offered by a one-shot timer that runs
-/// whether or not frames arrive, so a dead stream never leaves the user without
-/// a command. When sharpness is unknown that button does not capture silently:
+/// When sharpness is unknown the manual button does not capture silently:
 /// each press is refused and counted, and the AC-C34 escape only appears past
 /// blurOverrideAfter, exactly as it does for a blurred frame.
 ///
@@ -71,9 +74,6 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
   /// resume that does not re-listen would leave a permanently dead screen, and
   /// a subscription outliving this page could fire on a disposed widget.
   StreamSubscription<LumaFrame>? _sub;
-
-  /// One-shot, latched, never restarted, cancelled on dispose.
-  Timer? _fallbackTimer;
 
   /// Drives the overlay alone, so the camera preview never rebuilds (P5).
   final ValueNotifier<DocumentShutterState> _shutter = ValueNotifier(
@@ -117,7 +117,6 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
 
   int _blurFails = 0;
   int _autoRejects = 0;
-  bool _fallbackDue = false;
   bool _capturing = false;
 
   /// True once a shot has actually been taken. The hint has nothing left
@@ -174,7 +173,6 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
 
     _resetAnalysis();
     _sub = _source.lumaFrames().listen(_onFrame);
-    _armFallback();
     setState(() => _ui = _Ui.ready);
   }
 
@@ -191,21 +189,6 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
     _lastFrameMs = 0;
     _resumeFloorMs = 0;
     _shutter.value = const DocumentShutterState.initial();
-  }
-
-  /// The fallback clock is a wall clock, NOT the frame clock: a frame-fed clock
-  /// does not advance when nothing arrives, so a dead stream would leave the
-  /// user with no command at all. It is armed once and latched, so the button
-  /// never disappears after showing itself.
-  void _armFallback() {
-    if (_fallbackTimer != null || _fallbackDue) return;
-    final config = ref.read(captureConfigProvider);
-    _fallbackTimer = Timer(
-      Duration(milliseconds: config.manualFallbackAfterMs),
-      () {
-        if (mounted) setState(() => _fallbackDue = true);
-      },
-    );
   }
 
   /// Runs the contour detection for one frame, drives the overlay, and returns
@@ -476,7 +459,6 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
   @override
   void dispose() {
     // Order matters: silence the inputs before disposing what they write to.
-    _fallbackTimer?.cancel();
     _contour.dispose();
     _projected.dispose();
     _sub?.cancel();
@@ -620,11 +602,13 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
               captureLabel: l10n.identityCaptureButton,
               manualHint: l10n.identityCaptureManualHint,
               sendAnywayLabel: l10n.identityCaptureSendAnyway,
-              offerManual: offerManualShutter(
-                fallbackDue: _fallbackDue,
-                autoRejects: _autoRejects,
-                rejectLimit: config.autoRejectLimit,
-              ),
+              // Point 6 (CADRAGE booking-ux, Amath's arbitrage): manual
+              // capture is the PRINCIPAL path now, offered from the first
+              // frame rather than promoted after a fallback timer. Detection
+              // itself is untouched: the automatic shutter still fires on its
+              // own as the bonus (_onFrame below), this only changes when the
+              // button is shown.
+              offerManual: true,
               offerSendAnyway: _blurFails >= config.blurOverrideAfter,
               onCapture: () => _capture(automatic: false),
               onSendAnyway: () => _capture(automatic: false, force: true),

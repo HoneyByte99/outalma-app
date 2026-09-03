@@ -66,6 +66,7 @@ class CallableFunctionClient {
       throw FirebaseFunctionsException(
         code: code,
         message: err['message'] as String? ?? 'Cloud Function error',
+        details: err['details'],
       );
     }
 

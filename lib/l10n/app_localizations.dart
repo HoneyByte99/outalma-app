@@ -1778,6 +1778,18 @@ abstract class AppLocalizations {
   /// **'The service must take place in Senegal. Please choose an address in Senegal.'**
   String get bookingAddressNotInSenegal;
 
+  /// No description provided for @bookingAddressOutsideZones.
+  ///
+  /// In en, this message translates to:
+  /// **'This provider does not serve this address. Zones covered: {zones}.'**
+  String bookingAddressOutsideZones(String zones);
+
+  /// No description provided for @bookingSaveAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this address'**
+  String get bookingSaveAddress;
+
   /// No description provided for @marketplaceDisclaimer.
   ///
   /// In en, this message translates to:
@@ -1793,7 +1805,7 @@ abstract class AppLocalizations {
   /// No description provided for @bookingStep3Subtitle.
   ///
   /// In en, this message translates to:
-  /// **'Where should the provider intervene? (optional)'**
+  /// **'Where should the provider intervene?'**
   String get bookingStep3Subtitle;
 
   /// No description provided for @bookingStep3Hint.
@@ -1801,6 +1813,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'E.g. Rue 10, Point E, Dakar'**
   String get bookingStep3Hint;
+
+  /// No description provided for @bookingAddressRequiredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Address required: the provider always travels to the service location.'**
+  String get bookingAddressRequiredHint;
+
+  /// No description provided for @bookingAddressNotResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Address not found. Choose a suggestion from the list or use your location.'**
+  String get bookingAddressNotResolved;
 
   /// No description provided for @bookingBack.
   ///
@@ -4159,6 +4183,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profile picture'**
   String get avatarSheetTitle;
+
+  /// No description provided for @avatarPreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get avatarPreviewLabel;
 
   /// No description provided for @avatarImportPhoto.
   ///

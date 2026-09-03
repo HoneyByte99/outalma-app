@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/app_shell.dart';
@@ -15,12 +14,14 @@ import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/public_profile_providers.dart';
 import '../../application/user/user_providers.dart';
+import '../shared/current_position_messages.dart';
 import '../shared/service_location_label.dart';
 import '../shared/service_price_label.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/category_id.dart';
+import '../../domain/utils/current_position.dart';
 import '../auth/email_verification_banner.dart';
 import '../../domain/models/service.dart';
 import '../../domain/utils/distance.dart';
@@ -387,48 +388,24 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
 
   Future<void> _useMyLocation() async {
     setState(() => _geoLoading = true);
-
     try {
-      // Check if location services are enabled
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
+      final result = await resolveCurrentPosition();
+      final position = result.position;
+      if (position == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                AppLocalizations.of(context)!.locationServiceDisabled,
+                currentPositionFailureMessage(
+                  result.failure!,
+                  AppLocalizations.of(context)!,
+                ),
               ),
             ),
           );
         }
         return;
       }
-
-      // Check permissions
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context)!.locationPermissionDenied,
-              ),
-            ),
-          );
-        }
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
-          timeLimit: Duration(seconds: 15),
-        ),
-      );
 
       if (!mounted) return;
 
@@ -451,15 +428,6 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
         lng: position.longitude,
         radiusKm: _radiusKm,
       );
-    } catch (e) {
-      debugPrint('[Location] GPS error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.locationGeoError),
-          ),
-        );
-      }
     } finally {
       if (mounted) setState(() => _geoLoading = false);
     }

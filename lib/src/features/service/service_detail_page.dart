@@ -687,6 +687,7 @@ class _BookingBottomBarState extends ConsumerState<_BookingBottomBar> {
         serviceId: service.id,
         providerId: service.providerId,
         serviceTitle: service.title,
+        serviceZones: service.serviceZones,
       ),
     );
   }
