@@ -13,6 +13,7 @@ import {
   seedUser,
   getUser,
   getNotifications,
+  seedNotification,
 } from './helpers';
 
 const customer = 'cust1';
@@ -371,7 +372,7 @@ describe('sendBookingReminders → timezone-correct 24h reminder', () => {
     await seedUser(customer, { pushToken: 'tok-cust', country: 'FR' });
     await seedUser(provider, { pushToken: 'tok-prov', country: 'FR' });
 
-    // ~24h out, inside the 23.5–24.5h window.
+    // ~24h out, inside the 23.5 to 24.5h window.
     const scheduled = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await seedBooking('b1', {
       customerId: customer,
@@ -406,5 +407,95 @@ describe('sendBookingReminders → timezone-correct 24h reminder', () => {
     if (utc !== expectedParis) {
       expect(reminder?.body).not.toContain(utc);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Notification cascade: deleting a booking or a chat must not leave a
+// notification pointing at it. 475 production notifications were audited: 85
+// pointed at a bookingId that no longer existed, 50 at a chatId that no
+// longer existed. onBookingDeleted and onChatDeleted close that hole.
+// ---------------------------------------------------------------------------
+describe('onBookingDeleted → notification cascade', () => {
+  it('deletes every notification (any recipient) referencing the deleted booking', async () => {
+    await seedNotification(customer, 'n1', { type: 'booking_accepted', bookingId: 'b1' });
+    await seedNotification(provider, 'n2', { type: 'booking_requested', bookingId: 'b1' });
+    // A different booking's notification must survive.
+    await seedNotification(customer, 'n3', { type: 'booking_accepted', bookingId: 'b2' });
+
+    await tf.wrap(fns.onBookingDeleted)({
+      data: bookingSnapshot({ status: 'cancelled' }, 'b1'),
+      params: { bookingId: 'b1' },
+      id: 'evt-cascade-1',
+    } as never);
+
+    const custNotifs = await getNotifications(customer);
+    const provNotifs = await getNotifications(provider);
+    expect(custNotifs.some((n) => n?.bookingId === 'b1')).toBe(false);
+    expect(provNotifs.some((n) => n?.bookingId === 'b1')).toBe(false);
+    // The other booking's notification is untouched.
+    expect(custNotifs.some((n) => n?.bookingId === 'b2')).toBe(true);
+  });
+
+  it('is idempotent: replaying the delete event finds nothing left and does not throw', async () => {
+    await seedNotification(customer, 'n1', { type: 'booking_accepted', bookingId: 'b1' });
+    const event = {
+      data: bookingSnapshot({ status: 'cancelled' }, 'b1'),
+      params: { bookingId: 'b1' },
+      id: 'evt-cascade-idem',
+    } as never;
+
+    await tf.wrap(fns.onBookingDeleted)(event);
+    await expect(tf.wrap(fns.onBookingDeleted)(event)).resolves.not.toThrow();
+
+    expect(await getNotifications(customer)).toHaveLength(0);
+  });
+
+  it('does nothing (no throw) when no notification references the booking', async () => {
+    await expect(
+      tf.wrap(fns.onBookingDeleted)({
+        data: bookingSnapshot({ status: 'requested' }, 'b-none'),
+        params: { bookingId: 'b-none' },
+        id: 'evt-cascade-none',
+      } as never)
+    ).resolves.not.toThrow();
+  });
+});
+
+describe('onChatDeleted → notification cascade', () => {
+  function chatSnapshot(data: Record<string, unknown>, id = 'c1') {
+    return tf.firestore.makeDocumentSnapshot(data, `chats/${id}`);
+  }
+
+  it('deletes every notification (any recipient) referencing the deleted chat', async () => {
+    await seedNotification(customer, 'n1', { type: 'new_message', chatId: 'c1' });
+    await seedNotification(provider, 'n2', { type: 'new_message', chatId: 'c1' });
+    await seedNotification(customer, 'n3', { type: 'new_message', chatId: 'c2' });
+
+    await tf.wrap(fns.onChatDeleted)({
+      data: chatSnapshot({ participantIds: [customer, provider] }, 'c1'),
+      params: { chatId: 'c1' },
+      id: 'evt-chat-cascade-1',
+    } as never);
+
+    const custNotifs = await getNotifications(customer);
+    const provNotifs = await getNotifications(provider);
+    expect(custNotifs.some((n) => n?.chatId === 'c1')).toBe(false);
+    expect(provNotifs.some((n) => n?.chatId === 'c1')).toBe(false);
+    expect(custNotifs.some((n) => n?.chatId === 'c2')).toBe(true);
+  });
+
+  it('is idempotent: replaying the delete event finds nothing left and does not throw', async () => {
+    await seedNotification(customer, 'n1', { type: 'new_message', chatId: 'c1' });
+    const event = {
+      data: chatSnapshot({ participantIds: [customer, provider] }, 'c1'),
+      params: { chatId: 'c1' },
+      id: 'evt-chat-cascade-idem',
+    } as never;
+
+    await tf.wrap(fns.onChatDeleted)(event);
+    await expect(tf.wrap(fns.onChatDeleted)(event)).resolves.not.toThrow();
+
+    expect(await getNotifications(customer)).toHaveLength(0);
   });
 });

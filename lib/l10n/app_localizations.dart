@@ -1988,6 +1988,12 @@ abstract class AppLocalizations {
   /// **'Mark all read'**
   String get notificationsReadAll;
 
+  /// No description provided for @notificationTargetGone.
+  ///
+  /// In en, this message translates to:
+  /// **'This content no longer exists.'**
+  String get notificationTargetGone;
+
   /// No description provided for @notificationsUnreadCount.
   ///
   /// In en, this message translates to:
