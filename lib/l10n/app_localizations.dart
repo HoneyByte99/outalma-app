@@ -4172,6 +4172,12 @@ abstract class AppLocalizations {
   /// **'Profile picture'**
   String get avatarSheetTitle;
 
+  /// No description provided for @avatarPreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get avatarPreviewLabel;
+
   /// No description provided for @avatarImportPhoto.
   ///
   /// In en, this message translates to:

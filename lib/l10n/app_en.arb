@@ -1019,6 +1019,7 @@
   "introContinueAsGuest": "Browse without an account",
   "introAlreadyHaveAccount": "I already have an account",
   "avatarSheetTitle": "Profile picture",
+  "avatarPreviewLabel": "Preview",
   "avatarImportPhoto": "Import a photo",
   "avatarRemove": "Remove, back to initials",
   "avatarSkinToneLabel": "Skin tone",

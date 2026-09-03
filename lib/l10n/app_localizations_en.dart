@@ -2245,6 +2245,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get avatarSheetTitle => 'Profile picture';
 
   @override
+  String get avatarPreviewLabel => 'Preview';
+
+  @override
   String get avatarImportPhoto => 'Import a photo';
 
   @override

@@ -72,18 +72,19 @@ class AvatarPickerSheet extends StatefulWidget {
 class _AvatarPickerSheetState extends State<AvatarPickerSheet> {
   late int _tone;
 
+  /// Pending avatar choice: set on tap, written only when Enregistrer is
+  /// pressed. Aligns the avatar grid on the tone swatch's own behaviour
+  /// (`_tone` above), which is the inconsistency this sheet used to have:
+  /// picking a tone staged it, picking a character wrote it immediately.
+  late String? _selectedCharacterId;
+
   @override
   void initState() {
     super.initState();
-    _tone =
-        AvatarCatalog.parse(widget.currentAvatarId)?.toneIndex ??
-        AvatarCatalog.defaultToneIndex;
+    final current = AvatarCatalog.parse(widget.currentAvatarId);
+    _tone = current?.toneIndex ?? AvatarCatalog.defaultToneIndex;
+    _selectedCharacterId = current?.characterId;
   }
-
-  /// Read from the catalogue rather than re-split here: the tone grammar has
-  /// one owner.
-  String? get _currentCharacter =>
-      AvatarCatalog.parse(widget.currentAvatarId)?.characterId;
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +159,24 @@ class _AvatarPickerSheetState extends State<AvatarPickerSheet> {
               ),
               const Divider(height: 1),
 
+              // Preview + Enregistrer: the character grid stages a pending
+              // choice exactly like the tone row already did, so the two
+              // controls finally behave the same way, and a character can be
+              // compared across several tones before committing to one.
+              _PreviewAndSave(
+                selectedId: _selectedCharacterId == null
+                    ? null
+                    : AvatarCatalog.composeId(_selectedCharacterId!, _tone),
+                onSave: _selectedCharacterId == null
+                    ? null
+                    : () => Navigator.of(context).pop(
+                        PickAvatar(
+                          AvatarCatalog.composeId(_selectedCharacterId!, _tone),
+                        ),
+                      ),
+              ),
+              const Divider(height: 1),
+
               Expanded(
                 child: ListView(
                   controller: scrollCtrl,
@@ -171,9 +190,11 @@ class _AvatarPickerSheetState extends State<AvatarPickerSheet> {
                     _AvatarGrid(
                       ids: AvatarCatalog.humanIds,
                       tone: _tone,
-                      currentCharacter: _currentCharacter,
+                      currentCharacter: _selectedCharacterId,
                       labelBuilder: (i) =>
                           l10n.avatarItemLabel(i + 1, AvatarCatalog.humanCount),
+                      onSelected: (id) =>
+                          setState(() => _selectedCharacterId = id),
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     Text(
@@ -184,11 +205,13 @@ class _AvatarPickerSheetState extends State<AvatarPickerSheet> {
                     _AvatarGrid(
                       ids: AvatarCatalog.animalIds,
                       tone: _tone,
-                      currentCharacter: _currentCharacter,
+                      currentCharacter: _selectedCharacterId,
                       labelBuilder: (i) => l10n.avatarAnimalLabel(
                         i + 1,
                         AvatarCatalog.animalCount,
                       ),
+                      onSelected: (id) =>
+                          setState(() => _selectedCharacterId = id),
                     ),
                   ],
                 ),
@@ -197,6 +220,77 @@ class _AvatarPickerSheetState extends State<AvatarPickerSheet> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Shows the pending character + tone combination and commits it. Disabled
+/// (no preview, no button) until a character has been picked in the grid
+/// below: mirrors the tone row's own "nothing to show yet" state, since a
+/// fresh sheet with no prior avatar starts with neither set.
+class _PreviewAndSave extends StatelessWidget {
+  const _PreviewAndSave({required this.selectedId, required this.onSave});
+
+  /// The composed avatar id to preview, or null when nothing is staged yet.
+  final String? selectedId;
+
+  /// Commits the pending choice, or null while nothing is staged (disables
+  /// the button rather than removing it, so its position never shifts).
+  final VoidCallback? onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+    final id = selectedId;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        AppSpacing.m,
+        AppSpacing.l,
+        AppSpacing.m,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: id == null
+                    ? DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: oc.inputFill,
+                          border: Border.all(color: oc.border),
+                        ),
+                      )
+                    : UserAvatar(
+                        key: ValueKey(id),
+                        displayName: '',
+                        avatarId: id,
+                        radius: 24,
+                      ),
+              ),
+              const SizedBox(width: AppSpacing.m),
+              Expanded(
+                child: Text(
+                  l10n.avatarPreviewLabel,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.m),
+          // Full width, on the same footing as every other primary action in
+          // the app (ElevatedButtonThemeData forces minWidth: infinity), so
+          // this cannot sit inline beside the preview above.
+          ElevatedButton(onPressed: onSave, child: Text(l10n.save)),
+        ],
+      ),
     );
   }
 }
@@ -347,12 +441,17 @@ class _AvatarGrid extends StatelessWidget {
     required this.tone,
     required this.currentCharacter,
     required this.labelBuilder,
+    required this.onSelected,
   });
 
   final List<String> ids;
   final int tone;
   final String? currentCharacter;
   final String Function(int index) labelBuilder;
+
+  /// Stages the tap as the pending choice; the sheet only pops (and writes)
+  /// when Enregistrer is pressed.
+  final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -378,7 +477,7 @@ class _AvatarGrid extends StatelessWidget {
           selected: isSelected,
           label: labelBuilder(index),
           child: InkWell(
-            onTap: () => Navigator.of(context).pop(PickAvatar(id)),
+            onTap: () => onSelected(characterId),
             customBorder: const CircleBorder(),
             child: Stack(
               children: [

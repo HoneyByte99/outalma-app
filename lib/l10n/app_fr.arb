@@ -978,6 +978,7 @@
   "introContinueAsGuest": "Explorer sans compte",
   "introAlreadyHaveAccount": "J'ai déjà un compte",
   "avatarSheetTitle": "Photo de profil",
+  "avatarPreviewLabel": "Aperçu",
   "avatarImportPhoto": "Importer une photo",
   "avatarRemove": "Retirer, revenir aux initiales",
   "avatarSkinToneLabel": "Teinte de peau",
