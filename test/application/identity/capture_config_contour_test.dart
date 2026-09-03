@@ -9,20 +9,25 @@ import 'package:outalma_app/src/application/identity/capture_config.dart';
 /// proved by `git diff --numstat` showing zero deletions under `test/`.
 void main() {
   group('the shipped defaults', () {
-    test('both contour flags are OFF', () {
-      // Nothing about the capture screen may change until the real-phone pass
-      // has calibrated the detection thresholds. Turning either of these on by
-      // default would ship an uncalibrated threshold onto the automatic path.
+    test('the overlay is ON for the calibration pass, framing still OFF', () {
+      // Build 32 (2026-09-03) is the real-phone pass itself, so the DRAWING is
+      // switched on deliberately while edgeThreshold is still the placeholder:
+      // an absent or flickering contour is the observation being collected.
+      //
+      // contourFramingEnabled stays false, and that is the line that matters:
+      // an uncalibrated threshold must never reach the AUTOMATIC path, where a
+      // wrong DocumentFraming would fire or block the shutter. Drawing is
+      // reversible by looking away; a wrong shutter is not.
       const config = CaptureConfig();
-      expect(config.contourOverlayEnabled, isFalse);
+      expect(config.contourOverlayEnabled, isTrue);
       expect(config.contourFramingEnabled, isFalse);
     });
 
-    test('no contour work is needed, so no grid is built', () {
-      // "Inert" has to hold in milliseconds too. If the grid were built anyway,
-      // the P1 and P5 budget lines would move while the feature is supposedly
-      // switched off, and the phone pass would measure the wrong baseline.
-      expect(const CaptureConfig().contourWorkNeeded, isFalse);
+    test('contour work is now needed, so the grid IS built', () {
+      // The counterpart of the flag above, kept explicit: the per-frame cost of
+      // the detector is now paid on every capture. The P1 and P5 budget lines
+      // are therefore measured WITH the detector running from build 32 on.
+      expect(const CaptureConfig().contourWorkNeeded, isTrue);
     });
   });
 

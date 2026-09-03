@@ -77,7 +77,12 @@ class CaptureConfig {
     /// uncalibrated threshold the contour would be permanently absent or
     /// flickering, and a flickering contour is the worst possible signal for
     /// someone who cannot read.
-    this.contourOverlayEnabled = false,
+    ///
+    /// Turned ON for build 32 (2026-09-03) on Amath's explicit call, knowing
+    /// [edgeThreshold] is still the placeholder: this build IS the real-phone
+    /// pass that calibrates it. [contourFramingEnabled] stays false, so the
+    /// shutter behaviour is untouched and only the drawing is observed.
+    this.contourOverlayEnabled = true,
 
     /// When false the shutter is handed [DocumentFraming.unknown] whatever the
     /// detector saw, so its behaviour is bit for bit what it was before this

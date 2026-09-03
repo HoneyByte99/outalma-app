@@ -274,8 +274,13 @@ void main() {
       await tester.pumpWidget(
         _wrapContour(
           source,
-          // Both flags at their shipped defaults.
-          config: const CaptureConfig(analyzeEveryNthFrame: 1),
+          // The flag is passed EXPLICITLY false rather than left to the
+          // default: the shipped default became true in build 32 (calibration
+          // pass). This test guards the OFF path, not the shipped one.
+          config: const CaptureConfig(
+            analyzeEveryNthFrame: 1,
+            contourOverlayEnabled: false,
+          ),
         ),
       );
       await tester.pumpAndSettle();
