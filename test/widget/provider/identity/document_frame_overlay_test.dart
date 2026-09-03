@@ -113,11 +113,15 @@ void main() {
     // the caller with colorFor, see capture_document_page.dart). The ring
     // itself keeps turning either way, since it is the hold's main signal
     // (document_shutter_framing_test.dart); it must not disappear at the exact
-    // moment detection starts working. Verifying the painter actually differs
-    // is as far as a widget test can see (`_DocumentFramePainter` is private
-    // to the library); the one-line `progress: value` fix itself is covered
-    // by `colorFor` staying wired through both overlays in
-    // document_contour_geometry_test.dart.
+    // moment detection starts working.
+    //
+    // `DocumentFramePainter` is `@visibleForTesting` precisely so this test can
+    // name it and assert on its observable `color`/`progress` fields, instead
+    // of what the previous version did: compare two CustomPaint.painter object
+    // identities across two separate pumpWidget calls, which are always
+    // different regardless of what either one painted (the painter defines no
+    // `operator ==`), so that assertion passed even with `contourVisible`
+    // wired to nothing.
     await tester.pumpWidget(
       _wrap(
         const DocumentFrameOverlay(
@@ -151,10 +155,28 @@ void main() {
       ),
     );
 
+    final speakingPainter = speaking.painter! as DocumentFramePainter;
+    final yieldingPainter = yielding.painter! as DocumentFramePainter;
+
     expect(
-      yielding.painter,
-      isNot(equals(speaking.painter)),
-      reason: 'the template must paint differently once the contour is up',
+      speakingPainter.color,
+      AppColors.accent,
+      reason: 'the template carries the state colour before the contour is up',
+    );
+    expect(
+      yieldingPainter.color,
+      Colors.white.withValues(alpha: 0.35),
+      reason: 'the template must fade once the contour is up',
+    );
+    expect(
+      yieldingPainter.progress,
+      speakingPainter.progress,
+      reason: "the ring keeps turning, it is the hold's main signal",
+    );
+    expect(
+      yieldingPainter.progress,
+      0.5,
+      reason: 'the ring must not reset to 0 once the contour is up',
     );
   });
 }

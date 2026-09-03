@@ -106,7 +106,7 @@ class DocumentFrameOverlay extends StatelessWidget {
                   tween: Tween(begin: 0, end: progress.clamp(0.0, 1.0)),
                   duration: const Duration(milliseconds: 180),
                   builder: (context, value, _) => CustomPaint(
-                    painter: _DocumentFramePainter(
+                    painter: DocumentFramePainter(
                       color: contourVisible
                           ? Colors.white.withValues(alpha: 0.35)
                           : _color,
@@ -174,8 +174,9 @@ class _FlipCardDemo extends StatelessWidget {
 /// Draws the framing rectangle, and over it the portion of its outline that the
 /// hold has already earned. A ring filling up is the anticipation signal for a
 /// shot nobody asked for by pressing anything.
-class _DocumentFramePainter extends CustomPainter {
-  const _DocumentFramePainter({required this.color, required this.progress});
+@visibleForTesting
+class DocumentFramePainter extends CustomPainter {
+  const DocumentFramePainter({required this.color, required this.progress});
 
   final Color color;
   final double progress;
@@ -211,7 +212,7 @@ class _DocumentFramePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_DocumentFramePainter old) =>
+  bool shouldRepaint(DocumentFramePainter old) =>
       old.progress != progress || old.color != color;
 }
 
