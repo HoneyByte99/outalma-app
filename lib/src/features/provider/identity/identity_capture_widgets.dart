@@ -11,6 +11,26 @@ import '../../../domain/identity/document_quad.dart';
 /// Shared pieces of the capture screens: the framing overlays, the instruction
 /// banner (on its A7 scrim), and the two error states (permission, no camera).
 
+/// The state colour for a shutter reason, shared by [DocumentFrameOverlay] and
+/// the live [DocumentContourOverlay] so the two agree once the contour takes
+/// over the signal (see `contourVisible` below).
+///
+/// Every reason is listed EXPLICITLY rather than ending in a default: a
+/// default would let a new reason silently inherit white, and the A3
+/// icon-plus-label pair would then sit on a colour that says nothing.
+Color colorFor(DocumentShutterReason reason) => switch (reason) {
+  DocumentShutterReason.steadying => AppColors.accent,
+  DocumentShutterReason.ready => AppColors.accent,
+  DocumentShutterReason.refused => AppColors.warning,
+  DocumentShutterReason.noDocument => Colors.white,
+  DocumentShutterReason.tooSmall => AppColors.warning,
+  DocumentShutterReason.tooClose => AppColors.warning,
+  DocumentShutterReason.noFrame => Colors.white,
+  DocumentShutterReason.waitingForMotion => Colors.white,
+  DocumentShutterReason.tooBlurred => Colors.white,
+  DocumentShutterReason.moving => Colors.white,
+};
+
 /// A rounded rectangle framing hint for the ID card, drawn over the preview.
 ///
 /// The frame is the main channel for people who do not read: its colour, the
@@ -39,9 +59,14 @@ class DocumentFrameOverlay extends StatelessWidget {
   /// True once the detected contour is on screen.
   ///
   /// Two rectangles saying different things disorient someone who cannot read,
-  /// so the template YIELDS THE FLOOR: it fades and stops carrying the state
-  /// colour, which moves onto the contour. It is not removed, it just stops
-  /// speaking, so the framing hint is still there when detection drops out.
+  /// so the template YIELDS THE FLOOR on colour: it fades to a fixed white and
+  /// stops carrying the state colour, which moves onto the contour (drawn by
+  /// the caller with [colorFor]). The progress ring keeps turning regardless:
+  /// it is the hold's main signal (see `document_shutter_framing_test.dart`),
+  /// and hiding it the moment detection actually works would remove it right
+  /// when the capture is about to fire. The template is not removed, it just
+  /// stops speaking in colour, so the framing hint is still there when
+  /// detection drops out.
   final bool contourVisible;
 
   IconData get _icon => switch (reason) {
@@ -57,22 +82,7 @@ class DocumentFrameOverlay extends StatelessWidget {
     DocumentShutterReason.tooClose => Icons.zoom_out,
   };
 
-  // The three new reasons are listed EXPLICITLY, unlike the icon switch which
-  // the compiler would have forced. This one ends in a default, so they would
-  // silently have inherited white and the A3 icon-plus-label pair would sit on
-  // a colour that says nothing.
-  Color get _color => switch (reason) {
-    DocumentShutterReason.steadying => AppColors.accent,
-    DocumentShutterReason.ready => AppColors.accent,
-    DocumentShutterReason.refused => AppColors.warning,
-    DocumentShutterReason.noDocument => Colors.white,
-    DocumentShutterReason.tooSmall => AppColors.warning,
-    DocumentShutterReason.tooClose => AppColors.warning,
-    DocumentShutterReason.noFrame => Colors.white,
-    DocumentShutterReason.waitingForMotion => Colors.white,
-    DocumentShutterReason.tooBlurred => Colors.white,
-    DocumentShutterReason.moving => Colors.white,
-  };
+  Color get _color => colorFor(reason);
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +110,7 @@ class DocumentFrameOverlay extends StatelessWidget {
                       color: contourVisible
                           ? Colors.white.withValues(alpha: 0.35)
                           : _color,
-                      progress: contourVisible ? 0 : value,
+                      progress: value,
                     ),
                   ),
                 ),

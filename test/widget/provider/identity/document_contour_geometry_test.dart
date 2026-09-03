@@ -245,6 +245,17 @@ void main() {
       find.byType(DocumentFrameOverlay),
     );
     expect(template.contourVisible, isTrue);
+
+    // The colour the template gave up must have moved onto the contour, not
+    // fallen back to DocumentContourOverlay's own white default (M3): both
+    // widgets must agree on the exact same colorFor(state.reason).
+    expect(
+      overlay().color,
+      colorFor(template.reason),
+      reason:
+          'the contour must carry the live shutter colour, '
+          'not a hardcoded default',
+    );
   });
 
   testWidgets(
