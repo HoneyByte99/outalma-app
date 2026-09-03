@@ -16,7 +16,6 @@ import '../../data/services/camera_capture_source_stub.dart'
 import '../../data/services/mlkit_document_text_detector_stub.dart'
     if (dart.library.io) '../../data/services/mlkit_document_text_detector.dart';
 import '../../domain/identity/capture_selection.dart';
-import '../auth/auth_providers.dart';
 import 'capture_config.dart';
 import 'capture_source.dart';
 import 'document_text_detector.dart';
@@ -33,7 +32,7 @@ final identityUploadPortProvider = Provider<IdentityUploadPort>(
 );
 
 final identitySubmitPortProvider = Provider<IdentitySubmitPort>(
-  (ref) => FunctionsIdentitySubmitService(ref.watch(functionsProvider)),
+  (ref) => const FunctionsIdentitySubmitService(),
 );
 
 final batchIdGeneratorProvider = Provider<BatchIdGenerator>(
