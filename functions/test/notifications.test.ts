@@ -7,6 +7,7 @@ const tf = functionsTest({ projectId: 'demo-outalma', storageBucket: 'demo-outal
 
 import * as fns from '../src/index';
 import * as admin from 'firebase-admin';
+import { createNotification } from '../src/notify';
 import {
   clearFirestore,
   seedBooking,
@@ -497,5 +498,42 @@ describe('onChatDeleted → notification cascade', () => {
     await expect(tf.wrap(fns.onChatDeleted)(event)).resolves.not.toThrow();
 
     expect(await getNotifications(customer)).toHaveLength(0);
+  });
+});
+
+describe('createNotification → audience guard', () => {
+  // 344 of the 391 notifications in production predate `audience` (2026-09
+  // audit) precisely because the field used to be optional: this guard is
+  // what stops the stock from growing again. Every real call site already
+  // passes a valid audience (see the other describe blocks in this file); this
+  // block exercises the guard itself, in isolation, the way none of them do.
+  const base = { type: 'new_message', title: 't', body: 'b' };
+
+  // Matched against createNotification's own error message, not just "rejects
+  // with something": Firestore's admin SDK independently refuses an
+  // `undefined` field value, so a looser `.rejects.toThrow()` on the
+  // "no audience at all" case would pass even with the guard deleted, and
+  // mutation testing caught exactly that on the first draft of this test.
+  const guardMessage = /createNotification: missing\/invalid audience/;
+
+  it('rejects a creation with no audience at all, and writes nothing', async () => {
+    await expect(
+      createNotification(customer, { ...base } as never)
+    ).rejects.toThrow(guardMessage);
+    expect(await getNotifications(customer)).toHaveLength(0);
+  });
+
+  it('rejects a creation with an audience outside client/provider, and writes nothing', async () => {
+    await expect(
+      createNotification(customer, { ...base, audience: 'both' } as never)
+    ).rejects.toThrow(guardMessage);
+    expect(await getNotifications(customer)).toHaveLength(0);
+  });
+
+  it('accepts a valid audience and writes it through unchanged', async () => {
+    await createNotification(customer, { ...base, audience: 'client' });
+    const notifs = await getNotifications(customer);
+    expect(notifs).toHaveLength(1);
+    expect(notifs[0]?.audience).toBe('client');
   });
 });
