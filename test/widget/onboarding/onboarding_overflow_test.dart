@@ -6,14 +6,12 @@
 // OVERFLOWED BY 50 PIXELS"). The slide is now scroll-safe, so no vertical
 // RenderFlex overflow should occur.
 //
-// Width is intentionally wider than a real phone (700 logical px, not
-// iPhone 15 Pro's 393). At the real width this same last slide ALSO overflows
+// Viewport is the real iPhone 15 Pro size (393x852 logical px), not a wider
+// stand-in: at this exact width the same last slide ALSO used to overflow
 // horizontally, in `_LegalLink`'s Row inside the `Wrap` a few lines below the
-// slide (unrelated: it fires regardless of height, and reproduces unchanged
-// with this fix reverted). That is a second, pre-existing, currently-shipping
-// defect this recovery did not introduce and was not asked to fix; it belongs
-// to a follow-up, not this test. Height stays short (852 logical px) to keep
-// exercising the exact bug this test is for.
+// slide (independent of the vertical fix above: it fired regardless of
+// height). Both defects are exercised, and both must stay fixed, on this one
+// viewport.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,10 +31,10 @@ Widget _wrap(ThemeData theme) => ProviderScope(
 );
 
 void main() {
-  testWidgets('last slide does not overflow vertically on a short viewport', (
+  testWidgets('last slide does not overflow on a real iPhone 15 Pro viewport', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(2100, 2556);
+    tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -55,7 +53,7 @@ void main() {
   });
 
   testWidgets('renders in dark theme without overflow', (tester) async {
-    tester.view.physicalSize = const Size(2100, 2556);
+    tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
