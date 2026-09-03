@@ -24,3 +24,8 @@ lib/src/data/services/camera_capture_source_stub.dart
 lib/src/data/services/identity_upload_service.dart
 lib/src/data/services/functions_identity_submit_service.dart
 lib/src/application/identity/identity_capture_providers.dart
+# Same shape as functions_identity_submit_service.dart above: the
+# CallableFunctionClient transport is untestable Firebase plumbing (log()'s
+# never-throws contract is covered in test/data/log_session_service_test.dart),
+# and _deviceModel()'s per-platform branches only run on a real device or web.
+lib/src/data/services/log_session_service.dart

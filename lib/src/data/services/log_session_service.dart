@@ -1,18 +1,18 @@
 import 'dart:io';
 import 'dart:math';
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'callable_function_client.dart';
+
 /// Calls the `logSession` Cloud Function to record a login event
 /// (IP, country, platform, device model, app version).
 ///
-/// Failures are swallowed — session logging must never block the auth flow.
+/// Failures are swallowed, session logging must never block the auth flow.
 class LogSessionService {
-  const LogSessionService(this._functions);
-  final FirebaseFunctions _functions;
+  const LogSessionService();
 
   Future<void> log() async {
     try {
@@ -21,14 +21,17 @@ class LogSessionService {
       final appVersion = await _appVersion();
       final sessionId = _generateId();
 
-      await _functions.httpsCallable('logSession').call<void>({
-        'platform': platform,
-        'deviceModel': deviceModel,
-        'appVersion': appVersion,
-        'sessionId': sessionId,
-      });
+      await const CallableFunctionClient().call(
+        'logSession',
+        data: {
+          'platform': platform,
+          'deviceModel': deviceModel,
+          'appVersion': appVersion,
+          'sessionId': sessionId,
+        },
+      );
     } catch (e) {
-      // Intentionally silent — logging must not break the auth flow.
+      // Intentionally silent, logging must not break the auth flow.
       debugPrint('[LogSessionService] error: $e');
     }
   }
