@@ -96,8 +96,13 @@ AVATAR_PATH = "seed/avatars/{uid}.png"
 # `noHair1` is a plain bald head with no gendered cue at all, so it joins the
 # neutral pool instead of staying forced male; `twists` and `bantuKnots` both
 # draw a short cropped fade that reads masculine, the opposite of where a name
-# match would put them.
-_HEAD_NEUTRAL = ["afro", "twists2", "dreads1", "dreads2", "noHair1"]
+# match would put them. `hatBeanie` (a plain knit cap) and `hatHip` (a
+# brimmed hat over loose hair) are generic headwear with no gendered cue
+# either, same reasoning as `noHair1`, so they join neutral too instead of
+# being left out of every pool and never drawn at all.
+_HEAD_NEUTRAL = [
+    "afro", "twists2", "dreads1", "dreads2", "noHair1", "hatBeanie", "hatHip",
+]
 _HEAD_FEMALE = _HEAD_NEUTRAL + [
     "bangs", "bangs2", "bun", "bun2", "buns", "cornrows", "hijab", "long",
     "longAfro", "longBangs", "longCurly", "medium1", "medium2", "medium3",
