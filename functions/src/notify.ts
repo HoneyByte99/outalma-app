@@ -105,10 +105,24 @@ export async function createNotification(
     bookingId?: string;
     chatId?: string;
     // Which role this notification targets, drives the Client/Provider tabs in
-    // the app. Always set it: the caller knows the recipient's role.
-    audience?: 'client' | 'provider';
+    // the app. Required: every call site knows the recipient's role, and a
+    // notification written without it silently falls back to `both` on the
+    // client (see notificationAudienceFor in app_notification.dart), which is
+    // exactly how the pre-audience stock (344/391 notifications, 2026-09
+    // audit) leaked a provider's chats into the client tab and vice versa.
+    // Runtime check below, not just the type: a caller compiled against a
+    // stale .d.ts, or one reached from plain JS, would otherwise bypass this
+    // at the type layer alone.
+    audience: 'client' | 'provider';
   }
 ): Promise<void> {
+  if (data.audience !== 'client' && data.audience !== 'provider') {
+    throw new Error(
+      `createNotification: missing/invalid audience for type "${data.type}" ` +
+        `(uid=${uid}). Every caller must resolve the recipient's role; see ` +
+        'scripts/backfill-notification-audience.py for what happens when it does not.'
+    );
+  }
   await db()
     .collection('notifications')
     .doc(uid)
@@ -119,7 +133,7 @@ export async function createNotification(
       body: data.body,
       bookingId: data.bookingId ?? null,
       chatId: data.chatId ?? null,
-      ...(data.audience ? { audience: data.audience } : {}),
+      audience: data.audience,
       read: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });

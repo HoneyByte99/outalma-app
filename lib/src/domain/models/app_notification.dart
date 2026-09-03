@@ -79,6 +79,21 @@ NotificationAudience notificationAudienceFor({
       // booking_done / booking_cancelled / new_message / booking_reminder /
       // review_received and anything unknown: role can't be told from type
       // alone → show in both, and don't force a mode switch on tap.
+      //
+      // new_message specifically (2026-09 audit): unlike the other types
+      // here, a message DOES always have a knowable recipient role, but only
+      // via the chat's customerId (server rule: uid == chat.customerId ?
+      // client : provider, see functions/src/index.ts onMessageCreated) - a
+      // lookup this function cannot make. It is pure and synchronous by
+      // design: it also resolves raw FCM push `data` payloads at cold start
+      // (see app.dart _handleNotificationTap), where only strings exist and
+      // no chat read is possible before the deep link fires. Narrowing this
+      // case by type alone would mean guessing, exactly what
+      // scripts/backfill-notification-audience.py refuses to do for the same
+      // notifications. The real fix is upstream: the server always writes
+      // `audience` now (notify.ts's guard) and the backfill resolves the
+      // stock, so this branch is expected to stop firing for new_message in
+      // practice - it stays as the filet for whatever it cannot reach.
       return NotificationAudience.both;
   }
 }
