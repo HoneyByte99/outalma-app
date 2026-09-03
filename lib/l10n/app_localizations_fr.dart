@@ -934,6 +934,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'La prestation doit se situer au Sénégal. Choisissez une adresse au Sénégal.';
 
   @override
+  String bookingAddressOutsideZones(String zones) {
+    return 'Ce prestataire n\'intervient pas à cette adresse. Zones couvertes : $zones.';
+  }
+
+  @override
+  String get bookingSaveAddress => 'Enregistrer cette adresse';
+
+  @override
   String get marketplaceDisclaimer =>
       'Outalma met uniquement en relation des clients et des prestataires indépendants. Tout accord et paiement se fait directement entre vous, hors de l\'application et sous votre responsabilité. Vérifiez toujours à qui vous avez affaire.';
 

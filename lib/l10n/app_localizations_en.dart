@@ -922,6 +922,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'The service must take place in Senegal. Please choose an address in Senegal.';
 
   @override
+  String bookingAddressOutsideZones(String zones) {
+    return 'This provider does not serve this address. Zones covered: $zones.';
+  }
+
+  @override
+  String get bookingSaveAddress => 'Save this address';
+
+  @override
   String get marketplaceDisclaimer =>
       'Outalma only connects clients and independent providers. Any agreement and payment is made directly between you, outside the app and at your own risk. Always check who you are dealing with.';
 

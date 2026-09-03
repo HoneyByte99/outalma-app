@@ -315,9 +315,14 @@ export const createBooking = onCall(async (request) => {
           haversineKm(aLat, aLng, z.lat, z.lng) <= z.radiusKm
       );
       if (!inZone) {
+        // Stable code in `details`, on the same footing as the identity-submit
+        // refusals (E11 form): the client picks the localized phrase from this
+        // code and never parses the English message below, which exists only
+        // for callers that do not classify it (logs, curl, older clients).
         throw new HttpsError(
           'failed-precondition',
-          'Booking address is outside the service intervention zones.'
+          'Booking address is outside the service intervention zones.',
+          { code: 'BOOKING_OUTSIDE_ZONES' }
         );
       }
     }

@@ -449,6 +449,15 @@
   "bookingNoSlots": "No free slots that day. Try another date.",
   "bookingProviderUnavailable": "This provider is currently unavailable.",
   "bookingAddressNotInSenegal": "The service must take place in Senegal. Please choose an address in Senegal.",
+  "bookingAddressOutsideZones": "This provider does not serve this address. Zones covered: {zones}.",
+  "@bookingAddressOutsideZones": {
+    "placeholders": {
+      "zones": {
+        "type": "String"
+      }
+    }
+  },
+  "bookingSaveAddress": "Save this address",
   "marketplaceDisclaimer": "Outalma only connects clients and independent providers. Any agreement and payment is made directly between you, outside the app and at your own risk. Always check who you are dealing with.",
   "bookingStep3Title": "Service address",
   "bookingStep3Subtitle": "Where should the provider intervene? (optional)",

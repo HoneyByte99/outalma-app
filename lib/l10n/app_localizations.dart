@@ -1778,6 +1778,18 @@ abstract class AppLocalizations {
   /// **'The service must take place in Senegal. Please choose an address in Senegal.'**
   String get bookingAddressNotInSenegal;
 
+  /// No description provided for @bookingAddressOutsideZones.
+  ///
+  /// In en, this message translates to:
+  /// **'This provider does not serve this address. Zones covered: {zones}.'**
+  String bookingAddressOutsideZones(String zones);
+
+  /// No description provided for @bookingSaveAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this address'**
+  String get bookingSaveAddress;
+
   /// No description provided for @marketplaceDisclaimer.
   ///
   /// In en, this message translates to:
