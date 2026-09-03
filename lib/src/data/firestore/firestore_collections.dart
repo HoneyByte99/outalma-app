@@ -212,7 +212,16 @@ class FirestoreCollections {
 
   static Map<String, Object?> _userToFirestore(AppUser user) {
     return {
-      'displayName': user.displayName,
+      // Never written as empty. AuthNotifier._resolveState's defensive
+      // doc-creation branch runs on the auth listener as soon as
+      // authStateChanges fires, which on the email sign-up path is BEFORE
+      // updateDisplayName and the explicit upsert carrying the real name -
+      // if that branch's write reaches Firestore after the real one, an
+      // unconditional key here would merge-overwrite the name with ''. Every
+      // other caller (sign-up, updateProfile, switchMode) always carries a
+      // real, previously validated name, so omitting the key when empty only
+      // ever affects this one racy, not-yet-known case.
+      if (user.displayName.isNotEmpty) 'displayName': user.displayName,
       'email': user.email,
       'photoPath': user.photoPath,
       // Never write phoneE164 as null: the create rule requires the field to
