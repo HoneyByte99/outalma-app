@@ -310,7 +310,12 @@ bool _overflowsFrame(Uint8List cells, int cols, int rows) {
 
   var min = 255;
   var max = 0;
-  for (final v in cells) {
+  // Bounded to `cols * rows`, not `cells.length`: the contract only requires
+  // `cells.length >= cols * rows` (line 127), so a caller reusing a larger
+  // buffer to avoid a per-frame allocation would otherwise have `min`/`max`
+  // pulled from bytes outside the grid.
+  for (var i = 0; i < cols * rows; i++) {
+    final v = cells[i];
     if (v < min) min = v;
     if (v > max) max = v;
   }

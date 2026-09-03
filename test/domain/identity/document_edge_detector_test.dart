@@ -351,6 +351,36 @@ void main() {
       final flat = _grid(96, 54, (x, y) => 128);
       expect(_detect(flat, 96, 54).framing, DocumentFraming.none);
     });
+
+    test('the overflow guard ignores bytes past cols * rows (m2)', () {
+      // The contract only requires cells.length >= cols * rows (the truncated-
+      // buffer test above), which a caller reusing a larger buffer across
+      // frames to avoid a per-frame allocation is free to rely on. Low
+      // contrast (border 100, card 142, an 84-cell margin all round, well
+      // inside the frame) so the guard's own tolerance is narrow: true range
+      // 42, tolerance 10.5, border-to-subject gap 42 does not resemble.
+      // Appending 0 and 255 past the grid widens a min/max scan over the
+      // WHOLE buffer to a 255 range, tolerance 63.75, which DOES resemble,
+      // reading the entire (untouched) border as the card and reporting an
+      // overflow that is not there.
+      final grid = _card(
+        96,
+        54,
+        left: 18,
+        top: 8,
+        right: 78,
+        bottom: 46,
+        ground: 100,
+        card: 142,
+      );
+      final reused = Uint8List(grid.length + 2)
+        ..setRange(0, grid.length, grid)
+        ..[grid.length] = 0
+        ..[grid.length + 1] = 255;
+
+      final observation = _detect(reused, 96, 54);
+      expect(observation.framing, isNot(DocumentFraming.tooClose));
+    });
   });
 
   group('both real plane layouts', () {
