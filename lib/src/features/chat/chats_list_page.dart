@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_shell.dart';
 import '../../app/app_theme.dart';
+import '../shared/gender_icon.dart';
 import '../shared/mode_badge.dart';
 import '../../app/router.dart';
 import '../../application/auth/auth_providers.dart';
@@ -214,7 +215,7 @@ class _ChatTile extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Expanded(
+                      Flexible(
                         child: Text(
                           otherUser?.displayName ?? l10n.chatConversation,
                           style: Theme.of(context).textTheme.bodyMedium
@@ -223,6 +224,13 @@ class _ChatTile extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (chat.providerId == otherUid) ...[
+                        const SizedBox(width: 4),
+                        // Same pictogram as the other 5 surfaces, same rule:
+                        // nothing at all for an unknown gender.
+                        GenderIcon(gender: otherUser?.gender, size: 14),
+                      ],
+                      const Spacer(),
                       if (chat.lastMessageAt != null)
                         Text(
                           date_utils.formatRelativeTime(chat.lastMessageAt!),
