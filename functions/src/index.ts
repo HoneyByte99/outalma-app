@@ -2648,6 +2648,40 @@ async function decrementStatIdempotent(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Notification cascade deletes
+//
+// `notifications/{uid}/items/{notifId}` is a subcollection keyed by the
+// RECIPIENT's uid, not by the booking/chat it references: finding every
+// notification that points at a given booking or chat requires a
+// collection-group query across every user's `items` subcollection (hence
+// `collectionGroup('items')`, backed by the fieldOverrides in
+// firebase/firestore.indexes.json).
+//
+// No dedup document is needed here, unlike incrementStatIdempotent above: a
+// delete-by-query is naturally idempotent, a replay simply finds nothing left
+// to delete.
+// ---------------------------------------------------------------------------
+
+/**
+ * Deletes every notification item (across all recipients) whose `field`
+ * equals `value`, in bulk. Returns the number of documents removed.
+ */
+async function deleteNotificationsReferencing(
+  field: 'bookingId' | 'chatId',
+  value: string,
+): Promise<number> {
+  const snap = await db.collectionGroup('items').where(field, '==', value).get();
+  if (snap.empty) return 0;
+
+  const bulkWriter = db.bulkWriter();
+  for (const doc of snap.docs) {
+    bulkWriter.delete(doc.ref);
+  }
+  await bulkWriter.close();
+  return snap.size;
+}
+
 export const onUserCreated = onDocumentCreated('users/{userId}', async (event) => {
   await incrementStatIdempotent(event.id, 'user_created', {
     totalUsers: admin.firestore.FieldValue.increment(1),
@@ -2719,6 +2753,15 @@ export const onServiceDeleted = onDocumentDeleted('services/{serviceId}', async 
   // onServiceCreated is deliberately left alone: it carries a profile (bio,
   // serviceArea, suspended) that outlives any single service, and the provider
   // may still have others.
+  //
+  // No notification cascade here, deliberately: a notification carries a
+  // `bookingId`, never a `serviceId` (see notify.ts), so deleting a service can
+  // never orphan a notification directly. Deleting a service also does NOT
+  // cascade-delete its bookings anywhere in this codebase (verified: no
+  // trigger, callable, or client path deletes a booking on service removal),
+  // so an existing booking is left with a `serviceId` that points nowhere.
+  // That is a pre-existing data-integrity gap in bookings/services, out of
+  // scope for the notification-orphan fix this trigger belongs to.
 });
 
 export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async (event) => {
@@ -2855,6 +2898,33 @@ export const onBookingDeleted = onDocumentDeleted('bookings/{bookingId}', async 
     // A deleted booking that was done also stops counting as done.
     ...(booking?.status === 'done' ? { totalBookingsDone: 1 } : {}),
   });
+
+  // A notification pointing at this booking (see notify.ts's `bookingId`)
+  // would otherwise deep-link nowhere for ever: the client route (see
+  // notifications_page.dart) has no other way to learn the booking is gone.
+  const removed = await deleteNotificationsReferencing('bookingId', event.params.bookingId);
+  if (removed > 0) {
+    logger.info('onBookingDeleted: removed orphaned notifications', {
+      bookingId: event.params.bookingId,
+      count: removed,
+    });
+  }
+});
+
+// A chat has no delete trigger anywhere else in this file: this is the ONLY
+// place a `chats/{chatId}` deletion is observed server-side. Chats are never
+// hard-deleted by any client or callable path in this codebase today (only
+// created by acceptBooking, see firestore.rules), but the notification it
+// left behind (see notify.ts's `chatId`) must not survive it regardless of
+// who or what performed the deletion (client, admin console, a script).
+export const onChatDeleted = onDocumentDeleted('chats/{chatId}', async (event) => {
+  const removed = await deleteNotificationsReferencing('chatId', event.params.chatId);
+  if (removed > 0) {
+    logger.info('onChatDeleted: removed orphaned notifications', {
+      chatId: event.params.chatId,
+      count: removed,
+    });
+  }
 });
 
 export const onReportCreatedStats = onDocumentCreated('reports/{reportId}', async (event) => {

@@ -1047,6 +1047,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notificationsReadAll => 'Tout lire';
 
   @override
+  String get notificationTargetGone => 'Ce contenu n\'existe plus.';
+
+  @override
   String notificationsUnreadCount(int count) {
     return '$count non lues';
   }

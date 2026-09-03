@@ -174,11 +174,46 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     }
     if (!context.mounted) return;
 
+    // The cascade that deletes a notification alongside its booking/chat/
+    // service is not instantaneous, so a notification can briefly (or, before
+    // that cascade existed, permanently) survive its target. Probing before
+    // navigating keeps a tap on a stale notification from landing on a dead
+    // chat/booking screen; the notification itself is left alone here (the
+    // server-side cascade is the sole owner of deleting it, see onBookingDeleted/
+    // onChatDeleted in functions/src/index.ts).
     if (notif.chatId != null) {
+      final exists = await notificationTargetExists(
+        db: ref.read(firestoreProvider),
+        chatId: notif.chatId,
+      );
+      if (!context.mounted) return;
+      if (!exists) {
+        _showTargetGoneMessage(context);
+        return;
+      }
       unawaited(context.push(AppRoutes.chat(notif.chatId!)));
     } else if (notif.bookingId != null) {
+      final exists = await notificationTargetExists(
+        db: ref.read(firestoreProvider),
+        bookingId: notif.bookingId,
+      );
+      if (!context.mounted) return;
+      if (!exists) {
+        _showTargetGoneMessage(context);
+        return;
+      }
       unawaited(context.push(AppRoutes.bookingDeepLink(notif.bookingId!)));
     }
+  }
+
+  void _showTargetGoneMessage(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.notificationTargetGone),
+        backgroundColor: context.oc.error,
+      ),
+    );
   }
 }
 

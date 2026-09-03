@@ -484,6 +484,7 @@
   "chatTabDone": "Completed",
   "notificationsTitle": "Notifications",
   "notificationsReadAll": "Mark all read",
+  "notificationTargetGone": "This content no longer exists.",
   "notificationsUnreadCount": "{count} unread",
   "@notificationsUnreadCount": {
     "placeholders": {

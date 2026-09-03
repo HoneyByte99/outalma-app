@@ -66,3 +66,30 @@ Future<void> markAllNotificationsRead({
   }
   await batch.commit();
 }
+
+/// Best-effort existence probe for a notification's deep-link target, used to
+/// keep a tap from landing on a dead chat/booking screen.
+///
+/// Treated as "gone" both when the document genuinely doesn't exist AND when
+/// the read itself is denied: the chats/bookings security rules dereference
+/// `resource.data` to check participation, so a deleted parent document makes
+/// Firestore throw permission-denied rather than return an absent snapshot
+/// (verified against the emulator, not assumed). Either outcome means the
+/// same thing for the caller: do not navigate there.
+Future<bool> notificationTargetExists({
+  required FirebaseFirestore db,
+  String? chatId,
+  String? bookingId,
+}) async {
+  try {
+    if (chatId != null) {
+      return (await db.collection('chats').doc(chatId).get()).exists;
+    }
+    if (bookingId != null) {
+      return (await db.collection('bookings').doc(bookingId).get()).exists;
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+}

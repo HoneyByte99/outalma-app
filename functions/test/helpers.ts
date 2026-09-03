@@ -107,6 +107,28 @@ export async function getNotifications(uid: string) {
   return q.docs.map((d) => d.data());
 }
 
+/// Seeds a notification item directly, bypassing createNotification, so a
+/// cascade-delete trigger can be tested against a fixed doc id.
+export async function seedNotification(
+  uid: string,
+  id: string,
+  data: Record<string, unknown>
+): Promise<void> {
+  await db()
+    .collection('notifications')
+    .doc(uid)
+    .collection('items')
+    .doc(id)
+    .set({
+      type: 'new_message',
+      title: 'T',
+      body: 'B',
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      ...data,
+    });
+}
+
 export async function seedService_raw(id: string, data: Record<string, unknown>) {
   await db().collection('services').doc(id).set(data);
 }
