@@ -215,4 +215,68 @@ void main() {
       expect(quadMostlyInside(oneOut), isTrue);
     });
   });
+
+  group('quadPlausibleInPreview', () {
+    // previewAspect = 1.6 (a portrait screen 1.6x taller than wide, long over
+    // short). The template always draws the card LANDSCAPE, so a correctly
+    // rotated, centered card has its long side along the preview's SHORT axis
+    // (x): its raw normalized aspect (dx / dy, uncorrected) reads
+    // `idCardAspect * previewAspect`, not `idCardAspect` on its own. These
+    // corners are exactly that, centered on (0.5, 0.5), computed by hand from
+    // that relation (dx = idCardAspect * 1.6 * dy, dy = 0.2).
+    const previewAspect = 1.6;
+    const correct = DocumentQuad(
+      topLeft: (x: 0.2463703703703704, y: 0.4),
+      topRight: (x: 0.7536296296296296, y: 0.4),
+      bottomRight: (x: 0.7536296296296296, y: 0.6),
+      bottomLeft: (x: 0.2463703703703704, y: 0.6),
+    );
+
+    test('accepts a correctly rotated, centered card', () {
+      expect(
+        quadPlausibleInPreview(correct, previewAspect: previewAspect),
+        isTrue,
+      );
+    });
+
+    test(
+      'refuses the same card with its axes swapped (a wrong quarter turn)',
+      () {
+        // What a 90-degree rotation error produces: every corner still sits
+        // inside the frame (quadMostlyInside alone would accept this), but dx
+        // and dy have traded places, so the card now reads portrait instead of
+        // landscape.
+        const swapped = DocumentQuad(
+          topLeft: (x: 0.4, y: 0.2463703703703704),
+          topRight: (x: 0.6, y: 0.2463703703703704),
+          bottomRight: (x: 0.6, y: 0.7536296296296296),
+          bottomLeft: (x: 0.4, y: 0.7536296296296296),
+        );
+        expect(
+          quadMostlyInside(swapped),
+          isTrue,
+          reason: 'the gap this closes: still inside the frame',
+        );
+        expect(
+          quadPlausibleInPreview(swapped, previewAspect: previewAspect),
+          isFalse,
+        );
+      },
+    );
+
+    test('still refuses a quad thrown mostly outside the frame', () {
+      expect(
+        quadPlausibleInPreview(
+          _rect(1.4, 1.3, 2.2, 1.8),
+          previewAspect: previewAspect,
+        ),
+        isFalse,
+      );
+    });
+
+    test('refuses a non-positive previewAspect rather than dividing by it', () {
+      expect(quadPlausibleInPreview(correct, previewAspect: 0), isFalse);
+      expect(quadPlausibleInPreview(correct, previewAspect: -1), isFalse);
+    });
+  });
 }

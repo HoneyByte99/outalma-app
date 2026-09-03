@@ -19,6 +19,7 @@
 /// `rendering/proxy_box.dart`) and camera 0.12.0+2 (`src/camera_preview.dart`).
 library;
 
+import 'document_edge_detector.dart' show idCardAspect;
 import 'document_quad.dart';
 
 /// Rotates and mirrors [quad] from plane space into preview space.
@@ -73,9 +74,11 @@ DocumentQuad projectQuadToPreview({
 
 /// Whether a projected quad sits mostly inside the overlay rectangle.
 ///
-/// The last net against an absurd overlay: if the platform rotation turns out to
-/// be wrong, the contour comes back ABSENT rather than grotesque, and the fixed
-/// template is still on screen either way.
+/// One net against an absurd overlay, not the only one: it catches a quad
+/// thrown mostly off-screen, but a wrong rotation on a CENTERED card (the
+/// nominal case, since the template asks to center the card) keeps every
+/// corner inside this rectangle regardless, so it slips through untouched.
+/// [quadPlausibleInPreview] adds the shape check that catches that case.
 ///
 /// A pure function and not a private helper on the page, for the reason this
 /// project has already written down once: a guard living in a widget is covered
@@ -93,6 +96,44 @@ bool quadMostlyInside(DocumentQuad quad, {double margin = 0.05}) {
     }
   }
   return inside >= 3;
+}
+
+/// Whether a projected quad both sits inside the frame ([quadMostlyInside])
+/// and still has the proportions of a correctly rotated ID card.
+///
+/// The gap this closes: a card is always drawn LANDSCAPE by the template
+/// (`AspectRatio(85.6 / 54)` in `identity_capture_widgets.dart`), on a screen
+/// this flow only ever uses in PORTRAIT. So the card's long physical side
+/// runs along the preview's SHORT axis (x, width) and its short side along
+/// the preview's LONG axis (y, height): the quad's raw normalized aspect
+/// (long edge over short edge, uncorrected) reads `idCardAspect *
+/// previewAspect`, not `idCardAspect` on its own. [DocumentQuad.planeAspect]
+/// divides that scale factor back out when handed a plane whose width:height
+/// ratio is `1:previewAspect`, the same one-line trick
+/// `document_quad.dart`'s own doc uses to strip the platform's plane
+/// orientation out of a rotation-in-degrees measurement.
+///
+/// [previewAspect] is [PreviewGeometry.aspect] (long side over short side, so
+/// it alone cannot say which physical axis is which; the portrait assumption
+/// above supplies that). A wrong quarter turn swaps which normalized delta is
+/// which, which divides by `previewAspect` where the correct quad multiplies
+/// (or the reverse): the resulting aspect lands near `idCardAspect /
+/// previewAspect²` or its reciprocal, well outside tolerance for any
+/// realistic preview shape, so the rotation is refused rather than drawn.
+///
+/// What this does NOT catch: a 180-degree error swaps neither axis, so it
+/// passes both checks unchanged. That residual stays a phone-pass
+/// observation, same as the platform-crop residual `previewMatchesPlane`
+/// already documents.
+bool quadPlausibleInPreview(
+  DocumentQuad quad, {
+  required double previewAspect,
+}) {
+  if (!quadMostlyInside(quad)) return false;
+  if (previewAspect <= 0) return false;
+  const tolerance = 0.25;
+  final aspect = quad.planeAspect(1000, (1000 * previewAspect).round());
+  return (aspect - idCardAspect).abs() <= tolerance * idCardAspect;
 }
 
 /// Whether the preview and the analysis plane can be assumed to show the same

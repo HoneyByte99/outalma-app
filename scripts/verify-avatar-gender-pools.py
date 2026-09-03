@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-Guard against re-introducing the two seed-avatar defects fixed on
-fix/ui-wave-before-build32 (see ~/clawd/tmp/outalma-wave-ui/report.md):
+Guard against re-introducing the seed-avatar defects fixed on
+fix/ui-wave-before-build32 and fix/cleanup-before-build32 (see
+~/clawd/tmp/outalma-wave-ui/report.md and
+~/clawd/tmp/outalma-wave-clean/report.md):
 
   - `maskProbability` missing from the DiceBear query (defaults to 5%,
     which is how "Ousmane" ended up wearing a surgical mask).
@@ -10,6 +12,9 @@ fix/ui-wave-before-build32 (see ~/clawd/tmp/outalma-wave-ui/report.md):
     male-only; `twists`/`bantuKnots` draw a masculine short fade but were
     reachable by female accounts; `noHair1` is a plain bald head with no
     gendered cue and was forced male-only instead of neutral.
+  - `head` styles missing from EVERY pool, so DiceBear's enum lists them
+    but no seed avatar can ever draw them: `hatBeanie` and `hatHip` were
+    absent from `_HEAD_NEUTRAL`/`_HEAD_FEMALE`/`_HEAD_MALE` entirely.
 
 Reads `scripts/align-seed-data.py` as text and evaluates only the constant
 definitions (AVATAR_API, _HEAD_NEUTRAL, _HEAD_FEMALE, _HEAD_MALE), never
@@ -24,6 +29,22 @@ from pathlib import Path
 
 TARGET = Path(__file__).parent / "align-seed-data.py"
 
+# The full `head` enum of DiceBear 9.x open-peeps
+# (api.dicebear.com/9.x/open-peeps/schema.json, `properties.head.items.enum`,
+# 47 values as of 2026-09-03). Hardcoded rather than fetched: this guard must
+# run offline and deterministically, and the enum is a published API contract
+# that does not change silently.
+_DICEBEAR_HEAD_ENUM = [
+    "afro", "bangs", "bangs2", "bantuKnots", "bear", "bun", "bun2", "buns",
+    "cornrows", "cornrows2", "dreads1", "dreads2", "flatTop", "flatTopLong",
+    "grayBun", "grayMedium", "grayShort", "hatBeanie", "hatHip", "hijab",
+    "long", "longAfro", "longBangs", "longCurly", "medium1", "medium2",
+    "medium3", "mediumBangs", "mediumBangs2", "mediumBangs3",
+    "mediumStraight", "mohawk", "mohawk2", "noHair1", "noHair2", "noHair3",
+    "pomp", "shaved1", "shaved2", "shaved3", "short1", "short2", "short3",
+    "short4", "short5", "turban", "twists", "twists2",
+]
+
 
 def load_pools(path):
     src = path.read_text()
@@ -36,6 +57,8 @@ def load_pools(path):
 
 def main():
     api, neutral, female, male = load_pools(TARGET)
+    reachable = set(female) | set(male)
+    unreachable = [v for v in _DICEBEAR_HEAD_ENUM if v not in reachable]
     checks = [
         ("maskProbability=0 present in AVATAR_API", "maskProbability=0" in api),
         ("turban assigned female, not male",
@@ -48,6 +71,8 @@ def main():
          "twists" in male and "twists" not in female),
         ("bantuKnots assigned male, not female",
          "bantuKnots" in male and "bantuKnots" not in female),
+        (f"every DiceBear head style is reachable ({len(unreachable)} orphaned: "
+         f"{', '.join(unreachable)})", not unreachable),
     ]
     failed = [name for name, ok in checks if not ok]
     for name, ok in checks:

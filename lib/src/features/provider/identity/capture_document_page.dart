@@ -280,8 +280,13 @@ class _CaptureDocumentPageState extends ConsumerState<CaptureDocumentPage> {
       );
       // Last net against an absurd overlay: a wrong rotation gives a contour
       // that is ABSENT, never one that is grotesque, and the template is still
-      // on screen either way.
-      _projected.value = quadMostlyInside(projected) ? projected : null;
+      // on screen either way. quadMostlyInside alone misses a wrong rotation
+      // on a centered card (m1); quadPlausibleInPreview adds the shape check
+      // that catches it.
+      _projected.value =
+          quadPlausibleInPreview(projected, previewAspect: geometry.aspect)
+          ? projected
+          : null;
     }
 
     return config.contourFramingEnabled

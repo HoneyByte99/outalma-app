@@ -238,7 +238,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         if (_voiceMode) return _recordedBytes != null;
         return _messageController.text.trim().isNotEmpty;
       case 1:
-        // Schedule is optional — but a paused provider can't be booked, so
+        // Schedule is optional, but a paused provider can't be booked, so
         // don't let the client advance past the "indisponible" banner.
         final paused =
             ref
@@ -261,7 +261,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
     final errorColor = context.oc.error;
 
     // Provider is "En pause": block the request client-side with a clear
-    // message. The server (createBooking) also refuses — this is just UX.
+    // message. The server (createBooking) also refuses: this is just UX.
     final providerPaused =
         ref
             .read(providerProfileByIdProvider(widget.providerId))
@@ -666,7 +666,7 @@ class _StepIndicator extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Step 1 — Message (text or voice)
+// Step 1: Message (text or voice)
 // ---------------------------------------------------------------------------
 
 class _StepMessage extends StatelessWidget {
@@ -983,7 +983,7 @@ class _VoiceRecorder extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Step 2 — Schedule
+// Step 2: Schedule
 // ---------------------------------------------------------------------------
 
 class _StepSchedule extends StatelessWidget {
@@ -1014,7 +1014,7 @@ class _StepSchedule extends StatelessWidget {
         ? dateFmt.format(selectedDate!)
         : l10n.bookingStep2PickDate;
 
-    // Provider paused their whole catalogue — surface it plainly and hide the
+    // Provider paused their whole catalogue, surface it plainly and hide the
     // date/slot picker (the request would be refused anyway).
     if (providerUnavailable) {
       return Column(
@@ -1076,7 +1076,7 @@ class _StepSchedule extends StatelessWidget {
           onTap: onPickDate,
         ),
 
-        // Slot picker — only the provider's free hours, no free typing.
+        // Slot picker: only the provider's free hours, no free typing.
         if (selectedDate != null) ...[
           const SizedBox(height: AppSpacing.m),
           Text(
@@ -1184,7 +1184,7 @@ class _PickerButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Step 3 — Address
+// Step 3: Address
 // ---------------------------------------------------------------------------
 
 class _StepAddress extends ConsumerStatefulWidget {

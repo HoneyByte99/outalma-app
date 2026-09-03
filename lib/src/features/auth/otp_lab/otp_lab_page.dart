@@ -1,4 +1,4 @@
-// 🔬 OTP Lab — internal test screen for benchmarking OTP providers.
+// 🔬 OTP Lab: internal test screen for benchmarking OTP providers.
 //
 // Not part of the production user flow. Accessible at /otp-lab from the
 // sign-in screen via a small debug link.
@@ -7,7 +7,7 @@
 //   - Provider used
 //   - Phone number (E.164)
 //   - send_at timestamp
-//   - received_at timestamp (manual — user taps "Marquer reçu" when SMS arrives)
+//   - received_at timestamp (manual, user taps "Marquer reçu" when SMS arrives)
 //   - verify_at timestamp
 //   - success / error
 //
@@ -23,6 +23,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/app_theme.dart';
 import '../../../application/auth/auth_providers.dart';
 import '../../../data/auth/phone_otp_service.dart';
+import '../../../data/services/callable_function_client.dart';
 
 // ---------------------------------------------------------------------------
 // In-memory log
@@ -111,7 +112,7 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
           }
           final vId = await platformSendOtp(auth, phone);
           if (vId == null) {
-            // Android auto-verification — already signed in.
+            // Android auto-verification: already signed in.
             attempt.autoVerified = true;
             attempt.verifiedAt = DateTime.now();
             // Sign out immediately so the lab stays usable.
@@ -121,11 +122,15 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
           }
         case OtpProvider.twilio:
           // Use the production endpoint. The legacy `sendOtpTwilio` callable
-          // was retired (cf. security review H4).
-          final functions = FirebaseFunctions.instance;
-          await functions
-              .httpsCallable('requestPhoneOtp')
-              .call<Map<String, dynamic>>({'phone': phone, 'channel': 'sms'});
+          // was retired (cf. security review H4). Goes through
+          // CallableFunctionClient, never FirebaseFunctions.httpsCallable
+          // (see callable_function_client.dart: that native path carries a
+          // Swift concurrency fatalError on iOS that no Dart try/catch can
+          // intercept).
+          await const CallableFunctionClient().call(
+            'requestPhoneOtp',
+            data: {'phone': phone, 'channel': 'sms'},
+          );
           // Twilio Verify side effect = SMS dispatched. Flag to enable verify.
           _verificationId = 'twilio';
         case OtpProvider.vonage:
@@ -165,19 +170,19 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
           await auth.signOut();
           _toast('✅ OTP Firebase vérifié + sign-out auto');
         case OtpProvider.twilio:
-          final functions = FirebaseFunctions.instance;
-          final result = await functions
-              .httpsCallable('verifyPhoneOtpAndSignIn')
-              .call<Map<String, dynamic>>({'phone': c.phone, 'code': code});
+          final result = await const CallableFunctionClient().call(
+            'verifyPhoneOtpAndSignIn',
+            data: {'phone': c.phone, 'code': code},
+          );
           c.verifiedAt = DateTime.now();
           c.code = code;
-          final newUser = result.data['newUser'] == true;
+          final newUser = result['newUser'] == true;
           if (newUser) {
-            _toast('✅ OTP Twilio vérifié — newUser (aucun compte Outalma lié)');
+            _toast('✅ OTP Twilio vérifié, newUser (aucun compte Outalma lié)');
           } else {
             // Sign in with the Firebase custom token, then sign out so the
             // lab stays usable.
-            final token = result.data['customToken'] as String?;
+            final token = result['customToken'] as String?;
             if (token != null) {
               await auth.signInWithCustomToken(token);
               await auth.signOut();
@@ -249,7 +254,7 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Mode debug — sur le simulateur iOS, Firebase Phone Auth '
+                      'Mode debug : sur le simulateur iOS, Firebase Phone Auth '
                       'exige un numéro de test configuré dans la Firebase '
                       'Console (Authentication → Sign-in method → Phone → '
                       'Phone numbers for testing). Sinon, tester sur appareil '

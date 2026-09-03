@@ -351,6 +351,89 @@ void main() {
       final flat = _grid(96, 54, (x, y) => 128);
       expect(_detect(flat, 96, 54).framing, DocumentFraming.none);
     });
+
+    test('the overflow guard ignores bytes past cols * rows (m2)', () {
+      // The contract only requires cells.length >= cols * rows (the truncated-
+      // buffer test above), which a caller reusing a larger buffer across
+      // frames to avoid a per-frame allocation is free to rely on. Low
+      // contrast (border 100, card 142, an 84-cell margin all round, well
+      // inside the frame) so the guard's own tolerance is narrow: true range
+      // 42, tolerance 10.5, border-to-subject gap 42 does not resemble.
+      // Appending 0 and 255 past the grid widens a min/max scan over the
+      // WHOLE buffer to a 255 range, tolerance 63.75, which DOES resemble,
+      // reading the entire (untouched) border as the card and reporting an
+      // overflow that is not there.
+      final grid = _card(
+        96,
+        54,
+        left: 18,
+        top: 8,
+        right: 78,
+        bottom: 46,
+        ground: 100,
+        card: 142,
+      );
+      final reused = Uint8List(grid.length + 2)
+        ..setRange(0, grid.length, grid)
+        ..[grid.length] = 0
+        ..[grid.length + 1] = 255;
+
+      final observation = _detect(reused, 96, 54);
+      expect(observation.framing, isNot(DocumentFraming.tooClose));
+    });
+  });
+
+  group('plausibleRect (m3)', () {
+    test('ties on cost break by the LARGER area, not by insertion order', () {
+      // Two candidates of EQUAL cost (li=0,ri=1 and li=1,ri=0, both summing
+      // to 1): width 120 (area 9600), inserted FIRST by the li/ri loop order,
+      // and width 134 (area 10720), inserted second. left=0/right=0 and
+      // left=1/right=1 (cost 0 and 2) are deliberately implausible (aspect
+      // 1.925 and 1.25, both outside a +/-10% tolerance around idCardAspect),
+      // so only the tied pair can be returned, isolating the tie-break.
+      //
+      // `List.sort` is not stable, so a plain `a.cost.compareTo(b.cost)`
+      // leaves which of two equal-cost candidates comes out first to the
+      // engine's sort implementation rather than to any rule this file
+      // states; on a short list Dart's sort happens to preserve insertion
+      // order today, which is what makes the mutation below reliably return
+      // the SMALLER (first-inserted) rect instead.
+      final rect = plausibleRect(
+        lefts: [10, 30],
+        rights: [164, 130],
+        tops: [10],
+        bottoms: [90],
+        cols: 200,
+        rows: 100,
+        planeWidth: 200,
+        planeHeight: 100,
+        aspectTolerance: 0.1,
+      );
+
+      expect(rect, isNotNull);
+      expect(
+        (left: rect!.left, right: rect.right),
+        (left: 30, right: 164),
+        reason:
+            'the larger (width 134, area 10720) of the two tied '
+            'candidates must win, not the smaller (width 120, area 9600)',
+      );
+    });
+
+    test('replaying the same candidates twice picks the same rectangle', () {
+      EdgeRect? run() => plausibleRect(
+        lefts: [10, 30],
+        rights: [164, 130],
+        tops: [10],
+        bottoms: [90],
+        cols: 200,
+        rows: 100,
+        planeWidth: 200,
+        planeHeight: 100,
+        aspectTolerance: 0.1,
+      );
+      expect(run(), run());
+    });
   });
 
   group('both real plane layouts', () {

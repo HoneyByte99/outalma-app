@@ -244,7 +244,7 @@ class _ActiveBookingsWithCalendarState
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Row(
                 children: [
-                  // The whole chip clears the date filter — a large tap target
+                  // The whole chip clears the date filter, a large tap target
                   // without inflating the compact pill height.
                   GestureDetector(
                     onTap: () => setState(() => _selectedDay = null),
@@ -489,7 +489,7 @@ class _StatusChip extends StatelessWidget {
       case BookingStatus.cancelled:
         return (l10n.statusCancelled, oc.secondaryText);
       case BookingStatus.unknown:
-        return ('—', oc.secondaryText);
+        return ('-', oc.secondaryText);
     }
   }
 }
