@@ -7,7 +7,7 @@ const tf = functionsTest({ projectId: 'demo-outalma', storageBucket: 'demo-outal
 
 import * as fns from '../src/index';
 import * as admin from 'firebase-admin';
-import { createNotification } from '../src/notify';
+import { createNotification, resolveDisplayName, titleWithSender } from '../src/notify';
 import {
   clearFirestore,
   seedBooking,
@@ -126,6 +126,44 @@ describe('onMessageCreate → notify the other participant', () => {
     expect((await getNotifications(customer))[0]?.audience).toBe('client');
   });
 
+  it('denormalizes the sender name into the notification, and drops the raw message text', async () => {
+    await seedChat({
+      participantIds: [customer, provider],
+      bookingId: 'b1',
+      customerId: customer,
+    });
+    await seedUser(customer, { pushToken: 'tok-cust', displayName: 'Fatou' });
+    await seedUser(provider, { pushToken: 'tok-prov' });
+
+    await fireMessage({ senderId: customer, text: 'texte du message', type: 'text' });
+
+    const notif = (await getNotifications(provider))[0];
+    // The name arrives in the document, denormalised at creation time.
+    expect(notif?.senderId).toBe(customer);
+    expect(notif?.senderName).toBe('Fatou');
+    expect(notif?.title).toContain('Fatou');
+    // And the raw message text must NOT arrive in it (lock-screen leak).
+    expect(notif?.body).not.toContain('texte du message');
+    expect(notif?.body).toBe('Vous avez reçu un nouveau message.');
+
+    const pushArg = sendSpy.mock.calls[0][0] as { notification?: { title?: string; body?: string } };
+    expect(pushArg.notification?.title).toContain('Fatou');
+    expect(pushArg.notification?.body).not.toContain('texte du message');
+  });
+
+  it('falls back to the bare title when the sender has no resolvable name', async () => {
+    await seedChat({ participantIds: [customer, provider], customerId: customer });
+    // No seedUser for the sender at all: users/{customer} does not exist.
+    await seedUser(provider, { pushToken: 'tok-prov' });
+
+    await fireMessage({ senderId: customer, text: 'hi', type: 'text' });
+
+    const notif = (await getNotifications(provider))[0];
+    expect(notif?.senderId).toBe(customer);
+    expect(notif?.senderName).toBeNull();
+    expect(notif?.title).toBe('Nouveau message');
+  });
+
   it('uses a media-aware body for an image message', async () => {
     await seedChat({ participantIds: [customer, provider] });
     await seedUser(provider, { pushToken: 'tok-prov' });
@@ -169,6 +207,26 @@ describe('onBookingCreated → provider notification', () => {
     expect(notifs).toHaveLength(1);
     expect(notifs[0]?.type).toBe('booking_requested');
     expect(notifs[0]?.audience).toBe('provider');
+  });
+
+  it('denormalizes the requesting customer name into the notification', async () => {
+    await seedUser(provider, { pushToken: 'tok-prov' });
+    await seedUser(customer, { displayName: 'Moussa' });
+    const snap = bookingSnapshot({
+      customerId: customer,
+      providerId: provider,
+      status: 'requested',
+    });
+    await tf.wrap(fns.onBookingCreated)({
+      data: snap,
+      params: { bookingId: 'b1' },
+      id: 'evt-create-name-1',
+    } as never);
+
+    const notif = (await getNotifications(provider))[0];
+    expect(notif?.senderId).toBe(customer);
+    expect(notif?.senderName).toBe('Moussa');
+    expect(notif?.title).toContain('Moussa');
   });
 });
 
@@ -217,6 +275,28 @@ describe('onReviewCreated → notify the reviewee', () => {
     const notifs = await getNotifications(customer);
     expect(notifs).toHaveLength(1);
     expect(notifs[0]?.audience).toBe('client');
+  });
+
+  it('denormalizes the reviewer name into the notification', async () => {
+    await seedUser(provider, { pushToken: 'tok-prov' });
+    await seedUser(customer, { displayName: 'Khady' });
+    const snap = reviewSnapshot({
+      revieweeId: provider,
+      reviewerId: customer,
+      reviewerRole: 'client',
+      bookingId: 'b1',
+      rating: 5,
+    });
+    await tf.wrap(fns.onReviewCreated)({
+      data: snap,
+      params: { reviewId: `b1_${customer}` },
+      id: 'evt-rev-name-1',
+    } as never);
+
+    const notif = (await getNotifications(provider))[0];
+    expect(notif?.senderId).toBe(customer);
+    expect(notif?.senderName).toBe('Khady');
+    expect(notif?.title).toContain('Khady');
   });
 });
 
@@ -324,6 +404,35 @@ describe('onBookingStatusChange → recipient selection', () => {
     );
     expect((await getNotifications(customer))[0]?.audience).toBe('client');
     expect((await getNotifications(provider))[0]?.audience).toBe('provider');
+  });
+
+  it('denormalizes the other party name into each side of the accept/done notifications', async () => {
+    await seedUser(customer, { pushToken: 'tok-cust', displayName: 'Astou' });
+    await seedUser(provider, { pushToken: 'tok-prov', displayName: 'Ibrahima' });
+
+    await runChange(
+      { status: 'requested', customerId: customer, providerId: provider },
+      { status: 'accepted', customerId: customer, providerId: provider }
+    );
+    const accepted = (await getNotifications(customer))[0];
+    // The customer is told the PROVIDER accepted: the provider's name.
+    expect(accepted?.senderId).toBe(provider);
+    expect(accepted?.senderName).toBe('Ibrahima');
+    expect(accepted?.title).toContain('Ibrahima');
+
+    await runChange(
+      { status: 'in_progress', customerId: customer, providerId: provider },
+      { status: 'done', customerId: customer, providerId: provider }
+    );
+    const custDone = (await getNotifications(customer)).find(
+      (n) => n?.type === 'booking_done'
+    );
+    const provDone = (await getNotifications(provider)).find(
+      (n) => n?.type === 'booking_done'
+    );
+    // Each side sees the OTHER party's name.
+    expect(custDone?.senderName).toBe('Ibrahima');
+    expect(provDone?.senderName).toBe('Astou');
   });
 
   it('on cancel, notifies the party who did NOT cancel', async () => {
@@ -434,6 +543,39 @@ describe('sendBookingReminders → timezone-correct 24h reminder', () => {
       expect(reminder?.body).not.toContain(utc);
     }
   });
+
+  it('denormalizes the OTHER party name into each side of a 24h reminder', async () => {
+    await seedUser(customer, { pushToken: 'tok-cust', country: 'FR', displayName: 'Ndeye' });
+    await seedUser(provider, { pushToken: 'tok-prov', country: 'FR', displayName: 'Modou' });
+
+    const scheduled = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await seedBooking('b1', {
+      customerId: customer,
+      providerId: provider,
+      status: 'accepted',
+    });
+    await admin
+      .firestore()
+      .collection('bookings')
+      .doc('b1')
+      .update({ scheduledAt: admin.firestore.Timestamp.fromDate(scheduled) });
+
+    await (tf.wrap(fns.sendBookingReminders as never) as () => Promise<void>)();
+
+    const custReminder = (await getNotifications(customer)).find(
+      (n) => n?.type === 'booking_reminder'
+    );
+    const provReminder = (await getNotifications(provider)).find(
+      (n) => n?.type === 'booking_reminder'
+    );
+    // The customer's reminder names the provider, and vice versa.
+    expect(custReminder?.senderId).toBe(provider);
+    expect(custReminder?.senderName).toBe('Modou');
+    expect(custReminder?.title).toContain('Modou');
+    expect(provReminder?.senderId).toBe(customer);
+    expect(provReminder?.senderName).toBe('Ndeye');
+    expect(provReminder?.title).toContain('Ndeye');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -523,6 +665,37 @@ describe('onChatDeleted → notification cascade', () => {
     await expect(tf.wrap(fns.onChatDeleted)(event)).resolves.not.toThrow();
 
     expect(await getNotifications(customer)).toHaveLength(0);
+  });
+});
+
+describe('titleWithSender / resolveDisplayName → the fallback guards', () => {
+  // These are what keep the 391 pre-migration notifications, and any future
+  // caller that cannot resolve a name, from ever showing a literal "null" or
+  // a dangling separator instead of the bare original title.
+  it('titleWithSender leaves the base title untouched when the name is null', () => {
+    expect(titleWithSender('Demande acceptée', null)).toBe('Demande acceptée');
+  });
+
+  it('titleWithSender appends the name when known', () => {
+    expect(titleWithSender('Demande acceptée', 'Awa')).toBe('Demande acceptée · Awa');
+  });
+
+  it('resolveDisplayName resolves null for an undefined uid, without touching Firestore', async () => {
+    await expect(resolveDisplayName(undefined)).resolves.toBeNull();
+  });
+
+  it('resolveDisplayName resolves null for a uid with no user document', async () => {
+    await expect(resolveDisplayName('no-such-user')).resolves.toBeNull();
+  });
+
+  it('resolveDisplayName resolves null for a user document with a blank displayName', async () => {
+    await seedUser('blank-name-user', { displayName: '   ' });
+    await expect(resolveDisplayName('blank-name-user')).resolves.toBeNull();
+  });
+
+  it('resolveDisplayName resolves the real name when present', async () => {
+    await seedUser('named-user', { displayName: 'Ousmane' });
+    await expect(resolveDisplayName('named-user')).resolves.toBe('Ousmane');
   });
 });
 
