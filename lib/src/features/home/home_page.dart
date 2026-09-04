@@ -338,6 +338,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                 TextField(
                   controller: nameController,
                   autofocus: true,
+                  textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
                     hintText: l10n.locationAddressHint,
                   ),
@@ -508,6 +509,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
             TextField(
               controller: _controller,
               autofocus: false,
+              textInputAction: TextInputAction.done,
               decoration: InputDecoration(
                 hintText: l10n.locationSearchHint,
                 prefixIcon: Icon(
@@ -816,6 +818,7 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
       ),
       child: TextField(
         controller: _controller,
+        textInputAction: TextInputAction.done,
         onChanged: (v) {
           _debounce?.cancel();
           _debounce = Timer(const Duration(milliseconds: 150), () {

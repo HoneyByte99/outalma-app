@@ -38,6 +38,14 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   // of the range (the high end lives in [_priceMaxController]).
   late final TextEditingController _priceController;
   late final TextEditingController _priceMaxController;
+  // Chain focus explicitly rather than relying on ambient traversal order:
+  // the title is followed on screen by the (non-focusable) category
+  // selector, so the default "next widget" order would not land on the
+  // description field.
+  final _titleFocusNode = FocusNode();
+  final _descriptionFocusNode = FocusNode();
+  final _priceFocusNode = FocusNode();
+  final _priceMaxFocusNode = FocusNode();
   late CategoryId _category;
   late PriceType _priceType;
   // Extra tasks the listing also covers, beyond the main category. Never
@@ -101,6 +109,10 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
     _descriptionController.dispose();
     _priceController.dispose();
     _priceMaxController.dispose();
+    _titleFocusNode.dispose();
+    _descriptionFocusNode.dispose();
+    _priceFocusNode.dispose();
+    _priceMaxFocusNode.dispose();
     super.dispose();
   }
 
@@ -363,7 +375,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
         _Label(l10n.serviceFormPrice),
         TextFormField(
           controller: _priceController,
+          focusNode: _priceFocusNode,
           keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           autovalidateMode: AutovalidateMode.onUserInteraction,
           decoration: const InputDecoration(hintText: '0', suffixText: 'F CFA'),
@@ -456,7 +470,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   ) {
     return TextFormField(
       controller: _priceController,
+      focusNode: _priceFocusNode,
       keyboardType: TextInputType.number,
+      textInputAction: TextInputAction.done,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
       autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: const InputDecoration(hintText: '0', suffixText: 'F CFA'),
@@ -481,7 +497,10 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
         _Label(l10n.serviceFormPriceMonthlyMin),
         TextFormField(
           controller: _priceController,
+          focusNode: _priceFocusNode,
           keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.next,
+          onFieldSubmitted: (_) => _priceMaxFocusNode.requestFocus(),
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           autovalidateMode: AutovalidateMode.onUserInteraction,
           decoration: const InputDecoration(hintText: '0', suffixText: 'F CFA'),
@@ -501,7 +520,9 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
         _Label(l10n.serviceFormPriceMonthlyMax),
         TextFormField(
           controller: _priceMaxController,
+          focusNode: _priceMaxFocusNode,
           keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           autovalidateMode: AutovalidateMode.onUserInteraction,
           decoration: const InputDecoration(hintText: '0', suffixText: 'F CFA'),
@@ -584,7 +605,10 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               _Label(l10n.serviceFormTitleLabel),
               TextFormField(
                 controller: _titleController,
+                focusNode: _titleFocusNode,
                 textCapitalization: TextCapitalization.sentences,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) => _descriptionFocusNode.requestFocus(),
                 decoration: InputDecoration(
                   hintText: l10n.serviceFormTitleHint,
                 ),
@@ -614,6 +638,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
               _Label(l10n.serviceFormDescription),
               TextFormField(
                 controller: _descriptionController,
+                focusNode: _descriptionFocusNode,
                 maxLines: 4,
                 maxLength: 500,
                 textCapitalization: TextCapitalization.sentences,
@@ -976,6 +1001,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
             controller: _addressController,
             autofocus: true,
             textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.done,
             decoration: InputDecoration(
               hintText: l10n.zoneCityOrAddress,
               prefixIcon: const Icon(Icons.search_rounded, size: 20),

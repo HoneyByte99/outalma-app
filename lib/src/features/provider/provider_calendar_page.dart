@@ -912,6 +912,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
             // Reason
             TextField(
               controller: _reasonController,
+              textInputAction: TextInputAction.done,
               decoration: InputDecoration(hintText: l10n.onboardingBio),
             ),
             const SizedBox(height: 20),
