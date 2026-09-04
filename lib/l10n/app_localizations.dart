@@ -4249,6 +4249,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get avatarSheetClose;
+
+  /// Label of the floating button that closes the on-screen keyboard, shown above it whenever a text field has focus, regardless of whether the keyboard has a usable return key.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide keyboard'**
+  String get keyboardDismiss;
 }
 
 class _AppLocalizationsDelegate

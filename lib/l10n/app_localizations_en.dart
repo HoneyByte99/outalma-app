@@ -2289,4 +2289,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get avatarSheetClose => 'Close';
+
+  @override
+  String get keyboardDismiss => 'Hide keyboard';
 }

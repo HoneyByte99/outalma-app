@@ -1020,5 +1020,6 @@
       }
     }
   },
-  "avatarSheetClose": "Fermer"
+  "avatarSheetClose": "Fermer",
+  "keyboardDismiss": "Fermer le clavier"
 }
