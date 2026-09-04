@@ -90,6 +90,31 @@ describe('onMessageCreate → notify the other participant', () => {
     expect(await getNotifications(customer)).toHaveLength(0);
   });
 
+  // Hypothesis A (tmp/outalma-notif-tap/BRIEF.md): the push `data` payload
+  // omits `audience`, while the in-app notification written right after gets
+  // it. The client's activeModeForAudience(notificationAudienceFor(data))
+  // (app_notification.dart) needs it from the PUSH payload at tap time - the
+  // Firestore notification doc is a separate read the tap handler never
+  // makes. Without it, a tap on a message meant for the other mode never
+  // switches mode and can misroute.
+  it('carries the same audience in the push payload as the in-app notification', async () => {
+    await seedChat({
+      participantIds: [customer, provider],
+      bookingId: 'b1',
+      customerId: customer,
+    });
+    await seedUser(customer, { pushToken: 'tok-cust' });
+    await seedUser(provider, { pushToken: 'tok-prov' });
+
+    await fireMessage({ senderId: customer, text: 'Bonjour', type: 'text' });
+
+    const arg = sendSpy.mock.calls[0][0] as { data?: { audience?: string } };
+    const provNotifs = await getNotifications(provider);
+    // The push payload's audience must match what was just written to
+    // Firestore for the same recipient/event.
+    expect(arg.data?.audience).toBe(provNotifs[0]?.audience);
+  });
+
   it('tags the message notification client when the recipient is the customer', async () => {
     await seedChat({
       participantIds: [customer, provider],
