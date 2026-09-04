@@ -16,6 +16,7 @@ import '../domain/models/app_notification.dart';
 import 'app_theme.dart';
 import 'connectivity_banner.dart';
 import 'notification_route.dart';
+import 'notification_tap_guard.dart';
 import 'router.dart';
 
 class OutalmaServiceApp extends ConsumerStatefulWidget {
@@ -88,6 +89,21 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
     // Let the redirect settle on the home route before pushing the deep link.
     await Future<void>.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
+
+    // The cascade that deletes a notification alongside its booking/chat is
+    // not instantaneous (see notification_providers.dart), so this system tap
+    // (taken with the app closed or backgrounded, unlike the in-app
+    // notifications list) can reach here after the target is already gone.
+    // Probe before pushing so a stale tap doesn't open a dead screen.
+    final exists = await notificationTargetExistsForData(
+      db: ref.read(firestoreProvider),
+      data: message.data,
+    );
+    if (!mounted) return;
+    if (!exists) {
+      showNotificationTargetGoneMessage(_messengerKey);
+      return;
+    }
     unawaited(ref.read(routerProvider).push(route));
   }
 

@@ -529,6 +529,13 @@ export const onMessageCreate = onDocumentCreated(
       notifBody = (message.text as string | undefined) ?? 'Message re\u00e7u';
     }
 
+    // The recipient's role in this chat: the customer of the booking is
+    // acting as client, the other party as provider. Chats are always 1:1
+    // (participantIds is [customerId, providerId]), so every recipient here
+    // shares this one value.
+    const audienceFor = (uid: string): 'client' | 'provider' =>
+      uid === chatCustomerId ? 'client' : 'provider';
+
     await sendPushToUsers(
       recipients,
       { title: notifTitle, body: notifBody },
@@ -536,6 +543,13 @@ export const onMessageCreate = onDocumentCreated(
         type: 'new_message',
         chatId,
         ...(bookingId ? { bookingId } : {}),
+        // Needed by the client at tap time (app_notification.dart's
+        // notificationAudienceFor/activeModeForAudience, read from
+        // app.dart's _handleNotificationTap) to switch into the right mode
+        // before pushing the deep link. Without it here, the tap can
+        // silently misroute when the chat's role differs from whichever
+        // mode is active on the device.
+        ...(recipients[0] ? { audience: audienceFor(recipients[0]) } : {}),
       }
     );
 
@@ -546,9 +560,7 @@ export const onMessageCreate = onDocumentCreated(
         body: notifBody,
         chatId,
         bookingId,
-        // The recipient's role in this chat: the customer of the booking is
-        // acting as client, the other party as provider.
-        audience: uid === chatCustomerId ? 'client' : 'provider',
+        audience: audienceFor(uid),
       });
     }
   }
