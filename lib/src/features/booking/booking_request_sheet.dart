@@ -1430,6 +1430,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
               TextField(
                 controller: nameController,
                 autofocus: true,
+                textInputAction: TextInputAction.done,
                 decoration: InputDecoration(hintText: l10n.locationAddressHint),
               ),
               const SizedBox(height: 20),

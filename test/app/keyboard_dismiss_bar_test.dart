@@ -1,11 +1,15 @@
 // Widget tests for KeyboardDismissBar: the one shared mechanism that shows a
-// button to close the on-screen keyboard whenever a text field has focus,
-// anywhere in the app.
+// button to close the on-screen keyboard, but only for a field that cannot
+// close it itself.
 //
-// The motivating case is a keyboard with no usable return key (numeric,
-// phone, multiline): the field never offers a way back, so the visibility
-// contract (appears on focus, disappears on blur, the button actually drops
-// focus) is proved directly here rather than trusted from a single field.
+// Most fields already have a usable native return key once they declare a
+// TextInputAction, so the bar would be a redundant, "moche" button
+// competing with the system for them. It only earns its place for the two
+// families that genuinely have no way out: a numeric/phone keyboard, which
+// has no return key at all on iOS, and a multiline field, whose return key
+// inserts a line break instead of submitting. That decision (appears on
+// focus, disappears on blur, the button actually drops focus) is proved
+// directly here rather than trusted from a single field.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,7 +37,147 @@ Future<void> _settleFocus(WidgetTester tester) async {
 }
 
 void main() {
-  group('KeyboardDismissBar, appears on focus, disappears on blur', () {
+  group('KeyboardDismissBar.needsDismissBar, the three families', () {
+    testWidgets(
+      'false for a single-line text field with no declared textInputAction '
+      '(resolves to done)',
+      (tester) async {
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+        await tester.pumpWidget(
+          _wrap(Scaffold(body: TextField(focusNode: focusNode))),
+        );
+        focusNode.requestFocus();
+        await tester.pump();
+
+        expect(KeyboardDismissBar.needsDismissBar(focusNode), isFalse);
+      },
+    );
+
+    testWidgets(
+      'false for a single-line text field with an explicit next action',
+      (tester) async {
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+        await tester.pumpWidget(
+          _wrap(
+            Scaffold(
+              body: TextField(
+                focusNode: focusNode,
+                textInputAction: TextInputAction.next,
+              ),
+            ),
+          ),
+        );
+        focusNode.requestFocus();
+        await tester.pump();
+
+        expect(KeyboardDismissBar.needsDismissBar(focusNode), isFalse);
+      },
+    );
+
+    testWidgets('true for a numeric field, even with an explicit done action '
+        '(no return key on iOS regardless of the declared action)', (
+      tester,
+    ) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      await tester.pumpWidget(
+        _wrap(
+          Scaffold(
+            body: TextField(
+              focusNode: focusNode,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+            ),
+          ),
+        ),
+      );
+      focusNode.requestFocus();
+      await tester.pump();
+
+      expect(KeyboardDismissBar.needsDismissBar(focusNode), isTrue);
+    });
+
+    testWidgets('true for a phone field', (tester) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      await tester.pumpWidget(
+        _wrap(
+          Scaffold(
+            body: TextField(
+              focusNode: focusNode,
+              keyboardType: TextInputType.phone,
+            ),
+          ),
+        ),
+      );
+      focusNode.requestFocus();
+      await tester.pump();
+
+      expect(KeyboardDismissBar.needsDismissBar(focusNode), isTrue);
+    });
+
+    testWidgets('true for a multiline field with no declared textInputAction '
+        '(resolves to newline)', (tester) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      await tester.pumpWidget(
+        _wrap(Scaffold(body: TextField(focusNode: focusNode, maxLines: 4))),
+      );
+      focusNode.requestFocus();
+      await tester.pump();
+
+      expect(KeyboardDismissBar.needsDismissBar(focusNode), isTrue);
+    });
+
+    testWidgets('true for a multiline field with an explicit newline action', (
+      tester,
+    ) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      await tester.pumpWidget(
+        _wrap(
+          Scaffold(
+            body: TextField(
+              focusNode: focusNode,
+              maxLines: 5,
+              textInputAction: TextInputAction.newline,
+            ),
+          ),
+        ),
+      );
+      focusNode.requestFocus();
+      await tester.pump();
+
+      expect(KeyboardDismissBar.needsDismissBar(focusNode), isTrue);
+    });
+
+    test('false for a null node (nothing focused)', () {
+      expect(KeyboardDismissBar.needsDismissBar(null), isFalse);
+    });
+
+    testWidgets('false for a focus node attached to a non-text widget', (
+      tester,
+    ) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      await tester.pumpWidget(
+        _wrap(
+          Scaffold(
+            body: Focus(focusNode: focusNode, child: const SizedBox()),
+          ),
+        ),
+      );
+      focusNode.requestFocus();
+      await tester.pump();
+
+      expect(KeyboardDismissBar.needsDismissBar(focusNode), isFalse);
+    });
+  });
+
+  group('KeyboardDismissBar, appears only for a field that cannot dismiss '
+      'its own keyboard', () {
     testWidgets('bar is absent before any field has focus', (tester) async {
       final focusNode = FocusNode();
       addTearDown(focusNode.dispose);
@@ -41,7 +185,12 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           KeyboardDismissBar(
-            child: Scaffold(body: TextField(focusNode: focusNode)),
+            child: Scaffold(
+              body: TextField(
+                focusNode: focusNode,
+                keyboardType: TextInputType.number,
+              ),
+            ),
           ),
         ),
       );
@@ -50,27 +199,33 @@ void main() {
       expect(find.byKey(_barKey), findsNothing);
     });
 
-    testWidgets('bar appears the moment a text field gains focus', (
-      tester,
-    ) async {
-      final focusNode = FocusNode();
-      addTearDown(focusNode.dispose);
+    testWidgets(
+      'bar appears the moment a field that cannot self-dismiss gains focus',
+      (tester) async {
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
 
-      await tester.pumpWidget(
-        _wrap(
-          KeyboardDismissBar(
-            child: Scaffold(body: TextField(focusNode: focusNode)),
+        await tester.pumpWidget(
+          _wrap(
+            KeyboardDismissBar(
+              child: Scaffold(
+                body: TextField(
+                  focusNode: focusNode,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      focusNode.requestFocus();
-      await _settleFocus(tester);
+        focusNode.requestFocus();
+        await _settleFocus(tester);
 
-      expect(find.byKey(_barKey), findsOneWidget);
-      expect(find.text('Terminé'), findsOneWidget);
-    });
+        expect(find.byKey(_barKey), findsOneWidget);
+        expect(find.text('Terminé'), findsOneWidget);
+      },
+    );
 
     testWidgets('bar disappears the moment that field loses focus', (
       tester,
@@ -81,7 +236,12 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           KeyboardDismissBar(
-            child: Scaffold(body: TextField(focusNode: focusNode)),
+            child: Scaffold(
+              body: TextField(
+                focusNode: focusNode,
+                keyboardType: TextInputType.number,
+              ),
+            ),
           ),
         ),
       );
@@ -122,6 +282,29 @@ void main() {
         expect(find.byKey(_barKey), findsNothing);
       },
     );
+
+    testWidgets(
+      'bar does NOT appear for a single-line text field, which can close '
+      'its own keyboard via its return key',
+      (tester) async {
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+
+        await tester.pumpWidget(
+          _wrap(
+            KeyboardDismissBar(
+              child: Scaffold(body: TextField(focusNode: focusNode)),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        focusNode.requestFocus();
+        await _settleFocus(tester);
+
+        expect(find.byKey(_barKey), findsNothing);
+      },
+    );
   });
 
   group('KeyboardDismissBar, the button drops focus', () {
@@ -134,7 +317,12 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           KeyboardDismissBar(
-            child: Scaffold(body: TextField(focusNode: focusNode)),
+            child: Scaffold(
+              body: TextField(
+                focusNode: focusNode,
+                keyboardType: TextInputType.number,
+              ),
+            ),
           ),
         ),
       );
@@ -215,7 +403,8 @@ void main() {
 
   group('KeyboardDismissBar, above a modal bottom sheet', () {
     testWidgets(
-      'bar still renders, layered above the sheet content, when a field inside a modal bottom sheet has focus',
+      'bar still renders, layered above the sheet content, when a field '
+      'that cannot self-dismiss inside a modal bottom sheet has focus',
       (tester) async {
         final focusNode = FocusNode();
         addTearDown(focusNode.dispose);
@@ -239,7 +428,10 @@ void main() {
                     context: context,
                     builder: (_) => SizedBox(
                       height: 200,
-                      child: TextField(focusNode: focusNode),
+                      child: TextField(
+                        focusNode: focusNode,
+                        keyboardType: TextInputType.number,
+                      ),
                     ),
                   ),
                   child: const Text('open sheet'),
@@ -269,7 +461,7 @@ void main() {
     );
   });
 
-  group('KeyboardDismissBar.isTextInputFocus, the guard', () {
+  group('KeyboardDismissBar.isTextInputFocus, the ancestor walk', () {
     testWidgets('true for a focus node attached to a text field', (
       tester,
     ) async {
