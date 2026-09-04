@@ -11,6 +11,8 @@ class AppNotification {
     this.bookingId,
     this.chatId,
     this.audience,
+    this.senderId,
+    this.senderName,
   });
 
   final String id;
@@ -31,6 +33,20 @@ class AppNotification {
   /// the inference fallback that keeps them visible.
   final String? audience;
 
+  /// Uid of the other party this notification is about (the message sender,
+  /// the provider who accepted, the reviewer, ...). Denormalised into the
+  /// document at creation time by the Cloud Function, never resolved here.
+  /// Null for a notification whose type has no single counterparty, and for
+  /// every notification predating this field (2026-09).
+  final String? senderId;
+
+  /// Display name of [senderId], baked into [title] server-side already (see
+  /// notify.ts's titleWithSender), and repeated here only so a future feature
+  /// (e.g. an avatar) can key off the sender without re-deriving it. Null has
+  /// the same two causes as [senderId] and must never render as the literal
+  /// string "null" or an empty tile: [title] already carries the fallback.
+  final String? senderName;
+
   AppNotification copyWith({bool? read}) => AppNotification(
     id: id,
     type: type,
@@ -41,6 +57,8 @@ class AppNotification {
     bookingId: bookingId,
     chatId: chatId,
     audience: audience,
+    senderId: senderId,
+    senderName: senderName,
   );
 }
 

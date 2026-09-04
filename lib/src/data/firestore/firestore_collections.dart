@@ -704,6 +704,8 @@ class FirestoreCollections {
       bookingId: data['bookingId'] as String?,
       chatId: data['chatId'] as String?,
       audience: data['audience'] as String?,
+      senderId: data['senderId'] as String?,
+      senderName: data['senderName'] as String?,
     );
   }
 
@@ -717,6 +719,8 @@ class FirestoreCollections {
       'bookingId': n.bookingId,
       'chatId': n.chatId,
       if (n.audience != null) 'audience': n.audience,
+      if (n.senderId != null) 'senderId': n.senderId,
+      if (n.senderName != null) 'senderName': n.senderName,
     };
   }
 }
