@@ -89,6 +89,10 @@ class _KeyboardDismissBarState extends State<KeyboardDismissBar> {
   }
 }
 
+/// iOS input-accessory-bar convention: a thin strip with a hairline
+/// separator (never a shadow) and a plain text button, not a filled one.
+/// Dismissing the keyboard is a utility action, not the screen's primary
+/// action, so it must not compete visually with it.
 class _DismissBar extends StatelessWidget {
   const _DismissBar();
 
@@ -96,27 +100,25 @@ class _DismissBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    return Material(
+    return Container(
       key: const Key('keyboardDismissBar'),
-      color: oc.surface,
-      elevation: 4,
+      decoration: BoxDecoration(
+        color: oc.surface,
+        border: Border(top: BorderSide(color: oc.border)),
+      ),
       child: SafeArea(
         top: false,
         bottom: false,
         child: Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: ElevatedButton.icon(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: TextButton.icon(
               key: const Key('keyboardDismissButton'),
               onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: oc.primary,
-                foregroundColor: oc.surface,
+              style: TextButton.styleFrom(
                 minimumSize: const Size(0, AppSpacing.minTouchTarget),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                shape: const StadiumBorder(),
-                elevation: 0,
               ),
               icon: const Icon(Icons.keyboard_hide_rounded, size: 20),
               label: Text(l10n.keyboardDismiss),

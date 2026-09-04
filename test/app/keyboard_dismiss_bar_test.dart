@@ -69,7 +69,7 @@ void main() {
       await _settleFocus(tester);
 
       expect(find.byKey(_barKey), findsOneWidget);
-      expect(find.text('Fermer le clavier'), findsOneWidget);
+      expect(find.text('Terminé'), findsOneWidget);
     });
 
     testWidgets('bar disappears the moment that field loses focus', (

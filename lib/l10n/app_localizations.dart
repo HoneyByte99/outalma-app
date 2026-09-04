@@ -4250,10 +4250,10 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get avatarSheetClose;
 
-  /// Label of the floating button that closes the on-screen keyboard, shown above it whenever a text field has focus, regardless of whether the keyboard has a usable return key.
+  /// Short label of the text button that closes the on-screen keyboard, shown in an accessory bar above it whenever a text field has focus, regardless of whether the keyboard has a usable return key. Follows the iOS input accessory bar convention ("Done").
   ///
   /// In en, this message translates to:
-  /// **'Hide keyboard'**
+  /// **'Done'**
   String get keyboardDismiss;
 }
 

@@ -2291,5 +2291,5 @@ class AppLocalizationsEn extends AppLocalizations {
   String get avatarSheetClose => 'Close';
 
   @override
-  String get keyboardDismiss => 'Hide keyboard';
+  String get keyboardDismiss => 'Done';
 }
