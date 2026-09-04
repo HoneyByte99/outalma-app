@@ -69,10 +69,21 @@ Future<LegalDocResult> loadLegalDoc(
 /// Loads the Markdown source from a bundled asset and renders it with a
 /// lightweight renderer (no remote link, works fully offline).
 class LegalPage extends StatelessWidget {
-  const LegalPage({super.key, required this.doc, required this.title});
+  const LegalPage({
+    super.key,
+    required this.doc,
+    required this.title,
+    @visibleForTesting this.loadString,
+  });
 
   final LegalDoc doc;
   final String title;
+
+  /// Overrides the asset loader used by [loadLegalDoc]; only ever set by
+  /// tests to simulate a missing language variant without touching the
+  /// real bundled assets.
+  @visibleForTesting
+  final Future<String> Function(String key)? loadString;
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +98,7 @@ class LegalPage extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
       ),
       body: FutureBuilder<LegalDocResult>(
-        future: loadLegalDoc(doc, languageCode),
+        future: loadLegalDoc(doc, languageCode, loadString: loadString),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return Center(child: CircularProgressIndicator(color: oc.primary));
