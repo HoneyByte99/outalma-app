@@ -1677,6 +1677,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get legalPrivacyTitle => 'Privacy policy';
 
   @override
+  String get legalDocUnavailable => 'Document unavailable.';
+
+  @override
+  String get legalLastUpdatedPrefix => 'Last updated';
+
+  @override
+  String get legalFallbackNotice =>
+      'This document isn\'t available in your language yet. You\'re viewing the French version.';
+
+  @override
   String get introSkip => 'Skip';
 
   @override

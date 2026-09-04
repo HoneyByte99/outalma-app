@@ -3170,6 +3170,24 @@ abstract class AppLocalizations {
   /// **'Privacy policy'**
   String get legalPrivacyTitle;
 
+  /// No description provided for @legalDocUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Document unavailable.'**
+  String get legalDocUnavailable;
+
+  /// No description provided for @legalLastUpdatedPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated'**
+  String get legalLastUpdatedPrefix;
+
+  /// No description provided for @legalFallbackNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'This document isn\'t available in your language yet. You\'re viewing the French version.'**
+  String get legalFallbackNotice;
+
   /// No description provided for @introSkip.
   ///
   /// In en, this message translates to:
