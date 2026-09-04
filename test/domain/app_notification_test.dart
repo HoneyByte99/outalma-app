@@ -73,6 +73,47 @@ void main() {
     });
   });
 
+  group('AppNotification sender identity (2026-09)', () {
+    test(
+      'senderId and senderName default to null (pre-migration notifications)',
+      () {
+        final n = _unread();
+        expect(n.senderId, isNull);
+        expect(n.senderName, isNull);
+      },
+    );
+
+    test('senderId and senderName are retained when set', () {
+      final n = AppNotification(
+        id: 'n4',
+        type: 'new_message',
+        title: 'Nouveau message de Awa',
+        body: 'Vous avez reçu un nouveau message.',
+        read: false,
+        createdAt: DateTime(2024, 3, 18),
+        senderId: 'prov1',
+        senderName: 'Awa',
+      );
+      expect(n.senderId, 'prov1');
+      expect(n.senderName, 'Awa');
+    });
+
+    test('copyWith preserves senderId/senderName untouched', () {
+      final n = AppNotification(
+        id: 'n5',
+        type: 'new_message',
+        title: 'Nouveau message de Awa',
+        body: 'Vous avez reçu un nouveau message.',
+        read: false,
+        createdAt: DateTime(2024, 3, 19),
+        senderId: 'prov1',
+        senderName: 'Awa',
+      ).copyWith(read: true);
+      expect(n.senderId, 'prov1');
+      expect(n.senderName, 'Awa');
+    });
+  });
+
   group('AppNotification known type strings', () {
     const knownTypes = [
       'booking_accepted',
