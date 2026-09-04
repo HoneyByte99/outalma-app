@@ -4,9 +4,17 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
+import 'keyboard_dismiss_bar.dart';
 
 /// Wraps [child] and shows a slim offline banner at the top when the device
 /// has no network connectivity. Dismisses automatically when connection returns.
+///
+/// Also wraps [child] in [KeyboardDismissBar]: this is the highest point in
+/// the widget tree below [MaterialApp.router]'s `builder` that isn't
+/// `app.dart` itself, and every routed screen (including modal bottom
+/// sheets, which attach to the Navigator nested inside [child]) passes
+/// through here, so the keyboard-dismiss bar covers the whole app from one
+/// place.
 class ConnectivityBanner extends StatefulWidget {
   const ConnectivityBanner({super.key, required this.child});
 
@@ -52,7 +60,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
           curve: Curves.easeInOut,
           child: _offline ? _OfflineBanner() : const SizedBox.shrink(),
         ),
-        Expanded(child: widget.child),
+        Expanded(child: KeyboardDismissBar(child: widget.child)),
       ],
     );
   }
