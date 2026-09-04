@@ -189,11 +189,11 @@ void main() {
     test(
       'does NOT overwrite phoneE164 when upsert is called with null phone',
       () async {
-        // First write — user has a phone number.
+        // First write: user has a phone number.
         final userWithPhone = _makeUser(id: 'uid-4', phoneE164: '+33600000000');
         await repo.upsert(userWithPhone);
 
-        // Second write — serializer guard omits phoneE164 when it is null.
+        // Second write: serializer guard omits phoneE164 when it is null.
         // We pass a user whose phoneE164 is null (e.g. email-only update path).
         final userWithoutPhone = AppUser(
           id: 'uid-4',
@@ -240,6 +240,37 @@ void main() {
         // With merge semantics and a non-null phone in the second write,
         // the field is overwritten.
         expect(raw.data()?['phoneE164'], '+22170000000');
+      },
+    );
+
+    test(
+      'does NOT overwrite displayName when upsert is called with an empty name',
+      () async {
+        // Regression test for the sign-up name race: AuthNotifier's auth
+        // listener can upsert a defensive doc with displayName: '' before it
+        // knows the real name. The serializer must omit the key when empty,
+        // exactly like it already does for phoneE164 above, so a merge write
+        // cannot blank a name a concurrent write already stored.
+        final user = _makeUser(id: 'uid-6', displayName: 'Fatou');
+        await repo.upsert(user);
+
+        final withEmptyName = AppUser(
+          id: 'uid-6',
+          displayName: '',
+          email: 'fatou@example.com',
+          country: 'FR',
+          activeMode: ActiveMode.client,
+          createdAt: DateTime(2024, 1, 1).toUtc(),
+        );
+        await repo.upsert(withEmptyName);
+
+        final raw = await fakeDb.collection('users').doc('uid-6').get();
+        expect(
+          raw.data()?['displayName'],
+          'Fatou',
+          reason:
+              'displayName must be preserved after a merge-upsert that carries an empty name',
+        );
       },
     );
   });
