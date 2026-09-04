@@ -114,6 +114,16 @@ export async function createNotification(
     // stale .d.ts, or one reached from plain JS, would otherwise bypass this
     // at the type layer alone.
     audience: 'client' | 'provider';
+    // Denormalised identity of the other party (2026-09, notification-sender
+    // identity). Resolved and baked in AT CREATION TIME, never at render time:
+    // a notification is a record of a past fact, and re-resolving N senders
+    // when the list renders would cost N reads and break offline. The
+    // trade-off is accepted deliberately: a later rename does not retro-update
+    // old notifications, which is correct for a journal. Both optional and
+    // independently nullable so a caller with no resolvable name still writes
+    // a valid notification that degrades to the bare title, never a "null".
+    senderId?: string;
+    senderName?: string | null;
   }
 ): Promise<void> {
   if (data.audience !== 'client' && data.audience !== 'provider') {
@@ -134,7 +144,33 @@ export async function createNotification(
       bookingId: data.bookingId ?? null,
       chatId: data.chatId ?? null,
       audience: data.audience,
+      senderId: data.senderId ?? null,
+      senderName: data.senderName ?? null,
       read: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+}
+
+/// Reads the current display name of `uid` straight off `users/{uid}`, the
+/// account record every sign-up path writes and the only one guaranteed fresh:
+/// `public_profiles/{uid}` is a projection of it (see public_profiles.ts) that
+/// only stays in sync once `mirrorPublicProfile` is deployed, which as of this
+/// writing it is not, so it may be stale or entirely absent. Never throws: an
+/// unresolvable name means the caller falls back to the bare title, not a
+/// broken notification.
+export async function resolveDisplayName(
+  uid: string | undefined | null
+): Promise<string | null> {
+  if (!uid) return null;
+  const snap = await db().collection('users').doc(uid).get();
+  const name = snap.data()?.displayName;
+  return typeof name === 'string' && name.trim().length > 0 ? name : null;
+}
+
+/// Appends the sender's name to a base title when known, otherwise returns the
+/// base title unchanged. The "unchanged" branch is what keeps the 391
+/// pre-existing notifications (and any future caller that cannot resolve a
+/// name) from ever showing a literal "null" or a dangling separator.
+export function titleWithSender(base: string, senderName: string | null): string {
+  return senderName ? `${base} · ${senderName}` : base;
 }

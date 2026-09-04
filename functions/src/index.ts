@@ -6,7 +6,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as logger from 'firebase-functions/logger';
 import { assertAdminClaim, assertAdminOrModeratorClaim, assertMinSupportClaim, assertAuthenticated, requireBoolean, requireString } from './common';
 import { writeAdminLog, writeAdminLogTx } from './audit';
-import { createNotification, sendPushToUsers } from './notify';
+import { createNotification, sendPushToUsers, resolveDisplayName, titleWithSender } from './notify';
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -518,7 +518,12 @@ export const onMessageCreate = onDocumentCreated(
 
     // Notify all participants except the sender
     const recipients = participants.filter(uid => uid !== message.senderId);
-    const notifTitle = 'Nouveau message';
+    // Sender's name, resolved once and denormalised into every recipient's
+    // notification below, so two threads from two different people never look
+    // identical (2026-09, notification-sender identity). Falls back to the
+    // bare "Nouveau message" when it can't be resolved.
+    const senderName = await resolveDisplayName(message.senderId);
+    const notifTitle = senderName ? `Nouveau message de ${senderName}` : 'Nouveau message';
     const msgType = message.type as string | undefined;
     let notifBody: string;
     if (msgType === 'image') {
@@ -526,7 +531,10 @@ export const onMessageCreate = onDocumentCreated(
     } else if (msgType === 'voice') {
       notifBody = 'A envoy\u00e9 un message vocal \ud83c\udfa4';
     } else {
-      notifBody = (message.text as string | undefined) ?? 'Message re\u00e7u';
+      // Generic on purpose: the raw message text used to ride along here,
+      // which meant a lock screen displayed it in the clear. The name above
+      // already answers "who", so the content itself is no longer needed.
+      notifBody = 'Vous avez re\u00e7u un nouveau message.';
     }
 
     // The recipient's role in this chat: the customer of the booking is
@@ -561,6 +569,8 @@ export const onMessageCreate = onDocumentCreated(
         chatId,
         bookingId,
         audience: audienceFor(uid),
+        senderId: message.senderId,
+        senderName,
       });
     }
   }
@@ -591,6 +601,16 @@ export const onBookingStatusChange = onDocumentUpdated(
 
     const bookingId = event.params.bookingId;
 
+    // The recipient of each entry below is always being told about the OTHER
+    // party's action (the provider accepted, the customer cancelled, ...), so
+    // that other party's name is what disambiguates repeat notifications
+    // (2026-09, notification-sender identity). Resolved once up front and
+    // reused per entry rather than per-notification.
+    const [customerName, providerName] = await Promise.all([
+      resolveDisplayName(customerId),
+      resolveDisplayName(providerId),
+    ]);
+
     type NotifEntry = {
       uids: string[];
       type: string;
@@ -599,6 +619,8 @@ export const onBookingStatusChange = onDocumentUpdated(
       // Which role the recipients are acting as for this event : drives the
       // Client/Provider notification tabs.
       audience: 'client' | 'provider';
+      senderId?: string;
+      senderName: string | null;
     };
     const notifications: NotifEntry[] = [];
 
@@ -608,9 +630,11 @@ export const onBookingStatusChange = onDocumentUpdated(
           notifications.push({
             uids: [customerId],
             type: 'booking_accepted',
-            title: 'Demande acceptée',
+            title: titleWithSender('Demande acceptée', providerName),
             body: 'Votre prestataire a accepté votre demande. Vous pouvez maintenant discuter.',
             audience: 'client',
+            senderId: providerId,
+            senderName: providerName,
           });
         }
         break;
@@ -619,9 +643,11 @@ export const onBookingStatusChange = onDocumentUpdated(
           notifications.push({
             uids: [customerId],
             type: 'booking_rejected',
-            title: 'Demande refusée',
+            title: titleWithSender('Demande refusée', providerName),
             body: 'Votre demande a été refusée. Vous pouvez en soumettre une nouvelle.',
             audience: 'client',
+            senderId: providerId,
+            senderName: providerName,
           });
         }
         break;
@@ -630,9 +656,11 @@ export const onBookingStatusChange = onDocumentUpdated(
           notifications.push({
             uids: [customerId],
             type: 'booking_in_progress',
-            title: 'Service démarré',
+            title: titleWithSender('Service démarré', providerName),
             body: 'Votre prestataire a démarré le service.',
             audience: 'client',
+            senderId: providerId,
+            senderName: providerName,
           });
         }
         break;
@@ -641,18 +669,22 @@ export const onBookingStatusChange = onDocumentUpdated(
           notifications.push({
             uids: [customerId],
             type: 'booking_done',
-            title: 'Service terminé',
+            title: titleWithSender('Service terminé', providerName),
             body: 'Le service est terminé. Laissez un avis !',
             audience: 'client',
+            senderId: providerId,
+            senderName: providerName,
           });
         }
         if (providerId) {
           notifications.push({
             uids: [providerId],
             type: 'booking_done',
-            title: 'Service terminé',
+            title: titleWithSender('Service terminé', customerName),
             body: 'Le service est marqué comme terminé. Laissez un avis au client !',
             audience: 'provider',
+            senderId: customerId,
+            senderName: customerName,
           });
         }
         break;
@@ -665,18 +697,22 @@ export const onBookingStatusChange = onDocumentUpdated(
           notifications.push({
             uids: [customerId],
             type: 'booking_cancelled',
-            title: 'Réservation annulée',
+            title: titleWithSender('Réservation annulée', providerName),
             body,
             audience: 'client',
+            senderId: providerId,
+            senderName: providerName,
           });
         }
         if (providerId && providerId !== canceller) {
           notifications.push({
             uids: [providerId],
             type: 'booking_cancelled',
-            title: 'Réservation annulée',
+            title: titleWithSender('Réservation annulée', customerName),
             body,
             audience: 'provider',
+            senderId: customerId,
+            senderName: customerName,
           });
         }
         break;
@@ -696,6 +732,8 @@ export const onBookingStatusChange = onDocumentUpdated(
           body: n.body,
           bookingId,
           audience: n.audience,
+          senderId: n.senderId,
+          senderName: n.senderName,
         });
       }
     }
@@ -1186,7 +1224,20 @@ export const sendBookingReminders = onSchedule(
       const diffMs = scheduledAt.getTime() - now.getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
 
-      const participants = [data.customerId, data.providerId].filter(Boolean);
+      const customerId = data.customerId as string | undefined;
+      const providerId = data.providerId as string | undefined;
+      const participants = [customerId, providerId].filter(Boolean) as string[];
+
+      // Each participant is reminded about the OTHER party's upcoming
+      // appointment, so that party's name is what tells apart two reminders
+      // for two different bookings at a glance (2026-09, notification-sender
+      // identity). One push per recipient now (used to be a single multicast
+      // to both), since the title differs by recipient.
+      const senderFor = (
+        uid: string,
+        customerName: string | null,
+        providerName: string | null
+      ) => (uid === customerId ? providerName : customerName);
 
       // 24h reminder (between 23.5h and 24.5h before)
       if (!data.reminded24h && diffHours >= 23.5 && diffHours <= 24.5) {
@@ -1194,9 +1245,12 @@ export const sendBookingReminders = onSchedule(
         // participants share the same market in practice). Without timeZone the
         // string is UTC : an hour or two off for France.
         let country: string | undefined;
-        if (data.customerId) {
-          const cs = await db.collection('users').doc(data.customerId).get();
+        let customerName: string | null = null;
+        if (customerId) {
+          const cs = await db.collection('users').doc(customerId).get();
           country = cs.data()?.country as string | undefined;
+          const name = cs.data()?.displayName;
+          customerName = typeof name === 'string' && name.trim().length > 0 ? name : null;
         }
         const timeStr = scheduledAt.toLocaleTimeString('fr-FR', {
           hour: '2-digit',
@@ -1212,21 +1266,24 @@ export const sendBookingReminders = onSchedule(
           shouldSend24h = true;
         });
         if (shouldSend24h) {
-          await sendPushToUsers(
-            participants,
-            {
-              title: 'Rappel : RDV demain',
-              body: `Votre prestation est prévue demain à ${timeStr}.`,
-            },
-            { type: 'booking_reminder', bookingId: doc.id }
-          );
+          const providerName = await resolveDisplayName(providerId);
+          const body = `Votre prestation est prévue demain à ${timeStr}.`;
           for (const uid of participants) {
+            const senderName = senderFor(uid, customerName, providerName);
+            const title = titleWithSender('Rappel : RDV demain', senderName);
+            await sendPushToUsers(
+              [uid],
+              { title, body },
+              { type: 'booking_reminder', bookingId: doc.id }
+            );
             await createNotification(uid, {
               type: 'booking_reminder',
-              title: 'Rappel : RDV demain',
-              body: `Votre prestation est prévue demain à ${timeStr}.`,
+              title,
+              body,
               bookingId: doc.id,
-              audience: uid === data.customerId ? 'client' : 'provider',
+              audience: uid === customerId ? 'client' : 'provider',
+              senderId: uid === customerId ? providerId : customerId,
+              senderName,
             });
           }
           sent++;
@@ -1244,21 +1301,27 @@ export const sendBookingReminders = onSchedule(
           shouldSend1h = true;
         });
         if (shouldSend1h) {
-          await sendPushToUsers(
-            participants,
-            {
-              title: 'Rappel : RDV dans 1h',
-              body: 'Votre prestation commence bientôt !',
-            },
-            { type: 'booking_reminder', bookingId: doc.id }
-          );
+          const [customerName, providerName] = await Promise.all([
+            resolveDisplayName(customerId),
+            resolveDisplayName(providerId),
+          ]);
+          const body = 'Votre prestation commence bientôt !';
           for (const uid of participants) {
+            const senderName = senderFor(uid, customerName, providerName);
+            const title = titleWithSender('Rappel : RDV dans 1h', senderName);
+            await sendPushToUsers(
+              [uid],
+              { title, body },
+              { type: 'booking_reminder', bookingId: doc.id }
+            );
             await createNotification(uid, {
               type: 'booking_reminder',
-              title: 'Rappel : RDV dans 1h',
-              body: 'Votre prestation commence bientôt !',
+              title,
+              body,
               bookingId: doc.id,
-              audience: uid === data.customerId ? 'client' : 'provider',
+              audience: uid === customerId ? 'client' : 'provider',
+              senderId: uid === customerId ? providerId : customerId,
+              senderName,
             });
           }
           sent++;
@@ -2792,11 +2855,18 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
   // silently expire). Booking creation is a `create` with status 'requested',
   // which onBookingStatusChange (an update trigger) never sees, so it lives
   // here.
-  const booking = event.data?.data() as { providerId?: string } | undefined;
+  const booking = event.data?.data() as
+    | { providerId?: string; customerId?: string }
+    | undefined;
   const providerId = booking?.providerId;
+  const customerId = booking?.customerId;
   if (providerId) {
     const bookingId = event.params.bookingId;
-    const title = 'Nouvelle demande';
+    // A provider fielding several open requests needs the requester's name to
+    // tell them apart (2026-09, notification-sender identity), same as every
+    // other notification that names a specific counterparty.
+    const customerName = await resolveDisplayName(customerId);
+    const title = titleWithSender('Nouvelle demande', customerName);
     const body = 'Vous avez reçu une nouvelle demande de réservation.';
     await sendPushToUsers(
       [providerId],
@@ -2809,6 +2879,8 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
       body,
       bookingId,
       audience: 'provider',
+      senderId: customerId,
+      senderName: customerName,
     });
   }
 });
@@ -2816,6 +2888,7 @@ export const onBookingCreated = onDocumentCreated('bookings/{bookingId}', async 
 export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (event) => {
   const review = event.data?.data() as {
     revieweeId?: string;
+    reviewerId?: string;
     reviewerRole?: string;
     bookingId?: string;
     hidden?: boolean;
@@ -2858,7 +2931,11 @@ export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (ev
   // with no decrement and no repair path other than the backfill.
   await countReview(event.params.reviewId, review as Record<string, unknown>);
 
-  const title = 'Nouvel avis';
+  // Who left it (2026-09, notification-sender identity): a provider or client
+  // with several bookings otherwise sees an unbroken run of identical "Nouvel
+  // avis" notifications with no way to tell them apart.
+  const reviewerName = await resolveDisplayName(review?.reviewerId);
+  const title = titleWithSender('Nouvel avis', reviewerName);
   const body = 'Vous avez reçu un nouvel avis.';
   await createNotification(revieweeId, {
     type: 'review_received',
@@ -2866,6 +2943,8 @@ export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (ev
     body,
     bookingId: review?.bookingId,
     audience,
+    senderId: review?.reviewerId,
+    senderName: reviewerName,
   });
   // Only the push is swallowed: it is the one leg whose failure must not undo
   // the rest, and a retry would re-deliver a notification the user already has.
