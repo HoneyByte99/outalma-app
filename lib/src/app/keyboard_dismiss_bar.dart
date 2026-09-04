@@ -21,30 +21,6 @@ class KeyboardDismissBar extends StatefulWidget {
 
   final Widget child;
 
-  @override
-  State<KeyboardDismissBar> createState() => _KeyboardDismissBarState();
-}
-
-class _KeyboardDismissBarState extends State<KeyboardDismissBar> {
-  bool _visible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    FocusManager.instance.addListener(_onFocusChange);
-  }
-
-  void _onFocusChange() {
-    final visible = isTextInputFocus(FocusManager.instance.primaryFocus);
-    if (visible == _visible) return;
-    // FocusManager notifies listeners mid-frame (while the framework may
-    // still be building/laying out), so rebuilding synchronously here can
-    // hit a "setState called during build" assertion. Defer to next frame.
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _visible = visible);
-    });
-  }
-
   /// True when [node] is attached to an [EditableText] ancestor, the shared
   /// trait of every TextField/TextFormField in the app (exposed for tests).
   @visibleForTesting
@@ -63,6 +39,32 @@ class _KeyboardDismissBarState extends State<KeyboardDismissBar> {
   }
 
   @override
+  State<KeyboardDismissBar> createState() => _KeyboardDismissBarState();
+}
+
+class _KeyboardDismissBarState extends State<KeyboardDismissBar> {
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    final visible = KeyboardDismissBar.isTextInputFocus(
+      FocusManager.instance.primaryFocus,
+    );
+    if (visible == _visible) return;
+    // FocusManager notifies listeners mid-frame (while the framework may
+    // still be building/laying out), so rebuilding synchronously here can
+    // hit a "setState called during build" assertion. Defer to next frame.
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _visible = visible);
+    });
+  }
+
+  @override
   void dispose() {
     FocusManager.instance.removeListener(_onFocusChange);
     super.dispose();
@@ -72,6 +74,7 @@ class _KeyboardDismissBarState extends State<KeyboardDismissBar> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Stack(
+      key: const Key('keyboardDismissStack'),
       children: [
         widget.child,
         if (_visible)
