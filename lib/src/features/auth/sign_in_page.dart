@@ -12,6 +12,7 @@ import '../../app/router.dart';
 import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
+import '../../domain/auth/otp.dart';
 import '../../../l10n/app_localizations.dart';
 import 'auth_prompt.dart';
 import '../shared/app_logo.dart';
@@ -294,6 +295,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
+                    autofillHints: const [AutofillHints.email],
                     decoration: InputDecoration(
                       hintText: l10n.signInEmailHint,
                       prefixIcon: const Icon(Icons.email_outlined, size: 20),
@@ -304,6 +306,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.password],
                     onSubmitted: (_) => _signInEmail(),
                     decoration: InputDecoration(
                       hintText: l10n.signInPasswordHint,
@@ -380,7 +383,19 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     controller: _otpController,
                     keyboardType: TextInputType.number,
                     autofocus: true,
+                    autofillHints: const [AutofillHints.oneTimeCode],
+                    // iOS renders no return key at all on a numeric keyboard,
+                    // so onSubmitted below never fires there: like the SMS
+                    // code screens Amath pointed at (WhatsApp and friends),
+                    // the code submits itself the instant it reaches its
+                    // expected length. textInputAction/onSubmitted stay only
+                    // as the fallback some Android numeric IMEs still expose.
                     textInputAction: TextInputAction.done,
+                    onChanged: (value) {
+                      if (value.trim().length == otpCodeLength && !_loading) {
+                        _verifyOtp();
+                      }
+                    },
                     onSubmitted: (_) => _verifyOtp(),
                     decoration: InputDecoration(
                       hintText: l10n.phoneOtpHint,
