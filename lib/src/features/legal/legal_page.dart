@@ -1,19 +1,67 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 
 /// Identifies which legal document to display.
 enum LegalDoc {
-  terms('docs/legal/terms-of-use.md'),
-  privacy('docs/legal/privacy-policy.md');
+  terms('terms-of-use'),
+  privacy('privacy-policy');
 
-  const LegalDoc(this.assetPath);
+  const LegalDoc(this._slug);
 
-  final String assetPath;
+  /// Base file name (without extension) shared by every language variant.
+  final String _slug;
+
+  /// Language the canonical, always-present file is written in. Every other
+  /// language is an optional variant that falls back to this one when
+  /// missing.
+  static const _fallbackLanguageCode = 'fr';
+
+  /// Asset path for [languageCode], following the `<slug>.<lang>.md`
+  /// convention (e.g. `terms-of-use.en.md`). The canonical language has no
+  /// suffix (`terms-of-use.md`).
+  String _assetPathFor(String languageCode) =>
+      languageCode == _fallbackLanguageCode
+      ? _fallbackAssetPath
+      : 'docs/legal/$_slug.$languageCode.md';
+
+  String get _fallbackAssetPath => 'docs/legal/$_slug.md';
 
   static LegalDoc fromKey(String? key) =>
       key == 'privacy' ? LegalDoc.privacy : LegalDoc.terms;
+}
+
+/// Result of loading a legal document: its Markdown source plus whether the
+/// requested language variant was missing and this is the French fallback.
+typedef LegalDocResult = ({String text, bool isFallback});
+
+/// Loads [doc]'s Markdown for [languageCode].
+///
+/// If no variant exists for that language, silently falls back to the
+/// French canonical file and reports it via [LegalDocResult.isFallback] so
+/// the caller can surface a visible notice (a document in the wrong
+/// language beats no document at all, but the substitution must not be
+/// invisible).
+@visibleForTesting
+Future<LegalDocResult> loadLegalDoc(
+  LegalDoc doc,
+  String languageCode, {
+  Future<String> Function(String key)? loadString,
+}) async {
+  final load = loadString ?? rootBundle.loadString;
+  final isCanonical = languageCode == LegalDoc._fallbackLanguageCode;
+  if (!isCanonical) {
+    try {
+      final text = await load(doc._assetPathFor(languageCode));
+      return (text: text, isFallback: false);
+    } catch (_) {
+      // No localized variant for this language: fall through to French.
+    }
+  }
+  final text = await load(doc._fallbackAssetPath);
+  return (text: text, isFallback: !isCanonical);
 }
 
 /// In-app viewer for legal documents (CGU / privacy policy).
@@ -21,14 +69,27 @@ enum LegalDoc {
 /// Loads the Markdown source from a bundled asset and renders it with a
 /// lightweight renderer (no remote link, works fully offline).
 class LegalPage extends StatelessWidget {
-  const LegalPage({super.key, required this.doc, required this.title});
+  const LegalPage({
+    super.key,
+    required this.doc,
+    required this.title,
+    @visibleForTesting this.loadString,
+  });
 
   final LegalDoc doc;
   final String title;
 
+  /// Overrides the asset loader used by [loadLegalDoc]; only ever set by
+  /// tests to simulate a missing language variant without touching the
+  /// real bundled assets.
+  @visibleForTesting
+  final Future<String> Function(String key)? loadString;
+
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
+    final languageCode = Localizations.localeOf(context).languageCode;
     return Scaffold(
       backgroundColor: oc.background,
       appBar: AppBar(
@@ -36,8 +97,8 @@ class LegalPage extends StatelessWidget {
         backgroundColor: oc.background,
         surfaceTintColor: Colors.transparent,
       ),
-      body: FutureBuilder<String>(
-        future: rootBundle.loadString(doc.assetPath),
+      body: FutureBuilder<LegalDocResult>(
+        future: loadLegalDoc(doc, languageCode, loadString: loadString),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return Center(child: CircularProgressIndicator(color: oc.primary));
@@ -56,19 +117,20 @@ class LegalPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Document indisponible.',
+                      l10n.legalDocUnavailable,
                       style: TextStyle(color: oc.secondaryText),
                     ),
                     const SizedBox(height: 12),
                     TextButton(
                       onPressed: () => Navigator.of(context).maybePop(),
-                      child: const Text('Retour'),
+                      child: Text(l10n.back),
                     ),
                   ],
                 ),
               ),
             );
           }
+          final result = snapshot.data!;
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
             child: Column(
@@ -94,7 +156,35 @@ class LegalPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                _MarkdownView(source: snapshot.data!),
+                if (result.isFallback)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: oc.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline, color: oc.primary, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              l10n.legalFallbackNotice,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: oc.primaryText),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                _MarkdownView(
+                  source: result.text,
+                  lastUpdatedPrefixes: _lastUpdatedPrefixes,
+                ),
               ],
             ),
           );
@@ -102,17 +192,30 @@ class LegalPage extends StatelessWidget {
       ),
     );
   }
+
+  /// The "last updated" line prefix in every supported language, so the
+  /// date line is recognised regardless of which language variant actually
+  /// got loaded (the requested one, or the French fallback).
+  static final List<String> _lastUpdatedPrefixes = AppLocalizations
+      .supportedLocales
+      .map((locale) => lookupAppLocalizations(locale).legalLastUpdatedPrefix)
+      .toList();
 }
 
 /// Minimal Markdown renderer covering the subset used in our legal docs:
 /// headings (#, ##, ###), paragraphs, bullet/numbered lists, the "last
 /// updated" date line, and inline bold (**...**).
 class _MarkdownView extends StatelessWidget {
-  const _MarkdownView({required this.source});
+  const _MarkdownView({
+    required this.source,
+    required this.lastUpdatedPrefixes,
+  });
 
   final String source;
 
-  static const _lastUpdatedPrefix = 'Dernière mise à jour';
+  /// Every known localized prefix of the "last updated" line (see
+  /// [LegalPage._lastUpdatedPrefixes]).
+  final List<String> lastUpdatedPrefixes;
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +273,7 @@ class _MarkdownView extends StatelessWidget {
         continue;
       }
 
-      if (trimmed.startsWith(_lastUpdatedPrefix)) {
+      if (lastUpdatedPrefixes.any(trimmed.startsWith)) {
         widgets.add(
           _block(
             text: trimmed,
