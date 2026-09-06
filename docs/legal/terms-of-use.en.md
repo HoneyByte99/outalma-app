@@ -2,7 +2,7 @@
 
 Last updated: 6 September 2026
 
-These Terms of Use ("Terms") govern access to and use of the Outalma Service mobile application and website (together, the "Application"), published by the company **KAYZEN TECHNOLOGY**. Outalma Service is a services marketplace for users based in France and Senegal. A single account may act as a **customer** (booking services) and as a **provider** (offering services).
+These Terms of Use ("Terms") govern access to and use of the Outalma Service mobile application and website (together, the "Application"), published by the company **KAYZEN TECHNOLOGY**. Outalma Service is a services marketplace for users based in Senegal. A single account may act as a **customer** (booking services) and as a **provider** (offering services).
 
 By creating an account or using the Application, you accept these Terms without reservation. If you do not accept these Terms, you must not use the Application.
 
@@ -119,7 +119,7 @@ Outalma may amend these Terms to adapt them to changes in the service or in regu
 
 ## 15. Governing law and disputes
 
-These Terms are governed by French law for users located in France and by Senegalese law for users located in Senegal.
+These Terms are governed by Senegalese law.
 
 In the event of a dispute concerning the interpretation or performance of these Terms, the parties undertake to seek an amicable resolution. To this end, the user shall send their complaint to contact@outalma.com; Outalma undertakes to respond within **thirty (30) days**.
 

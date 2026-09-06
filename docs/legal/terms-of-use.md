@@ -2,7 +2,7 @@
 
 Dernière mise à jour : 6 septembre 2026
 
-Les présentes Conditions Générales d'Utilisation (« CGU ») encadrent l'accès et l'utilisation de l'application mobile et du site web Outalma Service (ensemble, « l'Application »), édités par la société **KAYZEN TECHNOLOGY**. Outalma Service est une place de marché de services destinée à des utilisateurs basés en France et au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
+Les présentes Conditions Générales d'Utilisation (« CGU ») encadrent l'accès et l'utilisation de l'application mobile et du site web Outalma Service (ensemble, « l'Application »), édités par la société **KAYZEN TECHNOLOGY**. Outalma Service est une place de marché de services destinée aux utilisateurs basés au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
 
 En créant un compte ou en utilisant l'Application, vous acceptez sans réserve les présentes CGU. Si vous n'acceptez pas ces conditions, vous ne devez pas utiliser l'Application.
 
@@ -119,7 +119,7 @@ Outalma peut modifier les présentes CGU pour les adapter aux évolutions du ser
 
 ## 15. Droit applicable et litiges
 
-Les présentes CGU sont régies par le droit français pour les utilisateurs situés en France et par le droit sénégalais pour les utilisateurs situés au Sénégal.
+Les présentes CGU sont régies par le droit sénégalais.
 
 En cas de litige relatif à l'interprétation ou à l'exécution des présentes CGU, les parties s'engagent à rechercher une résolution amiable. À cette fin, l'utilisateur adresse sa réclamation à contact@outalma.com ; Outalma s'engage à y répondre dans un délai de **trente (30) jours**.
 

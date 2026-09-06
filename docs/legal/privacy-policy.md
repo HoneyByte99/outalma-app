@@ -2,9 +2,9 @@
 
 Dernière mise à jour : 6 septembre 2026
 
-La présente politique décrit comment **KAYZEN TECHNOLOGY** (« nous », « notre »), éditeur de l'application Outalma Service, collecte, utilise et protège vos données personnelles lorsque vous utilisez notre application mobile et notre site web (ensemble, « l'Application »). Outalma Service est une place de marché de services pour des utilisateurs basés en France et au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
+La présente politique décrit comment **KAYZEN TECHNOLOGY** (« nous », « notre »), éditeur de l'application Outalma Service, collecte, utilise et protège vos données personnelles lorsque vous utilisez notre application mobile et notre site web (ensemble, « l'Application »). Outalma Service est une place de marché de services destinée aux utilisateurs basés au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
 
-Nous nous engageons à respecter le Règlement Général sur la Protection des Données (UE 2016/679, « RGPD »), la loi française « Informatique et Libertés », ainsi que la **loi sénégalaise n° 2008-12 du 25 janvier 2008** sur la protection des données à caractère personnel.
+Nous nous engageons à respecter la **loi sénégalaise n° 2008-12 du 25 janvier 2008** sur la protection des données à caractère personnel.
 
 
 ## 1. Identité du responsable de traitement
@@ -62,18 +62,18 @@ Vos données sont utilisées pour :
 6. **Conformité légale** : répondre à une obligation légale, réglementaire, ou à une réquisition judiciaire.
 
 
-## 4. Bases légales (RGPD Article 6)
+## 4. Fondements du traitement (loi n° 2008-12)
 
-| Finalité | Base légale |
+La loi sénégalaise n° 2008-12 pose comme principe que le traitement de vos données est légitime lorsque vous y avez consenti. Son article 33 admet qu'il soit dérogé à cette exigence de consentement lorsque le traitement est nécessaire au respect d'une obligation légale, à l'exécution d'une mission d'intérêt public, à l'exécution d'un contrat auquel vous êtes partie, ou à la sauvegarde de vos intérêts ou de vos droits et libertés fondamentaux.
+
+| Finalité | Fondement |
 |---|---|
-| Création de compte et exécution des réservations | Exécution d'un contrat (Art. 6.1.b) |
-| Sécurité, prévention de la fraude | Intérêt légitime (Art. 6.1.f) |
-| Notifications push | Consentement (Art. 6.1.a), révocable depuis les réglages |
-| Géolocalisation précise | Consentement (Art. 6.1.a) |
-| Crashlytics (diagnostic technique) | Intérêt légitime (Art. 6.1.f) |
-| Conservation comptable et fiscale éventuelle | Obligation légale (Art. 6.1.c) |
-
-Au Sénégal, ces traitements reposent sur les bases prévues aux articles 33 et suivants de la loi n° 2008-12 (consentement, exécution contractuelle, intérêt légitime, obligation légale).
+| Création de compte et exécution des réservations | Exécution du contrat auquel vous êtes partie (art. 33-3) |
+| Notifications push | Consentement, révocable à tout moment depuis les réglages |
+| Géolocalisation précise | Consentement, recueilli via les permissions du système d'exploitation |
+| Sécurité, prévention de la fraude | Nécessaire au bon fonctionnement du service et à la protection des utilisateurs contre les usages abusifs de la plateforme |
+| Crashlytics (diagnostic technique) | Nécessaire au bon fonctionnement du service |
+| Conservation comptable et fiscale éventuelle | Obligation légale (art. 33-1) |
 
 
 ## 5. Sous-traitants et destinataires
@@ -105,29 +105,25 @@ Vous pouvez à tout moment demander la suppression de votre compte depuis l'Appl
 
 ## 7. Vos droits
 
-Conformément au RGPD et à la loi sénégalaise n° 2008-12, vous disposez des droits suivants :
+Conformément à la loi sénégalaise n° 2008-12, vous disposez des droits suivants :
 
-- **Accès** : obtenir une copie de vos données
-- **Rectification** : corriger des données inexactes
-- **Effacement** (« droit à l'oubli »)
-- **Portabilité** : recevoir vos données dans un format structuré
-- **Opposition** au traitement fondé sur l'intérêt légitime
-- **Limitation** du traitement
-- **Retrait du consentement** à tout moment (sans effet rétroactif)
-- **Définir des directives** sur le sort de vos données après votre décès
+- **Information** : être informé, avant ou lors de la collecte, de l'identité du responsable du traitement, des finalités, des destinataires et de la durée de conservation de vos données (art. 58 à 61)
+- **Accès** : obtenir la confirmation qu'un traitement vous concernant existe, et une copie de vos données (art. 62 à 65)
+- **Opposition** : vous opposer, pour des motifs légitimes, à un traitement vous concernant, notamment à la communication de vos données à des tiers à des fins de prospection ; ce droit ne s'applique pas lorsque le traitement répond à une obligation légale (art. 68)
+- **Rectification et suppression** : demander que soient rectifiées, complétées, mises à jour, verrouillées ou supprimées les données inexactes, incomplètes, périmées, ou dont la collecte, l'utilisation, la communication ou la conservation est interdite (art. 69)
 
-Pour exercer ces droits, écrivez-nous à : **contact@outalma.com**. Une réponse vous sera apportée dans un délai d'**un mois**. Une preuve d'identité peut être demandée en cas de doute raisonnable.
+Pour exercer ces droits, écrivez-nous à : **contact@outalma.com**. L'article 69 de la loi n° 2008-12 impose un délai de réponse d'**un (1) mois** pour les demandes de rectification ; nous appliquons ce même délai à l'ensemble de ces demandes. Une preuve d'identité peut être demandée en cas de doute raisonnable.
 
 
-## 8. Transferts hors Union européenne
+## 8. Transferts de données hors du Sénégal
 
-Certains sous-traitants (Google, Twilio) sont susceptibles de traiter vos données en dehors de l'Union européenne, notamment aux États-Unis. Ces transferts sont encadrés par :
+Certains sous-traitants (Google, Twilio) sont susceptibles de traiter vos données hors du Sénégal, notamment dans l'Union européenne et aux États-Unis (voir la Section 5).
 
-- l'adhésion au **EU-US Data Privacy Framework (DPF)** lorsque l'entreprise y est certifiée,
-- les **Clauses Contractuelles Types** adoptées par la Commission européenne (décision 2021/914),
-- des mesures de sécurité techniques complémentaires (chiffrement en transit et au repos).
+Conformément à la loi n° 2008-12, un tel transfert n'est possible que si l'État de destination assure un niveau de protection suffisant de la vie privée et des droits fondamentaux des personnes concernées (art. 49). À défaut, le transfert reste possible s'il est ponctuel, non massif, et que la personne concernée y a expressément consenti, ou dans l'un des cas prévus à l'article 50, ou encore sur autorisation de la Commission des Données Personnelles lorsque le responsable du traitement offre des garanties suffisantes (art. 51).
 
-Pour les utilisateurs sénégalais, les transferts internationaux respectent les articles 49 et suivants de la loi n° 2008-12 et requièrent un niveau de protection adéquat.
+Nous appliquons des mesures de sécurité techniques complémentaires (chiffrement en transit et au repos) à l'ensemble de ces transferts.
+
+**[à vérifier avant publication]** : la démarche préalable auprès de la Commission des Données Personnelles prévue à l'article 49 pour ces transferts (information préalable, ou selon le cas demande d'autorisation au titre de l'article 51) n'a pas été confirmée comme accomplie à ce jour.
 
 
 ## 9. Sécurité des données
@@ -141,7 +137,7 @@ Nous mettons en œuvre des mesures techniques et organisationnelles raisonnables
 - Journaux d'accès et alertes en cas d'activité suspecte
 - Accès restreint aux données aux seuls membres de l'équipe qui en ont besoin
 
-Comme aucun système n'est infaillible, nous nous engageons à vous notifier toute violation de données susceptible d'engendrer un risque élevé pour vos droits, dans les **72 heures** après en avoir pris connaissance, conformément à l'article 33 du RGPD.
+Comme aucun système n'est infaillible, nous prenons l'engagement contractuel (la loi n° 2008-12 ne fixe pas de délai chiffré en la matière) de vous notifier toute violation de données susceptible d'engendrer un risque élevé pour vos droits, dans les **72 heures** après en avoir pris connaissance.
 
 
 ## 10. Cookies et traceurs (site web)
@@ -175,10 +171,7 @@ Pour toute question relative à vos données personnelles :
 - **Email** : contact@outalma.com
 - **Adresse postale** : KAYZEN TECHNOLOGY [adresse à compléter avant publication]
 
-Si vous estimez que vos droits ne sont pas respectés, vous pouvez introduire une réclamation auprès de :
-
-- **France** : Commission Nationale de l'Informatique et des Libertés (CNIL), 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07. Site : [www.cnil.fr](https://www.cnil.fr)
-- **Sénégal** : Commission des Données Personnelles (CDP), Immeuble Y2K, 1er étage, Rond-Point OMVS, Dakar. Site : [www.cdp.sn](https://www.cdp.sn)
+Si vous estimez que vos droits ne sont pas respectés, vous pouvez introduire une réclamation auprès de la **Commission des Données Personnelles (CDP)** : Complexe SICAP, Point E, 1er étage, Immeuble A, Avenue Cheikh Anta Diop x Canal IV, Dakar, Sénégal. Site : [www.cdp.sn](https://www.cdp.sn)
 
 
 ## 14. Date d'effet

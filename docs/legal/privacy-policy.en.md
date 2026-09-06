@@ -2,9 +2,9 @@
 
 Last updated: 6 September 2026
 
-This policy describes how **KAYZEN TECHNOLOGY** ("we", "us", "our"), publisher of the Outalma Service application, collects, uses and protects your personal data when you use our mobile application and our website (together, the "Application"). Outalma Service is a services marketplace for users based in France and Senegal. A single account may act as a **customer** (booking services) and as a **provider** (offering services).
+This policy describes how **KAYZEN TECHNOLOGY** ("we", "us", "our"), publisher of the Outalma Service application, collects, uses and protects your personal data when you use our mobile application and our website (together, the "Application"). Outalma Service is a services marketplace for users based in Senegal. A single account may act as a **customer** (booking services) and as a **provider** (offering services).
 
-We are committed to complying with the General Data Protection Regulation (EU 2016/679, "GDPR"), the French Data Protection Act ("Loi Informatique et Libertés"), as well as **Senegalese Law No. 2008-12 of 25 January 2008** on the protection of personal data.
+We are committed to complying with **Senegalese Law No. 2008-12 of 25 January 2008** on the protection of personal data.
 
 
 ## 1. Identity of the data controller
@@ -62,18 +62,18 @@ Your data is used to:
 6. **Legal compliance**: respond to a legal or regulatory obligation, or to a judicial request.
 
 
-## 4. Legal bases (GDPR Article 6)
+## 4. Grounds for processing (Law No. 2008-12)
 
-| Purpose | Legal basis |
+Senegalese Law No. 2008-12 provides that processing your data is lawful where you have given your consent. Its Article 33 allows this consent requirement to be set aside where the processing is necessary to comply with a legal obligation, to perform a task carried out in the public interest, to perform a contract to which you are a party, or to safeguard your interests or fundamental rights and freedoms.
+
+| Purpose | Ground |
 |---|---|
-| Account creation and performance of bookings | Performance of a contract (Art. 6.1.b) |
-| Security, fraud prevention | Legitimate interest (Art. 6.1.f) |
-| Push notifications | Consent (Art. 6.1.a), revocable from settings |
-| Precise geolocation | Consent (Art. 6.1.a) |
-| Crashlytics (technical diagnostics) | Legitimate interest (Art. 6.1.f) |
-| Possible accounting and tax retention | Legal obligation (Art. 6.1.c) |
-
-In Senegal, this processing relies on the bases set out in articles 33 et seq. of Law No. 2008-12 (consent, contractual performance, legitimate interest, legal obligation).
+| Account creation and performance of bookings | Performance of the contract to which you are a party (Art. 33-3) |
+| Push notifications | Consent, revocable at any time from settings |
+| Precise geolocation | Consent, obtained via the operating system's permissions |
+| Security, fraud prevention | Necessary for the proper functioning of the service and for protecting users against abusive use of the platform |
+| Crashlytics (technical diagnostics) | Necessary for the proper functioning of the service |
+| Possible accounting and tax retention | Legal obligation (Art. 33-1) |
 
 
 ## 5. Processors and recipients
@@ -105,29 +105,25 @@ You may at any time request the deletion of your account from within the Applica
 
 ## 7. Your rights
 
-In accordance with the GDPR and Senegalese Law No. 2008-12, you have the following rights:
+In accordance with Senegalese Law No. 2008-12, you have the following rights:
 
-- **Access**: obtain a copy of your data
-- **Rectification**: correct inaccurate data
-- **Erasure** ("right to be forgotten")
-- **Portability**: receive your data in a structured format
-- **Objection** to processing based on legitimate interest
-- **Restriction** of processing
-- **Withdrawal of consent** at any time (without retroactive effect)
-- **Setting directives** on the fate of your data after your death
+- **Information**: be informed, before or at the time of collection, of the identity of the data controller, the purposes, the recipients and the retention period of your data (Art. 58 to 61)
+- **Access**: obtain confirmation that processing concerning you exists, and a copy of your data (Art. 62 to 65)
+- **Objection**: object, on legitimate grounds, to processing concerning you, in particular to the disclosure of your data to third parties for prospecting purposes; this right does not apply where the processing meets a legal obligation (Art. 68)
+- **Rectification and erasure**: request that inaccurate, incomplete, outdated data, or data whose collection, use, disclosure or retention is prohibited, be rectified, completed, updated, blocked or erased (Art. 69)
 
-To exercise these rights, write to us at: **contact@outalma.com**. A response will be provided within **one month**. Proof of identity may be requested in case of reasonable doubt.
+To exercise these rights, write to us at: **contact@outalma.com**. Article 69 of Law No. 2008-12 sets a response deadline of **one (1) month** for rectification requests; we apply this same deadline to all such requests. Proof of identity may be requested in case of reasonable doubt.
 
 
-## 8. Transfers outside the European Union
+## 8. Transfers of data outside Senegal
 
-Certain processors (Google, Twilio) may process your data outside the European Union, in particular in the United States. These transfers are governed by:
+Certain processors (Google, Twilio) may process your data outside Senegal, in particular in the European Union and in the United States (see Section 5).
 
-- adherence to the **EU-US Data Privacy Framework (DPF)** where the company is certified under it,
-- the **Standard Contractual Clauses** adopted by the European Commission (Decision 2021/914),
-- additional technical security measures (encryption in transit and at rest).
+Under Law No. 2008-12, such a transfer is only possible if the destination State ensures a sufficient level of protection for the privacy and fundamental rights of the individuals concerned (Art. 49). Failing that, the transfer remains possible if it is occasional, not massive, and the individual concerned has expressly consented to it, or in one of the cases provided for in Article 50, or where the Commission des Données Personnelles authorises it because the data controller offers sufficient guarantees (Art. 51).
 
-For Senegalese users, international transfers comply with articles 49 et seq. of Law No. 2008-12 and require an adequate level of protection.
+We apply additional technical security measures (encryption in transit and at rest) to all of these transfers.
+
+**[to be verified before publication]**: whether the prior step with the Commission des Données Personnelles required by Article 49 for these transfers (prior information, or, as the case may be, a request for authorisation under Article 51) has been completed has not been confirmed to date.
 
 
 ## 9. Data security
@@ -141,7 +137,7 @@ We implement reasonable technical and organisational measures:
 - Access logs and alerts in the event of suspicious activity
 - Access to data restricted to the only team members who need it
 
-As no system is infallible, we undertake to notify you of any data breach likely to result in a high risk to your rights, within **72 hours** of becoming aware of it, in accordance with Article 33 of the GDPR.
+As no system is infallible, we make a contractual commitment (Law No. 2008-12 does not set a specific figure in this regard) to notify you of any data breach likely to result in a high risk to your rights, within **72 hours** of becoming aware of it.
 
 
 ## 10. Cookies and trackers (website)
@@ -175,10 +171,7 @@ For any question relating to your personal data:
 - **Email**: contact@outalma.com
 - **Postal address**: KAYZEN TECHNOLOGY [address to be completed before publication]
 
-If you believe that your rights are not being respected, you may lodge a complaint with:
-
-- **France**: Commission Nationale de l'Informatique et des Libertés (CNIL), 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07. Website: [www.cnil.fr](https://www.cnil.fr)
-- **Senegal**: Commission des Données Personnelles (CDP), Immeuble Y2K, 1er étage, Rond-Point OMVS, Dakar. Website: [www.cdp.sn](https://www.cdp.sn)
+If you believe that your rights are not being respected, you may lodge a complaint with the **Commission des Données Personnelles (CDP)**: Complexe SICAP, Point E, 1st floor, Immeuble A, Avenue Cheikh Anta Diop x Canal IV, Dakar, Senegal. Website: [www.cdp.sn](https://www.cdp.sn)
 
 
 ## 14. Effective date
