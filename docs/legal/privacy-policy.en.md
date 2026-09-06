@@ -1,6 +1,6 @@
 # Privacy Policy of Outalma Service
 
-Last updated: 16 May 2026
+Last updated: 6 September 2026
 
 This policy describes how **KAYZEN TECHNOLOGY** ("we", "us", "our"), publisher of the Outalma Service application, collects, uses and protects your personal data when you use our mobile application and our website (together, the "Application"). Outalma Service is a services marketplace for users based in France and Senegal. A single account may act as a **customer** (booking services) and as a **provider** (offering services).
 
@@ -141,7 +141,7 @@ We implement reasonable technical and organisational measures:
 - Access logs and alerts in the event of suspicious activity
 - Access to data restricted to the only team members who need it
 
-No system being infallible, we undertake to notify you of any data breach likely to result in a high risk to your rights, within **72 hours** of becoming aware of it, in accordance with Article 33 of the GDPR.
+As no system is infallible, we undertake to notify you of any data breach likely to result in a high risk to your rights, within **72 hours** of becoming aware of it, in accordance with Article 33 of the GDPR.
 
 
 ## 10. Cookies and trackers (website)
@@ -183,7 +183,7 @@ If you believe that your rights are not being respected, you may lodge a complai
 
 ## 14. Effective date
 
-This policy has been in force since **16 May 2026**.
+This policy has been in force since **6 September 2026**.
 
 
 ## 15. Governing language

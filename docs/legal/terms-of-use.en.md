@@ -1,6 +1,6 @@
 # Terms of Use of Outalma Service
 
-Last updated: 5 June 2026
+Last updated: 6 September 2026
 
 These Terms of Use ("Terms") govern access to and use of the Outalma Service mobile application and website (together, the "Application"), published by the company **KAYZEN TECHNOLOGY**. Outalma Service is a services marketplace for users based in France and Senegal. A single account may act as a **customer** (booking services) and as a **provider** (offering services).
 
@@ -96,10 +96,10 @@ Any user may report content, a profile or abusive behaviour from within the Appl
 
 ## 11. Liability
 
-- Outalma provides a connection service and does not guarantee the quality, safety or lawfulness of the services, nor the accuracy of information published by users.
-- Outalma cannot be held liable for disputes, damages or harm resulting from a service or an exchange between users.
-- During the test phase, the Application is provided "as is", with no guarantee of continuous availability or of the absence of errors.
-- Outalma's liability cannot be engaged for interruptions, data loss or malfunctions beyond its control.
+- Outalma operates a platform connecting customers and providers. As set out in Article 2, Outalma is not a party to the service contract concluded between the customer and the provider: it therefore does not answer for the performance, quality, safety or lawfulness of the service itself, nor for the accuracy of information published by users. These matters are the sole responsibility of the provider and, where applicable, the customer.
+- Outalma is liable, under ordinary law, for breaches directly attributable to it in the provision of the platform itself (availability of the service, technical operation, data security as described in the Privacy Policy).
+- During the test phase, the Application is provided "as is": Outalma does not guarantee continuous availability or the absence of errors, and cannot be held liable for interruptions, data loss or malfunctions not directly attributable to it.
+- Nothing in this article excludes or limits Outalma's liability for wilful misconduct, gross negligence, or harm to a person's life, physical integrity or health, nor in any case where applicable law prohibits such an exclusion. The statutory guarantees you benefit from as a consumer remain fully applicable.
 
 
 ## 12. Personal data
@@ -119,7 +119,13 @@ Outalma may amend these Terms to adapt them to changes in the service or in regu
 
 ## 15. Governing law and disputes
 
-These Terms are governed by French law for users located in France and by Senegalese law for users located in Senegal. In the event of a dispute, the parties will favour an amicable resolution before any contentious action.
+These Terms are governed by French law for users located in France and by Senegalese law for users located in Senegal.
+
+In the event of a dispute concerning the interpretation or performance of these Terms, the parties undertake to seek an amicable resolution. To this end, the user shall send their complaint to contact@outalma.com; Outalma undertakes to respond within **thirty (30) days**.
+
+Failing an amicable agreement within that period, the dispute shall be brought before [jurisdiction to be confirmed by the publisher].
+
+The foregoing provisions do not deprive a user acting as a consumer of the mandatory rights granted by the law of their country of residence, including, where that law so provides, the right to bring proceedings before the court of their place of residence.
 
 
 ## 16. Contact

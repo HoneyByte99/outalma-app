@@ -1,6 +1,6 @@
 # Politique de confidentialité d'Outalma Service
 
-Dernière mise à jour : 16 mai 2026
+Dernière mise à jour : 6 septembre 2026
 
 La présente politique décrit comment **KAYZEN TECHNOLOGY** (« nous », « notre »), éditeur de l'application Outalma Service, collecte, utilise et protège vos données personnelles lorsque vous utilisez notre application mobile et notre site web (ensemble, « l'Application »). Outalma Service est une place de marché de services pour des utilisateurs basés en France et au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
 
@@ -141,7 +141,7 @@ Nous mettons en œuvre des mesures techniques et organisationnelles raisonnables
 - Journaux d'accès et alertes en cas d'activité suspecte
 - Accès restreint aux données aux seuls membres de l'équipe qui en ont besoin
 
-Aucun système n'étant infaillible, nous nous engageons à vous notifier toute violation de données susceptible d'engendrer un risque élevé pour vos droits, dans les **72 heures** après en avoir pris connaissance, conformément à l'article 33 du RGPD.
+Comme aucun système n'est infaillible, nous nous engageons à vous notifier toute violation de données susceptible d'engendrer un risque élevé pour vos droits, dans les **72 heures** après en avoir pris connaissance, conformément à l'article 33 du RGPD.
 
 
 ## 10. Cookies et traceurs (site web)
@@ -183,7 +183,7 @@ Si vous estimez que vos droits ne sont pas respectés, vous pouvez introduire un
 
 ## 14. Date d'effet
 
-Cette politique est en vigueur depuis le **16 mai 2026**.
+Cette politique est en vigueur depuis le **6 septembre 2026**.
 
 
 ## 15. Langue faisant foi

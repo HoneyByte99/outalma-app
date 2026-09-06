@@ -1,6 +1,6 @@
 # Conditions générales d'utilisation d'Outalma Service
 
-Dernière mise à jour : 5 juin 2026
+Dernière mise à jour : 6 septembre 2026
 
 Les présentes Conditions Générales d'Utilisation (« CGU ») encadrent l'accès et l'utilisation de l'application mobile et du site web Outalma Service (ensemble, « l'Application »), édités par la société **KAYZEN TECHNOLOGY**. Outalma Service est une place de marché de services destinée à des utilisateurs basés en France et au Sénégal. Un même compte peut agir comme **client** (réservation de services) et comme **prestataire** (offre de services).
 
@@ -96,10 +96,10 @@ Tout utilisateur peut signaler un contenu, un profil ou un comportement abusif d
 
 ## 11. Responsabilité
 
-- Outalma fournit un service de mise en relation et ne garantit ni la qualité, ni la sécurité, ni la légalité des prestations, ni la véracité des informations publiées par les utilisateurs.
-- Outalma ne saurait être tenue responsable des litiges, dommages ou préjudices résultant d'une prestation ou d'un échange entre utilisateurs.
-- Pendant la phase de test, l'Application est fournie « en l'état », sans garantie de disponibilité continue ni d'absence d'erreurs.
-- La responsabilité d'Outalma ne saurait être engagée pour les interruptions, pertes de données ou dysfonctionnements indépendants de sa volonté.
+- Outalma exploite une plateforme de mise en relation entre clients et prestataires. Conformément à l'article 2, Outalma n'est pas partie au contrat de prestation conclu entre le client et le prestataire : elle ne répond donc ni de l'exécution, ni de la qualité, ni de la sécurité, ni de la légalité de la prestation elle-même, ni de la véracité des informations publiées par les utilisateurs. Ces éléments relèvent de la seule responsabilité du prestataire et, le cas échéant, du client.
+- Outalma répond, dans les conditions de droit commun, des manquements qui lui sont directement imputables dans la fourniture de la plateforme elle-même (disponibilité du service, fonctionnement technique, sécurité des données traitée dans la Politique de Confidentialité).
+- Pendant la phase de test, l'Application est fournie « en l'état » : Outalma ne garantit pas une disponibilité continue ni l'absence d'erreurs, et ne peut être tenue responsable des interruptions, pertes de données ou dysfonctionnements qui ne lui seraient pas directement imputables.
+- Aucune disposition de cet article n'a pour effet d'exclure ou de limiter la responsabilité d'Outalma en cas de dol, de faute lourde, ou d'atteinte à la vie, à l'intégrité physique ou à la santé d'une personne, ni dans les cas où la loi applicable interdit une telle exclusion. Les garanties légales dont vous bénéficiez en tant que consommateur restent pleinement applicables.
 
 
 ## 12. Données personnelles
@@ -119,7 +119,13 @@ Outalma peut modifier les présentes CGU pour les adapter aux évolutions du ser
 
 ## 15. Droit applicable et litiges
 
-Les présentes CGU sont régies par le droit français pour les utilisateurs situés en France et par le droit sénégalais pour les utilisateurs situés au Sénégal. En cas de litige, les parties privilégieront une résolution amiable avant toute action contentieuse.
+Les présentes CGU sont régies par le droit français pour les utilisateurs situés en France et par le droit sénégalais pour les utilisateurs situés au Sénégal.
+
+En cas de litige relatif à l'interprétation ou à l'exécution des présentes CGU, les parties s'engagent à rechercher une résolution amiable. À cette fin, l'utilisateur adresse sa réclamation à contact@outalma.com ; Outalma s'engage à y répondre dans un délai de **trente (30) jours**.
+
+À défaut d'accord amiable dans ce délai, le litige est porté devant [juridiction à confirmer par l'éditeur].
+
+Les dispositions qui précèdent ne privent pas l'utilisateur agissant en qualité de consommateur des droits impératifs que lui reconnaît la loi de son pays de résidence, notamment, lorsque cette loi le prévoit, le droit de saisir la juridiction de son domicile.
 
 
 ## 16. Contact
