@@ -236,6 +236,7 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
         ],
       ),
       body: ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.all(16),
         children: [
           if (kDebugMode)
@@ -286,6 +287,7 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
             child: TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.done,
               decoration: const InputDecoration(
                 hintText: '+33612345678 ou +221701234567',
               ),
@@ -334,6 +336,7 @@ class _OtpLabPageState extends ConsumerState<OtpLabPage> {
               child: TextField(
                 controller: _codeController,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(hintText: '123456'),
               ),
             ),

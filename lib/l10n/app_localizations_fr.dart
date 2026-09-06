@@ -2317,7 +2317,4 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get avatarSheetClose => 'Fermer';
-
-  @override
-  String get keyboardDismiss => 'Fermer le clavier';
 }

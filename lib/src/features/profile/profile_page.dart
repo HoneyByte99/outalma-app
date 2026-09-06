@@ -48,6 +48,7 @@ class ProfilePage extends ConsumerWidget {
         actions: const [ModeBadge(), SizedBox(width: 4)],
       ),
       body: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -461,6 +462,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
             TextFormField(
               controller: _nameCtrl,
               textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.done,
               decoration: _inputDecoration(
                 context,
                 label: l10n.fieldFullName,
@@ -1106,6 +1108,7 @@ class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
             TextField(
               controller: controller,
               keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
               decoration: InputDecoration(labelText: l10n.exportRequestEmail),
             ),
           ],

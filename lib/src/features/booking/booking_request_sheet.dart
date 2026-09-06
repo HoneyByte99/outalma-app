@@ -527,6 +527,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxHeight),
           child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1430,6 +1431,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
               TextField(
                 controller: nameController,
                 autofocus: true,
+                textInputAction: TextInputAction.done,
                 decoration: InputDecoration(hintText: l10n.locationAddressHint),
               ),
               const SizedBox(height: 20),

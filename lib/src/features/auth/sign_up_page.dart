@@ -298,6 +298,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
         body: SafeArea(
           top: true,
           child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.symmetric(horizontal: 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
