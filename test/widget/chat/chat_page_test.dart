@@ -12,7 +12,9 @@ import 'package:outalma_app/src/application/auth/auth_providers.dart';
 import 'package:outalma_app/src/application/auth/auth_state.dart';
 import 'package:outalma_app/src/application/chat/chat_providers.dart';
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
+import 'package:outalma_app/src/domain/enums/message_type.dart';
 import 'package:outalma_app/src/domain/models/app_user.dart';
+import 'package:outalma_app/src/domain/models/chat_message.dart';
 import 'package:outalma_app/src/features/chat/chat_page.dart';
 
 class _FakeAuthNotifier extends AuthNotifier {
@@ -29,10 +31,10 @@ class _FakeAuthNotifier extends AuthNotifier {
   );
 }
 
-Widget _wrap() => ProviderScope(
+Widget _wrap({List<ChatMessage> messages = const []}) => ProviderScope(
   overrides: [
     authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-    chatMessagesProvider('chat_1').overrideWith((_) => Stream.value([])),
+    chatMessagesProvider('chat_1').overrideWith((_) => Stream.value(messages)),
     chatDetailProvider('chat_1').overrideWith((_) => Stream.value(null)),
     otherTypingProvider('chat_1').overrideWith((_) => Stream.value(null)),
   ],
@@ -44,9 +46,21 @@ Widget _wrap() => ProviderScope(
   ),
 );
 
+List<ChatMessage> _someMessages() => List.generate(
+  20,
+  (i) => ChatMessage(
+    id: 'msg_$i',
+    chatId: 'chat_1',
+    senderId: i.isEven ? 'user_1' : 'user_2',
+    type: MessageType.text,
+    createdAt: DateTime(2024, 1, 1).add(Duration(minutes: i)),
+    text: 'message number $i',
+  ),
+);
+
 void main() {
   group('ChatPage', () {
-    testWidgets('smoke — renders without throwing', (tester) async {
+    testWidgets('smoke: renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
       expect(find.byType(ChatPage), findsOneWidget);
@@ -71,5 +85,27 @@ void main() {
       final hasSend = tester.any(find.byIcon(Icons.send_rounded));
       expect(hasMic || hasSend, isTrue);
     });
+
+    testWidgets(
+      'dragging the message list closes the keyboard, like WhatsApp',
+      (tester) async {
+        await tester.pumpWidget(_wrap(messages: _someMessages()));
+        await tester.pump();
+        await tester.pump();
+
+        // Focus the composer: the keyboard is now "open" from the test
+        // harness' point of view (a text input connection is attached).
+        await tester.tap(find.byType(TextField));
+        await tester.pump();
+        expect(tester.testTextInput.hasAnyClients, isTrue);
+
+        // Drag the messages ListView itself, not the composer: this is the
+        // sibling scrollable WhatsApp closes the keyboard from.
+        await tester.drag(find.byType(ListView), const Offset(0, -200));
+        await tester.pump();
+
+        expect(tester.testTextInput.hasAnyClients, isFalse);
+      },
+    );
   });
 }

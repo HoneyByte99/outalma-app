@@ -1527,6 +1527,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
             ),
             child: ListView.separated(
               shrinkWrap: true,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.zero,
               itemCount: _suggestions.length,
               separatorBuilder: (_, __) =>

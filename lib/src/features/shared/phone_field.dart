@@ -378,6 +378,8 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
               Expanded(
                 child: ListView.builder(
                   controller: scrollCtrl,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   itemCount: _filtered.length,
                   itemBuilder: (context, i) {
                     final c = _filtered[i];
