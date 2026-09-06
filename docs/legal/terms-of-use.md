@@ -128,3 +128,8 @@ Pour toute question relative aux présentes CGU :
 
 - **Email** : contact@outalma.com
 - **Adresse postale** : KAYZEN TECHNOLOGY [adresse à compléter avant publication]
+
+
+## 17. Langue faisant foi
+
+Les présentes CGU sont rédigées en français et en anglais. En cas de divergence ou d'incohérence entre les deux versions, la **version française prévaut** ; la version anglaise est fournie à titre d'information.

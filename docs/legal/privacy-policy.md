@@ -184,3 +184,8 @@ Si vous estimez que vos droits ne sont pas respectés, vous pouvez introduire un
 ## 14. Date d'effet
 
 Cette politique est en vigueur depuis le **16 mai 2026**.
+
+
+## 15. Langue faisant foi
+
+Cette politique est rédigée en français et en anglais. En cas de divergence ou d'incohérence entre les deux versions, la **version française prévaut** ; la version anglaise est fournie à titre d'information.
