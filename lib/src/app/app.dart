@@ -15,6 +15,7 @@ import '../application/user/user_providers.dart';
 import '../domain/models/app_notification.dart';
 import 'app_theme.dart';
 import 'connectivity_banner.dart';
+import 'dismiss_keyboard_on_tap.dart';
 import 'notification_route.dart';
 import 'notification_tap_guard.dart';
 import 'router.dart';
@@ -198,11 +199,7 @@ class _OutalmaServiceAppState extends ConsumerState<OutalmaServiceApp> {
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      builder: (context, child) => GestureDetector(
-        // Tap anywhere outside a focused field to dismiss the keyboard, applies
-        // app-wide. Translucent so taps still reach buttons/fields underneath.
-        behavior: HitTestBehavior.translucent,
-        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      builder: (context, child) => DismissKeyboardOnTap(
         child: ConnectivityBanner(child: child ?? const SizedBox.shrink()),
       ),
     );

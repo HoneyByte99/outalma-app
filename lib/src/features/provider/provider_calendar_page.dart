@@ -766,6 +766,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -912,6 +913,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
             // Reason
             TextField(
               controller: _reasonController,
+              textInputAction: TextInputAction.done,
               decoration: InputDecoration(hintText: l10n.onboardingBio),
             ),
             const SizedBox(height: 20),

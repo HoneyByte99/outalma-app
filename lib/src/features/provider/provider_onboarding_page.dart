@@ -107,6 +107,7 @@ class _ProviderOnboardingPageState
       ),
       body: SafeArea(
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.all(20),
           child: Form(
             key: _formKey,

@@ -150,6 +150,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
         surfaceTintColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
