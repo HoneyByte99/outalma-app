@@ -568,6 +568,8 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                 ),
                 child: ListView.separated(
                   shrinkWrap: true,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: EdgeInsets.zero,
                   itemCount: _suggestions.length,
                   separatorBuilder: (_, __) => Divider(
@@ -682,6 +684,8 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
               Expanded(
                 child: ListView.separated(
                   controller: scrollController,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   itemCount: savedLocations.length,
                   separatorBuilder: (_, __) =>
                       const SizedBox(height: AppSpacing.xs),
@@ -957,6 +961,8 @@ class _ServiceGrid extends ConsumerWidget {
                 return false;
               },
               child: GridView.builder(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.l,
                   AppSpacing.s,

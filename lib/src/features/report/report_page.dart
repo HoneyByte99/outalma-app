@@ -116,6 +116,8 @@ class _ReportPageState extends ConsumerState<ReportPage> {
             // Reason chips
             Flexible(
               child: ListView.separated(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 itemCount: reasons.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, i) {

@@ -1026,6 +1026,8 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
               ),
               child: ListView.separated(
                 shrinkWrap: true,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: EdgeInsets.zero,
                 itemCount: _suggestions.length,
                 separatorBuilder: (_, __) =>
@@ -1177,6 +1179,7 @@ class _PhotoSection extends StatelessWidget {
           height: _thumbSize,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             itemCount: photos.length + ((canAddMore || uploading) ? 1 : 0),
             separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (context, i) {

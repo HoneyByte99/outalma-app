@@ -214,6 +214,11 @@ class _PhoneFieldState extends State<PhoneField> {
                   controller: _ctrl,
                   keyboardType: TextInputType.phone,
                   textInputAction: widget.textInputAction,
+                  // The dial code lives in the selector beside this field
+                  // (see initState, which strips it from the controller
+                  // text), so the hint is the national number, not the
+                  // full E.164 telephoneNumber.
+                  autofillHints: const [AutofillHints.telephoneNumberNational],
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[\d\s\-]')),
                   ],
@@ -378,6 +383,8 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
               Expanded(
                 child: ListView.builder(
                   controller: scrollCtrl,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   itemCount: _filtered.length,
                   itemBuilder: (context, i) {
                     final c = _filtered[i];

@@ -255,8 +255,11 @@ void main() {
 
       // Step 2: the OTP screen has no gender control, so this proves the value
       // chosen on step 1 survives the transition and reaches the account.
+      // Typing the 6th digit auto-submits (like the reference SMS-code
+      // screens), so there is no separate submit() call left to make here.
       await tester.enterText(find.byType(TextField).first, '123456');
-      await submit(tester);
+      await tester.pump();
+      await tester.pump();
 
       expect(auth.phoneSignUps, [Gender.male]);
     });

@@ -40,6 +40,7 @@ class CategoryFilterBar extends StatelessWidget {
       height: AppSpacing.minTouchTarget,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.s),

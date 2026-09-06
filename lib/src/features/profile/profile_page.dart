@@ -463,6 +463,7 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
               controller: _nameCtrl,
               textCapitalization: TextCapitalization.words,
               textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.name],
               decoration: _inputDecoration(
                 context,
                 label: l10n.fieldFullName,
@@ -1109,6 +1110,7 @@ class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
               controller: controller,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.email],
               decoration: InputDecoration(labelText: l10n.exportRequestEmail),
             ),
           ],

@@ -853,6 +853,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
                 return ListView.builder(
                   controller: _scrollController,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   itemCount: messages.length + headerCount,
                   itemBuilder: (context, rawIndex) {

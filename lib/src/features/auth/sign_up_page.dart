@@ -10,6 +10,7 @@ import '../../app/router.dart';
 import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
+import '../../domain/auth/otp.dart';
 import '../../domain/enums/gender.dart';
 import '../../../l10n/app_localizations.dart';
 import 'auth_prompt.dart';
@@ -341,6 +342,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
                     textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.name],
                     decoration: InputDecoration(
                       hintText: l10n.signUpNameHint,
                       prefixIcon: const Icon(
@@ -363,6 +365,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
+                    autofillHints: const [AutofillHints.email],
                     decoration: InputDecoration(
                       hintText: l10n.signInEmailHint,
                       prefixIcon: const Icon(Icons.email_outlined, size: 20),
@@ -373,6 +376,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.next,
+                    // newPassword, not password: this is account creation,
+                    // so the OS should offer to generate/save a new one
+                    // rather than autofill an existing credential.
+                    autofillHints: const [AutofillHints.newPassword],
                     decoration: InputDecoration(
                       hintText: l10n.signUpPasswordHint,
                       prefixIcon: const Icon(
@@ -401,6 +408,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     controller: _passwordConfirmController,
                     obscureText: _obscurePasswordConfirm,
                     textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.newPassword],
                     onSubmitted: (_) => _signUpEmail(),
                     decoration: InputDecoration(
                       hintText: l10n.signUpPasswordConfirmHint,
@@ -457,6 +465,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
                     textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.name],
                     decoration: InputDecoration(
                       hintText: l10n.signUpNameHint,
                       prefixIcon: const Icon(
@@ -512,7 +521,19 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     controller: _otpController,
                     keyboardType: TextInputType.number,
                     autofocus: true,
+                    autofillHints: const [AutofillHints.oneTimeCode],
+                    // iOS renders no return key at all on a numeric keyboard,
+                    // so onSubmitted below never fires there: like the SMS
+                    // code screens Amath pointed at (WhatsApp and friends),
+                    // the code submits itself the instant it reaches its
+                    // expected length. textInputAction/onSubmitted stay only
+                    // as the fallback some Android numeric IMEs still expose.
                     textInputAction: TextInputAction.done,
+                    onChanged: (value) {
+                      if (value.trim().length == otpCodeLength && !_loading) {
+                        _verifyAndSignUp();
+                      }
+                    },
                     onSubmitted: (_) => _verifyAndSignUp(),
                     decoration: InputDecoration(
                       hintText: l10n.phoneOtpHint,
