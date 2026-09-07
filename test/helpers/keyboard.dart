@@ -73,3 +73,22 @@ Widget shellLike(Widget page) {
     bottomNavigationBar: const SizedBox(height: 80),
   );
 }
+
+/// Asserts that [item] lies entirely inside the box of [container], i.e. is
+/// not clipped by it. A capped list that lost its own scroll physics clips
+/// its last rows this way: they are laid out, found by finders and even
+/// "scrolled to" by `Scrollable.ensureVisible`, yet the user has no gesture
+/// to reach them. Measure BEFORE any `scrollUntilVisible`, which would move
+/// the row into the box programmatically.
+void expectInsideBox(WidgetTester tester, Finder item, Finder container) {
+  final itemRect = tester.getRect(item);
+  final boxRect = tester.getRect(container);
+  expect(
+    itemRect.bottom,
+    lessThanOrEqualTo(boxRect.bottom + 0.5),
+    reason:
+        'item bottom ${itemRect.bottom} is clipped by its box '
+        '(bottom ${boxRect.bottom})',
+  );
+  expect(itemRect.top, greaterThanOrEqualTo(boxRect.top - 0.5));
+}

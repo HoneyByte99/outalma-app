@@ -142,6 +142,11 @@ void main() {
       // The LAST suggestion too: the list is no longer capped at 180 px,
       // which used to clip the fifth prediction with nothing to scroll.
       final last = find.text('Dakar zone 4');
+      expectInsideBox(
+        tester,
+        last,
+        find.ancestor(of: last, matching: find.byType(ListView)).first,
+      );
       await tester.scrollUntilVisible(
         last,
         100,

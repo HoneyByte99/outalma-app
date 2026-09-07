@@ -33,10 +33,14 @@ class _FakeAuthNotifier extends AuthNotifier {
 
 class _MockGeocodingService extends Mock implements GeocodingService {}
 
+// Five entries: the most the geocoding service returns, and the count that
+// used to overflow the 160 px cap of the suggestion box.
 const _suggestions = [
   PlaceSuggestion(placeId: 'p1', description: 'Dakar, Senegal'),
   PlaceSuggestion(placeId: 'p2', description: 'Dakar Plateau, Senegal'),
-  PlaceSuggestion(placeId: 'p3', description: 'Dakar Yoff, Senegal'),
+  PlaceSuggestion(placeId: 'p3', description: 'Dakar Medina, Senegal'),
+  PlaceSuggestion(placeId: 'p4', description: 'Dakar Almadies, Senegal'),
+  PlaceSuggestion(placeId: 'p5', description: 'Dakar Yoff, Senegal'),
 ];
 
 Widget _wrap({
@@ -103,6 +107,11 @@ void main() {
           .descendant(of: sheetScroll, matching: find.byType(Scrollable))
           .first;
       final last = find.text('Dakar Yoff, Senegal');
+      expectInsideBox(
+        tester,
+        last,
+        find.ancestor(of: last, matching: find.byType(ListView)).first,
+      );
       await tester.scrollUntilVisible(last, 100, scrollable: sheetScrollable);
       await tester.pumpAndSettle();
       expectAboveKeyboard(tester, last, inset: kReferenceKeyboard);
