@@ -75,9 +75,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   /// Focus of the search field. While it has focus the greeting and the email
   /// banner fold away to give the results grid room: the keyboard squeezes
   /// the grid to ~130 px on a small phone. Focus rather than the keyboard
-  /// inset,
-  /// because this page sits inside AppShell's Scaffold body, where the bottom
-  /// inset is already removed from the MediaQuery.
+  /// inset, because this page sits inside AppShell's Scaffold body, where
+  /// the bottom inset is already removed from the MediaQuery.
   final _searchFocus = FocusNode();
 
   @override
@@ -626,7 +625,6 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
                 // Suggestions
                 if (_suggestions.isNotEmpty)
                   Container(
-                    constraints: const BoxConstraints(maxHeight: 160),
                     margin: const EdgeInsets.only(bottom: AppSpacing.s),
                     decoration: BoxDecoration(
                       color: oc.cardSurface,

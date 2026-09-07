@@ -1038,7 +1038,6 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
                   // Suggestions list
                   if (_suggestions.isNotEmpty)
                     Container(
-                      constraints: const BoxConstraints(maxHeight: 180),
                       margin: const EdgeInsets.only(top: 4),
                       decoration: BoxDecoration(
                         color: oc.cardSurface,

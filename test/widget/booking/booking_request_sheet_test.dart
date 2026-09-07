@@ -118,7 +118,7 @@ Future<void> _goToAddressStep(WidgetTester tester) async {
 }
 
 void main() {
-  keyboardMain();
+  _keyboardGroup();
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     registerFallbackValue(Uri.parse('https://example.test'));
@@ -721,12 +721,8 @@ Future<void> _pumpSheetInRoute(
   await tester.pumpAndSettle();
 }
 
-void keyboardMain() {
-  setUp(() {
-    SharedPreferences.setMockInitialValues({});
-    registerFallbackValue(Uri.parse('https://example.test'));
-  });
-
+// Registered from main(), which already owns the shared setUp.
+void _keyboardGroup() {
   group('BookingRequestSheet in its modal route, keyboard open', () {
     testWidgets('step 1: the message field stays above the keyboard', (
       tester,

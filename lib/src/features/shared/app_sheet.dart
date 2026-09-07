@@ -87,10 +87,13 @@ class KeyboardAwareSheet extends StatelessWidget {
       builder: (context, constraints) {
         // The sheet's world is the height the modal route hands it, not the
         // MediaQuery size: they differ inside a shell branch (shrunk body)
-        // and on a test surface resized with setSurfaceSize.
-        final available = constraints.hasBoundedHeight
-            ? constraints.maxHeight
-            : MediaQuery.sizeOf(context).height;
+        // and on a test surface resized with setSurfaceSize. The route
+        // always bounds it (_ModalBottomSheetLayout).
+        assert(
+          constraints.hasBoundedHeight,
+          'KeyboardAwareSheet is meant to be mounted by showAppSheet',
+        );
+        final available = constraints.maxHeight;
         return AnimatedPadding(
           // Same timing as Dialog: the keyboard slides in ~250 ms on iOS, a
           // short animation keeps the sheet attached to it without lagging.

@@ -70,6 +70,9 @@ void main() {
       when(
         () => geocoding.autocomplete(any()),
       ).thenAnswer((_) async => _suggestions);
+      when(
+        () => geocoding.getPlaceLatLng(any()),
+      ).thenAnswer((_) async => (lat: 14.69, lng: -17.44, countryCode: 'SN'));
       final keyboard = ValueNotifier<double>(0);
 
       await tester.pumpWidget(_wrap(geocoding: geocoding, keyboard: keyboard));
@@ -92,18 +95,46 @@ void main() {
         find.text('Dakar, Senegal'),
         inset: kReferenceKeyboard,
       );
+      // The LAST suggestion too: the list is no longer capped at 160 px,
+      // which used to clip the fifth prediction with nothing to scroll.
+      final sheetScroll = find.byType(SingleChildScrollView).last;
+      // Its own Scrollable comes first in tree order, before the nested lists.
+      final sheetScrollable = find
+          .descendant(of: sheetScroll, matching: find.byType(Scrollable))
+          .first;
+      final last = find.text('Dakar Yoff, Senegal');
+      await tester.scrollUntilVisible(last, 100, scrollable: sheetScrollable);
+      await tester.pumpAndSettle();
+      expectAboveKeyboard(tester, last, inset: kReferenceKeyboard);
 
       // The actions below the suggestions are one drag away, not lost: drag
       // the sheet's scroll view, then the "whole country" button is visible
       // above the keyboard.
       final allAreas = find.widgetWithText(OutlinedButton, 'Tout le Sénégal');
       expect(allAreas, findsOneWidget);
-      await tester.drag(
-        find.byType(SingleChildScrollView).last,
-        const Offset(0, -400),
-      );
+      await tester.drag(sheetScroll, const Offset(0, -400));
       await tester.pumpAndSettle();
       expectAboveKeyboard(tester, allAreas, inset: kReferenceKeyboard);
+
+      // Picking a suggestion applies the filter: the radius slider and the
+      // validate button appear, and both are reachable above the keyboard.
+      await tester.drag(sheetScroll, const Offset(0, 400));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dakar, Senegal'));
+      await tester.pumpAndSettle();
+      final validate = find.widgetWithText(ElevatedButton, 'Valider');
+      await tester.scrollUntilVisible(
+        validate,
+        100,
+        scrollable: sheetScrollable,
+      );
+      await tester.pumpAndSettle();
+      expectAboveKeyboard(
+        tester,
+        find.byType(Slider),
+        inset: kReferenceKeyboard,
+      );
+      expectAboveKeyboard(tester, validate, inset: kReferenceKeyboard);
     },
   );
 }

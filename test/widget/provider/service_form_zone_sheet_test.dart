@@ -139,6 +139,18 @@ void main() {
         find.text('Dakar zone 0'),
         inset: kReferenceKeyboard,
       );
+      // The LAST suggestion too: the list is no longer capped at 180 px,
+      // which used to clip the fifth prediction with nothing to scroll.
+      final last = find.text('Dakar zone 4');
+      await tester.scrollUntilVisible(
+        last,
+        100,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      expectAboveKeyboard(tester, last, inset: kReferenceKeyboard);
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, 400));
+      await tester.pumpAndSettle();
       final validate = find.widgetWithText(ElevatedButton, 'Valider');
       expect(validate, findsOneWidget);
 
