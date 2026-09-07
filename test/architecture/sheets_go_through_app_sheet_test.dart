@@ -30,6 +30,12 @@ final _draggable = RegExp(r'\bDraggableScrollableSheet\b');
 // Scaffold(bottomSheet:) is the third hand-written shape of a fixed footer
 // that the keyboard would cover; nothing uses it today, keep it that way.
 final _scaffoldBottomSheet = RegExp(r'\bbottomSheet\s*:');
+// Keyboard handling lives in KeyboardAwareSheet. Plain substring, no trailing
+// word boundary: `viewInsetsOf`, `.viewInsets.bottom` and `removeViewInsets`
+// must all trip. A legitimate page-level use is added to this allowlist with
+// its justification.
+final _viewInsets = RegExp(r'viewInsets');
+const _viewInsetsAllowlist = <String>{_sheetHelper};
 
 Iterable<File> _dartFilesUnderLib() => Directory('lib')
     .listSync(recursive: true)
@@ -87,6 +93,18 @@ void main() {
           'un pied de page fixe vit dans le body (Column[Expanded(...), '
           'footer]) pour rester au-dessus du clavier, pas dans '
           'Scaffold.bottomSheet :\n${offenders.join('\n')}',
+    );
+  });
+
+  test('keyboard insets are handled in KeyboardAwareSheet only', () {
+    final offenders = _offenders(_viewInsets, except: _viewInsetsAllowlist);
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          'la gestion du clavier vit dans KeyboardAwareSheet (app_sheet.dart) ; '
+          'un usage page-level legitime s ajoute a l allowlist de ce test avec '
+          'sa justification :\n${offenders.join('\n')}',
     );
   });
 

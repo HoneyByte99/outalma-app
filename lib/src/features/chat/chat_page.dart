@@ -37,18 +37,28 @@ import '../shared/user_avatar.dart';
 import '../shared/app_sheet.dart';
 
 /// Scroll offset that keeps the same message resting just above the composer
-/// when the on-screen keyboard grows or shrinks by [insetDelta] pixels.
+/// when the message list's viewport changes height by [viewportDelta]
+/// (positive when the list shrinks: keyboard, image preview bar, reply or
+/// edit banner, typing indicator).
 ///
 /// The chat list is anchored at its top so pagination can prepend older
-/// messages; a keyboard that shrinks the viewport from below would therefore
+/// messages; anything that shrinks the viewport from below would therefore
 /// hide the newest messages unless the offset moves by the same amount.
-/// Clamped so it never overshoots either end of the list, and a list that
-/// fits without scrolling (`maxScrollExtent` 0) stays at 0.
-double keyboardCompensatedScrollOffset({
+/// A reader sitting at the end of the thread ([atBottom]) is pinned to the
+/// NEW end whatever else happens in the frame: sending a message while a
+/// banner closes both appends a message and grows the list, and a naive
+/// `pixels + delta` would cancel the scroll-to-bottom of that new message.
+/// Clamped so it never overshoots either end of the list.
+double viewportCompensatedScrollOffset({
   required double pixels,
-  required double insetDelta,
+  required double viewportDelta,
   required double maxScrollExtent,
-}) => (pixels + insetDelta).clamp(0.0, math.max(0.0, maxScrollExtent));
+  required bool atBottom,
+}) {
+  final max = math.max(0.0, maxScrollExtent);
+  if (atBottom) return max;
+  return (pixels + viewportDelta).clamp(0.0, max);
+}
 
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key, required this.chatId});
@@ -73,12 +83,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   // jump to the bottom : only a genuinely new latest message does.
   String? _lastBottomMsgId;
   Timer? _typingCooldown;
-  // Height of the on-screen keyboard at the previous build. The message list
-  // is anchored at its TOP (so pagination can prepend older messages), which
-  // means a keyboard shrinking the viewport from below hides the newest
-  // messages unless the scroll offset moves by the same amount. See
-  // [_compensateKeyboardInset].
-  double _lastKeyboardInset = 0;
+  // Height of the message list's viewport at the previous layout, null until
+  // the first one (which only records). The list is anchored at its TOP (so
+  // pagination can prepend older messages), so anything shrinking the
+  // viewport from below hides the newest messages unless the scroll offset
+  // moves by the same amount. See [_compensateViewportChange].
+  double? _lastViewportHeight;
 
   @override
   void initState() {
@@ -129,27 +139,38 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
-  /// Shifts the message list by exactly the height the keyboard took or gave
-  /// back, so the message resting just above the composer stays there (the
-  /// WhatsApp behaviour). Without this, opening the keyboard on a thread
-  /// scrolled to its end left the last messages hidden under the keyboard.
+  /// Shifts the message list by exactly the height its viewport lost or
+  /// regained, so the message resting just above the composer stays there
+  /// (the WhatsApp behaviour). Covers the keyboard, the image preview bar,
+  /// the reply and edit banners and the typing indicator alike, because the
+  /// list's own constraints are the source of truth.
   ///
-  /// Reads the offset NOW (before layout applies the new inset) and applies
-  /// the compensated value after the frame, once the viewport has resized
-  /// and `maxScrollExtent` reflects the new geometry.
-  void _compensateKeyboardInset(double inset) {
-    final delta = inset - _lastKeyboardInset;
-    if (delta == 0) return;
-    _lastKeyboardInset = inset;
-    if (!_scrollController.hasClients) return;
-    final pixelsBefore = _scrollController.position.pixels;
+  /// Called from the LayoutBuilder around the list, i.e. DURING layout, when
+  /// the scroll position still describes the previous geometry: that is what
+  /// makes `pixels` and `atBottom` reliable. The compensated offset is applied
+  /// after the frame, once `maxScrollExtent` reflects the new geometry. Two
+  /// layout passes in one frame register two callbacks and the last wins,
+  /// which loses the first delta; the next frame compensates again.
+  void _compensateViewportChange(double height) {
+    final previous = _lastViewportHeight;
+    _lastViewportHeight = height;
+    if (previous == null || previous == height) return;
+    if (!_scrollController.hasClients ||
+        !_scrollController.position.hasContentDimensions) {
+      return;
+    }
+    final position = _scrollController.position;
+    final pixelsBefore = position.pixels;
+    final atBottom = pixelsBefore >= position.maxScrollExtent - 1;
+    final delta = previous - height;
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
       _scrollController.jumpTo(
-        keyboardCompensatedScrollOffset(
+        viewportCompensatedScrollOffset(
           pixels: pixelsBefore,
-          insetDelta: delta,
+          viewportDelta: delta,
           maxScrollExtent: _scrollController.position.maxScrollExtent,
+          atBottom: atBottom,
         ),
       );
     });
@@ -728,7 +749,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    _compensateKeyboardInset(MediaQuery.viewInsetsOf(context).bottom);
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final messagesAsync = ref.watch(chatMessagesProvider(widget.chatId));
@@ -900,50 +920,55 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 final hasOlder = allMessages.length >= currentLimit;
                 final headerCount = hasOlder ? 1 : 0;
 
-                return ListView.builder(
-                  controller: _scrollController,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  itemCount: messages.length + headerCount,
-                  itemBuilder: (context, rawIndex) {
-                    if (hasOlder && rawIndex == 0) {
-                      return _LoadOlderButton(
-                        onPressed: () =>
-                            ref
-                                    .read(
-                                      chatMessageLimitProvider(
-                                        widget.chatId,
-                                      ).notifier,
-                                    )
-                                    .state +=
-                                chatMessagePageSize,
-                      );
-                    }
-                    final i = rawIndex - headerCount;
-                    final msg = messages[i];
-                    final isMe = msg.senderId == myUid;
-                    // Insert a day separator above the first message of each
-                    // calendar day so multi-day threads stay readable.
-                    final showDaySeparator =
-                        i == 0 ||
-                        date_utils.isDifferentDay(
-                          messages[i - 1].createdAt,
-                          msg.createdAt,
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    _compensateViewportChange(constraints.maxHeight);
+                    return ListView.builder(
+                      controller: _scrollController,
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      itemCount: messages.length + headerCount,
+                      itemBuilder: (context, rawIndex) {
+                        if (hasOlder && rawIndex == 0) {
+                          return _LoadOlderButton(
+                            onPressed: () =>
+                                ref
+                                        .read(
+                                          chatMessageLimitProvider(
+                                            widget.chatId,
+                                          ).notifier,
+                                        )
+                                        .state +=
+                                    chatMessagePageSize,
+                          );
+                        }
+                        final i = rawIndex - headerCount;
+                        final msg = messages[i];
+                        final isMe = msg.senderId == myUid;
+                        // Insert a day separator above the first message of each
+                        // calendar day so multi-day threads stay readable.
+                        final showDaySeparator =
+                            i == 0 ||
+                            date_utils.isDifferentDay(
+                              messages[i - 1].createdAt,
+                              msg.createdAt,
+                            );
+                        final bubble = _MessageBubble(
+                          message: msg,
+                          isMe: isMe,
+                          myUid: myUid,
+                          onLongPress: () => _showMessageActions(msg, isMe),
+                          onReactionTap: (emoji) => _react(msg, emoji),
                         );
-                    final bubble = _MessageBubble(
-                      message: msg,
-                      isMe: isMe,
-                      myUid: myUid,
-                      onLongPress: () => _showMessageActions(msg, isMe),
-                      onReactionTap: (emoji) => _react(msg, emoji),
-                    );
-                    if (!showDaySeparator) return bubble;
-                    return Column(
-                      children: [
-                        _DateSeparator(date: msg.createdAt),
-                        bubble,
-                      ],
+                        if (!showDaySeparator) return bubble;
+                        return Column(
+                          children: [
+                            _DateSeparator(date: msg.createdAt),
+                            bubble,
+                          ],
+                        );
+                      },
                     );
                   },
                 );
