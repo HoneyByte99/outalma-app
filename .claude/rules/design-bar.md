@@ -17,6 +17,7 @@
 ## Visual principles
 - Consistent design tokens
 - Reusable components
+- Every modal bottom sheet goes through `showAppSheet` (`lib/src/features/shared/app_sheet.dart`), never `showModalBottomSheet` directly: it lifts the sheet above the keyboard and caps its height. A sheet with a text field keeps its handle and header outside a `Flexible(SingleChildScrollView(...))`. A fixed footer (submit, save) lives in the body as `Column[Expanded(scroll view), footer]`, never in `bottomNavigationBar`, which the keyboard covers. Enforced by `test/architecture/sheets_go_through_app_sheet_test.dart`.
 - Good loading, empty, and error states
 - Avoid generic scaffold look
 - Keep visual quality high enough for launch confidence
