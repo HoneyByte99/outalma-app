@@ -23,7 +23,10 @@ import 'package:outalma_app/src/application/provider/provider_providers.dart';
 import 'package:outalma_app/src/data/services/geocoding_service.dart';
 import 'package:outalma_app/src/domain/models/service_zone.dart';
 import 'package:outalma_app/src/features/booking/booking_request_sheet.dart';
+import 'package:outalma_app/src/features/shared/app_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../helpers/keyboard.dart';
 
 class _MockCreateBookingUseCase extends Mock implements CreateBookingUseCase {}
 
@@ -115,6 +118,7 @@ Future<void> _goToAddressStep(WidgetTester tester) async {
 }
 
 void main() {
+  keyboardMain();
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     registerFallbackValue(Uri.parse('https://example.test'));
@@ -659,5 +663,136 @@ void main() {
         verifyZeroInteractions(useCase);
       },
     );
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Keyboard: the sheet opened through the real modal route, as
+// service_detail_page does. The direct mount above bypasses showAppSheet, so
+// it cannot tell whether the sheet is lifted above the keyboard; this one can.
+// Before the fix the sheet capped itself at 0.85 of the FULL screen and padded
+// for the inset INSIDE its scroll view: the message field sat three quarters
+// under the keyboard and the address suggestions were 60 to 90 % hidden.
+// ---------------------------------------------------------------------------
+
+const _openKey = Key('open-booking-sheet');
+
+Future<void> _pumpSheetInRoute(
+  WidgetTester tester, {
+  required List<Override> overrides,
+  required ValueNotifier<double> keyboard,
+}) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: overrides,
+      child: MaterialApp(
+        locale: const Locale('fr'),
+        theme: AppTheme.light(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: keyboardInsetBuilder(keyboard),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: ElevatedButton(
+                key: _openKey,
+                // Same options as service_detail_page._openBookingSheet.
+                onPressed: () => showAppSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  maxHeightFraction: 0.85,
+                  builder: (_) => const BookingRequestSheet(
+                    serviceId: 'svc_1',
+                    providerId: 'prov_1',
+                    serviceTitle: 'Test Service',
+                    serviceZones: [],
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.byKey(_openKey));
+  await tester.pumpAndSettle();
+}
+
+void keyboardMain() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    registerFallbackValue(Uri.parse('https://example.test'));
+  });
+
+  group('BookingRequestSheet in its modal route, keyboard open', () {
+    testWidgets('step 1: the message field stays above the keyboard', (
+      tester,
+    ) async {
+      useSurface(tester, kReferenceSurface);
+      final keyboard = ValueNotifier<double>(0);
+      await _pumpSheetInRoute(
+        tester,
+        overrides: _baseOverrides(useCase: _MockCreateBookingUseCase()),
+        keyboard: keyboard,
+      );
+
+      keyboard.value = kReferenceKeyboard;
+      await tester.pumpAndSettle();
+      final messageField = find.byType(TextFormField);
+      await tester.tap(messageField);
+      await tester.pumpAndSettle();
+
+      // The whole sheet is lifted above the keyboard (before the fix it kept
+      // 0.85 of the FULL screen and its bottom sat at the screen bottom)...
+      final sheet = find.byType(SingleChildScrollView);
+      expectAboveKeyboard(tester, sheet, inset: kReferenceKeyboard);
+      // ...and the five-line message field starts inside the visible sheet:
+      // its caret line is readable, the rest is one drag away.
+      final sheetRect = tester.getRect(sheet);
+      final fieldTop = tester.getRect(messageField).top;
+      expect(fieldTop, greaterThanOrEqualTo(sheetRect.top));
+      expect(fieldTop, lessThan(sheetRect.bottom - 40));
+    });
+
+    testWidgets('step 3: the address suggestions stay above the keyboard', (
+      tester,
+    ) async {
+      useSurface(tester, kReferenceSurface);
+      final geocoding = _MockGeocodingService();
+      when(() => geocoding.autocomplete(any())).thenAnswer(
+        (_) async => const [
+          PlaceSuggestion(placeId: 'p1', description: 'Saint-Louis, Senegal'),
+          PlaceSuggestion(placeId: 'p2', description: 'Saint-Louis Nord'),
+          PlaceSuggestion(placeId: 'p3', description: 'Saint-Louis Sud'),
+        ],
+      );
+      final keyboard = ValueNotifier<double>(0);
+      await _pumpSheetInRoute(
+        tester,
+        overrides: _baseOverrides(
+          useCase: _MockCreateBookingUseCase(),
+          geocoding: geocoding,
+        ),
+        keyboard: keyboard,
+      );
+      await _goToAddressStep(tester);
+      await tester.pumpAndSettle();
+
+      keyboard.value = kReferenceKeyboard;
+      await tester.pumpAndSettle();
+      final addressField = find.byKey(const Key('bookingAddressField'));
+      await tester.enterText(addressField, 'Saint');
+      await tester.pumpAndSettle();
+
+      expectAboveKeyboard(tester, addressField, inset: kReferenceKeyboard);
+      expectAboveKeyboard(
+        tester,
+        find.text('Saint-Louis, Senegal'),
+        inset: kReferenceKeyboard,
+      );
+    });
   });
 }
