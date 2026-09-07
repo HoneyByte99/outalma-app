@@ -36,6 +36,7 @@ import '../shared/network_image.dart';
 import '../shared/user_avatar.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../domain/utils/text_search.dart';
+import '../shared/app_sheet.dart';
 
 // ---------------------------------------------------------------------------
 // Filter state - local to this page subtree
@@ -217,7 +218,7 @@ class _LocationPill extends ConsumerWidget {
   }
 
   void _showLocationSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showAppSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: context.oc.background,

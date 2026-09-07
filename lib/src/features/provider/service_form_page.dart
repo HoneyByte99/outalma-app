@@ -19,6 +19,7 @@ import '../../domain/pricing/pricing_config.dart';
 import '../shared/category_icon.dart';
 import '../../domain/models/service.dart';
 import '../../domain/models/service_zone.dart';
+import '../shared/app_sheet.dart';
 
 class ServiceFormPage extends ConsumerStatefulWidget {
   /// Pass an existing service to edit. Null = create mode.
@@ -198,7 +199,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   }
 
   Future<void> _showAddZoneSheet() async {
-    final zone = await showModalBottomSheet<ServiceZone>(
+    final zone = await showAppSheet<ServiceZone>(
       context: context,
       isScrollControlled: true,
       builder: (_) =>
@@ -210,7 +211,7 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
   }
 
   Future<void> _editZone(int index) async {
-    final updated = await showModalBottomSheet<ServiceZone>(
+    final updated = await showAppSheet<ServiceZone>(
       context: context,
       isScrollControlled: true,
       builder: (_) => _AddZoneSheet(
@@ -968,12 +969,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
+      padding: const EdgeInsets.all(20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -34,6 +34,7 @@ import '../../domain/enums/message_type.dart';
 import '../../domain/models/chat_message.dart';
 import '../shared/gender_icon.dart';
 import '../shared/user_avatar.dart';
+import '../shared/app_sheet.dart';
 
 /// Scroll offset that keeps the same message resting just above the composer
 /// when the on-screen keyboard grows or shrinks by [insetDelta] pixels.
@@ -359,8 +360,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final oc = context.oc;
     final hasText = (msg.text ?? '').isNotEmpty;
     if (msg.deleted) return;
-    await showModalBottomSheet<void>(
+    await showAppSheet<void>(
       context: context,
+      useSafeArea: false,
       backgroundColor: oc.surface,
       builder: (ctx) => SafeArea(
         child: Column(

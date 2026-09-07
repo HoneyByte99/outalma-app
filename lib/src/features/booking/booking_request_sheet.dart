@@ -512,10 +512,7 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    final mediaQuery = MediaQuery.of(context);
-    final bottomInset = mediaQuery.viewInsets.bottom;
-    final bottomPadding = mediaQuery.padding.bottom;
-    final maxHeight = mediaQuery.size.height * 0.85;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     return Container(
       decoration: BoxDecoration(
@@ -524,119 +521,116 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
       ),
       child: SafeArea(
         top: false,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          child: SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: oc.border,
-                      borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, AppSpacing.l),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: oc.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Title + step indicator
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.bookingRequestTitle,
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
+                  _StepIndicator(current: _step, total: 3),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                widget.serviceTitle,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 20),
+
+              if (_errorBanner != null) ...[
+                _ErrorBanner(
+                  message: _errorBanner!,
+                  onDismiss: () => setState(() => _errorBanner = null),
                 ),
                 const SizedBox(height: 16),
-
-                // Title + step indicator
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.bookingRequestTitle,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    _StepIndicator(current: _step, total: 3),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.serviceTitle,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 20),
-
-                if (_errorBanner != null) ...[
-                  _ErrorBanner(
-                    message: _errorBanner!,
-                    onDismiss: () => setState(() => _errorBanner = null),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Step content
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: KeyedSubtree(
-                    key: ValueKey(_step),
-                    child: _buildStepContent(),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Navigation buttons
-                Row(
-                  children: [
-                    if (_step > 0) ...[
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _loading
-                              ? null
-                              : () => setState(() {
-                                  _step--;
-                                  _errorBanner = null;
-                                }),
-                          child: Text(l10n.bookingBack),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Expanded(
-                      child: _step < 2
-                          ? ElevatedButton(
-                              onPressed: _canAdvance
-                                  ? () => setState(() {
-                                      _step++;
-                                      _errorBanner = null;
-                                    })
-                                  : null,
-                              child: Text(l10n.bookingContinue),
-                            )
-                          : ElevatedButton(
-                              onPressed: (_loading || !_canAdvance)
-                                  ? null
-                                  : _submit,
-                              child: _loading
-                                  ? SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: oc.cardSurface,
-                                      ),
-                                    )
-                                  : Text(l10n.bookingSend),
-                            ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: bottomPadding > 0 ? 0 : 12),
               ],
-            ),
+
+              // Step content
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: KeyedSubtree(
+                  key: ValueKey(_step),
+                  child: _buildStepContent(),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Navigation buttons
+              Row(
+                children: [
+                  if (_step > 0) ...[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _loading
+                            ? null
+                            : () => setState(() {
+                                _step--;
+                                _errorBanner = null;
+                              }),
+                        child: Text(l10n.bookingBack),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: _step < 2
+                        ? ElevatedButton(
+                            onPressed: _canAdvance
+                                ? () => setState(() {
+                                    _step++;
+                                    _errorBanner = null;
+                                  })
+                                : null,
+                            child: Text(l10n.bookingContinue),
+                          )
+                        : ElevatedButton(
+                            onPressed: (_loading || !_canAdvance)
+                                ? null
+                                : _submit,
+                            child: _loading
+                                ? SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: oc.cardSurface,
+                                    ),
+                                  )
+                                : Text(l10n.bookingSend),
+                          ),
+                  ),
+                ],
+              ),
+              SizedBox(height: bottomPadding > 0 ? 0 : 12),
+            ],
           ),
         ),
       ),

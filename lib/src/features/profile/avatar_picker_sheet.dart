@@ -5,6 +5,7 @@ import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../domain/avatars/avatar_catalog.dart';
 import '../shared/user_avatar.dart';
+import '../shared/app_sheet.dart';
 
 /// What the sheet hands back. The three outcomes are mutually exclusive, which
 /// is why one type carries them instead of three booleans.
@@ -34,8 +35,9 @@ Future<AvatarPick?> showAvatarPickerSheet(
   required String? currentAvatarId,
   required bool hasPhoto,
 }) {
-  return showModalBottomSheet<AvatarPick>(
+  return showAppSheet<AvatarPick>(
     context: context,
+    useSafeArea: false,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (_) =>

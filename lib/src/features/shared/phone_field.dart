@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../app/app_theme.dart';
 import '../../domain/utils/text_search.dart';
+import 'app_sheet.dart';
 
 // ---------------------------------------------------------------------------
 // Country model + curated list (Francophone + major EU countries)
@@ -142,7 +143,7 @@ class _PhoneFieldState extends State<PhoneField> {
   }
 
   void _pickCountry() async {
-    final selected = await showModalBottomSheet<_Country>(
+    final selected = await showAppSheet<_Country>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
