@@ -218,7 +218,7 @@ class _LocationPill extends ConsumerWidget {
   }
 
   void _showLocationSheet(BuildContext context, WidgetRef ref) {
-    showAppSheet(
+    showAppSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: context.oc.background,
@@ -227,6 +227,7 @@ class _LocationPill extends ConsumerWidget {
           top: Radius.circular(AppSpacing.radiusXLarge),
         ),
       ),
+      maxHeightFraction: 0.85,
       builder: (_) => const _LocationSheet(),
     );
   }
@@ -455,257 +456,285 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
     final filter = ref.watch(locationFilterProvider);
     final savedLocations = ref.watch(savedLocationsProvider);
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (_, scrollController) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.m,
-          AppSpacing.xl,
-          0,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: oc.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.l),
-
-            // Title row
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.locationTitle,
-                    style: Theme.of(context).textTheme.titleLarge,
+    // Handle and title stay OUTSIDE the scroll view so the sheet keeps its
+    // drag-to-close gesture there. Everything else scrolls together, which is
+    // what keeps the field and its suggestions reachable when the keyboard
+    // shrinks the space: this sheet opens inside a shell branch, where the
+    // body is already shrunk by the keyboard and bounds the sheet.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.m,
+            AppSpacing.xl,
+            0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: oc.border,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                if (filter != null)
-                  IconButton(
-                    onPressed: _saveCurrentLocation,
-                    icon: Icon(
-                      Icons.star_outline_rounded,
-                      color: oc.warning,
-                      size: 24,
-                    ),
-                    tooltip: l10n.locationSaveTooltip,
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.m),
-
-            // Search field
-            TextField(
-              controller: _controller,
-              autofocus: false,
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                hintText: l10n.locationSearchHint,
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  size: 20,
-                  color: oc.icons,
-                ),
-                suffixIcon: filter != null
-                    ? IconButton(
-                        onPressed: () {
-                          _controller.clear();
-                          _clearFilter();
-                        },
-                        icon: Icon(Icons.close, size: 18, color: oc.icons),
-                      )
-                    : null,
               ),
-              onChanged: _onSearchChanged,
-            ),
-            const SizedBox(height: AppSpacing.s),
+              const SizedBox(height: AppSpacing.l),
 
-            // "Use my location" button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _geoLoading ? null : _useMyLocation,
-                icon: _geoLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        Icons.my_location_rounded,
-                        size: 18,
-                        color: oc.primary,
-                      ),
-                label: Text(l10n.locationUseMyPosition),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, AppSpacing.minTouchTarget),
-                  side: BorderSide(color: oc.primary.withValues(alpha: 0.4)),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-
-            // Suggestions
-            if (_suggestions.isNotEmpty)
-              Container(
-                constraints: const BoxConstraints(maxHeight: 160),
-                margin: const EdgeInsets.only(bottom: AppSpacing.s),
-                decoration: BoxDecoration(
-                  color: oc.cardSurface,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                  border: Border.all(color: oc.border),
-                ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.zero,
-                  itemCount: _suggestions.length,
-                  separatorBuilder: (_, __) => Divider(
-                    height: 1,
-                    color: oc.border.withValues(alpha: 0.5),
-                  ),
-                  itemBuilder: (_, i) {
-                    final s = _suggestions[i];
-                    return InkWell(
-                      onTap: () => _selectSuggestion(s),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              size: 16,
-                              color: oc.secondaryText,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                s.description,
-                                style: Theme.of(context).textTheme.bodySmall,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-            // Radius slider + validate button
-            if (filter != null) ...[
-              const SizedBox(height: AppSpacing.s),
+              // Title row
               Row(
                 children: [
-                  Icon(Icons.radar_outlined, size: 16, color: oc.secondaryText),
-                  const SizedBox(width: 6),
-                  Text(
-                    l10n.locationRadius,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.labelMedium?.copyWith(color: oc.secondaryText),
-                  ),
                   Expanded(
-                    child: Slider(
-                      value: _radiusKm,
-                      min: 5,
-                      max: 200,
-                      divisions: 39,
-                      activeColor: oc.primary,
-                      inactiveColor: oc.border,
-                      onChanged: _updateRadius,
-                    ),
-                  ),
-                  SizedBox(
-                    width: 48,
                     child: Text(
-                      '${_radiusKm.round()} km',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: oc.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.end,
+                      l10n.locationTitle,
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
+                  if (filter != null)
+                    IconButton(
+                      onPressed: _saveCurrentLocation,
+                      icon: Icon(
+                        Icons.star_outline_rounded,
+                        color: oc.warning,
+                        size: 24,
+                      ),
+                      tooltip: l10n.locationSaveTooltip,
+                    ),
                 ],
               ),
               const SizedBox(height: AppSpacing.m),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.check_rounded, size: 18),
-                  label: Text(l10n.locationValidate),
-                ),
-              ),
             ],
-
-            const SizedBox(height: AppSpacing.m),
-
-            // "Toute la France" button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _clearFilter,
-                icon: const Icon(Icons.public_outlined, size: 18),
-                label: Text(l10n.locationAllAreas),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, AppSpacing.minTouchTarget),
-                  side: BorderSide(color: oc.border),
-                ),
-              ),
-            ),
-
-            // Saved locations
-            if (savedLocations.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xl),
-              Text(
-                l10n.locationMyAddresses,
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: AppSpacing.s),
-              Expanded(
-                child: ListView.separated(
-                  controller: scrollController,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount: savedLocations.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.xs),
-                  itemBuilder: (_, i) {
-                    final loc = savedLocations[i];
-                    return _SavedLocationTile(
-                      location: loc,
-                      onTap: () => _applyFavorite(loc),
-                      onDelete: () =>
-                          ref.read(savedLocationsProvider.notifier).remove(i),
-                    );
-                  },
-                ),
-              ),
-            ] else
-              const Spacer(),
-          ],
+          ),
         ),
-      ),
+        Flexible(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              0,
+              AppSpacing.xl,
+              AppSpacing.m,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Search field
+                TextField(
+                  controller: _controller,
+                  autofocus: false,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(
+                    hintText: l10n.locationSearchHint,
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      size: 20,
+                      color: oc.icons,
+                    ),
+                    suffixIcon: filter != null
+                        ? IconButton(
+                            onPressed: () {
+                              _controller.clear();
+                              _clearFilter();
+                            },
+                            icon: Icon(Icons.close, size: 18, color: oc.icons),
+                          )
+                        : null,
+                  ),
+                  onChanged: _onSearchChanged,
+                ),
+                const SizedBox(height: AppSpacing.s),
+
+                // "Use my location" button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _geoLoading ? null : _useMyLocation,
+                    icon: _geoLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            Icons.my_location_rounded,
+                            size: 18,
+                            color: oc.primary,
+                          ),
+                    label: Text(l10n.locationUseMyPosition),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, AppSpacing.minTouchTarget),
+                      side: BorderSide(
+                        color: oc.primary.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+
+                // Suggestions
+                if (_suggestions.isNotEmpty)
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 160),
+                    margin: const EdgeInsets.only(bottom: AppSpacing.s),
+                    decoration: BoxDecoration(
+                      color: oc.cardSurface,
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusMedium,
+                      ),
+                      border: Border.all(color: oc.border),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      // The outer scroll view owns the drag gesture.
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: _suggestions.length,
+                      separatorBuilder: (_, __) => Divider(
+                        height: 1,
+                        color: oc.border.withValues(alpha: 0.5),
+                      ),
+                      itemBuilder: (_, i) {
+                        final s = _suggestions[i];
+                        return InkWell(
+                          onTap: () => _selectSuggestion(s),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 16,
+                                  color: oc.secondaryText,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    s.description,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                // Radius slider + validate button
+                if (filter != null) ...[
+                  const SizedBox(height: AppSpacing.s),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.radar_outlined,
+                        size: 16,
+                        color: oc.secondaryText,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        l10n.locationRadius,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: oc.secondaryText),
+                      ),
+                      Expanded(
+                        child: Slider(
+                          value: _radiusKm,
+                          min: 5,
+                          max: 200,
+                          divisions: 39,
+                          activeColor: oc.primary,
+                          inactiveColor: oc.border,
+                          onChanged: _updateRadius,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 48,
+                        child: Text(
+                          '${_radiusKm.round()} km',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: oc.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.m),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.check_rounded, size: 18),
+                      label: Text(l10n.locationValidate),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: AppSpacing.m),
+
+                // "Toute la France" button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _clearFilter,
+                    icon: const Icon(Icons.public_outlined, size: 18),
+                    label: Text(l10n.locationAllAreas),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, AppSpacing.minTouchTarget),
+                      side: BorderSide(color: oc.border),
+                    ),
+                  ),
+                ),
+
+                // Saved locations
+                if (savedLocations.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xl),
+                  Text(
+                    l10n.locationMyAddresses,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: AppSpacing.s),
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: savedLocations.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.xs),
+                    itemBuilder: (_, i) {
+                      final loc = savedLocations[i];
+                      return _SavedLocationTile(
+                        location: loc,
+                        onTap: () => _applyFavorite(loc),
+                        onDelete: () =>
+                            ref.read(savedLocationsProvider.notifier).remove(i),
+                      );
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
