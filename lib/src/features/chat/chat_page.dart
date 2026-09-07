@@ -35,6 +35,20 @@ import '../../domain/models/chat_message.dart';
 import '../shared/gender_icon.dart';
 import '../shared/user_avatar.dart';
 
+/// Scroll offset that keeps the same message resting just above the composer
+/// when the on-screen keyboard grows or shrinks by [insetDelta] pixels.
+///
+/// The chat list is anchored at its top so pagination can prepend older
+/// messages; a keyboard that shrinks the viewport from below would therefore
+/// hide the newest messages unless the offset moves by the same amount.
+/// Clamped so it never overshoots either end of the list, and a list that
+/// fits without scrolling (`maxScrollExtent` 0) stays at 0.
+double keyboardCompensatedScrollOffset({
+  required double pixels,
+  required double insetDelta,
+  required double maxScrollExtent,
+}) => (pixels + insetDelta).clamp(0.0, math.max(0.0, maxScrollExtent));
+
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key, required this.chatId});
 
@@ -58,6 +72,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   // jump to the bottom : only a genuinely new latest message does.
   String? _lastBottomMsgId;
   Timer? _typingCooldown;
+  // Height of the on-screen keyboard at the previous build. The message list
+  // is anchored at its TOP (so pagination can prepend older messages), which
+  // means a keyboard shrinking the viewport from below hides the newest
+  // messages unless the scroll offset moves by the same amount. See
+  // [_compensateKeyboardInset].
+  double _lastKeyboardInset = 0;
 
   @override
   void initState() {
@@ -106,6 +126,32 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         markNotificationRead(db: db, uid: authState.user.id, notifId: n.id);
       }
     }
+  }
+
+  /// Shifts the message list by exactly the height the keyboard took or gave
+  /// back, so the message resting just above the composer stays there (the
+  /// WhatsApp behaviour). Without this, opening the keyboard on a thread
+  /// scrolled to its end left the last messages hidden under the keyboard.
+  ///
+  /// Reads the offset NOW (before layout applies the new inset) and applies
+  /// the compensated value after the frame, once the viewport has resized
+  /// and `maxScrollExtent` reflects the new geometry.
+  void _compensateKeyboardInset(double inset) {
+    final delta = inset - _lastKeyboardInset;
+    if (delta == 0) return;
+    _lastKeyboardInset = inset;
+    if (!_scrollController.hasClients) return;
+    final pixelsBefore = _scrollController.position.pixels;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.jumpTo(
+        keyboardCompensatedScrollOffset(
+          pixels: pixelsBefore,
+          insetDelta: delta,
+          maxScrollExtent: _scrollController.position.maxScrollExtent,
+        ),
+      );
+    });
   }
 
   void _scrollToBottom() {
@@ -680,6 +726,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    _compensateKeyboardInset(MediaQuery.viewInsetsOf(context).bottom);
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final messagesAsync = ref.watch(chatMessagesProvider(widget.chatId));

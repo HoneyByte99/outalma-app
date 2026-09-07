@@ -31,7 +31,13 @@ class _FakeAuthNotifier extends AuthNotifier {
   );
 }
 
-Widget _wrap({List<ChatMessage> messages = const []}) => ProviderScope(
+/// [keyboardInset] simulates the on-screen keyboard: the test binding never
+/// opens a real one, so the bottom view inset is injected right above the
+/// page, the same way the platform reports it to the app.
+Widget _wrap({
+  List<ChatMessage> messages = const [],
+  double keyboardInset = 0,
+}) => ProviderScope(
   overrides: [
     authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
     chatMessagesProvider('chat_1').overrideWith((_) => Stream.value(messages)),
@@ -42,7 +48,14 @@ Widget _wrap({List<ChatMessage> messages = const []}) => ProviderScope(
     theme: AppTheme.light(),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    home: const ChatPage(chatId: 'chat_1'),
+    home: Builder(
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(viewInsets: EdgeInsets.only(bottom: keyboardInset)),
+        child: const ChatPage(chatId: 'chat_1'),
+      ),
+    ),
   ),
 );
 
@@ -59,7 +72,111 @@ List<ChatMessage> _someMessages() => List.generate(
 );
 
 void main() {
+  group('keyboardCompensatedScrollOffset', () {
+    test('a list scrolled to its end stays at the new end when the keyboard '
+        'opens', () {
+      // Viewport lost 300 px, so maxScrollExtent grew from 1000 to 1300.
+      expect(
+        keyboardCompensatedScrollOffset(
+          pixels: 1000,
+          insetDelta: 300,
+          maxScrollExtent: 1300,
+        ),
+        1300,
+      );
+    });
+
+    test('closing the keyboard shifts the list back by the same amount', () {
+      expect(
+        keyboardCompensatedScrollOffset(
+          pixels: 1300,
+          insetDelta: -300,
+          maxScrollExtent: 1000,
+        ),
+        1000,
+      );
+    });
+
+    test('a mid-thread position moves by the delta, not to the end', () {
+      expect(
+        keyboardCompensatedScrollOffset(
+          pixels: 400,
+          insetDelta: 300,
+          maxScrollExtent: 1300,
+        ),
+        700,
+      );
+    });
+
+    test('never overshoots the top or the end of the list', () {
+      expect(
+        keyboardCompensatedScrollOffset(
+          pixels: 100,
+          insetDelta: -300,
+          maxScrollExtent: 1000,
+        ),
+        0,
+      );
+      expect(
+        keyboardCompensatedScrollOffset(
+          pixels: 1200,
+          insetDelta: 300,
+          maxScrollExtent: 1300,
+        ),
+        1300,
+      );
+    });
+
+    test('a thread that fits without scrolling stays at 0', () {
+      expect(
+        keyboardCompensatedScrollOffset(
+          pixels: 0,
+          insetDelta: 300,
+          maxScrollExtent: 0,
+        ),
+        0,
+      );
+    });
+  });
+
   group('ChatPage', () {
+    testWidgets(
+      'opening the keyboard keeps the newest message visible above the composer',
+      (tester) async {
+        final messages = _someMessages();
+        await tester.pumpWidget(_wrap(messages: messages));
+        // No pumpAndSettle: the page hosts a repeating animation. The stream
+        // delivers on one frame, the post-frame auto-scroll starts on the
+        // next, so pump a few frames then run past the 250 ms animation.
+        for (var i = 0; i < 3; i++) {
+          await tester.pump();
+        }
+        await tester.pump(const Duration(milliseconds: 400));
+
+        // The thread auto-scrolls to its end on first load: the newest
+        // message sits just above the composer.
+        final newest = find.text('message number 19');
+        expect(newest, findsOneWidget);
+        final composerTopBefore = tester.getTopLeft(find.byType(TextField)).dy;
+        expect(tester.getBottomLeft(newest).dy, lessThan(composerTopBefore));
+
+        // The keyboard opens: the platform reports a 300 px bottom inset and
+        // the Scaffold shrinks its body by that much. Same tree shape, so the
+        // page keeps its state and its scroll position.
+        await tester.pumpWidget(_wrap(messages: messages, keyboardInset: 300));
+        await tester.pump();
+        await tester.pump();
+
+        // Build 36 regression: the list kept its top-anchored offset, the
+        // newest messages slid under the keyboard. They must stay visible,
+        // above the composer, which itself sits above the keyboard.
+        final composerTop = tester.getTopLeft(find.byType(TextField)).dy;
+        expect(composerTop, lessThan(composerTopBefore));
+        expect(newest, findsOneWidget);
+        expect(tester.getBottomLeft(newest).dy, lessThan(composerTop));
+      },
+    );
+
     testWidgets('smoke: renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap());
       await tester.pump();
