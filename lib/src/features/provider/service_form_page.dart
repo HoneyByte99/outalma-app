@@ -568,147 +568,158 @@ class _ServiceFormPageState extends ConsumerState<ServiceFormPage> {
           onPressed: () => context.pop(),
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-          child: ElevatedButton(
-            onPressed: canSave ? _save : null,
-            child: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(_isEdit ? l10n.serviceFormSave : l10n.serviceFormCreate),
-          ),
-        ),
-      ),
+      // The save button lives in the body, which the Scaffold shrinks with
+      // the keyboard: it stays visible (and its enabled state readable) while
+      // the provider types. A bottomNavigationBar sits behind the keyboard.
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.all(20),
-            children: [
-              // Photo upload
-              _PhotoSection(
-                photos: _photos,
-                uploading: _uploadingPhoto,
-                maxPhotos: _maxPhotos,
-                onPick: _pickPhoto,
-                onRemove: _removePhoto,
-              ),
-              const SizedBox(height: 20),
-
-              // Title
-              _Label(l10n.serviceFormTitleLabel),
-              TextFormField(
-                controller: _titleController,
-                focusNode: _titleFocusNode,
-                textCapitalization: TextCapitalization.sentences,
-                textInputAction: TextInputAction.next,
-                onFieldSubmitted: (_) => _descriptionFocusNode.requestFocus(),
-                decoration: InputDecoration(
-                  hintText: l10n.serviceFormTitleHint,
-                ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? l10n.serviceFormTitleRequired
-                    : null,
-              ),
-              const SizedBox(height: 20),
-
-              // Category. Only the bounded launch tasks are creatable; the five
-              // non-launch categories are hidden at creation (spec section 4,
-              // SC-13). An existing non-launch listing keeps its category so it
-              // stays editable.
-              _Label(l10n.serviceFormCategory),
-              _CategorySelector(
-                value: _category,
-                selectable: _selectableCategories(config),
-                onChanged: (c) => setState(() {
-                  _category = c;
-                  // A category can never be its own extra task.
-                  _extraTasks.remove(c.name);
-                }),
-              ),
-              const SizedBox(height: 20),
-
-              // Description
-              _Label(l10n.serviceFormDescription),
-              TextFormField(
-                controller: _descriptionController,
-                focusNode: _descriptionFocusNode,
-                maxLines: 4,
-                maxLength: 500,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  hintText: l10n.serviceFormDescriptionHint,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Pricing: billing mode, encadre range, extra tasks. The whole
-              // section is driven by the grid; it renders loading/error states
-              // when the grid is unavailable (spec AC-15, SC-12).
-              _buildPricing(l10n, oc, pricingAsync),
-              const SizedBox(height: 20),
-
-              // Zones d'intervention
-              _Label(l10n.serviceFormZones),
-              _ZonesSection(
-                zones: _zones,
-                onRemove: _removeZone,
-                onEdit: _editZone,
-                onAdd: _showAddZoneSheet,
-              ),
-              const SizedBox(height: 24),
-
-              // Published toggle
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: oc.cardSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: oc.border),
-                ),
-                child: Row(
+        child: Column(
+          children: [
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.all(20),
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    // Photo upload
+                    _PhotoSection(
+                      photos: _photos,
+                      uploading: _uploadingPhoto,
+                      maxPhotos: _maxPhotos,
+                      onPick: _pickPhoto,
+                      onRemove: _removePhoto,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Title
+                    _Label(l10n.serviceFormTitleLabel),
+                    TextFormField(
+                      controller: _titleController,
+                      focusNode: _titleFocusNode,
+                      textCapitalization: TextCapitalization.sentences,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) =>
+                          _descriptionFocusNode.requestFocus(),
+                      decoration: InputDecoration(
+                        hintText: l10n.serviceFormTitleHint,
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? l10n.serviceFormTitleRequired
+                          : null,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Category. Only the bounded launch tasks are creatable; the five
+                    // non-launch categories are hidden at creation (spec section 4,
+                    // SC-13). An existing non-launch listing keeps its category so it
+                    // stays editable.
+                    _Label(l10n.serviceFormCategory),
+                    _CategorySelector(
+                      value: _category,
+                      selectable: _selectableCategories(config),
+                      onChanged: (c) => setState(() {
+                        _category = c;
+                        // A category can never be its own extra task.
+                        _extraTasks.remove(c.name);
+                      }),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Description
+                    _Label(l10n.serviceFormDescription),
+                    TextFormField(
+                      controller: _descriptionController,
+                      focusNode: _descriptionFocusNode,
+                      maxLines: 4,
+                      maxLength: 500,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        hintText: l10n.serviceFormDescriptionHint,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Pricing: billing mode, encadre range, extra tasks. The whole
+                    // section is driven by the grid; it renders loading/error states
+                    // when the grid is unavailable (spec AC-15, SC-12).
+                    _buildPricing(l10n, oc, pricingAsync),
+                    const SizedBox(height: 20),
+
+                    // Zones d'intervention
+                    _Label(l10n.serviceFormZones),
+                    _ZonesSection(
+                      zones: _zones,
+                      onRemove: _removeZone,
+                      onEdit: _editZone,
+                      onAdd: _showAddZoneSheet,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Published toggle
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: oc.cardSurface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: oc.border),
+                      ),
+                      child: Row(
                         children: [
-                          Text(
-                            l10n.serviceFormPublish,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w500),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.serviceFormPublish,
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(fontWeight: FontWeight.w500),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  l10n.serviceFormPublishSubtitle,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: oc.secondaryText),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            l10n.serviceFormPublishSubtitle,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: oc.secondaryText),
+                          Switch(
+                            value: _published,
+                            onChanged: (v) => setState(() => _published = v),
+                            activeThumbColor: oc.success,
+                            activeTrackColor: oc.success.withValues(alpha: 0.4),
                           ),
                         ],
                       ),
                     ),
-                    Switch(
-                      value: _published,
-                      onChanged: (v) => setState(() => _published = v),
-                      activeThumbColor: oc.success,
-                      activeTrackColor: oc.success.withValues(alpha: 0.4),
-                    ),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: ElevatedButton(
+                onPressed: canSave ? _save : null,
+                child: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        _isEdit ? l10n.serviceFormSave : l10n.serviceFormCreate,
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -898,6 +909,9 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
   void _selectSuggestion(PlaceSuggestion suggestion) {
     _selected = suggestion;
     _addressController.text = suggestion.description;
+    // The address is chosen: close the keyboard so the radius slider and the
+    // validate button below get the screen back.
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _suggestions = [];
       _error = null;
@@ -968,8 +982,12 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
+    // Handle and title stay OUTSIDE the scroll view so the sheet keeps its
+    // drag-to-close gesture there; the field, its suggestions, the radius and
+    // the validate button scroll together above the keyboard (the field takes
+    // focus on open, so the keyboard is up from the first frame).
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -992,126 +1010,145 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
-
-          // Address field with autocomplete
-          TextFormField(
-            controller: _addressController,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.done,
-            decoration: InputDecoration(
-              hintText: l10n.zoneCityOrAddress,
-              prefixIcon: const Icon(Icons.search_rounded, size: 20),
-              errorText: _error,
-            ),
-            onChanged: (v) {
-              _selected = null;
-              _onSearchChanged(v);
-            },
-          ),
-
-          // Suggestions list
-          if (_suggestions.isNotEmpty)
-            Container(
-              constraints: const BoxConstraints(maxHeight: 180),
-              margin: const EdgeInsets.only(top: 4),
-              decoration: BoxDecoration(
-                color: oc.cardSurface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: oc.border),
-              ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: EdgeInsets.zero,
-                itemCount: _suggestions.length,
-                separatorBuilder: (_, __) =>
-                    Divider(height: 1, color: oc.border.withValues(alpha: 0.5)),
-                itemBuilder: (_, i) {
-                  final s = _suggestions[i];
-                  return InkWell(
-                    onTap: () => _selectSuggestion(s),
-                    borderRadius: BorderRadius.circular(
-                      i == 0 || i == _suggestions.length - 1 ? 12 : 0,
+          Flexible(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Address field with autocomplete
+                  TextFormField(
+                    controller: _addressController,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      hintText: l10n.zoneCityOrAddress,
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                      errorText: _error,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 16,
-                            color: oc.secondaryText,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              s.description,
-                              style: Theme.of(context).textTheme.bodySmall,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          const SizedBox(height: 20),
-
-          // Radius slider
-          Text(l10n.zoneRadius, style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: _radiusKm,
-                  min: 5,
-                  max: 200,
-                  divisions: 39,
-                  activeColor: oc.primary,
-                  inactiveColor: oc.border,
-                  label: '${_radiusKm.round()} km',
-                  onChanged: (v) => setState(() => _radiusKm = v),
-                ),
-              ),
-              SizedBox(
-                width: 56,
-                child: Text(
-                  '${_radiusKm.round()} km',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: oc.primary,
-                    fontWeight: FontWeight.w600,
+                    onChanged: (v) {
+                      _selected = null;
+                      _onSearchChanged(v);
+                    },
                   ),
-                  textAlign: TextAlign.end,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
 
-          // Validate button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _loading ? null : _validate,
-              child: _loading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+                  // Suggestions list
+                  if (_suggestions.isNotEmpty)
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 180),
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(
+                        color: oc.cardSurface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: oc.border),
                       ),
-                    )
-                  : Text(_isEdit ? l10n.zoneEdit : l10n.zoneValidate),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        // The outer scroll view owns the drag gesture.
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: EdgeInsets.zero,
+                        itemCount: _suggestions.length,
+                        separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          color: oc.border.withValues(alpha: 0.5),
+                        ),
+                        itemBuilder: (_, i) {
+                          final s = _suggestions[i];
+                          return InkWell(
+                            onTap: () => _selectSuggestion(s),
+                            borderRadius: BorderRadius.circular(
+                              i == 0 || i == _suggestions.length - 1 ? 12 : 0,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on_outlined,
+                                    size: 16,
+                                    color: oc.secondaryText,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      s.description,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+
+                  // Radius slider
+                  Text(
+                    l10n.zoneRadius,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          value: _radiusKm,
+                          min: 5,
+                          max: 200,
+                          divisions: 39,
+                          activeColor: oc.primary,
+                          inactiveColor: oc.border,
+                          label: '${_radiusKm.round()} km',
+                          onChanged: (v) => setState(() => _radiusKm = v),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 56,
+                        child: Text(
+                          '${_radiusKm.round()} km',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: oc.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Validate button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _validate,
+                      child: _loading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(_isEdit ? l10n.zoneEdit : l10n.zoneValidate),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

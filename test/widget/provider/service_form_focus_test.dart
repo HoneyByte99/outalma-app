@@ -17,6 +17,8 @@ import 'package:outalma_app/src/domain/models/service_zone.dart';
 import 'package:outalma_app/src/domain/pricing/pricing_config.dart';
 import 'package:outalma_app/src/features/provider/service_form_page.dart';
 
+import '../../helpers/keyboard.dart';
+
 PricingConfig _config() => const PricingConfig(
   version: 1,
   currency: 'XOF',
@@ -61,7 +63,10 @@ Service _existing() {
   );
 }
 
-Future<void> _pump(WidgetTester tester) async {
+Future<void> _pump(
+  WidgetTester tester, {
+  ValueNotifier<double>? keyboard,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [pricingConfigProvider.overrideWith((ref) => _config())],
@@ -70,6 +75,7 @@ Future<void> _pump(WidgetTester tester) async {
         locale: const Locale('fr'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: keyboard == null ? null : keyboardInsetBuilder(keyboard),
         home: ServiceFormPage(existing: _existing()),
       ),
     ),
@@ -121,5 +127,30 @@ void main() {
         expect(descriptionEditable.focusNode.hasFocus, isTrue);
       },
     );
+  });
+
+  // The save button used to live in a bottomNavigationBar, which the Scaffold
+  // pins to the screen bottom BEHIND the keyboard: while the provider typed
+  // the title, the button and its enabled state were out of sight. It now
+  // sits in a footer inside the body, which shrinks with the keyboard.
+  group('ServiceFormPage, save button under the keyboard', () {
+    testWidgets('the save button stays visible while typing the title', (
+      tester,
+    ) async {
+      useSurface(tester, kReferenceSurface);
+      final keyboard = ValueNotifier<double>(0);
+      await _pump(tester, keyboard: keyboard);
+
+      final saveButton = find.byType(ElevatedButton);
+      expect(saveButton, findsOneWidget);
+      final restingTop = tester.getRect(saveButton).top;
+
+      await tester.tap(find.byType(TextFormField).first);
+      keyboard.value = kReferenceKeyboard;
+      await tester.pumpAndSettle();
+
+      expectAboveKeyboard(tester, saveButton, inset: kReferenceKeyboard);
+      expect(tester.getRect(saveButton).top, lessThan(restingTop));
+    });
   });
 }
