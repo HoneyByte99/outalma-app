@@ -47,6 +47,8 @@ Future<void> _confirmCancelBooking(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
+      // A 200 % text scale on a small phone must scroll, not clip the field.
+      scrollable: true,
       title: Text(l10n.bookingCancelTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,

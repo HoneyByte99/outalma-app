@@ -30,6 +30,7 @@ import '../shared/category_icon.dart';
 import '../shared/category_filter_bar.dart';
 import '../shared/gender_icon.dart';
 import '../shared/identity_trust_signal.dart';
+import '../shared/scroll_safe_center.dart';
 import '../shared/empty_state_view.dart';
 import '../shared/mode_badge.dart';
 import '../shared/network_image.dart';
@@ -63,11 +64,30 @@ bool _serviceMatchesLocation(Service service, LocationFilter filter) {
 // HomePage
 // ---------------------------------------------------------------------------
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  /// Focus of the search field. While it has focus the greeting and the email
+  /// banner fold away to give the results grid room: the keyboard squeezes
+  /// the grid to ~130 px on a small phone. Focus rather than the keyboard
+  /// inset,
+  /// because this page sits inside AppShell's Scaffold body, where the bottom
+  /// inset is already removed from the MediaQuery.
+  final _searchFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final authState = ref.watch(authNotifierProvider).valueOrNull;
@@ -90,33 +110,52 @@ class HomePage extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting - compact single line
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.l,
-              AppSpacing.m,
-              AppSpacing.l,
-              AppSpacing.s,
-            ),
-            child: Text(
-              isAuthenticated
-                  ? (displayName.isNotEmpty
-                        ? l10n.homeGreeting(displayName)
-                        : l10n.homeGreetingNoName)
-                  // "Bonjour" to nobody in particular reads like a bug. Say
-                  // what the screen is for instead.
-                  : l10n.homeGuestGreeting,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          // Greeting and email nudge fold away while the user searches; the
+          // banner keeps its state (it reloads the user in initState), it is
+          // only taken offstage.
+          ListenableBuilder(
+            listenable: _searchFocus,
+            builder: (context, _) => AnimatedSize(
+              duration: const Duration(milliseconds: 150),
+              alignment: Alignment.topLeft,
+              child: Visibility(
+                visible: !_searchFocus.hasFocus,
+                maintainState: true,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Greeting - compact single line
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.l,
+                        AppSpacing.m,
+                        AppSpacing.l,
+                        AppSpacing.s,
+                      ),
+                      child: Text(
+                        isAuthenticated
+                            ? (displayName.isNotEmpty
+                                  ? l10n.homeGreeting(displayName)
+                                  : l10n.homeGreetingNoName)
+                            // "Bonjour" to nobody in particular reads like a bug. Say
+                            // what the screen is for instead.
+                            : l10n.homeGuestGreeting,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // Non-blocking email verification nudge (email accounts only).
+                    const EmailVerificationBanner(),
+                  ],
+                ),
+              ),
             ),
           ),
-          // Non-blocking email verification nudge (email accounts only).
-          const EmailVerificationBanner(),
           // Search bar - replaces static subtitle
-          const _SearchBar(),
+          _SearchBar(focusNode: _searchFocus),
           // Category chips
           const _CategoryChipsRow(),
           const SizedBox(height: AppSpacing.l),
@@ -324,62 +363,67 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.locationAddressName,
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nameController,
-                  autofocus: true,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    hintText: l10n.locationAddressHint,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) return;
-                    ref
-                        .read(savedLocationsProvider.notifier)
-                        .add(
-                          SavedLocation(
-                            label: name,
-                            address: filter.label,
-                            lat: filter.lat,
-                            lng: filter.lng,
-                            radiusKm: filter.radiusKm,
-                          ),
-                        );
-                    Navigator.of(ctx).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.locationSaved(name))),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+          // Scrollable so a 200 % text scale on a small phone never clips
+          // the field or the button (the SDK lifts the dialog, it does not
+          // shrink its content).
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.locationAddressName,
+                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  child: Text(l10n.save),
-                ),
-                const SizedBox(height: 4),
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(l10n.cancel),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameController,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      hintText: l10n.locationAddressHint,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      final name = nameController.text.trim();
+                      if (name.isEmpty) return;
+                      ref
+                          .read(savedLocationsProvider.notifier)
+                          .add(
+                            SavedLocation(
+                              label: name,
+                              address: filter.label,
+                              lat: filter.lat,
+                              lng: filter.lng,
+                              radiusKm: filter.radiusKm,
+                            ),
+                          );
+                      Navigator.of(ctx).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.locationSaved(name))),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(l10n.save),
+                  ),
+                  const SizedBox(height: 4),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(l10n.cancel),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -813,7 +857,9 @@ class _SavedLocationTile extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _SearchBar extends ConsumerStatefulWidget {
-  const _SearchBar();
+  const _SearchBar({required this.focusNode});
+
+  final FocusNode focusNode;
 
   @override
   ConsumerState<_SearchBar> createState() => _SearchBarState();
@@ -852,6 +898,7 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
       ),
       child: TextField(
         controller: _controller,
+        focusNode: widget.focusNode,
         textInputAction: TextInputAction.done,
         onChanged: (v) {
           _debounce?.cancel();
@@ -1509,7 +1556,7 @@ class _ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    return Center(
+    return ScrollSafeCenter(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxxl),
         child: Column(
