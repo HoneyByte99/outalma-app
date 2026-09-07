@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
+import 'scroll_safe_center.dart';
 
 /// Calm, centered empty-state block: an icon, a message, and an optional action.
 ///
@@ -25,7 +26,9 @@ class EmptyStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
-    return Center(
+    // Centered while it fits, scrollable when the keyboard squeezes the slot
+    // (otherwise the recovery button would be painted off-screen).
+    return ScrollSafeCenter(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxxl),
         child: Column(
