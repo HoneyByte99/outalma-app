@@ -1064,5 +1064,7 @@
       }
     }
   },
-  "avatarSheetClose": "Close"
+  "avatarSheetClose": "Close",
+  "countryPickerTitle": "Country code",
+  "countryPickerSearchHint": "Search a country…"
 }

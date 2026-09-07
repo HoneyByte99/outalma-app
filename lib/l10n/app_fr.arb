@@ -1023,5 +1023,7 @@
       }
     }
   },
-  "avatarSheetClose": "Fermer"
+  "avatarSheetClose": "Fermer",
+  "countryPickerTitle": "Indicatif pays",
+  "countryPickerSearchHint": "Rechercher un pays…"
 }

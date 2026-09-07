@@ -2,11 +2,18 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:outalma_app/l10n/app_localizations.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/features/shared/phone_field.dart';
 
-Widget _wrap(Widget child) => MaterialApp(
+import '../../helpers/keyboard.dart';
+
+Widget _wrap(Widget child, {ValueNotifier<double>? keyboard}) => MaterialApp(
   theme: AppTheme.light(),
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  locale: const Locale('fr'),
+  builder: keyboard == null ? null : keyboardInsetBuilder(keyboard),
   home: Scaffold(body: child),
 );
 
@@ -133,6 +140,50 @@ void main() {
       await tester.pumpAndSettle();
       expect(inList('S\u00e9n\u00e9gal'), findsNothing);
       expect(inList('France'), findsNothing);
+    });
+  });
+
+  // The picker's search field takes focus on open, so the keyboard is up from
+  // the first frame. Before the fix the sheet was a DraggableScrollableSheet
+  // at 0.6 of the screen with no inset handling: the field was half clipped
+  // and the country list sat entirely behind the keyboard.
+  group('PhoneField country picker: keyboard', () {
+    Finder inList(String label) =>
+        find.descendant(of: find.byType(ListView), matching: find.text(label));
+
+    testWidgets('the field and the first countries stay above the keyboard', (
+      tester,
+    ) async {
+      useSurface(tester, kReferenceSurface);
+      final keyboard = ValueNotifier<double>(0);
+      await tester.pumpWidget(
+        _wrap(PhoneField(onChanged: (_) {}), keyboard: keyboard),
+      );
+      await tester.pump();
+      await tester.tap(find.text('+33'));
+      await tester.pumpAndSettle();
+
+      keyboard.value = kReferenceKeyboard;
+      await tester.pumpAndSettle();
+
+      expectAboveKeyboard(
+        tester,
+        find.byType(TextField).last,
+        inset: kReferenceKeyboard,
+      );
+      expectAboveKeyboard(tester, inList('France'), inset: kReferenceKeyboard);
+    });
+
+    testWidgets('the close button dismisses the sheet', (tester) async {
+      await tester.pumpWidget(_wrap(PhoneField(onChanged: (_) {})));
+      await tester.pump();
+      await tester.tap(find.text('+33'));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.close_rounded), findsNothing);
     });
   });
 }

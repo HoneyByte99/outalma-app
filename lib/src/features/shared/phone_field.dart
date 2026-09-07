@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
 import '../../domain/utils/text_search.dart';
 import 'app_sheet.dart';
@@ -147,6 +148,7 @@ class _PhoneFieldState extends State<PhoneField> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      maxHeightFraction: 0.65,
       builder: (_) => _CountryPickerSheet(selected: _country),
     );
     if (selected != null && selected != _country) {
@@ -312,145 +314,141 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final oc = context.oc;
+    final l10n = AppLocalizations.of(context)!;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (context, scrollCtrl) {
-        return Container(
-          decoration: BoxDecoration(
-            color: oc.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+    // Handle and title stay OUTSIDE the scroll view so the sheet keeps its
+    // drag-to-close gesture there; the field and the list scroll together,
+    // which is what lets the wrapper (showAppSheet) keep them above the
+    // keyboard. The search field takes focus on open, so the keyboard is up
+    // from the first frame.
+    return Container(
+      decoration: BoxDecoration(
+        color: oc.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: oc.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          child: Column(
-            children: [
-              // Handle
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: oc.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
 
-              // Title
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-                child: Row(
-                  children: [
-                    Text(
-                      'Indicatif pays',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.of(context).pop(),
-                      iconSize: 20,
-                      color: oc.icons,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Search
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                child: TextField(
-                  controller: _searchCtrl,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    hintText: 'Rechercher un pays…',
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: oc.icons,
-                      size: 20,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          // Title
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+            child: Row(
+              children: [
+                Text(
+                  l10n.countryPickerTitle,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.of(context).pop(),
+                  iconSize: 20,
+                  color: oc.icons,
+                ),
+              ],
+            ),
+          ),
 
-              const Divider(height: 1),
-
-              // Country list
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollCtrl,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount: _filtered.length,
-                  itemBuilder: (context, i) {
-                    final c = _filtered[i];
-                    final isSelected =
-                        c.dialCode == widget.selected.dialCode &&
-                        c.name == widget.selected.name;
-                    return InkWell(
-                      onTap: () => Navigator.of(context).pop(c),
-                      child: Container(
-                        color: isSelected
-                            ? oc.primary.withValues(alpha: 0.07)
-                            : null,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 14,
+          Flexible(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Search
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: l10n.countryPickerSearchHint,
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: oc.icons,
+                          size: 20,
                         ),
-                        child: Row(
-                          children: [
-                            Text(c.flag, style: const TextStyle(fontSize: 22)),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                c.name,
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      fontWeight: isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                      color: isSelected
-                                          ? oc.primary
-                                          : oc.primaryText,
-                                    ),
-                              ),
-                            ),
-                            Text(
-                              c.dialCode,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: isSelected
-                                        ? oc.primary
-                                        : oc.secondaryText,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                            ),
-                            if (isSelected) ...[
-                              const SizedBox(width: 8),
-                              Icon(
-                                Icons.check_rounded,
-                                color: oc.primary,
-                                size: 18,
-                              ),
-                            ],
-                          ],
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ),
+
+                  const Divider(height: 1),
+
+                  // Country list. A ListView (not a Column) so tests keep
+                  // finding rows under it; non-scrollable because the outer
+                  // scroll view owns the gesture.
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: _filtered.length,
+                    itemBuilder: (context, i) =>
+                        _countryRow(context, _filtered[i], oc),
+                  ),
+
+                  SizedBox(height: bottomPadding),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _countryRow(BuildContext context, _Country c, OutalmaColors oc) {
+    final isSelected =
+        c.dialCode == widget.selected.dialCode &&
+        c.name == widget.selected.name;
+    return InkWell(
+      onTap: () => Navigator.of(context).pop(c),
+      child: Container(
+        color: isSelected ? oc.primary.withValues(alpha: 0.07) : null,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(
+          children: [
+            Text(c.flag, style: const TextStyle(fontSize: 22)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                c.name,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected ? oc.primary : oc.primaryText,
                 ),
               ),
-
-              SizedBox(height: bottomPadding),
+            ),
+            Text(
+              c.dialCode,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isSelected ? oc.primary : oc.secondaryText,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.check_rounded, color: oc.primary, size: 18),
             ],
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }

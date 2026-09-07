@@ -21,8 +21,6 @@ const _sheetHelper = 'lib/src/features/shared/app_sheet.dart';
 const _draggableAllowlist = <String>{
   // Avatar grid, no text field: the keyboard never opens over it.
   'lib/src/features/profile/avatar_picker_sheet.dart',
-  // Country picker: converted at step 3 of the keyboard-coverage plan.
-  'lib/src/features/shared/phone_field.dart',
   // Location sheet: converted at step 4 of the keyboard-coverage plan.
   'lib/src/features/home/home_page.dart',
 };
