@@ -398,80 +398,91 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       context: context,
       useSafeArea: false,
       backgroundColor: oc.surface,
+      // A long press does not unfocus the composer and the thread only
+      // dismisses the keyboard on a drag, so this sheet usually opens with
+      // the keyboard up: 84 px of usable height on a 375x667 device, for
+      // ~233 px of actions. Everything scrolls, reaction row included, so
+      // that the whole 84 px goes to the content (pinning the row would
+      // leave 18 px, too little for a single 56 px action row).
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Quick emoji reaction row.
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  for (final emoji in _quickReactions)
-                    IconButton(
-                      tooltip: emoji,
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _react(msg, emoji);
-                      },
-                      icon: Text(emoji, style: const TextStyle(fontSize: 24)),
-                    ),
-                ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Quick emoji reaction row.
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    for (final emoji in _quickReactions)
+                      IconButton(
+                        tooltip: emoji,
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _react(msg, emoji);
+                        },
+                        icon: Text(emoji, style: const TextStyle(fontSize: 24)),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.reply_rounded),
-              title: Text(l10n.chatReply),
-              onTap: () {
-                Navigator.pop(ctx);
-                setState(() => _replyingTo = msg);
-              },
-            ),
-            if (hasText)
+              const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.copy_rounded),
-                title: Text(l10n.chatCopy),
+                leading: const Icon(Icons.reply_rounded),
+                title: Text(l10n.chatReply),
                 onTap: () {
                   Navigator.pop(ctx);
-                  Clipboard.setData(ClipboardData(text: msg.text!));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(l10n.chatCopied),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
+                  setState(() => _replyingTo = msg);
                 },
               ),
-            if (isMe && _canEdit(msg))
-              ListTile(
-                leading: const Icon(Icons.edit_outlined),
-                title: Text(l10n.chatEdit),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _startEditing(msg);
-                },
-              ),
-            if (isMe)
-              ListTile(
-                leading: Icon(Icons.delete_outline_rounded, color: oc.error),
-                title: Text(l10n.chatDelete, style: TextStyle(color: oc.error)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _deleteMessage(msg);
-                },
-              )
-            else
-              ListTile(
-                leading: const Icon(Icons.flag_outlined),
-                title: Text(l10n.chatReportMessage),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(AppRoutes.report(type: 'message', id: msg.id));
-                },
-              ),
-          ],
+              if (hasText)
+                ListTile(
+                  leading: const Icon(Icons.copy_rounded),
+                  title: Text(l10n.chatCopy),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Clipboard.setData(ClipboardData(text: msg.text!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.chatCopied),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                ),
+              if (isMe && _canEdit(msg))
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: Text(l10n.chatEdit),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _startEditing(msg);
+                  },
+                ),
+              if (isMe)
+                ListTile(
+                  leading: Icon(Icons.delete_outline_rounded, color: oc.error),
+                  title: Text(
+                    l10n.chatDelete,
+                    style: TextStyle(color: oc.error),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _deleteMessage(msg);
+                  },
+                )
+              else
+                ListTile(
+                  leading: const Icon(Icons.flag_outlined),
+                  title: Text(l10n.chatReportMessage),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push(AppRoutes.report(type: 'message', id: msg.id));
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );

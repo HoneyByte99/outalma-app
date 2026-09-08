@@ -421,46 +421,53 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
       context: context,
       useSafeArea: false,
       showDragHandle: true,
+      // The drag handle sits outside this builder, so the whole body may
+      // scroll: with a keyboard open the bounded height drops well under the
+      // content's own (~289 px), and a fixed Column would overflow instead.
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.storefront_rounded, size: 48, color: oc.warning),
-              const SizedBox(height: 16),
-              Text(
-                l10n.hubPauseTitle,
-                style: Theme.of(ctx).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                count > 0 ? l10n.hubPauseBody(count) : l10n.hubPauseBodyNoCount,
-                style: Theme.of(
-                  ctx,
-                ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: oc.warning,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text(l10n.hubPauseCta),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.storefront_rounded, size: 48, color: oc.warning),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.hubPauseTitle,
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 4),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(l10n.cancel),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  count > 0
+                      ? l10n.hubPauseBody(count)
+                      : l10n.hubPauseBodyNoCount,
+                  style: Theme.of(
+                    ctx,
+                  ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: oc.warning,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: Text(l10n.hubPauseCta),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text(l10n.cancel),
+                ),
+              ],
+            ),
           ),
         ),
       ),
