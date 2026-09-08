@@ -22,6 +22,8 @@ import 'package:outalma_app/src/domain/models/chat_message.dart';
 import 'package:outalma_app/src/domain/repositories/chat_repository.dart';
 import 'package:outalma_app/src/features/chat/chat_page.dart';
 
+import '../../helpers/keyboard.dart';
+
 class _MockChatRepository extends Mock implements ChatRepository {}
 
 class _FakeAuthNotifier extends AuthNotifier {
@@ -102,6 +104,20 @@ Future<void> _settleThread(WidgetTester tester) async {
   }
   await tester.pump(const Duration(milliseconds: 400));
 }
+
+/// The thread's scroll position (the ListView's own Scrollable, not the
+/// composer's).
+ScrollPosition _threadPosition(WidgetTester tester) => tester
+    .state<ScrollableState>(
+      find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ),
+    )
+    .position;
+
+double _listBottom(WidgetTester tester) =>
+    tester.getRect(find.byType(ListView)).bottom;
 
 List<ChatMessage> _someMessages() => List.generate(
   20,
@@ -322,8 +338,9 @@ void main() {
       ).thenAnswer((_) async {});
     });
 
-    testWidgets('the typing indicator appearing keeps the newest message '
-        'above the composer', (tester) async {
+    testWidgets('the typing indicator appearing leaves the thread at its end, '
+        'newest message just above the list bottom', (tester) async {
+      useSurface(tester, kReferenceSurface);
       final typing = StreamController<DateTime?>();
       addTearDown(typing.close);
       await tester.pumpWidget(
@@ -334,27 +351,70 @@ void main() {
         ),
       );
       await _settleThread(tester);
+      final position = _threadPosition(tester);
       final newest = find.text('message number 19');
-      final composerTop = tester.getTopLeft(find.byType(TextField)).dy;
-      expect(tester.getBottomLeft(newest).dy, lessThan(composerTop));
+      expect(tester.getBottomLeft(newest).dy, lessThan(_listBottom(tester)));
+      // Note: after the initial auto-scroll the offset can sit BEYOND
+      // maxScrollExtent (lazy list, over-estimated extent at animateTo time:
+      // measured 65 px on this surface), pre-existing and not asserted here.
 
       // The other user starts typing: a bar appears above the composer and
-      // the list loses that height.
+      // the list loses that height. Without compensation the offset stays
+      // put while the extent shrinks: the thread is no longer at its end and
+      // the newest message slides towards the bar.
       typing.add(DateTime.now().toUtc());
       await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      final composerTopAfter = tester.getTopLeft(find.byType(TextField)).dy;
       expect(newest, findsOneWidget);
-      expect(
-        tester.getBottomLeft(newest).dy,
-        lessThan(
-          composerTopAfter - 20,
-          // The bar sits between the list and the composer.
-        ),
-      );
+      expect(position.pixels, closeTo(position.maxScrollExtent, 1));
+      final gap = _listBottom(tester) - tester.getBottomLeft(newest).dy;
+      expect(gap, greaterThanOrEqualTo(0));
+      expect(gap, lessThan(60), reason: 'newest message is not at the end');
     });
+
+    testWidgets(
+      'a viewport change during the user\'s own drag does not jump the thread',
+      (tester) async {
+        useSurface(tester, kReferenceSurface);
+        final messages = _someMessages();
+        await tester.pumpWidget(_wrap(messages: messages, keyboardInset: 300));
+        await _settleThread(tester);
+        final position = _threadPosition(tester);
+        final pixelsAtRest = position.pixels;
+
+        // Finger down on the thread, dragged a little towards older messages.
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(ListView)),
+        );
+        await gesture.moveBy(const Offset(0, 40));
+        await tester.pump();
+        final pixelsMidDrag = position.pixels;
+        expect(pixelsMidDrag, isNot(pixelsAtRest));
+
+        // Dismiss-on-drag: the keyboard slides away under the finger and the
+        // list grows by 300 px. The compensation must not fire mid-gesture:
+        // a jumpTo would end the drag activity, and the finger would go on
+        // moving over a thread that no longer follows it. (The physics may
+        // still adjust an out-of-range offset here, so the offset itself is
+        // not what is asserted: the drag being alive is.)
+        await tester.pumpWidget(_wrap(messages: messages, keyboardInset: 0));
+        await tester.pump();
+        await tester.pump();
+        final pixelsAfterChange = position.pixels;
+        await gesture.moveBy(const Offset(0, 40));
+        await tester.pump();
+        expect(
+          position.pixels,
+          closeTo(pixelsAfterChange - 40, 1),
+          reason: 'the drag no longer moves the thread',
+        );
+
+        await gesture.up();
+        await tester.pump(const Duration(milliseconds: 400));
+      },
+    );
 
     testWidgets('sending a reply while the banner closes leaves the sent '
         'message fully visible', (tester) async {
@@ -406,8 +466,14 @@ void main() {
 
       final sent = find.text('ma reponse');
       expect(sent, findsOneWidget);
-      final composerTop = tester.getTopLeft(find.byType(TextField)).dy;
-      expect(tester.getBottomLeft(sent).dy, lessThan(composerTop));
+      // The auto-scroll to the new message won: the sent bubble is inside
+      // the list box, not under the composer. (A naive compensation, pixels
+      // plus delta, would jump the thread short of the end and cancel that
+      // animation.)
+      expect(
+        tester.getBottomLeft(sent).dy,
+        lessThanOrEqualTo(_listBottom(tester)),
+      );
     });
   });
 }

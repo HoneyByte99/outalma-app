@@ -90,6 +90,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   // moves by the same amount. See [_compensateViewportChange].
   double? _lastViewportHeight;
 
+  /// True between a drag start and the end of the scroll it caused. A
+  /// viewport change during the user's own drag (dismiss-on-drag lets the
+  /// keyboard slide away under the finger) is not compensated: each jumpTo
+  /// would replace the drag activity mid-gesture.
+  bool _userDragging = false;
+
   @override
   void initState() {
     super.initState();
@@ -155,6 +161,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final previous = _lastViewportHeight;
     _lastViewportHeight = height;
     if (previous == null || previous == height) return;
+    if (_userDragging) return;
     if (!_scrollController.hasClients ||
         !_scrollController.position.hasContentDimensions) {
       return;
@@ -174,6 +181,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ),
       );
     });
+  }
+
+  bool _trackUserDrag(ScrollNotification n) {
+    if (n is ScrollStartNotification) _userDragging = n.dragDetails != null;
+    if (n is ScrollEndNotification) _userDragging = false;
+    return false;
   }
 
   void _scrollToBottom() {
@@ -920,57 +933,60 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 final hasOlder = allMessages.length >= currentLimit;
                 final headerCount = hasOlder ? 1 : 0;
 
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    _compensateViewportChange(constraints.maxHeight);
-                    return ListView.builder(
-                      controller: _scrollController,
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                      itemCount: messages.length + headerCount,
-                      itemBuilder: (context, rawIndex) {
-                        if (hasOlder && rawIndex == 0) {
-                          return _LoadOlderButton(
-                            onPressed: () =>
-                                ref
-                                        .read(
-                                          chatMessageLimitProvider(
-                                            widget.chatId,
-                                          ).notifier,
-                                        )
-                                        .state +=
-                                    chatMessagePageSize,
-                          );
-                        }
-                        final i = rawIndex - headerCount;
-                        final msg = messages[i];
-                        final isMe = msg.senderId == myUid;
-                        // Insert a day separator above the first message of each
-                        // calendar day so multi-day threads stay readable.
-                        final showDaySeparator =
-                            i == 0 ||
-                            date_utils.isDifferentDay(
-                              messages[i - 1].createdAt,
-                              msg.createdAt,
+                return NotificationListener<ScrollNotification>(
+                  onNotification: _trackUserDrag,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      _compensateViewportChange(constraints.maxHeight);
+                      return ListView.builder(
+                        controller: _scrollController,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        itemCount: messages.length + headerCount,
+                        itemBuilder: (context, rawIndex) {
+                          if (hasOlder && rawIndex == 0) {
+                            return _LoadOlderButton(
+                              onPressed: () =>
+                                  ref
+                                          .read(
+                                            chatMessageLimitProvider(
+                                              widget.chatId,
+                                            ).notifier,
+                                          )
+                                          .state +=
+                                      chatMessagePageSize,
                             );
-                        final bubble = _MessageBubble(
-                          message: msg,
-                          isMe: isMe,
-                          myUid: myUid,
-                          onLongPress: () => _showMessageActions(msg, isMe),
-                          onReactionTap: (emoji) => _react(msg, emoji),
-                        );
-                        if (!showDaySeparator) return bubble;
-                        return Column(
-                          children: [
-                            _DateSeparator(date: msg.createdAt),
-                            bubble,
-                          ],
-                        );
-                      },
-                    );
-                  },
+                          }
+                          final i = rawIndex - headerCount;
+                          final msg = messages[i];
+                          final isMe = msg.senderId == myUid;
+                          // Insert a day separator above the first message of each
+                          // calendar day so multi-day threads stay readable.
+                          final showDaySeparator =
+                              i == 0 ||
+                              date_utils.isDifferentDay(
+                                messages[i - 1].createdAt,
+                                msg.createdAt,
+                              );
+                          final bubble = _MessageBubble(
+                            message: msg,
+                            isMe: isMe,
+                            myUid: myUid,
+                            onLongPress: () => _showMessageActions(msg, isMe),
+                            onReactionTap: (emoji) => _react(msg, emoji),
+                          );
+                          if (!showDaySeparator) return bubble;
+                          return Column(
+                            children: [
+                              _DateSeparator(date: msg.createdAt),
+                              bubble,
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
                 );
               },
             ),
