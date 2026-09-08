@@ -161,6 +161,11 @@ void main() {
       await tester.pumpAndSettle();
       final validate = find.widgetWithText(ElevatedButton, 'Valider');
       expect(validate, findsOneWidget);
+      // The drag itself closed the keyboard (dismiss on drag): refocus the
+      // field so the assertion below is about the pick, not about the drag.
+      await tester.tap(sheetField);
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.hasAnyClients, isTrue);
 
       // Picking a suggestion drops focus, i.e. closes the keyboard...
       await tester.tap(find.text('Dakar zone 0'));
