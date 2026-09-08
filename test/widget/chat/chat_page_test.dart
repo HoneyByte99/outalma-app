@@ -418,6 +418,7 @@ void main() {
 
     testWidgets('sending a reply while the banner closes leaves the sent '
         'message fully visible', (tester) async {
+      useSurface(tester, kReferenceSurface);
       final messages = StreamController<List<ChatMessage>>();
       addTearDown(messages.close);
       final thread = _someMessages();

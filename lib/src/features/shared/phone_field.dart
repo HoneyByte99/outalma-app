@@ -356,6 +356,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => Navigator.of(context).pop(),
+                  tooltip: l10n.avatarSheetClose,
                   iconSize: 20,
                   color: oc.icons,
                 ),

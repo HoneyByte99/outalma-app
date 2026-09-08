@@ -192,6 +192,8 @@ void main() {
       await tester.tap(find.text('+33'));
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      // Icon-only action: labelled for screen readers (budget line A5).
+      expect(find.byTooltip('Fermer'), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.close_rounded));
       await tester.pumpAndSettle();
