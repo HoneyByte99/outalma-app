@@ -2299,4 +2299,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get avatarSheetClose => 'Close';
+
+  @override
+  String get countryPickerTitle => 'Country code';
+
+  @override
+  String get countryPickerSearchHint => 'Search a country…';
 }

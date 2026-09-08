@@ -22,6 +22,7 @@ import '../../domain/models/provider_profile.dart';
 import '../shared/category_icon.dart';
 import '../shared/user_avatar.dart';
 import '../../domain/models/service.dart';
+import '../shared/app_sheet.dart';
 
 class ProviderDashboardPage extends ConsumerWidget {
   const ProviderDashboardPage({super.key});
@@ -416,8 +417,9 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
   Future<bool?> _showPauseSheet(int count) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    return showModalBottomSheet<bool>(
+    return showAppSheet<bool>(
       context: context,
+      useSafeArea: false,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Padding(

@@ -73,4 +73,34 @@ void main() {
       );
     }, skip: goldenSkip);
   });
+
+  // The home grid slot drops to ~130 px when the keyboard is open. The block
+  // must then scroll instead of overflowing, and its action must stay
+  // reachable.
+  group('EmptyStateView squeezed', () {
+    testWidgets('does not overflow and keeps its action reachable', (
+      tester,
+    ) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            height: 120,
+            child: EmptyStateView(
+              icon: Icons.inbox_outlined,
+              message: 'Aucune fiche « Cuisine »\npour le moment',
+              actionLabel: 'Effacer les filtres',
+              onAction: () => tapped = true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // No RenderFlex overflow was thrown (it would have failed the test).
+      final action = find.text('Effacer les filtres');
+      await tester.scrollUntilVisible(action, 40);
+      await tester.tap(action);
+      expect(tapped, isTrue);
+    });
+  });
 }

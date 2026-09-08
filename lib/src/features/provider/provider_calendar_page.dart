@@ -16,6 +16,7 @@ import '../shared/booking_status_label.dart';
 import '../../application/service/service_providers.dart';
 import '../../domain/models/blocked_slot.dart';
 import '../../domain/models/booking.dart';
+import '../shared/app_sheet.dart';
 
 class ProviderCalendarPage extends ConsumerStatefulWidget {
   const ProviderCalendarPage({super.key});
@@ -294,7 +295,7 @@ class _ProviderCalendarPageState extends ConsumerState<ProviderCalendarPage> {
     final errorColor = context.oc.error;
     final blockedMsg = AppLocalizations.of(context)!.bookingSchedule;
     final errorMsg = AppLocalizations.of(context)!.bookingStartError;
-    final result = await showModalBottomSheet<BlockedSlot>(
+    final result = await showAppSheet<BlockedSlot>(
       context: context,
       isScrollControlled: true,
       builder: (_) => _BlockSlotSheet(initialDate: _selectedDay),
@@ -759,12 +760,7 @@ class _BlockSlotSheetState extends State<_BlockSlotSheet> {
     final endDate = _startDate.add(Duration(days: _durationDays - 1));
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
+      padding: const EdgeInsets.all(20),
       child: SingleChildScrollView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         child: Column(

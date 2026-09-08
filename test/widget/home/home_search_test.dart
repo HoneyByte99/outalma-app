@@ -39,6 +39,34 @@ Widget _wrap({List<Service> services = const []}) => ProviderScope(
 );
 
 void main() {
+  // While the search field has focus the greeting (and the email banner) fold
+  // away to hand the results grid the room the keyboard takes. Focus-driven,
+  // because inside AppShell the page never sees the keyboard inset.
+  group('HomePage : greeting folds while searching', () {
+    // The harness runs in the default test locale (en).
+    const guestGreeting = 'Find a trusted provider near you';
+
+    testWidgets('focus hides the greeting, unfocus brings it back', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pump();
+      expect(find.text(guestGreeting), findsOneWidget);
+
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      // Offstage, not gone: hitTestable() ignores it.
+      expect(find.text(guestGreeting).hitTestable(), findsNothing);
+
+      // No DismissKeyboardOnTap in this harness: drop focus directly.
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text(guestGreeting).hitTestable(), findsOneWidget);
+    });
+  });
+
   group('HomePage : search', () {
     testWidgets('smoke : renders without throwing', (tester) async {
       await tester.pumpWidget(_wrap());

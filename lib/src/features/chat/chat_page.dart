@@ -34,6 +34,31 @@ import '../../domain/enums/message_type.dart';
 import '../../domain/models/chat_message.dart';
 import '../shared/gender_icon.dart';
 import '../shared/user_avatar.dart';
+import '../shared/app_sheet.dart';
+
+/// Scroll offset that keeps the same message resting just above the composer
+/// when the message list's viewport changes height by [viewportDelta]
+/// (positive when the list shrinks: keyboard, image preview bar, reply or
+/// edit banner, typing indicator).
+///
+/// The chat list is anchored at its top so pagination can prepend older
+/// messages; anything that shrinks the viewport from below would therefore
+/// hide the newest messages unless the offset moves by the same amount.
+/// A reader sitting at the end of the thread ([atBottom]) is pinned to the
+/// NEW end whatever else happens in the frame: sending a message while a
+/// banner closes both appends a message and grows the list, and a naive
+/// `pixels + delta` would cancel the scroll-to-bottom of that new message.
+/// Clamped so it never overshoots either end of the list.
+double viewportCompensatedScrollOffset({
+  required double pixels,
+  required double viewportDelta,
+  required double maxScrollExtent,
+  required bool atBottom,
+}) {
+  final max = math.max(0.0, maxScrollExtent);
+  if (atBottom) return max;
+  return (pixels + viewportDelta).clamp(0.0, max);
+}
 
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({super.key, required this.chatId});
@@ -58,6 +83,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   // jump to the bottom : only a genuinely new latest message does.
   String? _lastBottomMsgId;
   Timer? _typingCooldown;
+  // Height of the message list's viewport at the previous layout, null until
+  // the first one (which only records). The list is anchored at its TOP (so
+  // pagination can prepend older messages), so anything shrinking the
+  // viewport from below hides the newest messages unless the scroll offset
+  // moves by the same amount. See [_compensateViewportChange].
+  double? _lastViewportHeight;
+
+  /// True between a drag start and the end of the scroll it caused. A
+  /// viewport change during the user's own drag (dismiss-on-drag lets the
+  /// keyboard slide away under the finger) is not compensated: each jumpTo
+  /// would replace the drag activity mid-gesture.
+  bool _userDragging = false;
 
   @override
   void initState() {
@@ -106,6 +143,50 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         markNotificationRead(db: db, uid: authState.user.id, notifId: n.id);
       }
     }
+  }
+
+  /// Shifts the message list by exactly the height its viewport lost or
+  /// regained, so the message resting just above the composer stays there
+  /// (the WhatsApp behaviour). Covers the keyboard, the image preview bar,
+  /// the reply and edit banners and the typing indicator alike, because the
+  /// list's own constraints are the source of truth.
+  ///
+  /// Called from the LayoutBuilder around the list, i.e. DURING layout, when
+  /// the scroll position still describes the previous geometry: that is what
+  /// makes `pixels` and `atBottom` reliable. The compensated offset is applied
+  /// after the frame, once `maxScrollExtent` reflects the new geometry. Two
+  /// layout passes in one frame register two callbacks and the last wins,
+  /// which loses the first delta; the next frame compensates again.
+  void _compensateViewportChange(double height) {
+    final previous = _lastViewportHeight;
+    _lastViewportHeight = height;
+    if (previous == null || previous == height) return;
+    if (_userDragging) return;
+    if (!_scrollController.hasClients ||
+        !_scrollController.position.hasContentDimensions) {
+      return;
+    }
+    final position = _scrollController.position;
+    final pixelsBefore = position.pixels;
+    final atBottom = pixelsBefore >= position.maxScrollExtent - 1;
+    final delta = previous - height;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.jumpTo(
+        viewportCompensatedScrollOffset(
+          pixels: pixelsBefore,
+          viewportDelta: delta,
+          maxScrollExtent: _scrollController.position.maxScrollExtent,
+          atBottom: atBottom,
+        ),
+      );
+    });
+  }
+
+  bool _trackUserDrag(ScrollNotification n) {
+    if (n is ScrollStartNotification) _userDragging = n.dragDetails != null;
+    if (n is ScrollEndNotification) _userDragging = false;
+    return false;
   }
 
   void _scrollToBottom() {
@@ -313,8 +394,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final oc = context.oc;
     final hasText = (msg.text ?? '').isNotEmpty;
     if (msg.deleted) return;
-    await showModalBottomSheet<void>(
+    await showAppSheet<void>(
       context: context,
+      useSafeArea: false,
       backgroundColor: oc.surface,
       builder: (ctx) => SafeArea(
         child: Column(
@@ -851,52 +933,60 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 final hasOlder = allMessages.length >= currentLimit;
                 final headerCount = hasOlder ? 1 : 0;
 
-                return ListView.builder(
-                  controller: _scrollController,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  itemCount: messages.length + headerCount,
-                  itemBuilder: (context, rawIndex) {
-                    if (hasOlder && rawIndex == 0) {
-                      return _LoadOlderButton(
-                        onPressed: () =>
-                            ref
-                                    .read(
-                                      chatMessageLimitProvider(
-                                        widget.chatId,
-                                      ).notifier,
-                                    )
-                                    .state +=
-                                chatMessagePageSize,
+                return NotificationListener<ScrollNotification>(
+                  onNotification: _trackUserDrag,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      _compensateViewportChange(constraints.maxHeight);
+                      return ListView.builder(
+                        controller: _scrollController,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        itemCount: messages.length + headerCount,
+                        itemBuilder: (context, rawIndex) {
+                          if (hasOlder && rawIndex == 0) {
+                            return _LoadOlderButton(
+                              onPressed: () =>
+                                  ref
+                                          .read(
+                                            chatMessageLimitProvider(
+                                              widget.chatId,
+                                            ).notifier,
+                                          )
+                                          .state +=
+                                      chatMessagePageSize,
+                            );
+                          }
+                          final i = rawIndex - headerCount;
+                          final msg = messages[i];
+                          final isMe = msg.senderId == myUid;
+                          // Insert a day separator above the first message of each
+                          // calendar day so multi-day threads stay readable.
+                          final showDaySeparator =
+                              i == 0 ||
+                              date_utils.isDifferentDay(
+                                messages[i - 1].createdAt,
+                                msg.createdAt,
+                              );
+                          final bubble = _MessageBubble(
+                            message: msg,
+                            isMe: isMe,
+                            myUid: myUid,
+                            onLongPress: () => _showMessageActions(msg, isMe),
+                            onReactionTap: (emoji) => _react(msg, emoji),
+                          );
+                          if (!showDaySeparator) return bubble;
+                          return Column(
+                            children: [
+                              _DateSeparator(date: msg.createdAt),
+                              bubble,
+                            ],
+                          );
+                        },
                       );
-                    }
-                    final i = rawIndex - headerCount;
-                    final msg = messages[i];
-                    final isMe = msg.senderId == myUid;
-                    // Insert a day separator above the first message of each
-                    // calendar day so multi-day threads stay readable.
-                    final showDaySeparator =
-                        i == 0 ||
-                        date_utils.isDifferentDay(
-                          messages[i - 1].createdAt,
-                          msg.createdAt,
-                        );
-                    final bubble = _MessageBubble(
-                      message: msg,
-                      isMe: isMe,
-                      myUid: myUid,
-                      onLongPress: () => _showMessageActions(msg, isMe),
-                      onReactionTap: (emoji) => _react(msg, emoji),
-                    );
-                    if (!showDaySeparator) return bubble;
-                    return Column(
-                      children: [
-                        _DateSeparator(date: msg.createdAt),
-                        bubble,
-                      ],
-                    );
-                  },
+                    },
+                  ),
                 );
               },
             ),

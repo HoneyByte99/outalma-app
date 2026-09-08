@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'app_sheet.dart';
+
 /// Opens an external maps app with directions to the given coordinates.
 /// Origin is left unspecified so the maps app uses the user's current GPS.
 ///
@@ -141,8 +143,9 @@ Future<_MapsOption?> _pickMapsApp(
   BuildContext context,
   List<_MapsOption> options,
 ) {
-  return showModalBottomSheet<_MapsOption>(
+  return showAppSheet<_MapsOption>(
     context: context,
+    useSafeArea: false,
     showDragHandle: true,
     builder: (ctx) {
       return SafeArea(

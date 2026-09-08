@@ -2327,4 +2327,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get avatarSheetClose => 'Fermer';
+
+  @override
+  String get countryPickerTitle => 'Indicatif pays';
+
+  @override
+  String get countryPickerSearchHint => 'Rechercher un pays…';
 }

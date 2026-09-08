@@ -5,6 +5,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../app/app_spacing.dart';
 import '../../app/app_theme.dart';
 import '../../app/router.dart';
+import '../shared/app_sheet.dart';
 
 /// Carries the current `?redirect=` target onto another auth route, so hopping
 /// between sign-in and sign-up (or the phone "no account yet" bounce) does not
@@ -29,8 +30,9 @@ Future<void> showAuthPrompt(
   required String reason,
   required String redirect,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
+    useSafeArea: false,
     isScrollControlled: true,
     backgroundColor: context.oc.background,
     shape: const RoundedRectangleBorder(

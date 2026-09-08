@@ -95,116 +95,134 @@ class _ReportPageState extends ConsumerState<ReportPage> {
         backgroundColor: oc.surface,
         surfaceTintColor: Colors.transparent,
       ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.reportQuestion,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.reportSubtitle,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
-            ),
-            const SizedBox(height: 28),
+      // The footer is part of the body, which the Scaffold shrinks with the
+      // keyboard: the submit button stays visible while typing. A
+      // bottomNavigationBar would NOT (the Scaffold pins it to the screen
+      // bottom, behind the keyboard), and the previous non-scrollable column
+      // overflowed by ~86 px on a 375x667 phone once the keyboard was up.
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.reportQuestion,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.reportSubtitle,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
+                  ),
+                  const SizedBox(height: 28),
 
-            // Reason chips
-            Flexible(
-              child: ListView.separated(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                itemCount: reasons.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, i) {
-                  final reason = reasons[i];
-                  final selected = _selectedReason == reason;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedReason = reason),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? oc.primary.withValues(alpha: 0.06)
-                            : oc.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: selected ? oc.primary : oc.border,
-                          width: selected ? 1.5 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              reason,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: selected
-                                        ? oc.primary
-                                        : oc.primaryText,
-                                    fontWeight: selected
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                  ),
-                            ),
-                          ),
-                          if (selected)
-                            Icon(
-                              Icons.check_circle_rounded,
-                              color: oc.primary,
-                              size: 20,
-                            ),
-                        ],
+                  // Reason chips
+                  for (var i = 0; i < reasons.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 10),
+                    _ReasonTile(
+                      reason: reasons[i],
+                      selected: _selectedReason == reasons[i],
+                      onTap: () => setState(() => _selectedReason = reasons[i]),
+                    ),
+                  ],
+
+                  // Optional details, only shown once a reason is selected to
+                  // avoid cluttering the screen during the initial choice.
+                  if (_selectedReason != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.reportDetailsLabel,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _detailsController,
+                      maxLines: 3,
+                      maxLength: 500,
+                      decoration: InputDecoration(
+                        hintText: l10n.reportDetailsHint,
                       ),
                     ),
-                  );
-                },
+                  ],
+                ],
               ),
             ),
-
-            const SizedBox(height: 16),
-
-            // Optional details, only shown once a reason is selected to
-            // avoid cluttering the screen during the initial choice.
-            if (_selectedReason != null) ...[
-              Text(
-                l10n.reportDetailsLabel,
-                style: Theme.of(context).textTheme.titleSmall,
+          ),
+          SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: (_selectedReason == null || _submitting)
+                    ? null
+                    : _submit,
+                style: ElevatedButton.styleFrom(backgroundColor: oc.error),
+                child: _submitting
+                    ? SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: oc.cardSurface,
+                        ),
+                      )
+                    : Text(l10n.reportSubmit),
               ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _detailsController,
-                maxLines: 3,
-                maxLength: 500,
-                decoration: InputDecoration(hintText: l10n.reportDetailsHint),
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            ElevatedButton(
-              onPressed: (_selectedReason == null || _submitting)
-                  ? null
-                  : _submit,
-              style: ElevatedButton.styleFrom(backgroundColor: oc.error),
-              child: _submitting
-                  ? SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: oc.cardSurface,
-                      ),
-                    )
-                  : Text(l10n.reportSubmit),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReasonTile extends StatelessWidget {
+  const _ReasonTile({
+    required this.reason,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String reason;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final oc = context.oc;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? oc.primary.withValues(alpha: 0.06) : oc.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? oc.primary : oc.border,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                reason,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: selected ? oc.primary : oc.primaryText,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_circle_rounded, color: oc.primary, size: 20),
           ],
         ),
       ),

@@ -30,12 +30,14 @@ import '../shared/category_icon.dart';
 import '../shared/category_filter_bar.dart';
 import '../shared/gender_icon.dart';
 import '../shared/identity_trust_signal.dart';
+import '../shared/scroll_safe_center.dart';
 import '../shared/empty_state_view.dart';
 import '../shared/mode_badge.dart';
 import '../shared/network_image.dart';
 import '../shared/user_avatar.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../domain/utils/text_search.dart';
+import '../shared/app_sheet.dart';
 
 // ---------------------------------------------------------------------------
 // Filter state - local to this page subtree
@@ -62,11 +64,29 @@ bool _serviceMatchesLocation(Service service, LocationFilter filter) {
 // HomePage
 // ---------------------------------------------------------------------------
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  /// Focus of the search field. While it has focus the greeting and the email
+  /// banner fold away to give the results grid room: the keyboard squeezes
+  /// the grid to ~130 px on a small phone. Focus rather than the keyboard
+  /// inset, because this page sits inside AppShell's Scaffold body, where
+  /// the bottom inset is already removed from the MediaQuery.
+  final _searchFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
     final authState = ref.watch(authNotifierProvider).valueOrNull;
@@ -89,33 +109,52 @@ class HomePage extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting - compact single line
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.l,
-              AppSpacing.m,
-              AppSpacing.l,
-              AppSpacing.s,
-            ),
-            child: Text(
-              isAuthenticated
-                  ? (displayName.isNotEmpty
-                        ? l10n.homeGreeting(displayName)
-                        : l10n.homeGreetingNoName)
-                  // "Bonjour" to nobody in particular reads like a bug. Say
-                  // what the screen is for instead.
-                  : l10n.homeGuestGreeting,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          // Greeting and email nudge fold away while the user searches; the
+          // banner keeps its state (it reloads the user in initState), it is
+          // only taken offstage.
+          ListenableBuilder(
+            listenable: _searchFocus,
+            builder: (context, _) => AnimatedSize(
+              duration: const Duration(milliseconds: 150),
+              alignment: Alignment.topLeft,
+              child: Visibility(
+                visible: !_searchFocus.hasFocus,
+                maintainState: true,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Greeting - compact single line
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.l,
+                        AppSpacing.m,
+                        AppSpacing.l,
+                        AppSpacing.s,
+                      ),
+                      child: Text(
+                        isAuthenticated
+                            ? (displayName.isNotEmpty
+                                  ? l10n.homeGreeting(displayName)
+                                  : l10n.homeGreetingNoName)
+                            // "Bonjour" to nobody in particular reads like a bug. Say
+                            // what the screen is for instead.
+                            : l10n.homeGuestGreeting,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // Non-blocking email verification nudge (email accounts only).
+                    const EmailVerificationBanner(),
+                  ],
+                ),
+              ),
             ),
           ),
-          // Non-blocking email verification nudge (email accounts only).
-          const EmailVerificationBanner(),
           // Search bar - replaces static subtitle
-          const _SearchBar(),
+          _SearchBar(focusNode: _searchFocus),
           // Category chips
           const _CategoryChipsRow(),
           const SizedBox(height: AppSpacing.l),
@@ -217,7 +256,7 @@ class _LocationPill extends ConsumerWidget {
   }
 
   void _showLocationSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showAppSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: context.oc.background,
@@ -226,6 +265,7 @@ class _LocationPill extends ConsumerWidget {
           top: Radius.circular(AppSpacing.radiusXLarge),
         ),
       ),
+      maxHeightFraction: 0.85,
       builder: (_) => const _LocationSheet(),
     );
   }
@@ -322,62 +362,67 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.locationAddressName,
-                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nameController,
-                  autofocus: true,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    hintText: l10n.locationAddressHint,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) return;
-                    ref
-                        .read(savedLocationsProvider.notifier)
-                        .add(
-                          SavedLocation(
-                            label: name,
-                            address: filter.label,
-                            lat: filter.lat,
-                            lng: filter.lng,
-                            radiusKm: filter.radiusKm,
-                          ),
-                        );
-                    Navigator.of(ctx).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.locationSaved(name))),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+          // Scrollable so a 200 % text scale on a small phone never clips
+          // the field or the button (the SDK lifts the dialog, it does not
+          // shrink its content).
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.locationAddressName,
+                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  child: Text(l10n.save),
-                ),
-                const SizedBox(height: 4),
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(l10n.cancel),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameController,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      hintText: l10n.locationAddressHint,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      final name = nameController.text.trim();
+                      if (name.isEmpty) return;
+                      ref
+                          .read(savedLocationsProvider.notifier)
+                          .add(
+                            SavedLocation(
+                              label: name,
+                              address: filter.label,
+                              lat: filter.lat,
+                              lng: filter.lng,
+                              radiusKm: filter.radiusKm,
+                            ),
+                          );
+                      Navigator.of(ctx).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.locationSaved(name))),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(l10n.save),
+                  ),
+                  const SizedBox(height: 4),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(l10n.cancel),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -454,257 +499,284 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
     final filter = ref.watch(locationFilterProvider);
     final savedLocations = ref.watch(savedLocationsProvider);
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (_, scrollController) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.m,
-          AppSpacing.xl,
-          0,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: oc.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.l),
-
-            // Title row
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.locationTitle,
-                    style: Theme.of(context).textTheme.titleLarge,
+    // Handle and title stay OUTSIDE the scroll view so the sheet keeps its
+    // drag-to-close gesture there. Everything else scrolls together, which is
+    // what keeps the field and its suggestions reachable when the keyboard
+    // shrinks the space: this sheet opens inside a shell branch, where the
+    // body is already shrunk by the keyboard and bounds the sheet.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.m,
+            AppSpacing.xl,
+            0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: oc.border,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                if (filter != null)
-                  IconButton(
-                    onPressed: _saveCurrentLocation,
-                    icon: Icon(
-                      Icons.star_outline_rounded,
-                      color: oc.warning,
-                      size: 24,
-                    ),
-                    tooltip: l10n.locationSaveTooltip,
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.m),
-
-            // Search field
-            TextField(
-              controller: _controller,
-              autofocus: false,
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                hintText: l10n.locationSearchHint,
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  size: 20,
-                  color: oc.icons,
-                ),
-                suffixIcon: filter != null
-                    ? IconButton(
-                        onPressed: () {
-                          _controller.clear();
-                          _clearFilter();
-                        },
-                        icon: Icon(Icons.close, size: 18, color: oc.icons),
-                      )
-                    : null,
               ),
-              onChanged: _onSearchChanged,
-            ),
-            const SizedBox(height: AppSpacing.s),
+              const SizedBox(height: AppSpacing.l),
 
-            // "Use my location" button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _geoLoading ? null : _useMyLocation,
-                icon: _geoLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        Icons.my_location_rounded,
-                        size: 18,
-                        color: oc.primary,
-                      ),
-                label: Text(l10n.locationUseMyPosition),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, AppSpacing.minTouchTarget),
-                  side: BorderSide(color: oc.primary.withValues(alpha: 0.4)),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-
-            // Suggestions
-            if (_suggestions.isNotEmpty)
-              Container(
-                constraints: const BoxConstraints(maxHeight: 160),
-                margin: const EdgeInsets.only(bottom: AppSpacing.s),
-                decoration: BoxDecoration(
-                  color: oc.cardSurface,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                  border: Border.all(color: oc.border),
-                ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.zero,
-                  itemCount: _suggestions.length,
-                  separatorBuilder: (_, __) => Divider(
-                    height: 1,
-                    color: oc.border.withValues(alpha: 0.5),
-                  ),
-                  itemBuilder: (_, i) {
-                    final s = _suggestions[i];
-                    return InkWell(
-                      onTap: () => _selectSuggestion(s),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              size: 16,
-                              color: oc.secondaryText,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                s.description,
-                                style: Theme.of(context).textTheme.bodySmall,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-            // Radius slider + validate button
-            if (filter != null) ...[
-              const SizedBox(height: AppSpacing.s),
+              // Title row
               Row(
                 children: [
-                  Icon(Icons.radar_outlined, size: 16, color: oc.secondaryText),
-                  const SizedBox(width: 6),
-                  Text(
-                    l10n.locationRadius,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.labelMedium?.copyWith(color: oc.secondaryText),
-                  ),
                   Expanded(
-                    child: Slider(
-                      value: _radiusKm,
-                      min: 5,
-                      max: 200,
-                      divisions: 39,
-                      activeColor: oc.primary,
-                      inactiveColor: oc.border,
-                      onChanged: _updateRadius,
-                    ),
-                  ),
-                  SizedBox(
-                    width: 48,
                     child: Text(
-                      '${_radiusKm.round()} km',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: oc.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.end,
+                      l10n.locationTitle,
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
+                  if (filter != null)
+                    IconButton(
+                      onPressed: _saveCurrentLocation,
+                      icon: Icon(
+                        Icons.star_outline_rounded,
+                        color: oc.warning,
+                        size: 24,
+                      ),
+                      tooltip: l10n.locationSaveTooltip,
+                    ),
                 ],
               ),
               const SizedBox(height: AppSpacing.m),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.check_rounded, size: 18),
-                  label: Text(l10n.locationValidate),
-                ),
-              ),
             ],
-
-            const SizedBox(height: AppSpacing.m),
-
-            // "Toute la France" button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _clearFilter,
-                icon: const Icon(Icons.public_outlined, size: 18),
-                label: Text(l10n.locationAllAreas),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, AppSpacing.minTouchTarget),
-                  side: BorderSide(color: oc.border),
-                ),
-              ),
-            ),
-
-            // Saved locations
-            if (savedLocations.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xl),
-              Text(
-                l10n.locationMyAddresses,
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: AppSpacing.s),
-              Expanded(
-                child: ListView.separated(
-                  controller: scrollController,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount: savedLocations.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.xs),
-                  itemBuilder: (_, i) {
-                    final loc = savedLocations[i];
-                    return _SavedLocationTile(
-                      location: loc,
-                      onTap: () => _applyFavorite(loc),
-                      onDelete: () =>
-                          ref.read(savedLocationsProvider.notifier).remove(i),
-                    );
-                  },
-                ),
-              ),
-            ] else
-              const Spacer(),
-          ],
+          ),
         ),
-      ),
+        Flexible(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              0,
+              AppSpacing.xl,
+              AppSpacing.m,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Search field
+                TextField(
+                  controller: _controller,
+                  autofocus: false,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(
+                    hintText: l10n.locationSearchHint,
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      size: 20,
+                      color: oc.icons,
+                    ),
+                    suffixIcon: filter != null
+                        ? IconButton(
+                            onPressed: () {
+                              _controller.clear();
+                              _clearFilter();
+                            },
+                            icon: Icon(Icons.close, size: 18, color: oc.icons),
+                          )
+                        : null,
+                  ),
+                  onChanged: _onSearchChanged,
+                ),
+                const SizedBox(height: AppSpacing.s),
+
+                // "Use my location" button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _geoLoading ? null : _useMyLocation,
+                    icon: _geoLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            Icons.my_location_rounded,
+                            size: 18,
+                            color: oc.primary,
+                          ),
+                    label: Text(l10n.locationUseMyPosition),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, AppSpacing.minTouchTarget),
+                      side: BorderSide(
+                        color: oc.primary.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+
+                // Suggestions
+                if (_suggestions.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: AppSpacing.s),
+                    decoration: BoxDecoration(
+                      color: oc.cardSurface,
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusMedium,
+                      ),
+                      border: Border.all(color: oc.border),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      // The outer scroll view owns the drag gesture.
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: EdgeInsets.zero,
+                      itemCount: _suggestions.length,
+                      separatorBuilder: (_, __) => Divider(
+                        height: 1,
+                        color: oc.border.withValues(alpha: 0.5),
+                      ),
+                      itemBuilder: (_, i) {
+                        final s = _suggestions[i];
+                        return InkWell(
+                          onTap: () => _selectSuggestion(s),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 16,
+                                  color: oc.secondaryText,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    s.description,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                // Radius slider + validate button
+                if (filter != null) ...[
+                  const SizedBox(height: AppSpacing.s),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.radar_outlined,
+                        size: 16,
+                        color: oc.secondaryText,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        l10n.locationRadius,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: oc.secondaryText),
+                      ),
+                      Expanded(
+                        child: Slider(
+                          value: _radiusKm,
+                          min: 5,
+                          max: 200,
+                          divisions: 39,
+                          activeColor: oc.primary,
+                          inactiveColor: oc.border,
+                          onChanged: _updateRadius,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 48,
+                        child: Text(
+                          '${_radiusKm.round()} km',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: oc.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.m),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.check_rounded, size: 18),
+                      label: Text(l10n.locationValidate),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: AppSpacing.m),
+
+                // "Toute la France" button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _clearFilter,
+                    icon: const Icon(Icons.public_outlined, size: 18),
+                    label: Text(l10n.locationAllAreas),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, AppSpacing.minTouchTarget),
+                      side: BorderSide(color: oc.border),
+                    ),
+                  ),
+                ),
+
+                // Saved locations
+                if (savedLocations.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xl),
+                  Text(
+                    l10n.locationMyAddresses,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: AppSpacing.s),
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: savedLocations.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.xs),
+                    itemBuilder: (_, i) {
+                      final loc = savedLocations[i];
+                      return _SavedLocationTile(
+                        location: loc,
+                        onTap: () => _applyFavorite(loc),
+                        onDelete: () =>
+                            ref.read(savedLocationsProvider.notifier).remove(i),
+                      );
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -783,7 +855,9 @@ class _SavedLocationTile extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _SearchBar extends ConsumerStatefulWidget {
-  const _SearchBar();
+  const _SearchBar({required this.focusNode});
+
+  final FocusNode focusNode;
 
   @override
   ConsumerState<_SearchBar> createState() => _SearchBarState();
@@ -822,6 +896,7 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
       ),
       child: TextField(
         controller: _controller,
+        focusNode: widget.focusNode,
         textInputAction: TextInputAction.done,
         onChanged: (v) {
           _debounce?.cancel();
@@ -1479,7 +1554,7 @@ class _ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final oc = context.oc;
-    return Center(
+    return ScrollSafeCenter(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xxxl),
         child: Column(

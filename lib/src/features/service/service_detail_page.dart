@@ -24,6 +24,7 @@ import '../shared/gender_icon.dart';
 import '../shared/identity_trust_signal.dart';
 import 'service_zones_map.dart';
 import '../shared/user_avatar.dart';
+import '../shared/app_sheet.dart';
 
 class ServiceDetailPage extends ConsumerWidget {
   const ServiceDetailPage({
@@ -679,10 +680,11 @@ class _BookingBottomBarState extends ConsumerState<_BookingBottomBar> {
 
   void _openBookingSheet(BuildContext context) {
     final service = widget.service;
-    showModalBottomSheet<void>(
+    showAppSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      maxHeightFraction: 0.85,
       builder: (_) => BookingRequestSheet(
         serviceId: service.id,
         providerId: service.providerId,

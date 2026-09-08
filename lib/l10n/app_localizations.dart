@@ -4267,6 +4267,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get avatarSheetClose;
+
+  /// No description provided for @countryPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Country code'**
+  String get countryPickerTitle;
+
+  /// No description provided for @countryPickerSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search a country…'**
+  String get countryPickerSearchHint;
 }
 
 class _AppLocalizationsDelegate
