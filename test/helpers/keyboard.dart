@@ -65,6 +65,12 @@ void expectAboveKeyboard(
 /// that has its bottom inset removed and is shrunk by the keyboard. This is
 /// the harness for any sheet reachable from a shell branch (home, provider
 /// dashboard, profile).
+///
+/// Caveat: inside this harness the body is already shrunk to
+/// `surfaceHeight - inset`, so [expectAboveKeyboard] is satisfied by anything
+/// laid out in the body. Its real content here is "no overflow and inside the
+/// shrunk body"; reachability is proven by an actual `tester.drag` on the
+/// sheet's scroll view (see the location sheet tests).
 Widget shellLike(Widget page) {
   return Scaffold(
     body: Navigator(

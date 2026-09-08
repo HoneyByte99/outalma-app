@@ -101,6 +101,18 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    testWidgets(
+      'picking a country closes the sheet and applies its dial code',
+      (tester) async {
+        await openPicker(tester);
+        await tester.tap(inList('S\u00e9n\u00e9gal'));
+        await tester.pumpAndSettle();
+        expect(find.byType(ListView), findsNothing);
+        expect(find.text('+221'), findsOneWidget);
+        expect(find.text('+33'), findsNothing);
+      },
+    );
+
     testWidgets('an UNACCENTED query finds an ACCENTED country', (
       tester,
     ) async {

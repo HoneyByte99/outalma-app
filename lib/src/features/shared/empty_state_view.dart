@@ -9,6 +9,10 @@ import 'scroll_safe_center.dart';
 /// Presentational and stateless so callers own the copy and the action. Reused
 /// across discovery surfaces to keep empty states consistent (design bar:
 /// "good loading, empty, and error states", reusable components).
+///
+/// Needs a bounded height (an `Expanded` slot or a sized box): it scrolls
+/// instead of overflowing when the keyboard squeezes it, so it cannot sit in
+/// an unbounded column.
 class EmptyStateView extends StatelessWidget {
   const EmptyStateView({
     super.key,

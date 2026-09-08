@@ -147,14 +147,17 @@ void main() {
         last,
         find.ancestor(of: last, matching: find.byType(ListView)).first,
       );
-      await tester.scrollUntilVisible(
-        last,
-        100,
-        scrollable: find.byType(Scrollable).last,
-      );
+      // The sheet's own scroll view, not the inner NeverScrollable list.
+      final sheetScrollable = find
+          .descendant(
+            of: find.byType(SingleChildScrollView).last,
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.scrollUntilVisible(last, 100, scrollable: sheetScrollable);
       await tester.pumpAndSettle();
       expectAboveKeyboard(tester, last, inset: kReferenceKeyboard);
-      await tester.drag(find.byType(Scrollable).last, const Offset(0, 400));
+      await tester.drag(sheetScrollable, const Offset(0, 400));
       await tester.pumpAndSettle();
       final validate = find.widgetWithText(ElevatedButton, 'Valider');
       expect(validate, findsOneWidget);
