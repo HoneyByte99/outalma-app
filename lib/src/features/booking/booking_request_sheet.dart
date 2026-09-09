@@ -629,6 +629,11 @@ class _BookingRequestSheetState extends ConsumerState<BookingRequestSheet> {
                   ),
                 ],
               ),
+              // Breathing room under the action row, but only where the
+              // system leaves none: the SafeArea above already inset the
+              // whole sheet by the home indicator on the devices that have
+              // one (bottomPadding > 0), and stacking 12 px on top of it
+              // would read as a gap.
               SizedBox(height: bottomPadding > 0 ? 0 : 12),
             ],
           ),

@@ -157,6 +157,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   /// after the frame, once `maxScrollExtent` reflects the new geometry. Two
   /// layout passes in one frame register two callbacks and the last wins,
   /// which loses the first delta; the next frame compensates again.
+  /// How far from `maxScrollExtent` still counts as "resting at the bottom".
+  /// One logical pixel, i.e. the sub-pixel slack a jumpTo or a fling leaves
+  /// behind: any larger value would treat a user who scrolled up by a hair as
+  /// pinned to the bottom and drag their view down under them.
+  static const double _atBottomTolerance = 1.0;
+
+  /// Forgets the message list's last viewport height. Called from every
+  /// branch that does NOT mount the list (loading, error, empty thread): a
+  /// first measurement after the list comes back would otherwise be compared
+  /// with a height measured before it went away, and shift the view by a
+  /// delta that means nothing.
+  void _forgetViewportHeight() => _lastViewportHeight = null;
+
   void _compensateViewportChange(double height) {
     final previous = _lastViewportHeight;
     _lastViewportHeight = height;
@@ -168,7 +181,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     final position = _scrollController.position;
     final pixelsBefore = position.pixels;
-    final atBottom = pixelsBefore >= position.maxScrollExtent - 1;
+    final atBottom =
+        pixelsBefore >= position.maxScrollExtent - _atBottomTolerance;
     final delta = previous - height;
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
@@ -887,34 +901,40 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           // ---- Messages ----
           Expanded(
             child: messagesAsync.when(
-              loading: () => Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: oc.primary,
-                ),
-              ),
-              error: (_, __) => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.cloud_off_rounded, size: 40, color: oc.icons),
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.chatLoadError,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: oc.secondaryText),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () =>
-                          ref.invalidate(chatMessagesProvider(widget.chatId)),
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: Text(l10n.retry),
-                    ),
-                  ],
-                ),
-              ),
+              loading: () {
+                _forgetViewportHeight();
+                return Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: oc.primary,
+                  ),
+                );
+              },
+              error: (_, __) {
+                _forgetViewportHeight();
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.cloud_off_rounded, size: 40, color: oc.icons),
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.chatLoadError,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: oc.secondaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            ref.invalidate(chatMessagesProvider(widget.chatId)),
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: Text(l10n.retry),
+                      ),
+                    ],
+                  ),
+                );
+              },
               data: (allMessages) {
                 // Hide messages from users the current user has blocked.
                 final messages = blocked.isEmpty
@@ -923,6 +943,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           .where((m) => !blocked.contains(m.senderId))
                           .toList();
                 if (messages.isEmpty) {
+                  _forgetViewportHeight();
                   return _EmptyChat();
                 }
                 // Auto-scroll only when the newest message changes (a real new

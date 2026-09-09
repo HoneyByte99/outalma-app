@@ -45,6 +45,16 @@ Future<T?> showAppSheet<T>({
   );
 }
 
+/// [maxHeightFraction] of a sheet that must leave the page behind it clearly
+/// visible, because that page is the context of the choice being made: the
+/// country picker, opened from the phone field it is about.
+const double sheetFractionCompact = 0.65;
+
+/// [maxHeightFraction] of a sheet that owns nearly the whole screen and only
+/// keeps a strip of the page visible, so it still reads as a sheet and not as
+/// a route: the location picker, the booking request.
+const double sheetFractionTall = 0.85;
+
 /// Pure: the tallest a sheet may be so that it stays above a keyboard of
 /// [keyboardInset] pixels while never exceeding [fraction] of the screen.
 double sheetMaxHeight({

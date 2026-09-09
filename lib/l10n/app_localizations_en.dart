@@ -2298,7 +2298,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get avatarSheetClose => 'Close';
+  String get sheetClose => 'Close';
 
   @override
   String get countryPickerTitle => 'Country code';

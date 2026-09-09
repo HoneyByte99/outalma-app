@@ -4262,11 +4262,11 @@ abstract class AppLocalizations {
   /// **'Skin tone {index} of {total}'**
   String avatarSkinToneItem(int index, int total);
 
-  /// No description provided for @avatarSheetClose.
+  /// No description provided for @sheetClose.
   ///
   /// In en, this message translates to:
   /// **'Close'**
-  String get avatarSheetClose;
+  String get sheetClose;
 
   /// No description provided for @countryPickerTitle.
   ///
