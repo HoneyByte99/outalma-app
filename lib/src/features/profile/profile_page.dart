@@ -1096,36 +1096,9 @@ class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
         : '';
     final controller = TextEditingController(text: currentEmail);
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showExportRequestDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.exportRequestTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.exportRequestBody),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.done,
-              autofillHints: const [AutofillHints.email],
-              decoration: InputDecoration(labelText: l10n.exportRequestEmail),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.bookingBack),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.exportRequestSend),
-          ),
-        ],
-      ),
+      controller: controller,
     );
 
     final email = controller.text.trim();
@@ -1201,6 +1174,53 @@ class _ExportDataTileState extends ConsumerState<_ExportDataTile> {
       ),
     );
   }
+}
+
+/// The export-request dialog: confirm or correct the destination email.
+///
+/// Exposed for tests, and for a reason of its own: this dialog's geometry is
+/// only provable in isolation. At the 200 % text scale it has to survive, the
+/// profile page behind it has row overflows of its own, and driving the whole
+/// page to reach this dialog would report those instead.
+@visibleForTesting
+Future<bool?> showExportRequestDialog({
+  required BuildContext context,
+  required TextEditingController controller,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      // A 200 % text scale on a small phone must scroll, not clip the field.
+      scrollable: true,
+      title: Text(l10n.exportRequestTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.exportRequestBody),
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.email],
+            decoration: InputDecoration(labelText: l10n.exportRequestEmail),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(l10n.bookingBack),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(l10n.exportRequestSend),
+        ),
+      ],
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
