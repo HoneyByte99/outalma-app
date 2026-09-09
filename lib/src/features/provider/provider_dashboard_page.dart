@@ -421,9 +421,14 @@ class _ProviderHubCardState extends ConsumerState<_ProviderHubCard> {
       context: context,
       useSafeArea: false,
       showDragHandle: true,
+      // isScrollControlled drops the SDK's 9/16 cap: with a keyboard open the
+      // usable height goes from 84 px to 667 - 291 = 376 px on a 375x667
+      // device, which fits this sheet's own ~289 px.
+      isScrollControlled: true,
       // The drag handle sits outside this builder, so the whole body may
-      // scroll: with a keyboard open the bounded height drops well under the
-      // content's own (~289 px), and a fixed Column would overflow instead.
+      // scroll. It stays the safety net for what 376 px still does not fit
+      // (a taller keyboard, a large text scale): a fixed Column would
+      // overflow instead.
       builder: (ctx) => SafeArea(
         child: SingleChildScrollView(
           child: Padding(

@@ -400,10 +400,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       backgroundColor: oc.surface,
       // A long press does not unfocus the composer and the thread only
       // dismisses the keyboard on a drag, so this sheet usually opens with
-      // the keyboard up: 84 px of usable height on a 375x667 device, for
-      // ~233 px of actions. Everything scrolls, reaction row included, so
-      // that the whole 84 px goes to the content (pinning the row would
-      // leave 18 px, too little for a single 56 px action row).
+      // the keyboard up. isScrollControlled drops the SDK's 9/16 cap, which
+      // is what left only 84 px above the keyboard on a 375x667 device for
+      // ~233 px of actions: the usable height becomes 667 - 291 = 376 px and
+      // the actions fit. The scroll view below stays the safety net (a
+      // taller keyboard, a large text scale, one more action), and it wraps
+      // everything, reaction row included, so all of that height goes to the
+      // content.
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
         child: SingleChildScrollView(
           child: Column(
