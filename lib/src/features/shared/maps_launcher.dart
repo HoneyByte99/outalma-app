@@ -147,12 +147,17 @@ Future<_MapsOption?> _pickMapsApp(
     context: context,
     useSafeArea: false,
     showDragHandle: true,
+    // isScrollControlled drops the SDK's 9/16 cap: a keyboard still open when
+    // this sheet opens used to leave it 84 px on a 375x667 device, less than
+    // the title plus a single 56 px option. The usable height becomes
+    // 667 - 291 = 376 px.
+    isScrollControlled: true,
     builder: (ctx) {
       return SafeArea(
         // The drag handle sits outside this builder, so the whole body may
-        // scroll. It has to: a keyboard still open when this sheet opens
-        // leaves it 84 px on a 375x667 device, less than the title plus a
-        // single 56 px option, and a fixed Column would overflow.
+        // scroll. It stays the safety net for a long list of map apps, a
+        // taller keyboard or a large text scale, where a fixed Column would
+        // overflow.
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,

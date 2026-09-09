@@ -684,7 +684,7 @@ class _BookingBottomBarState extends ConsumerState<_BookingBottomBar> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      maxHeightFraction: 0.85,
+      maxHeightFraction: sheetFractionTall,
       builder: (_) => BookingRequestSheet(
         serviceId: service.id,
         providerId: service.providerId,

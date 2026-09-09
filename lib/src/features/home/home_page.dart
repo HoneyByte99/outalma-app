@@ -79,6 +79,12 @@ class _HomePageState extends ConsumerState<HomePage> {
   /// the bottom inset is already removed from the MediaQuery.
   final _searchFocus = FocusNode();
 
+  /// How long the greeting takes to fold away. Deliberately shorter than the
+  /// ~250 ms the keyboard takes to slide in: the room has to be there before
+  /// the keyboard finishes covering the grid, or the user sees the grid
+  /// squeezed for a beat and then jump.
+  static const _greetingFoldDuration = Duration(milliseconds: 150);
+
   @override
   void dispose() {
     _searchFocus.dispose();
@@ -115,7 +121,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ListenableBuilder(
             listenable: _searchFocus,
             builder: (context, _) => AnimatedSize(
-              duration: const Duration(milliseconds: 150),
+              duration: _greetingFoldDuration,
               alignment: Alignment.topLeft,
               child: Visibility(
                 visible: !_searchFocus.hasFocus,
@@ -265,7 +271,7 @@ class _LocationPill extends ConsumerWidget {
           top: Radius.circular(AppSpacing.radiusXLarge),
         ),
       ),
-      maxHeightFraction: 0.85,
+      maxHeightFraction: sheetFractionTall,
       builder: (_) => const _LocationSheet(),
     );
   }

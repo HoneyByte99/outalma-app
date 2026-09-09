@@ -40,6 +40,9 @@ class IdentityCaptureHostPage extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
+        // A 200 % text scale on a small phone must scroll, not clip the
+        // support reference the user has to read out.
+        scrollable: true,
         title: Text(l10n.identityLivenessSupportTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,

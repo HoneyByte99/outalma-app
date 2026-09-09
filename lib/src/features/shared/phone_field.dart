@@ -148,7 +148,7 @@ class _PhoneFieldState extends State<PhoneField> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      maxHeightFraction: 0.65,
+      maxHeightFraction: sheetFractionCompact,
       builder: (_) => _CountryPickerSheet(selected: _country),
     );
     if (selected != null && selected != _country) {
@@ -356,7 +356,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => Navigator.of(context).pop(),
-                  tooltip: l10n.avatarSheetClose,
+                  tooltip: l10n.sheetClose,
                   iconSize: 20,
                   color: oc.icons,
                 ),

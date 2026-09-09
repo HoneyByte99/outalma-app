@@ -134,7 +134,7 @@ class _AvatarPickerSheetState extends State<AvatarPickerSheet> {
                       onPressed: () => Navigator.of(context).pop(),
                       iconSize: 20,
                       color: oc.icons,
-                      tooltip: l10n.avatarSheetClose,
+                      tooltip: l10n.sheetClose,
                     ),
                   ],
                 ),

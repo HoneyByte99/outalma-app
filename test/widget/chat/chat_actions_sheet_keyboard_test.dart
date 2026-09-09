@@ -7,10 +7,17 @@
 // sheet reads the real inset.
 //
 // Geometry on the reference device (375x667, keyboard 291): the SDK caps a
-// non scroll-controlled sheet at 9/16 of the screen (375 px), then
+// NON scroll-controlled sheet at 9/16 of the screen (375 px), then
 // KeyboardAwareSheet caps it again at 375 - 291 = 84 px. The actions measure
-// ~233 px, so a fixed Column overflowed by ~150 px and painted its last rows
-// under the keyboard. They must scroll instead.
+// ~243 px, so a fixed Column overflowed by ~160 px and painted its last rows
+// under the keyboard.
+//
+// The sheet is scroll-controlled now, which drops the 9/16 cap: the usable
+// height is 667 - 291 = 376 px and the actions fit, with no gesture needed.
+// The SingleChildScrollView stays as the safety net for the cases that still
+// do not fit, so both properties are asserted here: portrait, the actions are
+// reachable with no gesture at all; landscape (667x375, keyboard ~200), they
+// are reachable by a drag.
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -93,9 +100,28 @@ List<ChatMessage> _incomingThread() => List.generate(
   ),
 );
 
+/// The same phone sideways: an iOS landscape keyboard is shorter than the
+/// portrait one, and the screen is shorter still.
+const double _landscapeKeyboard = 200;
+
+/// The last action of the sheet, the one a fixed Column pushed under the
+/// keyboard.
+Finder _lastAction() => find.ancestor(
+  of: find.byIcon(Icons.flag_outlined),
+  matching: find.byType(ListTile),
+);
+
+/// The sheet's own scroll view. `.first` on the inner Scrollable is not needed
+/// here: an action row holds no editable text.
+ScrollPosition _sheetPosition(WidgetTester tester, Finder sheetScroll) => tester
+    .state<ScrollableState>(
+      find.descendant(of: sheetScroll, matching: find.byType(Scrollable)),
+    )
+    .position;
+
 void main() {
-  testWidgets('the long-press action sheet scrolls instead of overflowing '
-      'when the keyboard is open', (tester) async {
+  testWidgets('the long-press action sheet fits above the keyboard, with no '
+      'gesture needed', (tester) async {
     useSurface(tester, kReferenceSurface);
     // The composer was focused, so the keyboard is already up when the user
     // long-presses a message.
@@ -111,15 +137,10 @@ void main() {
     expect(
       tester.takeException(),
       isNull,
-      reason: 'the action sheet overflows its 84 px of usable height',
+      reason: 'the action sheet overflows its usable height',
     );
 
-    // The last action of the sheet, the one a fixed Column pushed under the
-    // keyboard.
-    final lastAction = find.ancestor(
-      of: find.byIcon(Icons.flag_outlined),
-      matching: find.byType(ListTile),
-    );
+    final lastAction = _lastAction();
     expect(lastAction, findsOneWidget);
     final sheetScroll = find.ancestor(
       of: lastAction,
@@ -127,19 +148,65 @@ void main() {
     );
     expect(sheetScroll, findsOneWidget);
 
-    // The geometry this test is about: 375 px (SDK cap, 9/16 of 667) minus
-    // the 291 px keyboard.
+    // The geometry this test is about. The old 9/16 cap left 84 px here; a
+    // scroll-controlled sheet is bounded by the keyboard alone, so the whole
+    // 667 - 291 = 376 px is available and the ~243 px of actions fit in it.
+    final height = tester.getRect(sheetScroll).height;
     expect(
-      tester.getRect(sheetScroll).height,
-      closeTo(667 * 9 / 16 - kReferenceKeyboard, 1),
+      height,
+      greaterThan(667 * 9 / 16 - kReferenceKeyboard),
+      reason: 'the SDK 9/16 cap is back, isScrollControlled was lost',
     );
-    // Space really is short here: without a scrollable there would be nothing
-    // to reach the last rows with.
-    final position = tester
-        .state<ScrollableState>(
-          find.descendant(of: sheetScroll, matching: find.byType(Scrollable)),
-        )
-        .position;
+    expect(
+      height,
+      lessThanOrEqualTo(667 - kReferenceKeyboard + 0.5),
+      reason: 'the sheet is taller than the space above the keyboard',
+    );
+
+    // Everything fits: the user reaches the last action without scrolling at
+    // all, which is the point of dropping the cap.
+    expect(_sheetPosition(tester, sheetScroll).maxScrollExtent, 0);
+    expectInsideBox(tester, lastAction, sheetScroll);
+    expectAboveKeyboard(tester, sheetScroll, inset: kReferenceKeyboard);
+    expectAboveKeyboard(tester, lastAction, inset: kReferenceKeyboard);
+  });
+
+  testWidgets('landscape, where the actions still do not fit: the scroll view '
+      'is the safety net', (tester) async {
+    // The same phone held sideways: 667x375, and a landscape keyboard is
+    // about 200 px. That leaves the sheet 175 px for its ~235 px of actions,
+    // so here it is the scrollable, not the height, that makes the last
+    // action reachable.
+    useSurface(tester, const Size(667, 375));
+    // The keyboard is raised AFTER the sheet opens, and that order is a
+    // harness constraint rather than a scenario: with 175 px left, the app
+    // bar and the composer eat the whole thread and there is no bubble to
+    // long-press. What is asserted below is the sheet's geometry under
+    // 175 px, which is the same whichever way it got there.
+    final inset = ValueNotifier<double>(0);
+    await tester.pumpWidget(_app(_incomingThread(), inset));
+    await _settle(tester);
+
+    // Sideways the thread shows fewer bubbles: long-press whichever one is on
+    // screen, the actions are the same for every incoming message.
+    await tester.longPress(
+      find.textContaining('message number').hitTestable().last,
+    );
+    await _settle(tester);
+
+    inset.value = _landscapeKeyboard;
+    await _settle(tester);
+
+    final lastAction = _lastAction();
+    expect(lastAction, findsOneWidget);
+    final sheetScroll = find.ancestor(
+      of: lastAction,
+      matching: find.byType(SingleChildScrollView),
+    );
+    expect(sheetScroll, findsOneWidget);
+
+    // Space really is short here, so the drag below is not vacuous.
+    final position = _sheetPosition(tester, sheetScroll);
     expect(
       position.maxScrollExtent,
       greaterThan(0),
@@ -155,7 +222,7 @@ void main() {
     expect(position.pixels, closeTo(position.maxScrollExtent, 0.5));
 
     expectInsideBox(tester, lastAction, sheetScroll);
-    expectAboveKeyboard(tester, sheetScroll, inset: kReferenceKeyboard);
-    expectAboveKeyboard(tester, lastAction, inset: kReferenceKeyboard);
+    expectAboveKeyboard(tester, sheetScroll, inset: _landscapeKeyboard);
+    expectAboveKeyboard(tester, lastAction, inset: _landscapeKeyboard);
   });
 }
