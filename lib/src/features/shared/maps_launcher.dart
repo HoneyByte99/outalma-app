@@ -149,27 +149,33 @@ Future<_MapsOption?> _pickMapsApp(
     showDragHandle: true,
     builder: (ctx) {
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Ouvrir avec',
-                  style: Theme.of(ctx).textTheme.titleMedium,
+        // The drag handle sits outside this builder, so the whole body may
+        // scroll. It has to: a keyboard still open when this sheet opens
+        // leaves it 84 px on a 375x667 device, less than the title plus a
+        // single 56 px option, and a fixed Column would overflow.
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Ouvrir avec',
+                    style: Theme.of(ctx).textTheme.titleMedium,
+                  ),
                 ),
               ),
-            ),
-            for (final opt in options)
-              ListTile(
-                leading: Icon(opt.icon),
-                title: Text(opt.label),
-                onTap: () => Navigator.of(ctx).pop(opt),
-              ),
-            const SizedBox(height: 8),
-          ],
+              for (final opt in options)
+                ListTile(
+                  leading: Icon(opt.icon),
+                  title: Text(opt.label),
+                  onTap: () => Navigator.of(ctx).pop(opt),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       );
     },
