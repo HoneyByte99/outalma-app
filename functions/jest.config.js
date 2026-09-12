@@ -20,6 +20,16 @@ module.exports = {
   coverageReporters: ['text-summary', 'lcov'],
   coverageThreshold: {
     global: { statements: 25, branches: 25, functions: 25, lines: 25 },
+    // Budget line T5b on the module this increment adds. It holds every rule
+    // that guards a billed API, so the floor is on the file that can actually
+    // carry one: auth_phone.ts is excluded on purpose, the two verify*
+    // callables being out of this increment's scope and occupying most of it.
+    './src/otp_rate_limit.ts': {
+      lines: 80,
+      branches: 80,
+      functions: 80,
+      statements: 80,
+    },
     './src/identity_verification.ts': {
       lines: 80,
       branches: 80,
