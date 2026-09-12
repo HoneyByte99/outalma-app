@@ -713,6 +713,14 @@
       }
     }
   },
+  "otpResendInMinutes": "Renvoyer dans {minutes} min",
+  "@otpResendInMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "otpResend": "Renvoyer le code",
   "otpErrorTooSoon": "Trop tôt. Réessayez dans {seconds}s.",
   "@otpErrorTooSoon": {

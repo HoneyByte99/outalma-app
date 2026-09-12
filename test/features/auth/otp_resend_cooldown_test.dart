@@ -86,4 +86,39 @@ void main() {
       );
     }
   });
+
+  group('the countdown label', () {
+    test('switches to minutes once seconds stop being readable', () {
+      // A ceiling refusal is tens of minutes away. "Renvoyer dans 14700s" is
+      // not a number anyone reads, and the snackbar beside it already says
+      // "25 min": the two contradicting each other is worse than either alone.
+      expect(otpResendCountdownLabel(fr, 60), contains('60s'));
+      expect(otpResendCountdownLabel(fr, 119), contains('119s'));
+      expect(otpResendCountdownLabel(fr, 1500), contains('25 min'));
+      expect(otpResendCountdownLabel(en, 1500), contains('25 min'));
+    });
+
+    test('agrees with the sentence shown beside it, to the minute', () {
+      // Same delay, two places on screen: they must not disagree.
+      const seconds = 1500;
+      expect(otpResendCountdownLabel(fr, seconds), contains('25'));
+      expect(
+        otpRequestErrorMessage(
+          fr,
+          const OtpRequestError(
+            OtpRequestErrorKind.quotaExceeded,
+            retryAfterMs: seconds * 1000,
+          ),
+        ),
+        contains('25'),
+      );
+    });
+
+    test('rounds minutes UP, like every other delay in this flow', () {
+      // 121 s reads as 3 min, never 2: told short, the label would promise the
+      // button back before the server would take the request.
+      expect(otpResendCountdownLabel(fr, 121), contains('3 min'));
+      expect(otpResendCountdownLabel(fr, 180), contains('3 min'));
+    });
+  });
 }

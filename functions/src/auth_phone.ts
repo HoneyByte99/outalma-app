@@ -4,8 +4,13 @@
 //
 // Three callable functions form the canonical phone-auth pipeline:
 //
-//   requestPhoneOtp({ phone, channel? })
-//     → Sends an OTP via Twilio Verify on the requested channel (sms|call).
+//   requestPhoneOtp({ phone })
+//     → Sends an OTP via Twilio Verify. The channel is FORCED to SMS
+//       server-side: any other value is refused with `invalid-argument`.
+//       Rate-limited BEFORE Twilio is touched (budget line S8), so a refusal
+//       costs nothing; it carries a stable `details.code` and, when the wait is
+//       a wait, a `retryAfterMs`. A success carries `retryAfterMs` too: the
+//       delay before a resend would be accepted.
 //
 //   verifyPhoneOtpAndSignIn({ phone, code })
 //     → Confirms the code, returns a Firebase custom token for the existing

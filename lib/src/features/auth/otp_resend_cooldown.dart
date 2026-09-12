@@ -56,6 +56,15 @@ mixin OtpResendCooldown<T extends StatefulWidget> on State<T> {
     });
   }
 
+  /// Stops the countdown outright, for a screen leaving the OTP step.
+  ///
+  /// UNTESTED, and knowingly so: mutation shows that removing every call to it
+  /// leaves the whole suite green, because nothing observes its effect. Coming
+  /// back to the OTP step always goes through a fresh send, and that send calls
+  /// [startResendCooldown] again, which cancels and replaces the timer whatever
+  /// state it was in. All this buys is a timer that stops ticking on a screen
+  /// that no longer shows it: worth doing, not worth a test that would only
+  /// assert its own setup.
   void clearResendCooldown() {
     _cooldownTimer?.cancel();
     _cooldownTimer = null;
@@ -68,6 +77,22 @@ mixin OtpResendCooldown<T extends StatefulWidget> on State<T> {
     super.dispose();
   }
 }
+
+/// Above this, a countdown is told in minutes. A ceiling refusal is tens of
+/// minutes away, and "Renvoyer dans 14700s" is not a number anyone reads: the
+/// snackbar next to it already says "25 min", and the two contradicting each
+/// other on the same screen is worse than either alone.
+const _kCountdownMinutesFrom = 120;
+
+/// The label of the resend button while the countdown runs.
+String otpResendCountdownLabel(AppLocalizations l10n, int seconds) =>
+    seconds >= _kCountdownMinutesFrom
+    ? l10n.otpResendInMinutes(_toMinutes(seconds))
+    : l10n.otpResendIn(seconds);
+
+/// Rounds UP, like every other delay in this flow: a minute told short would
+/// re-enable the button straight into the refusal.
+int _toMinutes(int seconds) => (seconds + 59) ~/ 60;
 
 /// The user-facing sentence for a refused OTP request (U3: a kind, never a
 /// technical code).
@@ -88,7 +113,7 @@ String otpRequestErrorMessage(AppLocalizations l10n, OtpRequestError error) {
       // tens of minutes, and a four-figure second count reads as noise.
       return seconds == null
           ? l10n.authErrorOtpSend
-          : l10n.otpErrorQuotaExceeded((seconds + 59) ~/ 60);
+          : l10n.otpErrorQuotaExceeded(_toMinutes(seconds));
     case OtpRequestErrorKind.prefixNotServed:
       return l10n.otpErrorPrefixNotServed;
     case OtpRequestErrorKind.serviceClosed:

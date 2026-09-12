@@ -2864,6 +2864,12 @@ abstract class AppLocalizations {
   /// **'Resend in {seconds}s'**
   String otpResendIn(int seconds);
 
+  /// No description provided for @otpResendInMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend in {minutes} min'**
+  String otpResendInMinutes(int minutes);
+
   /// No description provided for @otpResend.
   ///
   /// In en, this message translates to:

@@ -424,7 +424,10 @@ class _SignInPageState extends ConsumerState<SignInPage>
                       child: Text(
                         canResendOtp
                             ? l10n.phoneOtpResend
-                            : l10n.otpResendIn(resendCooldownSeconds),
+                            : otpResendCountdownLabel(
+                                l10n,
+                                resendCooldownSeconds,
+                              ),
                       ),
                     ),
                   ),

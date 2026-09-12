@@ -1516,6 +1516,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String otpResendInMinutes(int minutes) {
+    return 'Resend in $minutes min';
+  }
+
+  @override
   String get otpResend => 'Resend code';
 
   @override

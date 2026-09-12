@@ -2,6 +2,8 @@
 // Strategy: override authNotifierProvider + themeModeProvider to bypass
 // Firebase. Verify smoke render, email field, and submit button presence.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,12 +31,18 @@ class _FakeAuthNotifier extends AuthNotifier {
   @override
   Future<AuthState> build() async => const AuthUnauthenticated();
 
+  /// Set to hold the call open, so a test can dispose the page while the
+  /// request is still in flight.
+  Completer<OtpRequestOutcome>? pending;
+
   @override
-  Future<OtpRequestOutcome> requestPhoneOtp(String phoneE164) async {
+  Future<OtpRequestOutcome> requestPhoneOtp(String phoneE164) {
     otpRequests.add(phoneE164);
+    final held = pending;
+    if (held != null) return held.future;
     final r = refusal;
-    if (r != null) throw r;
-    return outcome;
+    if (r != null) return Future<OtpRequestOutcome>.error(r);
+    return Future<OtpRequestOutcome>.value(outcome);
   }
 
   @override
@@ -211,21 +219,27 @@ void main() {
         expect(tester.widget<TextButton>(resendButton()).onPressed, isNull);
       });
 
-      testWidgets('editing the number drops the countdown with its timer', (
+      testWidgets('a refusal landing after the user left does not throw', (
         tester,
       ) async {
-        auth.outcome = const OtpRequestOutcome(retryAfterMs: 600000);
+        // The countdown starts on the refusal path too, and that path has no
+        // `mounted` guard of its own: without the one inside the mixin, this
+        // is setState on a disposed State, thrown out of an async gap nobody
+        // catches.
+        final pending = Completer<OtpRequestOutcome>();
+        auth.pending = pending;
         await goToOtpStep(tester);
-        expect(find.text('Renvoyer dans 600s'), findsOneWidget);
 
-        // Back on the number step there is no resend button left to gate, and
-        // a ten-minute timer left running would keep rebuilding a screen that
-        // no longer shows it (and would fail this test outright on teardown
-        // with "A Timer is still pending").
-        await tester.tap(find.text('Modifier le numéro'));
+        await tester.pumpWidget(const SizedBox());
+        pending.completeError(
+          const OtpRequestError(
+            OtpRequestErrorKind.backoff,
+            retryAfterMs: 60000,
+          ),
+        );
         await tester.pump();
 
-        expect(find.textContaining('Renvoyer dans'), findsNothing);
+        expect(tester.takeException(), isNull);
       });
 
       testWidgets('says WHY, and differently for each refusal', (tester) async {

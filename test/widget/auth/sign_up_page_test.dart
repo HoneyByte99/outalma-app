@@ -344,7 +344,11 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.textContaining('25 min'), findsOneWidget);
+      // Two places on screen at the same instant: the snackbar and the button
+      // beneath it. They must agree. They did not before: the button showed
+      // raw seconds and read "Renvoyer dans 1500s" under a message saying
+      // 25 min.
+      expect(find.textContaining('25 min'), findsNWidgets(2));
     });
 
     testWidgets('the service-wide closure is not dressed up as a wait', (
