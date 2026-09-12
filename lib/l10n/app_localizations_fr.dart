@@ -1535,6 +1535,32 @@ class AppLocalizationsFr extends AppLocalizations {
   String get otpResend => 'Renvoyer le code';
 
   @override
+  String otpErrorTooSoon(int seconds) {
+    return 'Trop tôt. Réessayez dans ${seconds}s.';
+  }
+
+  @override
+  String otpErrorQuotaExceeded(int minutes) {
+    return 'Trop de codes demandés pour ce numéro. Réessayez dans $minutes min.';
+  }
+
+  @override
+  String get otpErrorPrefixNotServed =>
+      'Ce pays n\'est pas encore desservi. Choisissez un autre indicatif.';
+
+  @override
+  String get otpErrorServiceClosed =>
+      'L\'envoi de codes est momentanément suspendu. Réessayez plus tard.';
+
+  @override
+  String get otpErrorInvalidPhone =>
+      'Ce numéro n\'est pas valide. Vérifiez-le.';
+
+  @override
+  String get otpErrorNetwork =>
+      'Connexion interrompue. Vérifiez votre réseau et réessayez.';
+
+  @override
   String get otpError => 'Code incorrect. Réessayez.';
 
   @override

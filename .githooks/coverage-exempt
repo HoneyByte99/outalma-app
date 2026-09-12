@@ -42,3 +42,16 @@ lib/src/data/services/log_session_service.dart
 # Functions' own tests (functions/test/*.test.ts) and by every caller above
 # this transport.
 lib/src/data/services/callable_function_client.dart
+# Same shape again: the CallableFunctionClient transport is untestable Firebase
+# plumbing, and the port's only contract (never throw raw) is covered in
+# test/data/services/functions_phone_otp_service_test.dart. Every decision it
+# sits behind is tested elsewhere: the refusal mapping in
+# test/domain/auth/otp_request_error_test.dart, the delay arithmetic in
+# test/application/auth/phone_otp_port_test.dart, and the screen behaviour in
+# the two auth widget tests.
+lib/src/data/services/functions_phone_otp_service.dart
+# Riverpod wiring for auth, structural like identity_capture_providers.dart
+# above: it only instantiates Firebase-backed singletons (FirebaseAuth,
+# FirebaseFirestore) which throw without an initialised app, so reading these
+# providers in a test measures nothing but the throw.
+lib/src/application/auth/auth_providers.dart

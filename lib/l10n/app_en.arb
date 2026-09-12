@@ -734,6 +734,26 @@
     }
   },
   "otpResend": "Resend code",
+  "otpErrorTooSoon": "Too soon. Try again in {seconds}s.",
+  "@otpErrorTooSoon": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "otpErrorQuotaExceeded": "Too many codes requested for this number. Try again in {minutes} min.",
+  "@otpErrorQuotaExceeded": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "otpErrorPrefixNotServed": "This country is not served yet. Pick another dial code.",
+  "otpErrorServiceClosed": "Code sending is paused for now. Please try again later.",
+  "otpErrorInvalidPhone": "This number is not valid. Please check it.",
+  "otpErrorNetwork": "Connection lost. Check your network and try again.",
   "otpError": "Incorrect code. Please try again.",
   "otpPhoneError": "Could not send code. Check the number.",
   "phoneNameTitle": "Your name",

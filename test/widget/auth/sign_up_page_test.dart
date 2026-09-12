@@ -15,7 +15,9 @@ import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/application/auth/auth_notifier.dart';
 import 'package:outalma_app/src/application/auth/auth_providers.dart';
 import 'package:outalma_app/src/application/auth/auth_state.dart';
+import 'package:outalma_app/src/application/auth/phone_otp_port.dart';
 import 'package:outalma_app/src/application/theme/theme_provider.dart';
+import 'package:outalma_app/src/domain/auth/otp_request_error.dart';
 import 'package:outalma_app/src/domain/enums/gender.dart';
 import 'package:outalma_app/src/features/auth/sign_up_page.dart';
 
@@ -40,12 +42,19 @@ class _FakeAuthNotifier extends AuthNotifier {
     emailSignUps.add(gender);
   }
 
+  /// What the next send answers. The default is what the real server sends on
+  /// a first successful request: the first backoff step, 60 s.
+  OtpRequestOutcome outcome = const OtpRequestOutcome(retryAfterMs: 60000);
+
+  /// Set to replay a server refusal instead of a success.
+  OtpRequestError? refusal;
+
   @override
-  Future<void> requestPhoneOtp(
-    String phoneE164, {
-    String channel = 'sms',
-  }) async {
+  Future<OtpRequestOutcome> requestPhoneOtp(String phoneE164) async {
     otpRequests.add(phoneE164);
+    final r = refusal;
+    if (r != null) throw r;
+    return outcome;
   }
 
   @override
@@ -262,6 +271,98 @@ void main() {
       await tester.pump();
 
       expect(auth.phoneSignUps, [Gender.male]);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // The resend brake, which has to exist on BOTH auth screens: sign-up is the
+  // one an attacker can reach without an account, and the one a real user
+  // hammers hardest, having no code yet and no account to fall back on.
+  // ---------------------------------------------------------------------------
+  group('resend brake', () {
+    /// The resend control. The OTP step carries several TextButtons (edit the
+    /// details, the sign-in prompt), so it is located by its own label, whose
+    /// two forms both start with the same verb.
+    Finder resendButton() => find.ancestor(
+      of: find.byWidgetPredicate(
+        (w) => w is Text && (w.data?.startsWith('Renvoyer') ?? false),
+      ),
+      matching: find.byType(TextButton),
+    );
+
+    Future<void> goToOtpStep(WidgetTester tester) async {
+      await pumpForm(tester);
+      await tester.tap(find.text('Téléphone'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField).at(0), 'Awa Cisse');
+      await tester.enterText(find.byType(TextField).at(1), '770000001');
+      await tester.pump();
+      await acceptTerms(tester);
+      await tester.tap(find.text('Homme'));
+      await tester.pump();
+      await submit(tester);
+    }
+
+    testWidgets('locks the resend button for the delay the SERVER gave', (
+      tester,
+    ) async {
+      auth.outcome = const OtpRequestOutcome(retryAfterMs: 60000);
+      await goToOtpStep(tester);
+
+      expect(find.text('Renvoyer dans 60s'), findsOneWidget);
+      expect(tester.widget<TextButton>(resendButton()).onPressed, isNull);
+    });
+
+    testWidgets('counts down and hands the button back', (tester) async {
+      auth.outcome = const OtpRequestOutcome(retryAfterMs: 2000);
+      await goToOtpStep(tester);
+      expect(find.text('Renvoyer dans 2s'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Renvoyer le code'), findsOneWidget);
+      await tester.tap(resendButton());
+      await tester.pump();
+      await tester.pump();
+      expect(auth.otpRequests.length, 2);
+    });
+
+    testWidgets('a quota refusal is counted in MINUTES, not in seconds', (
+      tester,
+    ) async {
+      // An hourly ceiling is tens of minutes away; a four-figure second count
+      // reads as noise and tells the user nothing they can act on.
+      auth.outcome = const OtpRequestOutcome(retryAfterMs: null);
+      await goToOtpStep(tester);
+      auth.refusal = const OtpRequestError(
+        OtpRequestErrorKind.quotaExceeded,
+        retryAfterMs: 1500000,
+      );
+
+      await tester.tap(resendButton());
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.textContaining('25 min'), findsOneWidget);
+    });
+
+    testWidgets('the service-wide closure is not dressed up as a wait', (
+      tester,
+    ) async {
+      auth.outcome = const OtpRequestOutcome(retryAfterMs: null);
+      await goToOtpStep(tester);
+      auth.refusal = const OtpRequestError(OtpRequestErrorKind.serviceClosed);
+
+      await tester.tap(resendButton());
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.textContaining("L'envoi de codes est momentanément suspendu"),
+        findsOneWidget,
+      );
+      expect(find.text('Renvoyer le code'), findsOneWidget);
     });
   });
 }

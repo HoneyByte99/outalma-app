@@ -6,12 +6,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/services/callable_function_client.dart';
+import '../../domain/auth/otp_request_error.dart';
 import '../../domain/enums/active_mode.dart';
 import '../../domain/enums/gender.dart';
 import '../../domain/models/app_user.dart';
 import 'auth_providers.dart';
 import 'auth_state.dart';
+import 'phone_otp_port.dart';
 
 // ---------------------------------------------------------------------------
 // Email verification link - round-trip target after the user clicks the
@@ -150,13 +151,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   /// server-authoritative Cloud Function, then signs out locally.
   /// Required by App Store 5.1.1(v) and Google Play.
   Future<void> deleteAccount() async {
-    await const CallableFunctionClient().call('deleteMyAccount');
+    await ref.read(callableClientProvider).call('deleteMyAccount');
     await ref.read(firebaseAuthProvider).signOut();
   }
 
   /// Returns the caller's personal data (RGPD portability) as a JSON-able map.
   Future<Map<String, dynamic>> exportMyData() async {
-    return const CallableFunctionClient().call('exportMyData');
+    return ref.read(callableClientProvider).call('exportMyData');
   }
 
   // ---------------------------------------------------------------------------
@@ -164,17 +165,16 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   // All flows are server-authoritative through Cloud Functions.
   // ---------------------------------------------------------------------------
 
-  /// Sends an OTP to [phoneE164] via Twilio (SMS by default).
+  /// Sends an OTP to [phoneE164] via Twilio, and returns the delay before a
+  /// resend would be accepted.
   ///
-  /// Throws [FirebaseFunctionsException] on Twilio failure or invalid input.
-  Future<void> requestPhoneOtp(
-    String phoneE164, {
-    String channel = 'sms',
-  }) async {
-    await const CallableFunctionClient().call(
-      'requestPhoneOtp',
-      data: {'phone': phoneE164, 'channel': channel},
-    );
+  /// The channel is forced to SMS server-side, so there is nothing to pass.
+  /// Throws [OtpRequestError] and nothing else: the server guard is a rate
+  /// limit with several distinct refusals, and the caller has to tell them
+  /// apart to say anything useful ("wait 60 s" and "this country is not
+  /// served" are not the same sentence).
+  Future<OtpRequestOutcome> requestPhoneOtp(String phoneE164) {
+    return ref.read(phoneOtpPortProvider).request(phoneE164);
   }
 
   /// Verifies [code] and signs in the existing Outalma account behind
@@ -188,10 +188,12 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     String code,
   ) async {
     try {
-      final result = await const CallableFunctionClient().call(
-        'verifyPhoneOtpAndSignIn',
-        data: {'phone': phoneE164, 'code': code},
-      );
+      final result = await ref
+          .read(callableClientProvider)
+          .call(
+            'verifyPhoneOtpAndSignIn',
+            data: {'phone': phoneE164, 'code': code},
+          );
 
       final newUser = result['newUser'] == true;
       if (newUser) {
@@ -223,19 +225,21 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required Gender gender,
   }) async {
     try {
-      final result = await const CallableFunctionClient().call(
-        'verifyPhoneOtpAndSignUp',
-        data: {
-          'phone': phoneE164,
-          'code': code,
-          'displayName': displayName,
-          'country': country,
-          // The account document is written server-side on this path, so the
-          // declared gender has to travel with the call: there is no client
-          // write afterwards that could carry it.
-          'gender': gender.name,
-        },
-      );
+      final result = await ref
+          .read(callableClientProvider)
+          .call(
+            'verifyPhoneOtpAndSignUp',
+            data: {
+              'phone': phoneE164,
+              'code': code,
+              'displayName': displayName,
+              'country': country,
+              // The account document is written server-side on this path, so the
+              // declared gender has to travel with the call: there is no client
+              // write afterwards that could carry it.
+              'gender': gender.name,
+            },
+          );
 
       final token = result['customToken'] as String?;
       if (token == null) {

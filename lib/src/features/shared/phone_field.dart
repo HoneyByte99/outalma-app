@@ -76,6 +76,23 @@ class PhoneField extends StatefulWidget {
   final TextInputAction textInputAction;
   final VoidCallback? onSubmitted;
 
+  /// The dial codes this product offers, derived from the selector's own list
+  /// so the two cannot drift.
+  ///
+  /// Public because the server guard carries the same allowlist
+  /// (`ALLOWED_PREFIXES` in `functions/src/otp_rate_limit.ts`), and the two are
+  /// held together by a parity test on each side
+  /// (`test/shared/phone_prefix_parity_test.dart` here,
+  /// `functions/test/otp_rate_limit.test.ts` there), both reading
+  /// `shared/allowed-phone-prefixes.json`. A code offered here but missing
+  /// there is a user who picks their country and is refused for picking it.
+  ///
+  /// A Set, not a List: +1 appears twice in the selector (the United States and
+  /// Canada share the NANP), and the allowlist is about codes, not countries.
+  static final Set<String> supportedDialCodes = {
+    for (final c in _kCountries) c.dialCode,
+  };
+
   /// Returns `null` when [value] (E.164 string) is valid, or an error message.
   static String? validate(String? value) {
     if (value == null || value.isEmpty) return null; // optional field

@@ -2870,6 +2870,42 @@ abstract class AppLocalizations {
   /// **'Resend code'**
   String get otpResend;
 
+  /// No description provided for @otpErrorTooSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Too soon. Try again in {seconds}s.'**
+  String otpErrorTooSoon(int seconds);
+
+  /// No description provided for @otpErrorQuotaExceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many codes requested for this number. Try again in {minutes} min.'**
+  String otpErrorQuotaExceeded(int minutes);
+
+  /// No description provided for @otpErrorPrefixNotServed.
+  ///
+  /// In en, this message translates to:
+  /// **'This country is not served yet. Pick another dial code.'**
+  String get otpErrorPrefixNotServed;
+
+  /// No description provided for @otpErrorServiceClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Code sending is paused for now. Please try again later.'**
+  String get otpErrorServiceClosed;
+
+  /// No description provided for @otpErrorInvalidPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'This number is not valid. Please check it.'**
+  String get otpErrorInvalidPhone;
+
+  /// No description provided for @otpErrorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection lost. Check your network and try again.'**
+  String get otpErrorNetwork;
+
   /// No description provided for @otpError.
   ///
   /// In en, this message translates to:

@@ -1519,6 +1519,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get otpResend => 'Resend code';
 
   @override
+  String otpErrorTooSoon(int seconds) {
+    return 'Too soon. Try again in ${seconds}s.';
+  }
+
+  @override
+  String otpErrorQuotaExceeded(int minutes) {
+    return 'Too many codes requested for this number. Try again in $minutes min.';
+  }
+
+  @override
+  String get otpErrorPrefixNotServed =>
+      'This country is not served yet. Pick another dial code.';
+
+  @override
+  String get otpErrorServiceClosed =>
+      'Code sending is paused for now. Please try again later.';
+
+  @override
+  String get otpErrorInvalidPhone =>
+      'This number is not valid. Please check it.';
+
+  @override
+  String get otpErrorNetwork =>
+      'Connection lost. Check your network and try again.';
+
+  @override
   String get otpError => 'Incorrect code. Please try again.';
 
   @override

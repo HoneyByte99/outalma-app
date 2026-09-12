@@ -1,4 +1,3 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/gestures.dart';
@@ -13,10 +12,12 @@ import '../../application/auth/auth_notifier.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/theme/theme_provider.dart';
 import '../../domain/auth/otp.dart';
+import '../../domain/auth/otp_request_error.dart';
 import '../../../l10n/app_localizations.dart';
 import 'auth_prompt.dart';
 import '../shared/app_logo.dart';
 import '../shared/phone_field.dart';
+import 'otp_resend_cooldown.dart';
 
 // ---------------------------------------------------------------------------
 // Auth mode enum - shared between sign-in and sign-up
@@ -33,7 +34,8 @@ class SignInPage extends ConsumerStatefulWidget {
   ConsumerState<SignInPage> createState() => _SignInPageState();
 }
 
-class _SignInPageState extends ConsumerState<SignInPage> {
+class _SignInPageState extends ConsumerState<SignInPage>
+    with OtpResendCooldown<SignInPage> {
   _AuthMode _mode = _AuthMode.mail;
   _PhoneStep _phoneStep = _PhoneStep.enterPhone;
 
@@ -138,14 +140,23 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
     setState(() => _loading = true);
     try {
-      await ref.read(authNotifierProvider.notifier).requestPhoneOtp(phone);
+      final outcome = await ref
+          .read(authNotifierProvider.notifier)
+          .requestPhoneOtp(phone);
       if (!mounted) return;
       setState(() {
         _phoneStep = _PhoneStep.enterOtp;
         _otpController.clear();
       });
-    } on FirebaseFunctionsException {
-      _showError(l10n.authErrorOtpSend);
+      // The brake: the button stays disabled for exactly as long as the server
+      // says a resend would be refused, so the app stops manufacturing the
+      // refusals the guard exists to absorb.
+      startResendCooldown(outcome.retryAfterSeconds);
+    } on OtpRequestError catch (e) {
+      // A refusal also carries a delay: honour it, otherwise the next tap walks
+      // straight back into the same wall.
+      startResendCooldown(e.retryAfterSeconds);
+      _showError(otpRequestErrorMessage(l10n, e));
     } catch (_) {
       _showError(l10n.errorGeneral);
     } finally {
@@ -189,6 +200,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   }
 
   void _editPhone() {
+    // Back on the number step there is no resend button to gate, and a running
+    // timer would keep rebuilding a screen that no longer shows it.
+    clearResendCooldown();
     setState(() {
       _phoneStep = _PhoneStep.enterPhone;
       _otpController.clear();
@@ -406,8 +420,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: _loading ? null : _requestOtp,
-                      child: Text(l10n.phoneOtpResend),
+                      onPressed: _loading || !canResendOtp ? null : _requestOtp,
+                      child: Text(
+                        canResendOtp
+                            ? l10n.phoneOtpResend
+                            : l10n.otpResendIn(resendCooldownSeconds),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),

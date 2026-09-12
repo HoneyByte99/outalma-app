@@ -11,6 +11,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:outalma_app/src/application/auth/auth_notifier.dart';
 import 'package:outalma_app/src/application/auth/auth_providers.dart';
 import 'package:outalma_app/src/application/auth/auth_state.dart';
+import 'package:outalma_app/src/application/auth/phone_otp_port.dart';
+import 'package:outalma_app/src/domain/auth/otp_request_error.dart';
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
 import 'package:outalma_app/src/domain/enums/gender.dart';
 import 'package:outalma_app/src/domain/models/app_user.dart';
@@ -34,6 +36,23 @@ class _AuthenticatedNotifier extends AuthNotifier {
 class _UnauthenticatedNotifier extends AuthNotifier {
   @override
   Future<AuthState> build() async => const AuthUnauthenticated();
+}
+
+/// Stands in for the `requestPhoneOtp` callable.
+class _FakePhoneOtpPort implements PhoneOtpPort {
+  _FakePhoneOtpPort({this.outcome, this.error});
+
+  final OtpRequestOutcome? outcome;
+  final OtpRequestError? error;
+  final calls = <String>[];
+
+  @override
+  Future<OtpRequestOutcome> request(String phoneE164) async {
+    calls.add(phoneE164);
+    final e = error;
+    if (e != null) throw e;
+    return outcome!;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -457,6 +476,57 @@ void main() {
           verify(() => repo.upsert(captureAny())).captured.single as AppUser;
       expect(captured.displayName, 'Alice B.');
       expect(captured.avatarId, 'human_afro1_t2');
+    });
+  });
+
+  group('requestPhoneOtp', () {
+    ProviderContainer makeContainer(_FakePhoneOtpPort port) =>
+        ProviderContainer(
+          overrides: [
+            authNotifierProvider.overrideWith(_UnauthenticatedNotifier.new),
+            phoneOtpPortProvider.overrideWithValue(port),
+          ],
+        );
+
+    test('hands the number to the port and returns its delay', () async {
+      final port = _FakePhoneOtpPort(
+        outcome: const OtpRequestOutcome(retryAfterMs: 60000),
+      );
+      final container = makeContainer(port);
+      addTearDown(container.dispose);
+      await container.read(authNotifierProvider.future);
+
+      final outcome = await container
+          .read(authNotifierProvider.notifier)
+          .requestPhoneOtp('+221771234567');
+
+      expect(port.calls, ['+221771234567']);
+      expect(outcome.retryAfterSeconds, 60);
+    });
+
+    test('lets the typed refusal through instead of flattening it', () async {
+      // The two auth screens branch on the kind to decide what to say and
+      // whether to start a countdown; a notifier that swallowed it into a
+      // generic failure would undo the whole layer.
+      final port = _FakePhoneOtpPort(
+        error: const OtpRequestError(OtpRequestErrorKind.prefixNotServed),
+      );
+      final container = makeContainer(port);
+      addTearDown(container.dispose);
+      await container.read(authNotifierProvider.future);
+
+      await expectLater(
+        () => container
+            .read(authNotifierProvider.notifier)
+            .requestPhoneOtp('+79123456789'),
+        throwsA(
+          isA<OtpRequestError>().having(
+            (e) => e.kind,
+            'kind',
+            OtpRequestErrorKind.prefixNotServed,
+          ),
+        ),
+      );
     });
   });
 }

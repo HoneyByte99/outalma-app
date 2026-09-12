@@ -714,6 +714,26 @@
     }
   },
   "otpResend": "Renvoyer le code",
+  "otpErrorTooSoon": "Trop tôt. Réessayez dans {seconds}s.",
+  "@otpErrorTooSoon": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "otpErrorQuotaExceeded": "Trop de codes demandés pour ce numéro. Réessayez dans {minutes} min.",
+  "@otpErrorQuotaExceeded": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "otpErrorPrefixNotServed": "Ce pays n'est pas encore desservi. Choisissez un autre indicatif.",
+  "otpErrorServiceClosed": "L'envoi de codes est momentanément suspendu. Réessayez plus tard.",
+  "otpErrorInvalidPhone": "Ce numéro n'est pas valide. Vérifiez-le.",
+  "otpErrorNetwork": "Connexion interrompue. Vérifiez votre réseau et réessayez.",
   "otpError": "Code incorrect. Réessayez.",
   "otpPhoneError": "Impossible d'envoyer le code. Vérifiez le numéro.",
   "phoneNameTitle": "Votre prénom et nom",
