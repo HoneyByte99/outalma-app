@@ -1,0 +1,27 @@
+{
+  "//": "Single declaration of the dial codes the product offers. Read ONLY by tests, on both sides: functions/test/otp_rate_limit.test.ts asserts ALLOWED_PREFIXES matches it, and app test/shared/phone_prefix_parity_test.dart asserts PhoneField.supportedDialCodes matches it. It is NOT read at runtime: firebase.json uploads only functions/, so this file is absent from the deployed bundle. Same pattern as shared/rating-parity-cases.json.",
+  "prefixes": [
+    "+1",
+    "+212",
+    "+213",
+    "+216",
+    "+221",
+    "+223",
+    "+224",
+    "+225",
+    "+226",
+    "+227",
+    "+228",
+    "+229",
+    "+237",
+    "+32",
+    "+33",
+    "+34",
+    "+351",
+    "+352",
+    "+39",
+    "+41",
+    "+44",
+    "+49"
+  ]
+}
