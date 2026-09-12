@@ -76,6 +76,35 @@ describe('purgeExpiredOtpStates', () => {
     expect((await db().collection(OTP_COUNTERS).doc('2026-09-12').get()).exists).toBe(true);
   });
 
+  it('purges past the 500-write batch ceiling instead of failing forever', async () => {
+    // A day at the global ceiling can leave more than 500 expired guard
+    // documents. Deleting them in one batch would be rejected, and since the
+    // query is deterministic EVERY later run would fail identically: nothing
+    // would ever be purged again, right after the incident this module is for.
+    const stale = Date.now() - OTP_STATE_TTL_MS - 60_000;
+    for (let i = 0; i < 501; i += 100) {
+      const batch = db().batch();
+      for (let j = i; j < Math.min(i + 100, 501); j++) {
+        batch.set(db().collection(OTP_STATES).doc(`stale-${j}`), {
+          creditTimestampsMs: [stale],
+          updatedAtMs: stale,
+        });
+      }
+      await batch.commit();
+    }
+    // Plus a counter, so the run carries deletions from BOTH queries: that is
+    // what pushed the single batch over the limit.
+    await db()
+      .collection(OTP_COUNTERS)
+      .doc('2020-01-02')
+      .set({ count: 1, updatedAtMs: stale });
+
+    await wrap(fns.purgeExpiredOtpStates)({} as never);
+
+    expect((await db().collection(OTP_STATES).get()).size).toBe(0);
+    expect((await db().collection(OTP_COUNTERS).get()).size).toBe(0);
+  }, 120_000);
+
   it('keeps the TTL above the longest counting window', async () => {
     // A shorter TTL would erase a 24h counter before it expires and hand back
     // a fresh quota every night.

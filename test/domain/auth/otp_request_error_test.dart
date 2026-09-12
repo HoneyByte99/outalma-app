@@ -139,4 +139,42 @@ void main() {
       );
     });
   });
+
+  group('reading the server payload', () {
+    test('a delay arrives as an int or as a double, both usable', () {
+      // The wire carries JSON numbers: the platform decides which Dart type
+      // comes out, and a double falling through as null would silently disable
+      // the whole mobile brake.
+      expect(otpRetryAfterMs(60000), 60000);
+      expect(otpRetryAfterMs(60000.0), 60000);
+      expect(otpRetryAfterMs(59999.7), 59999);
+    });
+
+    test('anything not a number stays null, never a zero', () {
+      // Zero reads as "retry now", the opposite of what a missing delay means.
+      for (final value in <Object?>[
+        null,
+        '60000',
+        true,
+        <int>[60000],
+        {},
+      ]) {
+        expect(otpRetryAfterMs(value), isNull, reason: '$value');
+      }
+    });
+
+    test('the machine code is read only from a Map carrying a string', () {
+      expect(otpDetailsCode({'code': 'otp/backoff'}), 'otp/backoff');
+      expect(otpDetailsCode({'code': 42}), isNull);
+      expect(otpDetailsCode({'other': 'otp/backoff'}), isNull);
+      expect(otpDetailsCode('otp/backoff'), isNull);
+      expect(otpDetailsCode(null), isNull);
+    });
+
+    test('a details payload that is not a Map yields no field at all', () {
+      expect(otpDetailsField(null, 'retryAfterMs'), isNull);
+      expect(otpDetailsField('nope', 'retryAfterMs'), isNull);
+      expect(otpDetailsField({'retryAfterMs': 90000}, 'retryAfterMs'), 90000);
+    });
+  });
 }

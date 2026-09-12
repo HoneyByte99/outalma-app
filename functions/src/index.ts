@@ -2686,33 +2686,65 @@ export const purgeExpiredOtpStates = onSchedule(
   async () => {
     const cutoffMs = Date.now() - OTP_STATE_TTL_MS;
 
-    const staleStates = await db
-      .collection(OTP_STATES)
-      .where('updatedAtMs', '<', cutoffMs)
-      .limit(500)
-      .get();
+    const states = await purgeExpiredBy(OTP_STATES, cutoffMs);
+    const counters = await purgeExpiredBy(OTP_COUNTERS, cutoffMs);
 
-    const staleCounters = await db
-      .collection(OTP_COUNTERS)
-      .where('updatedAtMs', '<', cutoffMs)
-      .limit(500)
-      .get();
-
-    if (staleStates.empty && staleCounters.empty) {
+    if (states === 0 && counters === 0) {
       logger.info('OTP purge: nothing expired.');
       return;
     }
 
-    const batch = db.batch();
-    for (const doc of staleStates.docs) batch.delete(doc.ref);
-    for (const doc of staleCounters.docs) batch.delete(doc.ref);
-    await batch.commit();
-
     logger.info(
-      `OTP purge: deleted ${staleStates.size} guard documents and ${staleCounters.size} daily counters.`
+      `OTP purge: deleted ${states} guard documents and ${counters} daily counters.`
     );
   }
 );
+
+/// Deletes every document of [collection] older than [cutoffMs], in pages, and
+/// returns how many went.
+///
+/// Two bounds, each load-bearing:
+///
+///   - Deletions are committed in chunks of 400. A Firestore batch caps at 500
+///     writes, the trap `deleteIdentityVerificationData` documents above. The
+///     first version of this purge put both collections in ONE batch of up to
+///     1000, and because the queries are deterministic it would not have failed
+///     occasionally: the first day leaving more than 500 expired guard
+///     documents behind would have made EVERY later run fail identically, so
+///     nothing would ever be purged again, right after the incident this module
+///     exists for.
+///   - Pages are drained rather than one page taken per run. At the global
+///     ceiling of 600 sends a day, a single 500-document page would fall behind
+///     by a hundred documents a day and never catch up. The page cap keeps the
+///     run bounded (line D1) at a ceiling an order of magnitude above the
+///     day's worst case.
+async function purgeExpiredBy(
+  collection: string,
+  cutoffMs: number
+): Promise<number> {
+  const PAGE = 500;
+  const CHUNK = 400;
+  const MAX_PAGES = 10;
+
+  let deleted = 0;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const expired = await db
+      .collection(collection)
+      .where('updatedAtMs', '<', cutoffMs)
+      .limit(PAGE)
+      .get();
+    if (expired.empty) break;
+
+    for (let i = 0; i < expired.docs.length; i += CHUNK) {
+      const batch = db.batch();
+      for (const doc of expired.docs.slice(i, i + CHUNK)) batch.delete(doc.ref);
+      await batch.commit();
+    }
+    deleted += expired.size;
+    if (expired.size < PAGE) break;
+  }
+  return deleted;
+}
 
 // ---------------------------------------------------------------------------
 // Scheduled: purge old IP geo cache entries (daily at 4am Paris)

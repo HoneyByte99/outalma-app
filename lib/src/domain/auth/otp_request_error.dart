@@ -104,3 +104,34 @@ OtpRequestError classifyOtpRequestError({
 
   return const OtpRequestError(OtpRequestErrorKind.unknown);
 }
+
+// ---------------------------------------------------------------------------
+// Reading the server's payload
+//
+// Pure, and here rather than in the data adapter, because this is where the
+// frail part is: the whole mobile brake runs on `retryAfterMs`, and the wire
+// carries JSON numbers that arrive as int or double depending on the platform
+// and the value. The adapter around them is untestable Firebase plumbing; these
+// two are not, so they do not live inside it.
+// ---------------------------------------------------------------------------
+
+/// Reads the stable machine code out of a callable's `details` payload.
+/// Anything that is not a string under `code` reads as absent.
+String? otpDetailsCode(Object? details) {
+  final value = otpDetailsField(details, 'code');
+  return value is String ? value : null;
+}
+
+/// Reads one field of a `details` payload, tolerating any shape but a Map.
+Object? otpDetailsField(Object? details, String key) =>
+    details is Map ? details[key] : null;
+
+/// Reads a millisecond delay off the wire.
+///
+/// An absent or non-numeric value stays null and never becomes a zero: zero
+/// reads as "retry now", which is the opposite of what a missing delay means.
+int? otpRetryAfterMs(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return null;
+}

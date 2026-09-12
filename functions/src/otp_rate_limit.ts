@@ -284,6 +284,21 @@ export function decideOtpRequest(
   return decide(rawState, globalCount, phone, limits, nowMs, false);
 }
 
+/// The credit whose expiry actually frees a slot: the (count - max)-th oldest,
+/// not simply the oldest.
+///
+/// The two are the same only while the state holds exactly `max` credits. A
+/// ceiling lowered live through `otp_config` (which is the point of that
+/// document: tightening during an incident without a deploy) leaves states
+/// carrying more credits than the new ceiling allows, and the oldest one
+/// expiring then frees nothing. The client would be handed a delay, wait it
+/// out, and walk into the same refusal.
+function freeingCredit(credits: number[], max: number): number {
+  const sorted = [...credits].sort((a, b) => a - b);
+  const index = Math.max(credits.length - max, 0);
+  return sorted[index] ?? sorted[0] ?? 0;
+}
+
 /// [probe] is set on the inner call that asks "what would the NEXT request get
 /// right now", which is how `nextRetryAfterMs` stays derived from the very
 /// ordering above instead of from a second copy of it. It bounds the recursion
@@ -335,20 +350,20 @@ function decide(
   }
 
   if (inWindow.length >= limits.maxPerWindow) {
-    const oldest = Math.min(...inWindow);
     return {
       allowed: false,
       code: OTP_ERROR.windowCap,
-      retryAfterMs: limits.windowMs - (nowMs - oldest),
+      retryAfterMs:
+        limits.windowMs - (nowMs - freeingCredit(inWindow, limits.maxPerWindow)),
     };
   }
 
   if (inDay.length >= limits.maxPerDay) {
-    const oldest = Math.min(...inDay);
     return {
       allowed: false,
       code: OTP_ERROR.dayCap,
-      retryAfterMs: limits.dayWindowMs - (nowMs - oldest),
+      retryAfterMs:
+        limits.dayWindowMs - (nowMs - freeingCredit(inDay, limits.maxPerDay)),
     };
   }
 

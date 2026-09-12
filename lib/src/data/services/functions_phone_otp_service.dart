@@ -29,34 +29,18 @@ class FunctionsPhoneOtpService implements PhoneOtpPort {
         data: {'phone': phoneE164},
       );
       return OtpRequestOutcome(
-        retryAfterMs: _retryAfterMs(data['retryAfterMs']),
+        retryAfterMs: otpRetryAfterMs(data['retryAfterMs']),
       );
     } on FirebaseFunctionsException catch (e) {
       throw classifyOtpRequestError(
-        detailsCode: _detailsCode(e.details),
+        detailsCode: otpDetailsCode(e.details),
         httpCode: e.code,
-        retryAfterMs: _retryAfterMs(_detailsField(e.details, 'retryAfterMs')),
+        retryAfterMs: otpRetryAfterMs(
+          otpDetailsField(e.details, 'retryAfterMs'),
+        ),
       );
     } catch (_) {
       throw const OtpRequestError(OtpRequestErrorKind.unknown);
     }
-  }
-
-  /// Reads the stable machine code the guard sends alongside its refusal.
-  static String? _detailsCode(Object? details) {
-    final value = _detailsField(details, 'code');
-    return value is String ? value : null;
-  }
-
-  static Object? _detailsField(Object? details, String key) =>
-      details is Map ? details[key] : null;
-
-  /// The wire carries JSON numbers, which arrive as int or double depending on
-  /// the platform and the value. A non-numeric or absent field stays null: an
-  /// absent delay must not become a zero, which would read as "retry now".
-  static int? _retryAfterMs(Object? value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return null;
   }
 }

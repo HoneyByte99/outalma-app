@@ -283,6 +283,65 @@ describe('decideOtpRequest', () => {
     });
   });
 
+  describe('the delay a ceiling refusal announces', () => {
+    it('waits for the credit that actually frees a slot, not the oldest', () => {
+      // A ceiling lowered live through otp_config leaves states carrying more
+      // credits than it allows. The oldest one expiring frees nothing then, and
+      // announcing its expiry sends the client back into the same refusal.
+      const tight = { ...L, maxPerWindow: 2 };
+      const ts = [T0 - 50 * 60 * 1000, T0 - 40 * 60 * 1000, T0 - 30 * 60 * 1000];
+      const d = decideOtpRequest(
+        { creditTimestampsMs: ts, updatedAtMs: T0 },
+        0,
+        SN,
+        tight,
+        T0
+      );
+      expect(d).toMatchObject({ allowed: false, code: OTP_ERROR.windowCap });
+      if (!d.allowed) {
+        // Three credits for a ceiling of two: the SECOND oldest is the one
+        // whose expiry opens a slot.
+        expect(d.retryAfterMs).toBe(L.windowMs - 40 * 60 * 1000);
+      }
+    });
+
+    it('is the oldest credit when the state holds exactly the ceiling', () => {
+      const spacing = 6 * 60 * 1000;
+      const d = decideOtpRequest(
+        stateWith(L.maxPerWindow, spacing, spacing),
+        0,
+        SN,
+        L,
+        T0
+      );
+      expect(d).toMatchObject({ allowed: false, code: OTP_ERROR.windowCap });
+      if (!d.allowed) {
+        const oldest = T0 - spacing * L.maxPerWindow;
+        expect(d.retryAfterMs).toBe(L.windowMs - (T0 - oldest));
+      }
+    });
+
+    it('does the same for the 24 h ceiling', () => {
+      const tight = { ...L, maxPerDay: 2, maxPerWindow: 100 };
+      const ts = [
+        T0 - 20 * 60 * 60 * 1000,
+        T0 - 10 * 60 * 60 * 1000,
+        T0 - 5 * 60 * 60 * 1000,
+      ];
+      const d = decideOtpRequest(
+        { creditTimestampsMs: ts, updatedAtMs: T0 },
+        0,
+        SN,
+        tight,
+        T0
+      );
+      expect(d).toMatchObject({ allowed: false, code: OTP_ERROR.dayCap });
+      if (!d.allowed) {
+        expect(d.retryAfterMs).toBe(L.dayWindowMs - 10 * 60 * 60 * 1000);
+      }
+    });
+  });
+
   it.each([
     ['prefix', '+99912345678', 0, undefined],
     ['global cap', SN, L.stopAt, undefined],

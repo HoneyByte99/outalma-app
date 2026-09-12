@@ -44,8 +44,10 @@ lib/src/data/services/log_session_service.dart
 lib/src/data/services/callable_function_client.dart
 # Same shape again: the CallableFunctionClient transport is untestable Firebase
 # plumbing, and the port's only contract (never throw raw) is covered in
-# test/data/services/functions_phone_otp_service_test.dart. Every decision it
-# sits behind is tested elsewhere: the refusal mapping in
+# test/data/services/functions_phone_otp_service_test.dart. Nothing else is left
+# in the file: the payload decoding this brake runs on was moved OUT of it, into
+# lib/src/domain/auth/otp_request_error.dart, precisely so that it would not
+# ride in on this exemption. The refusal mapping and that decoding are tested in
 # test/domain/auth/otp_request_error_test.dart, the delay arithmetic in
 # test/application/auth/phone_otp_port_test.dart, and the screen behaviour in
 # the two auth widget tests.

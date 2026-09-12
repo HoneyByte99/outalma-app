@@ -211,6 +211,23 @@ void main() {
         expect(tester.widget<TextButton>(resendButton()).onPressed, isNull);
       });
 
+      testWidgets('editing the number drops the countdown with its timer', (
+        tester,
+      ) async {
+        auth.outcome = const OtpRequestOutcome(retryAfterMs: 600000);
+        await goToOtpStep(tester);
+        expect(find.text('Renvoyer dans 600s'), findsOneWidget);
+
+        // Back on the number step there is no resend button left to gate, and
+        // a ten-minute timer left running would keep rebuilding a screen that
+        // no longer shows it (and would fail this test outright on teardown
+        // with "A Timer is still pending").
+        await tester.tap(find.text('Modifier le numéro'));
+        await tester.pump();
+
+        expect(find.textContaining('Renvoyer dans'), findsNothing);
+      });
+
       testWidgets('says WHY, and differently for each refusal', (tester) async {
         // The whole point of the typed error: "wait" and "this country is not
         // served" are not the same sentence, and the second is not a wait.

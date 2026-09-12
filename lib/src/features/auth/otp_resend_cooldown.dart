@@ -30,8 +30,14 @@ mixin OtpResendCooldown<T extends StatefulWidget> on State<T> {
   /// did not give.
   void startResendCooldown(int? seconds) {
     _cooldownTimer?.cancel();
+    // Checked FIRST, for every path. The refusal branch of both pages calls
+    // this without a `mounted` guard of its own (only their success branch has
+    // one), so a user who leaves the screen while a request is in flight would
+    // otherwise hit setState on a disposed State and throw out of an async gap
+    // nobody catches.
+    if (!mounted) return;
     if (seconds == null || seconds <= 0) {
-      if (mounted) setState(() => _secondsLeft = 0);
+      setState(() => _secondsLeft = 0);
       return;
     }
     setState(() => _secondsLeft = seconds);

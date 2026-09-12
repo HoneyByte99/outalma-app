@@ -109,6 +109,22 @@ describe('requestPhoneOtp, happy path', () => {
     expect(twilio.sent[0]?.phone).toBe(FR_TRUNK);
   });
 
+  it('hands Twilio the SAME string at Start and at Check', async () => {
+    // The invariant the whole normalisation rests on. Normalising before the
+    // Start call is the natural temptation, `normalisePhone` being right there,
+    // and it would bill an SMS for a code that can never be validated: Start
+    // would carry +33612345678 while Check still carries +330612345678.
+    await request({ phone: FR_TRUNK });
+    await expect(
+      wrap(fns.verifyPhoneOtpAndSignIn)({
+        data: { phone: FR_TRUNK, code: '123456' },
+      } as never)
+    ).resolves.toBeDefined();
+
+    expect(twilio.checked[0]?.phone).toBe(twilio.sent[0]?.phone);
+    expect(twilio.checked[0]?.phone).toBe(FR_TRUNK);
+  });
+
   it('stores no phone number, in the document id nor in its fields', async () => {
     await request({ phone: SN });
     const docs = await db().collection(OTP_STATES).get();
