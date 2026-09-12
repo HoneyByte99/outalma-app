@@ -97,6 +97,13 @@ describe('requestPhoneOtp, happy path', () => {
     expect(twilio.sent).toEqual([{ phone: SN, channel: 'sms' }]);
   });
 
+  it('answers with the delay the resend countdown runs on', async () => {
+    // The app must not carry its own copy of the backoff table: `otp_config`
+    // can move these values without a client release.
+    const res = await request({ phone: SN });
+    expect(res).toMatchObject({ retryAfterMs: DEFAULT_LIMITS.backoffMs[0] });
+  });
+
   it('sends the RAW string to Twilio, never the normalised one', async () => {
     await request({ phone: FR_TRUNK });
     expect(twilio.sent[0]?.phone).toBe(FR_TRUNK);

@@ -239,6 +239,50 @@ describe('decideOtpRequest', () => {
     if (d.allowed) expect(d.nextState.creditTimestampsMs).toEqual([T0]);
   });
 
+  describe('nextRetryAfterMs on an ACCEPTED request', () => {
+    // The mobile resend countdown runs on this number. If it were wrong the
+    // app would either re-enable the button too early (and manufacture the
+    // refusal the brake exists to avoid) or lock it for too long.
+    it('is the first backoff step on a fresh number', () => {
+      const d = decideOtpRequest(undefined, 0, SN, L, T0);
+      expect(d.allowed).toBe(true);
+      if (d.allowed) expect(d.nextRetryAfterMs).toBe(L.backoffMs[0]);
+    });
+
+    it('climbs with the rank, matching what the next refusal will say', () => {
+      const second = decideOtpRequest(stateWith(1, 60_000), 0, SN, L, T0);
+      const third = decideOtpRequest(stateWith(2, 200_000), 0, SN, L, T0);
+      expect(second.allowed && second.nextRetryAfterMs).toBe(L.backoffMs[1]);
+      expect(third.allowed && third.nextRetryAfterMs).toBe(L.backoffMs[2]);
+    });
+
+    it('announces the HOUR wait, not a backoff step, on the last slot', () => {
+      // Sixth send of the hour: the seventh will be refused by the window cap,
+      // whose wait is far longer than the 300 s step. Announcing the step here
+      // would send the user straight into a refusal.
+      const spacing = 6 * 60 * 1000;
+      const d = decideOtpRequest(
+        stateWith(L.maxPerWindow - 1, spacing, spacing),
+        0,
+        SN,
+        L,
+        T0
+      );
+      expect(d.allowed).toBe(true);
+      if (d.allowed) {
+        expect(d.nextRetryAfterMs).toBeGreaterThan(L.backoffMs[2]!);
+        const oldest = T0 - spacing * (L.maxPerWindow - 1);
+        expect(d.nextRetryAfterMs).toBe(L.windowMs - (T0 - oldest));
+      }
+    });
+
+    it('terminates on a degenerate zero backoff instead of recursing', () => {
+      const d = decideOtpRequest(undefined, 0, SN, { ...L, backoffMs: [0] }, T0);
+      expect(d.allowed).toBe(true);
+      if (d.allowed) expect(d.nextRetryAfterMs).toBe(0);
+    });
+  });
+
   it.each([
     ['prefix', '+99912345678', 0, undefined],
     ['global cap', SN, L.stopAt, undefined],

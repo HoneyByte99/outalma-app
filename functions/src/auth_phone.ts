@@ -302,7 +302,14 @@ export const requestPhoneOtp = onCall(
     // exactly the same string, or the user gets a billed SMS and a code that
     // can never be validated. Normalisation is a quota key and nothing else.
     await activeTwilioClient.startVerification(phone, channel);
-    return { sentAt: new Date().toISOString(), channel };
+    // `retryAfterMs` on a SUCCESS: how long before a resend would be accepted.
+    // The app runs its countdown on this value rather than on a copy of the
+    // backoff table, so the brake follows `otp_config` without a client release.
+    return {
+      sentAt: new Date().toISOString(),
+      channel,
+      retryAfterMs: outcome.nextRetryAfterMs,
+    };
   }
 );
 

@@ -256,7 +256,17 @@ export function readState(raw: unknown): OtpState {
 }
 
 export type OtpDecision =
-  | { allowed: true; nextState: OtpState; globalAfter: number }
+  | {
+      allowed: true;
+      nextState: OtpState;
+      globalAfter: number;
+      /// How long the caller must wait before a further request would be
+      /// accepted. Sent back on SUCCESS so the app can run its resend countdown
+      /// without hard-coding a copy of the backoff table: a threshold duplicated
+      /// client-side is a threshold that drifts, and `otp_config` can move these
+      /// values without a deploy.
+      nextRetryAfterMs: number;
+    }
   | { allowed: false; code: OtpErrorCode; retryAfterMs: number };
 
 /// The whole guard, in one pure function.
@@ -270,6 +280,23 @@ export function decideOtpRequest(
   phone: string,
   limits: OtpLimits,
   nowMs: number
+): OtpDecision {
+  return decide(rawState, globalCount, phone, limits, nowMs, false);
+}
+
+/// [probe] is set on the inner call that asks "what would the NEXT request get
+/// right now", which is how `nextRetryAfterMs` stays derived from the very
+/// ordering above instead of from a second copy of it. It bounds the recursion
+/// to one level: without it, a `limits` carrying a zero backoff step (reachable
+/// from a unit test, since `backoffMs` is not config-driven) would allow again
+/// and recurse forever.
+function decide(
+  rawState: unknown,
+  globalCount: number,
+  phone: string,
+  limits: OtpLimits,
+  nowMs: number,
+  probe: boolean
 ): OtpDecision {
   if (!isAllowedPrefix(phone)) {
     return {
@@ -325,14 +352,50 @@ export function decideOtpRequest(
     };
   }
 
+  const nextState: OtpState = {
+    creditTimestampsMs: [...inDay, nowMs],
+    updatedAtMs: nowMs,
+  };
+
   return {
     allowed: true,
-    nextState: {
-      creditTimestampsMs: [...inDay, nowMs],
-      updatedAtMs: nowMs,
-    },
+    nextState,
     globalAfter: globalCount + 1,
+    nextRetryAfterMs: probe
+      ? 0
+      : nextWaitOf(nextState, globalCount + 1, phone, limits, nowMs),
   };
+}
+
+/// The delay after which a further request would be ACCEPTED, replayed against
+/// the state this one is about to write.
+///
+/// It is not simply the backoff step: the backoff is checked before the hourly
+/// cap, so a probe taken right now answers "300 s" on the sixth send of the
+/// hour, when the truth is the full wait for the window to open. Announcing the
+/// step there would re-enable the button straight into the refusal this brake
+/// exists to avoid. So the probe walks forward, adopting each refusal's own
+/// delay, until the decision turns green. Three hops cover the three
+/// time-based dimensions (backoff, hour, day); the bound is a guard, not an
+/// expectation.
+///
+/// A refusal carrying no delay (the global cap, which is a service-wide closure
+/// and not a wait) stops the walk: that one is not a countdown, it has its own
+/// message.
+function nextWaitOf(
+  nextState: OtpState,
+  globalAfter: number,
+  phone: string,
+  limits: OtpLimits,
+  nowMs: number
+): number {
+  let waited = 0;
+  for (let hop = 0; hop < 4; hop++) {
+    const after = decide(nextState, globalAfter, phone, limits, nowMs + waited, true);
+    if (after.allowed || after.retryAfterMs <= 0) return waited;
+    waited += after.retryAfterMs;
+  }
+  return waited;
 }
 
 // ---------------------------------------------------------------------------
@@ -360,7 +423,7 @@ export function phoneHash(phone: string, key: string): string {
 // ---------------------------------------------------------------------------
 
 export type QuotaOutcome =
-  | { allowed: true }
+  | { allowed: true; nextRetryAfterMs: number }
   | { allowed: false; code: OtpErrorCode; retryAfterMs: number };
 
 /// Reserves one credit, or refuses.
@@ -457,5 +520,5 @@ export async function consumeOtpQuota(
     });
   }
 
-  return { allowed: true };
+  return { allowed: true, nextRetryAfterMs: decision.nextRetryAfterMs };
 }
