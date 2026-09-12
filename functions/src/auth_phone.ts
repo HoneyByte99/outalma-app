@@ -25,10 +25,16 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import * as logger from 'firebase-functions/logger';
 import { GENDERS, Gender } from './public_profiles';
+import { consumeOtpQuota } from './otp_rate_limit';
 
 const TWILIO_ACCOUNT_SID = defineSecret('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = defineSecret('TWILIO_AUTH_TOKEN');
 const TWILIO_VERIFY_SERVICE_SID = defineSecret('TWILIO_VERIFY_SERVICE_SID');
+
+/// Keys the HMAC that turns a phone number into a quota key. A bare digest
+/// would be brute-forceable over the phone number space in seconds, so the
+/// guard documents would be personal data barely disguised.
+export const OTP_HASH_KEY = defineSecret('OTP_HASH_KEY');
 
 const db = () => admin.firestore();
 
@@ -188,6 +194,37 @@ async function twilioCheckVerification(
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// Twilio seam
+// ---------------------------------------------------------------------------
+
+/// The two Twilio calls, behind a swappable object.
+///
+/// `postForm` is private and not exported, so without this seam there is no way
+/// to assert the claim that actually protects the money: "Twilio was NOT called
+/// when the cap was reached". An unobservable claim is not a tested one. Same
+/// reasoning, and same shape, as `setTextExtractor` in identity_verification.
+export type TwilioClient = {
+  startVerification(phone: string, channel: 'sms' | 'call'): Promise<void>;
+  checkVerification(phone: string, code: string): Promise<void>;
+};
+
+const liveTwilioClient: TwilioClient = {
+  startVerification: twilioStartVerification,
+  checkVerification: twilioCheckVerification,
+};
+
+let activeTwilioClient: TwilioClient = liveTwilioClient;
+
+export function setTwilioClient(client: TwilioClient): void {
+  activeTwilioClient = client;
+}
+
+export function resetTwilioClient(): void {
+  activeTwilioClient = liveTwilioClient;
+}
+
 // ---------------------------------------------------------------------------
 // User lookup helpers - Firebase Auth is the source of truth for phone↔uid
 // mapping. We DELIBERATELY do not look up via Firestore mirror, because the
@@ -216,16 +253,55 @@ async function findUserUidByPhone(phone: string): Promise<string | null> {
 
 export const requestPhoneOtp = onCall(
   {
-    secrets: [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID],
+    secrets: [
+      TWILIO_ACCOUNT_SID,
+      TWILIO_AUTH_TOKEN,
+      TWILIO_VERIFY_SERVICE_SID,
+      OTP_HASH_KEY,
+    ],
     region: 'us-central1',
   },
   async (request) => {
     const phone = assertPhone(request.data?.phone);
-    const channelRaw = request.data?.channel;
-    const channel: 'sms' | 'call' =
-      channelRaw === 'call' ? 'call' : 'sms';
 
-    await twilioStartVerification(phone, channel);
+    // The channel is FORCED server-side. No surface of this product asks for
+    // the voice channel (the app and the web both send 'sms'), and voice costs
+    // more per verification: leaving it caller-controlled handed an attacker a
+    // pricier channel at the same quota price. This endpoint is unauthenticated
+    // and therefore called from outside our own interfaces by definition, so
+    // "no caller asks for it" is not a reason to accept it.
+    const channelRaw = request.data?.channel;
+    if (channelRaw !== undefined && channelRaw !== 'sms') {
+      throw new HttpsError(
+        'invalid-argument',
+        'channel must be sms'
+      );
+    }
+    const channel = 'sms' as const;
+
+    // Reserve the credit and COMMIT before touching Twilio. A Firestore
+    // transaction is replayed on contention, so a network call inside it would
+    // bill one SMS per replay.
+    const outcome = await db().runTransaction((tx) =>
+      consumeOtpQuota(db(), tx, phone, OTP_HASH_KEY.value(), Date.now())
+    );
+
+    if (!outcome.allowed) {
+      // A stable machine code plus structured data, never a display string:
+      // the app is bilingual and composes the message from its own catalogue.
+      throw new HttpsError(
+        'resource-exhausted',
+        'OTP request refused by rate limit',
+        { code: outcome.code, retryAfterMs: outcome.retryAfterMs }
+      );
+    }
+
+    // The RAW string, deliberately. `verifyPhoneOtpAndSignIn` and
+    // `verifyPhoneOtpAndSignUp` are out of this increment's scope and keep
+    // sending the raw string to the Check call: Start and Check must receive
+    // exactly the same string, or the user gets a billed SMS and a code that
+    // can never be validated. Normalisation is a quota key and nothing else.
+    await activeTwilioClient.startVerification(phone, channel);
     return { sentAt: new Date().toISOString(), channel };
   }
 );
@@ -243,7 +319,7 @@ export const verifyPhoneOtpAndSignIn = onCall(
     const phone = assertPhone(request.data?.phone);
     const code = assertCode(request.data?.code);
 
-    await twilioCheckVerification(phone, code);
+    await activeTwilioClient.checkVerification(phone, code);
 
     // Auth-side lookup: Firebase Auth enforces phoneNumber uniqueness, so this
     // is the only trustworthy identity resolution path.
@@ -282,7 +358,7 @@ export const verifyPhoneOtpAndSignUp = onCall(
     // rejected on a field the client could have checked itself.
     const gender = assertGender(request.data?.gender);
 
-    await twilioCheckVerification(phone, code);
+    await activeTwilioClient.checkVerification(phone, code);
 
     // Auth-side uniqueness check (server-authoritative).
     if ((await findUserUidByPhone(phone)) !== null) {

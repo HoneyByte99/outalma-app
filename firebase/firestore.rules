@@ -337,6 +337,35 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ---------- OTP RATE LIMIT (server-owned, invisible to every client) ----------
+    //
+    // Three collections that exist only so `requestPhoneOtp` cannot be turned
+    // into a bill. All three are written exclusively by Cloud Functions via the
+    // Admin SDK, which bypasses these rules.
+    //
+    // `otp_request_states/{hash}`: one guard document per phone number, keyed by
+    // an HMAC of the number so no phone number is ever stored in a document id
+    // or a field (budget line S12).
+    //
+    // `otp_global_counters/{yyyy-mm-dd}`: the daily volume, all numbers
+    // confounded, plus the flag that keeps the alert from being re-raised.
+    //
+    // `otp_config/thresholds`: the alert and stop thresholds, tunable live so
+    // raising a ceiling during an incident does not require a deploy. It is
+    // CLOSED to reads on purpose, unlike `config/{docId}` above: publishing the
+    // stop value would tell an attacker exactly how many requests close phone
+    // sign-in for everyone. Values read from it are clamped by code constants
+    // anyway, so a bad edit cannot switch the guard off.
+    match /otp_request_states/{hash} {
+      allow read, write: if false;
+    }
+    match /otp_global_counters/{day} {
+      allow read, write: if false;
+    }
+    match /otp_config/{docId} {
+      allow read, write: if false;
+    }
+
     // ---------- SERVICES (public read) ----------
     match /services/{serviceId} {
       allow read: if true;

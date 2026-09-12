@@ -18,6 +18,12 @@
 // block real users long before an attacker, who changes address for free.
 
 import { createHmac } from 'crypto';
+import * as admin from 'firebase-admin';
+
+export const OTP_STATES = 'otp_request_states';
+export const OTP_COUNTERS = 'otp_global_counters';
+export const OTP_CONFIG = 'otp_config';
+export const OTP_CONFIG_DOC = 'thresholds';
 
 // ---------------------------------------------------------------------------
 // Dial codes
@@ -347,4 +353,109 @@ export function phoneHash(phone: string, key: string): string {
     throw new Error('OTP_HASH_KEY is missing: refusing to hash without a key.');
   }
   return createHmac('sha256', key).update(normalisePhone(phone)).digest('hex');
+}
+
+// ---------------------------------------------------------------------------
+// Firestore side of the guard
+// ---------------------------------------------------------------------------
+
+export type QuotaOutcome =
+  | { allowed: true }
+  | { allowed: false; code: OtpErrorCode; retryAfterMs: number };
+
+/// Reserves one credit, or refuses.
+///
+/// Two ordering constraints, both load-bearing:
+///
+///   1. ALL reads happen before ANY write, which Firestore requires of a
+///      transaction anyway, and which is why the config document is read here
+///      rather than fetched lazily further down.
+///   2. The caller MUST let this transaction COMMIT before calling Twilio.
+///      A Firestore transaction is replayed on contention, so a network call
+///      inside it would bill one SMS per replay. Same constraint the identity
+///      pipeline documents.
+///
+/// A refusal writes nothing at all: being turned away must not cost the caller
+/// their next legitimate attempt.
+///
+/// The global alert is created in THIS transaction, together with the `alerted`
+/// flag that suppresses it afterwards. Writing them separately would let the
+/// flag claim an alert exists when its write failed, and nobody would ever
+/// learn the day crossed the threshold. Writing it without the flag would
+/// rewrite `status: 'open'` on every subsequent request and silently reopen an
+/// alert an admin had just resolved.
+export async function consumeOtpQuota(
+  db: admin.firestore.Firestore,
+  tx: admin.firestore.Transaction,
+  phone: string,
+  hashKey: string,
+  nowMs: number
+): Promise<QuotaOutcome> {
+  const hash = phoneHash(phone, hashKey);
+  const day = dayKey(nowMs);
+
+  const stateRef = db.collection(OTP_STATES).doc(hash);
+  const counterRef = db.collection(OTP_COUNTERS).doc(day);
+  const configRef = db.collection(OTP_CONFIG).doc(OTP_CONFIG_DOC);
+
+  // Every read first.
+  const [stateSnap, counterSnap, configSnap] = await Promise.all([
+    tx.get(stateRef),
+    tx.get(counterRef),
+    tx.get(configRef),
+  ]);
+
+  const limits = resolveLimits(configSnap.exists ? configSnap.data() : undefined);
+  const counter = (counterSnap.data() ?? {}) as {
+    count?: unknown;
+    alerted?: unknown;
+  };
+  const globalCount =
+    typeof counter.count === 'number' && Number.isFinite(counter.count)
+      ? counter.count
+      : 0;
+
+  const decision = decideOtpRequest(
+    stateSnap.exists ? stateSnap.data() : undefined,
+    globalCount,
+    phone,
+    limits,
+    nowMs
+  );
+
+  if (!decision.allowed) {
+    return {
+      allowed: false,
+      code: decision.code,
+      retryAfterMs: decision.retryAfterMs,
+    };
+  }
+
+  tx.set(stateRef, decision.nextState);
+
+  const mustAlert =
+    decision.globalAfter >= limits.alertAt && counter.alerted !== true;
+
+  tx.set(
+    counterRef,
+    { count: decision.globalAfter, updatedAtMs: nowMs, alerted: mustAlert ? true : counter.alerted === true },
+    { merge: true }
+  );
+
+  if (mustAlert) {
+    // Same field set as the existing security_alerts writer, so the admin
+    // dashboard parses and sorts it like every other alert.
+    tx.create(db.collection('security_alerts').doc(), {
+      type: 'otp_global_cap',
+      severity: 'high',
+      description:
+        `OTP daily volume crossed the alert threshold (${decision.globalAfter} of ${limits.stopAt} before refusal) on ${day}.`,
+      status: 'open',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      resolvedAt: null,
+      resolvedBy: null,
+    });
+  }
+
+  return { allowed: true };
 }
