@@ -19,6 +19,13 @@ import {
   type RatingTx,
 } from './provider_rating';
 import { PUBLIC_PROFILES } from './public_profiles';
+import {
+  OTP_COUNTERS,
+  OTP_STATES,
+  OTP_STATE_TTL_MS,
+  phoneHash,
+} from './otp_rate_limit';
+import { OTP_HASH_KEY } from './auth_phone';
 
 // ---------------------------------------------------------------------------
 // IP geolocation cache (ipapi.co has 1 000 req/day on free tier)
@@ -959,7 +966,9 @@ async function deleteIdentityVerificationData(uid: string): Promise<void> {
   await flush();
 }
 
-export const deleteMyAccount = onCall(async (request) => {
+export const deleteMyAccount = onCall(
+  { secrets: [OTP_HASH_KEY] },
+  async (request) => {
   const uid = request.auth?.uid;
   assertAuthenticated(uid);
 
@@ -1030,11 +1039,42 @@ export const deleteMyAccount = onCall(async (request) => {
     console.warn(`deleteMyAccount: avatar cleanup failed for ${uid}: ${e}`);
   }
 
+  // Best-effort cleanup of the OTP rate-limit guard document (budget line S10).
+  //
+  // BEST-EFFORT ON PURPOSE, and the fail-closed rule of `phoneHash` does NOT
+  // apply here: erasing an account is a GDPR right and an App Store
+  // requirement, and it must never fall over because a hashing key is missing
+  // or a phone number is absent. Same shape as the avatar cleanup above.
+  //
+  // The number comes from Firebase Auth, which this file already treats as the
+  // source of truth for phone<->uid, and is hashed through the SAME
+  // normalisation the guard uses, otherwise an account created with a trunk
+  // zero would leave its document behind.
+  //
+  // Known and accepted consequence, written down rather than discovered: a
+  // "create an account then delete it" cycle hands that number a fresh quota.
+  // It is bounded, because signing up requires a SUCCESSFUL verification on a
+  // number the attacker controls, so it cannot be used to bombard a third
+  // party, and the global ceiling still applies.
+  try {
+    const authUser = await admin.auth().getUser(uid);
+    const phone = authUser.phoneNumber;
+    if (phone) {
+      await db
+        .collection(OTP_STATES)
+        .doc(phoneHash(phone, OTP_HASH_KEY.value()))
+        .delete();
+    }
+  } catch (e) {
+    console.warn(`deleteMyAccount: OTP guard cleanup failed for ${uid}: ${e}`);
+  }
+
   // Remove the Firebase Auth account last so the client is fully signed out.
   await admin.auth().deleteUser(uid);
 
   return { deleted: true };
-});
+  }
+);
 
 // ---------------------------------------------------------------------------
 // Personal data export (RGPD right to portability)
@@ -1065,6 +1105,15 @@ export const exportMyData = onCall(async (request) => {
   // number of rejected ones, its flags are their statuses). It is a
   // denormalised index, not a source. It IS deleted with the account, which the
   // retention rule requires separately.
+
+  // otp_request_states is NOT exported either, same kind of decision and the
+  // same retention rule (it IS deleted with the account, above). The document
+  // holds one HMAC and a list of timestamps: it tells its owner nothing about
+  // themselves that they do not already know, and the identifier is opaque by
+  // construction. The deciding argument is the second one: returning it would
+  // mean binding OTP_HASH_KEY to this callable purely to hand back a key the
+  // recipient cannot interpret, which widens the blast radius of a secret for
+  // no benefit to the person exercising their right.
   const identityFiles = await db
     .collection('identity_verifications')
     .where('providerId', '==', uid)
@@ -2618,6 +2667,50 @@ export const purgeExpiredSessionData = onSchedule(
     await batch.commit();
 
     logger.info(`Session purge: deleted ${expiredSnap.size} events older than ${retentionDays} days.`);
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Scheduled: purge expired OTP guard documents (daily at 3:30am Paris)
+// ---------------------------------------------------------------------------
+
+/// Retention for the OTP rate-limit guard (budget line S11). The TTL is
+/// deliberately longer than the longest counting window, otherwise this purge
+/// would erase a 24h counter before it expires and hand an attacker a fresh
+/// quota every night.
+///
+/// Also sweeps the daily volume counters, which carry no personal data but
+/// would otherwise grow one document per day forever.
+export const purgeExpiredOtpStates = onSchedule(
+  { schedule: 'every day 03:30', timeZone: 'Europe/Paris' },
+  async () => {
+    const cutoffMs = Date.now() - OTP_STATE_TTL_MS;
+
+    const staleStates = await db
+      .collection(OTP_STATES)
+      .where('updatedAtMs', '<', cutoffMs)
+      .limit(500)
+      .get();
+
+    const staleCounters = await db
+      .collection(OTP_COUNTERS)
+      .where('updatedAtMs', '<', cutoffMs)
+      .limit(500)
+      .get();
+
+    if (staleStates.empty && staleCounters.empty) {
+      logger.info('OTP purge: nothing expired.');
+      return;
+    }
+
+    const batch = db.batch();
+    for (const doc of staleStates.docs) batch.delete(doc.ref);
+    for (const doc of staleCounters.docs) batch.delete(doc.ref);
+    await batch.commit();
+
+    logger.info(
+      `OTP purge: deleted ${staleStates.size} guard documents and ${staleCounters.size} daily counters.`
+    );
   }
 );
 
