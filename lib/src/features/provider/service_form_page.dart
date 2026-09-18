@@ -10,6 +10,7 @@ import '../../application/auth/auth_providers.dart';
 import '../../application/auth/auth_state.dart';
 import '../../application/pricing/pricing_providers.dart';
 import '../../application/service/service_providers.dart';
+import '../../core/utils/debouncer.dart';
 import '../../core/utils/format_utils.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/service_photo_upload_service.dart';
@@ -871,6 +872,7 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
   String? _error;
   List<PlaceSuggestion> _suggestions = [];
   PlaceSuggestion? _selected;
+  final _searchDebounce = Debouncer();
 
   bool get _isEdit => widget.existing != null;
 
@@ -889,15 +891,21 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
 
   @override
   void dispose() {
+    _searchDebounce.dispose();
     _addressController.dispose();
     super.dispose();
   }
 
-  Future<void> _onSearchChanged(String input) async {
+  void _onSearchChanged(String input) {
     if (input.trim().length < 2) {
+      _searchDebounce.cancel();
       setState(() => _suggestions = []);
       return;
     }
+    _searchDebounce.run(() => _fetchSuggestions(input));
+  }
+
+  Future<void> _fetchSuggestions(String input) async {
     try {
       final results = await widget.geocoding.autocomplete(input);
       if (mounted) setState(() => _suggestions = results);
@@ -909,6 +917,9 @@ class _AddZoneSheetState extends State<_AddZoneSheet> {
   void _selectSuggestion(PlaceSuggestion suggestion) {
     _selected = suggestion;
     _addressController.text = suggestion.description;
+    // A fetch may still be in flight for a later keystroke: without this the
+    // list would reopen on top of the choice once the delay elapses.
+    _searchDebounce.cancel();
     // The address is chosen: close the keyboard so the radius slider and the
     // validate button below get the screen back.
     FocusManager.instance.primaryFocus?.unfocus();

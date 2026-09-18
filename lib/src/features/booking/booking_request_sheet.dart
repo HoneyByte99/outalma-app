@@ -17,6 +17,7 @@ import '../../app/app_theme.dart';
 import '../../app/router.dart';
 import '../../application/booking/booking_providers.dart';
 import '../../application/provider/provider_providers.dart';
+import '../../core/utils/debouncer.dart';
 import '../../data/services/chat_media_service.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../data/services/saved_locations_service.dart';
@@ -1331,14 +1332,29 @@ class _StepAddress extends ConsumerStatefulWidget {
 class _StepAddressState extends ConsumerState<_StepAddress> {
   List<PlaceSuggestion> _suggestions = [];
   bool _geoLoading = false;
+  final _searchDebounce = Debouncer();
 
-  Future<void> _onChanged(String input) async {
-    // Manual edits invalidate the previously resolved location.
+  @override
+  void dispose() {
+    // Only the debouncer: the controller belongs to the parent sheet.
+    _searchDebounce.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String input) {
+    // Manual edits invalidate the previously resolved location. This stays
+    // immediate, outside the debounce: it is a consistency guard on the submit
+    // button, it must not lag 350 ms behind the keystroke.
     widget.onLocationResolved(null);
     if (input.trim().length < 3) {
+      _searchDebounce.cancel();
       setState(() => _suggestions = []);
       return;
     }
+    _searchDebounce.run(() => _fetchSuggestions(input));
+  }
+
+  Future<void> _fetchSuggestions(String input) async {
     try {
       final geocoding = ref.read(geocodingServiceProvider);
       final results = await geocoding.autocomplete(input);
@@ -1348,6 +1364,9 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
 
   Future<void> _selectSuggestion(PlaceSuggestion s) async {
     widget.controller.text = s.description;
+    // A fetch may still be in flight for a later keystroke: without this the
+    // list would reopen on top of the choice once the delay elapses.
+    _searchDebounce.cancel();
     setState(() => _suggestions = []);
     try {
       final geocoding = ref.read(geocodingServiceProvider);
@@ -1387,6 +1406,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
       if (!mounted) return;
       widget.controller.text =
           label ?? AppLocalizations.of(context)!.locationMyPosition;
+      _searchDebounce.cancel();
       setState(() => _suggestions = []);
       widget.onLocationResolved((
         lat: position.latitude,
@@ -1400,6 +1420,7 @@ class _StepAddressState extends ConsumerState<_StepAddress> {
 
   void _applySavedLocation(SavedLocation loc) {
     widget.controller.text = loc.address;
+    _searchDebounce.cancel();
     setState(() => _suggestions = []);
     widget.onLocationResolved((lat: loc.lat, lng: loc.lng, countryCode: null));
   }

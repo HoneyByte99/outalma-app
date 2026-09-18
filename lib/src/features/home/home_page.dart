@@ -14,6 +14,7 @@ import '../../application/review/review_providers.dart';
 import '../../application/service/service_providers.dart';
 import '../../application/user/public_profile_providers.dart';
 import '../../application/user/user_providers.dart';
+import '../../core/utils/debouncer.dart';
 import '../shared/current_position_messages.dart';
 import '../shared/service_location_label.dart';
 import '../shared/service_price_label.dart';
@@ -293,6 +294,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
   List<PlaceSuggestion> _suggestions = [];
   late double _radiusKm;
   Timer? _radiusDebounce;
+  final _searchDebounce = Debouncer();
 
   @override
   void initState() {
@@ -307,15 +309,21 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
   @override
   void dispose() {
     _radiusDebounce?.cancel();
+    _searchDebounce.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _onSearchChanged(String input) async {
+  void _onSearchChanged(String input) {
     if (input.trim().length < 2) {
+      _searchDebounce.cancel();
       setState(() => _suggestions = []);
       return;
     }
+    _searchDebounce.run(() => _fetchSuggestions(input));
+  }
+
+  Future<void> _fetchSuggestions(String input) async {
     try {
       final geocoding = ref.read(geocodingServiceProvider);
       final results = await geocoding.autocomplete(input);
@@ -325,6 +333,9 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
 
   Future<void> _selectSuggestion(PlaceSuggestion suggestion) async {
     _controller.text = suggestion.description;
+    // A fetch may still be in flight for a later keystroke: without this the
+    // list would reopen on top of the choice once the delay elapses.
+    _searchDebounce.cancel();
     setState(() => _suggestions = []);
 
     final geocoding = ref.read(geocodingServiceProvider);
@@ -472,6 +483,7 @@ class _LocationSheetState extends ConsumerState<_LocationSheet> {
 
       final fallbackLabel = AppLocalizations.of(context)!.locationMyPosition;
       _controller.text = label ?? fallbackLabel;
+      _searchDebounce.cancel();
       setState(() => _suggestions = []);
 
       ref.read(locationFilterProvider.notifier).state = LocationFilter(

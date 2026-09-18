@@ -20,6 +20,7 @@ import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/application/booking/booking_providers.dart';
 import 'package:outalma_app/src/application/booking/create_booking_use_case.dart';
 import 'package:outalma_app/src/application/provider/provider_providers.dart';
+import 'package:outalma_app/src/core/utils/debouncer.dart';
 import 'package:outalma_app/src/data/services/geocoding_service.dart';
 import 'package:outalma_app/src/domain/models/service_zone.dart';
 import 'package:outalma_app/src/features/booking/booking_request_sheet.dart';
@@ -117,6 +118,16 @@ Future<void> _goToAddressStep(WidgetTester tester) async {
   await tester.pump();
 }
 
+/// Crosses the address autocomplete debounce.
+///
+/// A pending [Timer] schedules no frame, so `pump()` and `pumpAndSettle()`
+/// alone never reach it: without this the query never leaves the widget and
+/// the suggestion assertions below pass or fail for the wrong reason.
+Future<void> _settleAddressDebounce(WidgetTester tester) async {
+  await tester.pump(kAddressSearchDebounce + const Duration(milliseconds: 50));
+  await tester.pump();
+}
+
 void main() {
   _keyboardGroup();
   setUp(() {
@@ -192,7 +203,7 @@ void main() {
           find.byKey(const Key('bookingAddressField')),
           'Saint-Louis',
         );
-        await tester.pump();
+        await _settleAddressDebounce(tester);
         await tester.tap(find.text('Saint-Louis, Senegal'));
         await tester.pump();
 
@@ -251,7 +262,7 @@ void main() {
         find.byKey(const Key('bookingAddressField')),
         'Saint-Louis',
       );
-      await tester.pump();
+      await _settleAddressDebounce(tester);
       await tester.tap(find.text('Saint-Louis, Senegal'));
       await tester.pump();
 
@@ -295,7 +306,7 @@ void main() {
           find.byKey(const Key('bookingAddressField')),
           'Saint-Louis',
         );
-        await tester.pump();
+        await _settleAddressDebounce(tester);
         await tester.tap(find.text('Saint-Louis, Senegal'));
         await tester.pump();
 
@@ -347,7 +358,7 @@ void main() {
         find.byKey(const Key('bookingAddressField')),
         'Plateau',
       );
-      await tester.pump();
+      await _settleAddressDebounce(tester);
       await tester.tap(find.text('Plateau, Dakar'));
       await tester.pump();
 
@@ -480,7 +491,7 @@ void main() {
         find.byKey(const Key('bookingAddressField')),
         'Plateau',
       );
-      await tester.pump();
+      await _settleAddressDebounce(tester);
       await tester.tap(find.text('Plateau, Dakar'));
       await tester.pump();
 
@@ -781,6 +792,7 @@ void _keyboardGroup() {
       await tester.pumpAndSettle();
       final addressField = find.byKey(const Key('bookingAddressField'));
       await tester.enterText(addressField, 'Saint');
+      await _settleAddressDebounce(tester);
       await tester.pumpAndSettle();
 
       expectAboveKeyboard(tester, addressField, inset: kReferenceKeyboard);

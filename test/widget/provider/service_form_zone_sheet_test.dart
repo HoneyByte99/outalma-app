@@ -10,6 +10,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:outalma_app/src/core/utils/debouncer.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:outalma_app/l10n/app_localizations.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
@@ -99,6 +100,16 @@ Future<void> _pump(
   await tester.pump();
 }
 
+/// Crosses the address autocomplete debounce.
+///
+/// A pending Timer schedules no frame, so `pumpAndSettle()` alone never reaches
+/// it: without this the query never leaves the widget and the suggestion
+/// assertions below pass or fail for the wrong reason.
+Future<void> _settleAddressDebounce(WidgetTester tester) async {
+  await tester.pump(kAddressSearchDebounce + const Duration(milliseconds: 50));
+  await tester.pump();
+}
+
 void main() {
   testWidgets(
     'suggestions stay above the keyboard, picking one closes it and brings '
@@ -130,6 +141,7 @@ void main() {
 
       final sheetField = find.byType(TextFormField).last;
       await tester.enterText(sheetField, 'Dak');
+      await _settleAddressDebounce(tester);
       await tester.pumpAndSettle();
 
       // No overflow was thrown (it would have failed the test).
