@@ -83,6 +83,10 @@ dev_dependencies:
   fake_cloud_firestore: ^3.0.3
   mocktail: ^1.0.4
   geolocator_platform_interface: ^4.2.6
+  # Already pulled in transitively by flutter_test; declared explicitly because
+  # the debouncer unit test imports it and depend_on_referenced_packages fires
+  # otherwise. Version matches the lock, so `pub get` must not re-resolve.
+  fake_async: ^1.3.3
 
 flutter_launcher_icons:
   android: true
