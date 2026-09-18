@@ -711,11 +711,10 @@ describe('a late extraction cannot overwrite a decided file', () => {
       },
     });
     try {
-      await identity.runExtraction(
-        VERIF,
-        OWNER,
-        `private/identity/${OWNER}/${BATCH}/recto.jpg`
-      );
+      await identity.runExtraction(VERIF, OWNER, {
+        recto: `private/identity/${OWNER}/${BATCH}/recto.jpg`,
+        verso: `private/identity/${OWNER}/${BATCH}/verso.jpg`,
+      });
     } finally {
       identity.resetTextExtractor();
     }

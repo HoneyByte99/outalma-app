@@ -54,6 +54,7 @@ const internalDoc = (id = VERIF) =>
   verifDoc(id).collection(INTERNAL_SUB).doc(INTERNAL_DOC);
 
 const rectoPath = `private/identity/${OWNER}/${BATCH}/recto.jpg`;
+const versoPath = `private/identity/${OWNER}/${BATCH}/verso.jpg`;
 
 /// Counts its calls, so "one recognition per click" and "none once the ceiling
 /// is reached" are observed rather than asserted.
@@ -73,11 +74,13 @@ function countingExtractor(lines: string[]) {
 /// A file whose automatic extraction produced nothing: the exact state this
 /// callable exists to get out of.
 async function seedFailedFile(status = 'pending'): Promise<void> {
-  await admin
-    .storage()
-    .bucket()
-    .file(rectoPath)
-    .save(Buffer.from('bytes-recto'), { contentType: 'image/jpeg' });
+  for (const p of [rectoPath, versoPath]) {
+    await admin
+      .storage()
+      .bucket()
+      .file(p)
+      .save(Buffer.from(`bytes-${p}`), { contentType: 'image/jpeg' });
+  }
 
   await verifDoc().set({
     providerId: OWNER,
@@ -100,7 +103,7 @@ async function seedFailedFile(status = 'pending'): Promise<void> {
   await internalDoc().set({
     providerId: OWNER,
     rectoPath,
-    versoPath: `private/identity/${OWNER}/${BATCH}/verso.jpg`,
+    versoPath,
     selfiePath: `private/identity/${OWNER}/${BATCH}/selfie.jpg`,
     cniNumberKey: null,
     doublonPotentiel: false,
@@ -157,7 +160,7 @@ describe('what a second read does', () => {
     expect(res).toMatchObject({ verificationId: VERIF, extractionStatus: 'ok' });
     // Exactly one recognition per click: the pass is not free of CPU.
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toContain(rectoPath);
+    expect(calls[0]).toContain(versoPath);
 
     const data = (await verifDoc().get()).data() ?? {};
     expect(data.extractionStatus).toBe('ok');
@@ -242,7 +245,7 @@ describe('what a second read refuses to touch', () => {
 
   it('refuses when the stored image path is missing', async () => {
     await seedFailedFile();
-    await internalDoc().update({ rectoPath: admin.firestore.FieldValue.delete() });
+    await internalDoc().update({ versoPath: admin.firestore.FieldValue.delete() });
 
     await expectCode(reextract({ verificationId: VERIF }, ADMIN), 'failed-precondition');
   });

@@ -353,7 +353,7 @@ export const submitIdentityVerification = onCall(OCR_RUNTIME, async (request) =>
     return created;
   }
 
-  await runExtraction(docId, uid, paths.recto);
+  await runExtraction(docId, uid, { recto: paths.recto, verso: paths.verso });
 
   logger.info('Identity verification submitted', {
     uid,
@@ -465,7 +465,7 @@ async function readFingerprints(paths: {
 export async function runExtraction(
   docId: string,
   uid: string,
-  rectoPath: string
+  faces: IdentityFaces
 ): Promise<void> {
   // The WHOLE body is best effort, not just the extraction call. The duplicate
   // search uses a collection group index that is built asynchronously after a
@@ -475,7 +475,7 @@ export async function runExtraction(
   // and a provider convinced their submission failed while a replay tells them
   // one is already in progress.
   try {
-    await extractAndFlag(docId, uid, rectoPath);
+    await extractAndFlag(docId, uid, faces);
   } catch {
     // No card number, no name and no object path in the log (budget line S12).
     logger.warn('Identity extraction step failed', { verificationId: docId });
@@ -498,16 +498,56 @@ export function errorSummary(e: unknown): string {
   return raw.replace(/private\/identity\/\S*/g, 'private/identity/[redacted]').slice(0, 300);
 }
 
+/// The two faces of the card that may carry the machine readable zone.
+export interface IdentityFaces {
+  recto: string;
+  verso: string;
+}
+
+/// Reads the faces in order and returns the first one carrying an MRZ.
+///
+/// The BACK comes first, and that order is a measured fact rather than a guess:
+/// on the Senegalese CEDEAO card the machine readable zone is printed on the
+/// back (checked against real files on 2026-09-18, after every read of the
+/// front had come back empty). The front is still tried as a fallback, because
+/// other documents put the zone there and a wrong assumption in this file is
+/// exactly what cost the previous attempt.
+///
+/// `noReadableText` is computed across BOTH faces: it means "this upload
+/// carries no text at all", which is the review aid a human acts on. Deriving
+/// it from one face would flag a perfectly good card as unreadable whenever its
+/// other side happens to be blank.
+export async function readFirstFaceWithMrz(
+  faces: IdentityFaces,
+  detect: (objectPath: string) => Promise<string[]>
+): Promise<ExtractionOutcome> {
+  let last: ExtractionOutcome = { ...FAILED_EXTRACTION };
+  let sawText = false;
+
+  for (const objectPath of [faces.verso, faces.recto]) {
+    const candidate = extractionFromLines(await detect(objectPath));
+    sawText = sawText || !candidate.noReadableText;
+    last = candidate;
+    // `partial` counts as found: the zone was read, one check digit failed, and
+    // the reviewer gets the fields flagged as unverified. Reading the other
+    // face would replace them with nothing.
+    if (candidate.status !== 'failed') break;
+  }
+
+  return { ...last, noReadableText: !sawText };
+}
+
 export async function extractAndFlag(
   docId: string,
   uid: string,
-  rectoPath: string
+  faces: IdentityFaces
 ): Promise<void> {
   let outcome: ExtractionOutcome = { ...FAILED_EXTRACTION };
   try {
     const bucket = admin.storage().bucket().name;
-    const lines = await activeExtractor.detect(`gs://${bucket}/${rectoPath}`);
-    outcome = extractionFromLines(lines);
+    outcome = await readFirstFaceWithMrz(faces, (path) =>
+      activeExtractor.detect(`gs://${bucket}/${path}`)
+    );
   } catch (e) {
     // The CAUSE, never the content. Until 2026-09-18 this catch swallowed
     // everything, and that is exactly how a project-wide outage (the recogniser
@@ -993,8 +1033,17 @@ export const reextractIdentityVerification = onCall(OCR_RUNTIME, async (request)
       );
     }
 
+    // Both faces, because the MRZ lives on the back of the card and the front
+    // is only the fallback. A file missing either path cannot be replayed the
+    // way the automatic pass reads it.
     const rectoPath = internal.rectoPath;
-    if (typeof rectoPath !== 'string' || rectoPath.length === 0) {
+    const versoPath = internal.versoPath;
+    if (
+      typeof rectoPath !== 'string' ||
+      rectoPath.length === 0 ||
+      typeof versoPath !== 'string' ||
+      versoPath.length === 0
+    ) {
       throw new HttpsError(
         'failed-precondition',
         'Piece introuvable, relecture impossible.'
@@ -1014,11 +1063,14 @@ export const reextractIdentityVerification = onCall(OCR_RUNTIME, async (request)
       targetId: verificationId,
     });
 
-    return { providerId: String(data.providerId), rectoPath };
+    return {
+      providerId: String(data.providerId),
+      faces: { recto: rectoPath, verso: versoPath },
+    };
   });
 
   try {
-    await extractAndFlag(verificationId, armed.providerId, armed.rectoPath);
+    await extractAndFlag(verificationId, armed.providerId, armed.faces);
   } catch (e) {
     // The run is already counted and the file is back to `pending`: the reviewer
     // can try again, or key the fields in by hand. Surfacing the raw SDK error
