@@ -222,6 +222,37 @@ export function pickCniNumber(fields: Td1Fields): string {
   return normalizeCniNumber(fields.documentNumber);
 }
 
+/// Describes what the recogniser actually saw, when no MRZ could be isolated.
+///
+/// Exists because a failed read said nothing at all: front or back, TD1 badly
+/// read or a format this parser does not know, every case looked identical from
+/// the outside and each diagnosis cost a deploy. Each entry is `length:text`,
+/// longest first, which is what tells the three apart at a glance:
+///   - three entries near 30 -> TD1, read imperfectly (a stray character, a
+///     chevron taken for an L), so the fix is reading quality;
+///   - two entries near 36 or 44 -> TD2 or TD3, a format `parseTd1` will never
+///     accept whatever the photo looks like;
+///   - nothing of the sort -> the zone is not in the frame at all.
+///
+/// Bounded on both axes: a Firestore document has a size limit, and this is a
+/// diagnostic, not a transcript. It carries card text, so it belongs in the
+/// staff-only internal document alongside `mrzRaw` and never in a log (budget
+/// line S12).
+export function diagnoseMrzFailure(
+  rawLines: string[],
+  maxLines = 6,
+  maxChars = 60
+): string[] {
+  return rawLines
+    .map((line) => line.replace(/\s+/g, '').toUpperCase())
+    // Below 15 characters nothing can be a machine readable line; keeping the
+    // short ones would bury the useful entries under printed labels.
+    .filter((line) => line.length >= 15)
+    .sort((a, b) => b.length - a.length)
+    .slice(0, maxLines)
+    .map((line) => `${line.length}:${line.slice(0, maxChars)}`);
+}
+
 // ---------------------------------------------------------------------------
 // Storage object paths
 // ---------------------------------------------------------------------------

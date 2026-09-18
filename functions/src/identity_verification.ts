@@ -22,6 +22,7 @@ import { writeAdminLog, writeAdminLogTx } from './audit';
 import { createNotification, sendPushToUsers } from './notify';
 import {
   buildObjectPaths,
+  diagnoseMrzFailure,
   extractionFromLines,
   FAILED_EXTRACTION,
   isValidBatchId,
@@ -520,21 +521,31 @@ export interface IdentityFaces {
 export async function readFirstFaceWithMrz(
   faces: IdentityFaces,
   detect: (objectPath: string) => Promise<string[]>
-): Promise<ExtractionOutcome> {
+): Promise<{ outcome: ExtractionOutcome; diagnostic: string[] }> {
   let last: ExtractionOutcome = { ...FAILED_EXTRACTION };
   let sawText = false;
+  const diagnostic: string[] = [];
 
-  for (const objectPath of [faces.verso, faces.recto]) {
-    const candidate = extractionFromLines(await detect(objectPath));
+  for (const [label, objectPath] of [
+    ['verso', faces.verso],
+    ['recto', faces.recto],
+  ] as const) {
+    const lines = await detect(objectPath);
+    const candidate = extractionFromLines(lines);
     sawText = sawText || !candidate.noReadableText;
     last = candidate;
     // `partial` counts as found: the zone was read, one check digit failed, and
     // the reviewer gets the fields flagged as unverified. Reading the other
     // face would replace them with nothing.
-    if (candidate.status !== 'failed') break;
+    if (candidate.status !== 'failed') {
+      return { outcome: { ...candidate, noReadableText: !sawText }, diagnostic: [] };
+    }
+    // Only a failure is described: on success the MRZ itself is already stored,
+    // and a second copy of the card text would be retention with no purpose.
+    diagnostic.push(...diagnoseMrzFailure(lines).map((l) => `${label} ${l}`));
   }
 
-  return { ...last, noReadableText: !sawText };
+  return { outcome: { ...last, noReadableText: !sawText }, diagnostic };
 }
 
 export async function extractAndFlag(
@@ -543,11 +554,14 @@ export async function extractAndFlag(
   faces: IdentityFaces
 ): Promise<void> {
   let outcome: ExtractionOutcome = { ...FAILED_EXTRACTION };
+  let diagnostic: string[] = [];
   try {
     const bucket = admin.storage().bucket().name;
-    outcome = await readFirstFaceWithMrz(faces, (path) =>
+    const read = await readFirstFaceWithMrz(faces, (path) =>
       activeExtractor.detect(`gs://${bucket}/${path}`)
     );
+    outcome = read.outcome;
+    diagnostic = read.diagnostic;
   } catch (e) {
     // The CAUSE, never the content. Until 2026-09-18 this catch swallowed
     // everything, and that is exactly how a project-wide outage (the recogniser
@@ -590,8 +604,12 @@ export async function extractAndFlag(
       mrzRaw: outcome.mrzRaw,
       doublonPotentiel: duplicate !== null,
       doublonReferenceId: duplicate,
-      // Review aid only (decision D1): the recto carried no readable text, so the
-      // upload is likely not a document. The reviewer decides; nothing is
+      // What the recogniser saw when it found no zone, so the next failure is
+      // diagnosed by reading the file instead of by deploying a probe. Cleared
+      // on success: the MRZ is already stored just above.
+      extractionDiagnostic: diagnostic.length > 0 ? diagnostic : null,
+      // Review aid only (decision D1): neither face carried readable text, so
+      // the upload is likely not a document. The reviewer decides; nothing is
       // auto-rejected.
       pasDocumentLisible: outcome.noReadableText,
     });

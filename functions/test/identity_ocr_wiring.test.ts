@@ -9,6 +9,7 @@ import {
   parseGcsUri,
   readFirstFaceWithMrz,
 } from '../src/identity_verification';
+import { diagnoseMrzFailure } from '../src/identity_extraction';
 
 describe('parseGcsUri', () => {
   it('splits a bucket from its object path', () => {
@@ -87,7 +88,7 @@ describe('readFirstFaceWithMrz', () => {
     // The regression this locks down: reading only the front returned an empty
     // file for every real card, with no error anywhere to say why.
     const d = detector(FACES.verso);
-    const out = await readFirstFaceWithMrz(FACES, d.detect);
+    const { outcome: out } = await readFirstFaceWithMrz(FACES, d.detect);
 
     expect(out.status).toBe('ok');
     expect(out.cniNom).toBe('NDIAYE');
@@ -98,7 +99,7 @@ describe('readFirstFaceWithMrz', () => {
     // Other documents do print the zone on the front; a wrong assumption in
     // this file is what cost the previous attempt, so both are tried.
     const d = detector(FACES.recto);
-    const out = await readFirstFaceWithMrz(FACES, d.detect);
+    const { outcome: out } = await readFirstFaceWithMrz(FACES, d.detect);
 
     expect(out.status).toBe('ok');
     expect(d.calls).toEqual([FACES.verso, FACES.recto]);
@@ -112,7 +113,7 @@ describe('readFirstFaceWithMrz', () => {
 
   it('reports a failure when neither face carries an MRZ', async () => {
     const d = detector(null);
-    const out = await readFirstFaceWithMrz(FACES, d.detect);
+    const { outcome: out } = await readFirstFaceWithMrz(FACES, d.detect);
 
     expect(out.status).toBe('failed');
     expect(out.cniNumber).toBeNull();
@@ -127,10 +128,10 @@ describe('readFirstFaceWithMrz', () => {
     const blankBack = {
       detect: async (p: string) => (p === FACES.verso ? [''] : ['CARTE NATIONALE']),
     };
-    expect((await readFirstFaceWithMrz(FACES, blankBack.detect)).noReadableText).toBe(false);
+    expect((await readFirstFaceWithMrz(FACES, blankBack.detect)).outcome.noReadableText).toBe(false);
 
     const bothBlank = { detect: async () => ['', '  '] };
-    expect((await readFirstFaceWithMrz(FACES, bothBlank.detect)).noReadableText).toBe(true);
+    expect((await readFirstFaceWithMrz(FACES, bothBlank.detect)).outcome.noReadableText).toBe(true);
   });
 
   it('keeps a partial read instead of discarding it for the other face', async () => {
@@ -142,7 +143,7 @@ describe('readFirstFaceWithMrz', () => {
       'NDIAYE<<FATOU<<<<<<<<<<<<<<<<<',
     ];
     const calls: string[] = [];
-    const out = await readFirstFaceWithMrz(FACES, async (p) => {
+    const { outcome: out } = await readFirstFaceWithMrz(FACES, async (p) => {
       calls.push(p);
       return p === FACES.verso ? brokenCheckDigit : MRZ_OK;
     });
@@ -151,5 +152,41 @@ describe('readFirstFaceWithMrz', () => {
     expect(out.mrzValid).toBe(false);
     expect(out.cniNom).toBe('NDIAYE');
     expect(calls).toEqual([FACES.verso]);
+  });
+});
+
+describe('diagnoseMrzFailure', () => {
+  it('names the length of each candidate, longest first', () => {
+    // The length is the whole point: it is what separates a badly read TD1
+    // from a format the parser does not know.
+    const out = diagnoseMrzFailure([
+      'Nom: DIOP',
+      'REPUBLIQUE DU SENEGAL CARTE',
+      'I<SEND231458907123456789012345',
+    ]);
+    expect(out[0]).toBe('30:I<SEND231458907123456789012345');
+    expect(out[1]).toBe('24:REPUBLIQUEDUSENEGALCARTE');
+    // Too short to be a machine readable line: dropped rather than shown.
+    expect(out.join()).not.toContain('DIOP');
+  });
+
+  it('strips whitespace, which the recogniser inserts inside the zone', () => {
+    expect(diagnoseMrzFailure(['I<SEN D23145 8907123456789012345'])[0]).toBe(
+      '30:I<SEND231458907123456789012345'
+    );
+  });
+
+  it('stays bounded, since a Firestore document has a size limit', () => {
+    const many = Array.from({ length: 40 }, (_, i) => 'X'.repeat(80 + i));
+    const out = diagnoseMrzFailure(many);
+    expect(out).toHaveLength(6);
+    // `length:` prefix plus 60 characters of text.
+    expect(out[0]!.split(':')[1]).toHaveLength(60);
+    // The reported length is the REAL one, not the truncated one.
+    expect(out[0]!.split(':')[0]).toBe('119');
+  });
+
+  it('returns nothing when no line could plausibly be a zone', () => {
+    expect(diagnoseMrzFailure(['Nom', 'Prenom', ''])).toEqual([]);
   });
 });
