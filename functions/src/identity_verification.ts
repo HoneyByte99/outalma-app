@@ -9,6 +9,7 @@
 
 import * as admin from 'firebase-admin';
 import { createHash } from 'crypto';
+import * as path from 'path';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 import {
@@ -121,52 +122,92 @@ export function verificationDocId(uid: string, batchId: string): string {
 // Text extraction wiring
 // ---------------------------------------------------------------------------
 
-let visionClient: { textDetection: (uri: string) => Promise<unknown[]> } | null =
-  null;
+/// Runtime the recognition pass needs. The WebAssembly core plus the language
+/// data do not fit in the platform default of 256 MiB, and a cold start that
+/// loads both and then recognises an image does not fit in the default timeout
+/// either. Every callable that can reach the extractor declares it.
+export const OCR_RUNTIME = { memory: '1GiB', timeoutSeconds: 120 } as const;
 
-/// Production extractor: Cloud Vision, European endpoint. The users are in
-/// France and Senegal, there is no Senegalese GCP region, and the data
-/// protection file has to state where the images are processed, so the choice
-/// is explicit rather than left to a default.
-/* istanbul ignore next -- thin adapter over an external SDK: there is no
-   Cloud Vision emulator, so the only way to execute this body would be to call
-   the paid API from the test suite. Everything it feeds is covered through the
-   injected double, and the interface boundary is one line wide. */
-export const cloudVisionExtractor: TextExtractor = {
+/// Language data, SHIPPED with the function rather than downloaded at cold
+/// start. Resolved from the compiled file (`lib/identity_verification.js`), so
+/// the same path holds in the emulator and in the deployed bundle.
+const TESSDATA_DIR = path.join(__dirname, '..', 'tessdata');
+
+/// The MRZ is printed in OCR-B, whose glyphs are the Latin ones: `eng` reads it
+/// and nothing here is ever translated, so no second language is needed.
+const TESSDATA_LANG = 'eng';
+
+interface OcrWorker {
+  recognize(image: Buffer): Promise<{ data: { text: string } }>;
+}
+
+/// Kept across invocations of a warm instance: loading the WebAssembly core and
+/// the language data costs more than the recognition itself.
+let ocrWorker: OcrWorker | null = null;
+
+/// Splits `gs://bucket/object/path` in two.
+///
+/// Throws rather than guessing: the only caller builds this URI from a path the
+/// server itself stored, so a malformed value is a bug in this file, never a
+/// user input to be tolerated.
+export function parseGcsUri(gcsUri: string): { bucket: string; objectPath: string } {
+  const match = /^gs:\/\/([^/]+)\/(.+)$/.exec(gcsUri);
+  if (!match?.[1] || !match[2]) {
+    throw new Error('Malformed GCS URI');
+  }
+  return { bucket: match[1], objectPath: match[2] };
+}
+
+/// Production extractor: Tesseract (Apache 2.0), running INSIDE the function.
+///
+/// It replaced Cloud Vision on 2026-09-18 (decision Amath), and the reason is
+/// not only the bill: an identity document now never leaves the project, so
+/// there is no third-party processor to declare and no second copy of a card to
+/// reason about in the data protection file.
+/* istanbul ignore next -- thin adapter over the WASM recogniser and the Storage
+   SDK. Everything it feeds is covered through the injected double, and covering
+   the body itself would mean committing a real card image to the repository. */
+export const tesseractExtractor: TextExtractor = {
   async detect(gcsUri: string): Promise<string[]> {
-    if (!visionClient) {
-      const vision = await import('@google-cloud/vision');
-      visionClient = new vision.ImageAnnotatorClient({
-        apiEndpoint: 'eu-vision.googleapis.com',
-      }) as unknown as typeof visionClient;
+    const { bucket, objectPath } = parseGcsUri(gcsUri);
+    const [image] = await admin.storage().bucket(bucket).file(objectPath).download();
+
+    if (!ocrWorker) {
+      const { createWorker } = await import('tesseract.js');
+      ocrWorker = (await createWorker(TESSDATA_LANG, 1, {
+        langPath: TESSDATA_DIR,
+        // The shipped file is already decompressed, and the function filesystem
+        // is read only outside /tmp: nothing may be fetched or cached at run
+        // time. Both flags together are what make the pass work offline.
+        gzip: false,
+        cacheMethod: 'none',
+      })) as unknown as OcrWorker;
     }
-    const [result] = (await visionClient!.textDetection(gcsUri)) as [
-      { fullTextAnnotation?: { text?: string } | null },
-    ];
-    const text = result?.fullTextAnnotation?.text ?? '';
-    return text.split('\n');
+
+    const { data } = await ocrWorker.recognize(image);
+    return data.text.split('\n');
   },
 };
 
-let activeExtractor: TextExtractor = cloudVisionExtractor;
+let activeExtractor: TextExtractor = tesseractExtractor;
 
 /// Swaps the extractor. The only supported use is a test double that counts its
 /// calls: "exactly one extraction per file" and "no extraction beyond the rate
-/// limit" are claims about a billed API, and an unobservable claim is not a
-/// tested one.
+/// limit" are claims about a resource we pay for, and an unobservable claim is
+/// not a tested one.
 export function setTextExtractor(extractor: TextExtractor): void {
   activeExtractor = extractor;
 }
 
 export function resetTextExtractor(): void {
-  activeExtractor = cloudVisionExtractor;
+  activeExtractor = tesseractExtractor;
 }
 
 // ---------------------------------------------------------------------------
 // submitIdentityVerification
 // ---------------------------------------------------------------------------
 
-export const submitIdentityVerification = onCall(async (request) => {
+export const submitIdentityVerification = onCall(OCR_RUNTIME, async (request) => {
   const uid = request.auth?.uid;
   assertAuthenticated(uid);
 
@@ -441,6 +482,22 @@ export async function runExtraction(
   }
 }
 
+/// Compact, PII-free description of a thrown value, for the logs.
+///
+/// Budget line S12 keeps identity data out of the logs, and a storage or OCR
+/// error message routinely quotes the object path, which carries the provider's
+/// uid: the private prefix is therefore redacted rather than trusted, and the
+/// whole thing is capped so a stack-shaped message cannot flood an entry.
+export function errorSummary(e: unknown): string {
+  const raw =
+    e instanceof Error
+      ? (e as { code?: unknown }).code !== undefined
+        ? `${String((e as { code?: unknown }).code)}: ${e.message}`
+        : e.message
+      : String(e);
+  return raw.replace(/private\/identity\/\S*/g, 'private/identity/[redacted]').slice(0, 300);
+}
+
 export async function extractAndFlag(
   docId: string,
   uid: string,
@@ -451,8 +508,15 @@ export async function extractAndFlag(
     const bucket = admin.storage().bucket().name;
     const lines = await activeExtractor.detect(`gs://${bucket}/${rectoPath}`);
     outcome = extractionFromLines(lines);
-  } catch {
-    logger.warn('Identity extraction failed', { verificationId: docId });
+  } catch (e) {
+    // The CAUSE, never the content. Until 2026-09-18 this catch swallowed
+    // everything, and that is exactly how a project-wide outage (the recogniser
+    // API was simply not enabled) stayed invisible for weeks: every file came
+    // back empty and the log said only that something had failed.
+    logger.warn('Identity extraction failed', {
+      verificationId: docId,
+      cause: errorSummary(e),
+    });
   }
 
   const duplicate = outcome.cniNumberKey
@@ -860,6 +924,117 @@ export const revokeIdentityVerification = onCall(async (request) => {
     // needed.
     checkFingerprints: false,
   });
+});
+
+// ---------------------------------------------------------------------------
+// reextractIdentityVerification : staff-triggered second read
+// ---------------------------------------------------------------------------
+//
+// Extraction runs once, at submission. When it fails there, the file stays
+// empty for ever and the reviewer has to key in six fields from the image by
+// hand, because nothing in the product could ask for a second read. Three
+// causes make that common enough to need a way back: a blurred or angled photo,
+// a transient storage error, and the recogniser being down project-wide, which
+// is what happened until 2026-09-18.
+//
+// It decides nothing (budget line S1). It rewrites the same review aids the
+// automatic pass writes, which a human then reads, corrects and confirms.
+
+/// Replays allowed per file. The recogniser costs no API fee but it does cost
+/// CPU and memory: without a ceiling, a held-down button turns a review screen
+/// into a compute loop billed to us (budget line S8). Five is far above what a
+/// genuine review needs and far below what a loop would consume.
+export const MAX_EXTRACTION_RUNS = 5;
+
+export const reextractIdentityVerification = onCall(OCR_RUNTIME, async (request) => {
+  const callerUid = request.auth?.uid;
+  assertAuthenticated(callerUid);
+  // The same circle as the decision callables, which is the circle that may see
+  // the images: moderator and admin, never support.
+  assertAdminOrModeratorClaim(
+    request.auth?.token as Record<string, unknown> | undefined
+  );
+
+  const verificationId = requireVerificationId(request.data?.verificationId);
+  const verifRef = db().collection(VERIFICATIONS).doc(verificationId);
+  const internalRef = verifRef.collection(INTERNAL_SUB).doc(INTERNAL_DOC);
+
+  // One transaction arms the replay: it checks the file is still pending, counts
+  // the run against the ceiling, and puts the extraction back into the `pending`
+  // state that extractAndFlag requires before it writes anything. Doing the
+  // three atomically is what stops two reviewers clicking at the same moment
+  // from running two recognitions and racing over the result.
+  const armed = await db().runTransaction(async (tx) => {
+    const [verifSnap, internalSnap] = await Promise.all([
+      tx.get(verifRef),
+      tx.get(internalRef),
+    ]);
+    if (!verifSnap.exists || !internalSnap.exists) {
+      throw new HttpsError('not-found', 'Dossier introuvable.');
+    }
+
+    const data = verifSnap.data() ?? {};
+    if (data.status !== 'pending') {
+      // A decided file carries the fields a human confirmed. Replaying on it
+      // would overwrite a decision with a machine guess, silently.
+      throw new HttpsError(
+        'failed-precondition',
+        `Dossier deja traite (${String(data.status)}).`
+      );
+    }
+
+    const internal = internalSnap.data() ?? {};
+    const runs =
+      typeof internal.extractionRuns === 'number' ? internal.extractionRuns : 0;
+    if (runs >= MAX_EXTRACTION_RUNS) {
+      throw new HttpsError(
+        'resource-exhausted',
+        'Trop de relectures pour ce dossier.'
+      );
+    }
+
+    const rectoPath = internal.rectoPath;
+    if (typeof rectoPath !== 'string' || rectoPath.length === 0) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Piece introuvable, relecture impossible.'
+      );
+    }
+
+    tx.update(verifRef, { extractionStatus: 'pending' });
+    tx.update(internalRef, { extractionRuns: runs + 1 });
+
+    // Inside the transaction, like every other decision on an identity file: a
+    // staff action that leaves no trace breaks budget line S7 without anything
+    // noticing. No field value and no object path in the entry.
+    writeAdminLogTx(tx, {
+      actorUid: callerUid,
+      action: 'reextract_identity_verification',
+      targetType: 'identity_verification',
+      targetId: verificationId,
+    });
+
+    return { providerId: String(data.providerId), rectoPath };
+  });
+
+  try {
+    await extractAndFlag(verificationId, armed.providerId, armed.rectoPath);
+  } catch (e) {
+    // The run is already counted and the file is back to `pending`: the reviewer
+    // can try again, or key the fields in by hand. Surfacing the raw SDK error
+    // would put an untyped code in front of them instead.
+    logger.warn('Identity re-extraction failed', {
+      verificationId,
+      cause: errorSummary(e),
+    });
+    throw new HttpsError('internal', 'La relecture a echoue.');
+  }
+
+  const after = await verifRef.get();
+  return {
+    verificationId,
+    extractionStatus: String(after.data()?.extractionStatus ?? 'failed'),
+  };
 });
 
 // ---------------------------------------------------------------------------
