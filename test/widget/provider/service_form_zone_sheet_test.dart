@@ -192,4 +192,124 @@ void main() {
       expectAboveKeyboard(tester, find.byType(Slider), inset: 0);
     },
   );
+
+  // -------------------------------------------------------------------------
+  // The zone address field must query Places ONCE per typed address, when the
+  // user stops typing, and must never reopen the suggestion list on top of a
+  // choice already made. The sequences below are deliberate: a test that lets
+  // the delay elapse BEFORE the choice has nothing left to cancel and would
+  // pass with the guard removed.
+  // -------------------------------------------------------------------------
+  group('address autocomplete debounce', () {
+    // The second entry: always built, unlike the last which needs a
+    // scrollUntilVisible, so asserting its absence cannot be vacuously true.
+    const otherSuggestion = 'Dakar zone 1';
+
+    Future<Finder> openZoneSheet(
+      WidgetTester tester,
+      GeocodingService geocoding,
+    ) async {
+      await _pump(
+        tester,
+        geocoding: geocoding,
+        keyboard: ValueNotifier<double>(0),
+      );
+      final addZone = find.widgetWithText(OutlinedButton, 'Ajouter une zone');
+      await tester.scrollUntilVisible(
+        addZone,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(addZone);
+      await tester.pumpAndSettle();
+      return find.byType(TextFormField).last;
+    }
+
+    testWidgets('a burst of keystrokes queries Places once, with the last '
+        'text', (tester) async {
+      useSurface(tester, kReferenceSurface);
+      final geocoding = _MockGeocodingService();
+      when(
+        () => geocoding.autocomplete(any()),
+      ).thenAnswer((_) async => _suggestions);
+      final field = await openZoneSheet(tester, geocoding);
+
+      // Cumulative: enterText REPLACES the content, so literal single letters
+      // would never reach the minimum length and nothing would fire.
+      for (final text in ['D', 'Da', 'Dak', 'Daka', 'Dakar']) {
+        await tester.enterText(field, text);
+      }
+      await _settleAddressDebounce(tester);
+
+      // Captured, not verified against a literal: verify(autocomplete('Dakar'))
+      // only counts the invocations that MATCH, so it would stay green while
+      // the intermediate calls also went out.
+      final captured = verify(
+        () => geocoding.autocomplete(captureAny()),
+      ).captured;
+      expect(captured, ['Dakar']);
+    });
+
+    testWidgets('nothing is queried before the user stops typing', (
+      tester,
+    ) async {
+      useSurface(tester, kReferenceSurface);
+      final geocoding = _MockGeocodingService();
+      when(
+        () => geocoding.autocomplete(any()),
+      ).thenAnswer((_) async => _suggestions);
+      final field = await openZoneSheet(tester, geocoding);
+
+      await tester.enterText(field, 'Dakar');
+      await tester.pump(const Duration(milliseconds: 175)); // half the delay
+
+      verifyNever(() => geocoding.autocomplete(any()));
+    });
+
+    testWidgets('picking a suggestion does not let the list reopen on top of '
+        'it', (tester) async {
+      useSurface(tester, kReferenceSurface);
+      final geocoding = _MockGeocodingService();
+      when(
+        () => geocoding.autocomplete(any()),
+      ).thenAnswer((_) async => _suggestions);
+      final field = await openZoneSheet(tester, geocoding);
+
+      await tester.enterText(field, 'Dakar');
+      await _settleAddressDebounce(tester);
+      expect(find.text(otherSuggestion), findsOneWidget);
+
+      // One more keystroke RE-ARMS the timer while the previous list is still
+      // on screen: the choice below happens with a query in flight.
+      await tester.enterText(field, 'Dakar z');
+      await tester.tap(find.text('Dakar zone 0'));
+      await tester.pumpAndSettle();
+
+      await _settleAddressDebounce(tester);
+
+      expect(
+        find.text(otherSuggestion),
+        findsNothing,
+        reason: 'the in-flight query was cancelled when the user chose',
+      );
+    });
+
+    testWidgets('closing the sheet drops the pending query', (tester) async {
+      useSurface(tester, kReferenceSurface);
+      final geocoding = _MockGeocodingService();
+      when(
+        () => geocoding.autocomplete(any()),
+      ).thenAnswer((_) async => _suggestions);
+      final field = await openZoneSheet(tester, geocoding);
+
+      await tester.enterText(field, 'Dakar');
+      // Tear the tree down BEFORE the delay elapses, then let it elapse: the
+      // order is the point, a dispose() that does not cancel would fire on an
+      // unmounted State.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await _settleAddressDebounce(tester);
+
+      verifyNever(() => geocoding.autocomplete(any()));
+    });
+  });
 }

@@ -675,6 +675,215 @@ void main() {
       },
     );
   });
+
+  // ---------------------------------------------------------------------
+  // The address field must query Places ONCE per typed address, when the
+  // user stops typing, and must never reopen the suggestion list on top of
+  // a choice already made. Every sequence below is deliberate: a test that
+  // lets the delay elapse BEFORE the choice has nothing left to cancel and
+  // would pass with the guard removed.
+  // ---------------------------------------------------------------------
+  group('address autocomplete debounce', () {
+    // The second entry: always built, unlike the last one which needs a
+    // scrollUntilVisible, so asserting its absence cannot be vacuously true.
+    const otherSuggestion = 'Saint-Louis Nord';
+
+    _MockGeocodingService stubbedGeocoding() {
+      final geocoding = _MockGeocodingService();
+      when(() => geocoding.autocomplete(any())).thenAnswer(
+        (_) async => const [
+          PlaceSuggestion(placeId: 'p1', description: 'Saint-Louis, Senegal'),
+          PlaceSuggestion(placeId: 'p2', description: otherSuggestion),
+          PlaceSuggestion(placeId: 'p3', description: 'Saint-Louis Sud'),
+        ],
+      );
+      when(
+        () => geocoding.getPlaceLatLng(any()),
+      ).thenAnswer((_) async => (lat: 16.02, lng: -16.49, countryCode: 'SN'));
+      return geocoding;
+    }
+
+    final field = find.byKey(const Key('bookingAddressField'));
+
+    testWidgets('a burst of keystrokes queries Places once, with the last '
+        'text', (tester) async {
+      final geocoding = stubbedGeocoding();
+      await _pumpSheet(
+        tester,
+        overrides: _baseOverrides(
+          useCase: _MockCreateBookingUseCase(),
+          geocoding: geocoding,
+        ),
+      );
+      await _goToAddressStep(tester);
+
+      // Cumulative: enterText REPLACES the content, so literal single letters
+      // would never reach the 3-character minimum and nothing would fire.
+      for (final text in ['S', 'Sa', 'Sai', 'Sain', 'Saint']) {
+        await tester.enterText(field, text);
+      }
+      await _settleAddressDebounce(tester);
+
+      // Captured, not verified against a literal: verify(autocomplete('Saint'))
+      // only counts the invocations that MATCH, so it would stay green while
+      // the three intermediate calls also went out.
+      final captured = verify(
+        () => geocoding.autocomplete(captureAny()),
+      ).captured;
+      expect(captured, ['Saint']);
+    });
+
+    testWidgets('nothing is queried before the user stops typing', (
+      tester,
+    ) async {
+      final geocoding = stubbedGeocoding();
+      await _pumpSheet(
+        tester,
+        overrides: _baseOverrides(
+          useCase: _MockCreateBookingUseCase(),
+          geocoding: geocoding,
+        ),
+      );
+      await _goToAddressStep(tester);
+
+      await tester.enterText(field, 'Saint');
+      await tester.pump(const Duration(milliseconds: 175)); // half the delay
+
+      verifyNever(() => geocoding.autocomplete(any()));
+    });
+
+    testWidgets('picking a suggestion does not let the list reopen on top of '
+        'it', (tester) async {
+      final geocoding = stubbedGeocoding();
+      await _pumpSheet(
+        tester,
+        overrides: _baseOverrides(
+          useCase: _MockCreateBookingUseCase(),
+          geocoding: geocoding,
+        ),
+      );
+      await _goToAddressStep(tester);
+
+      await tester.enterText(field, 'Saint');
+      await _settleAddressDebounce(tester);
+      expect(find.text(otherSuggestion), findsOneWidget);
+
+      // One more keystroke RE-ARMS the timer while the previous list is still
+      // on screen: the choice below happens with a query in flight.
+      await tester.enterText(field, 'Saint-L');
+      await tester.tap(find.text('Saint-Louis, Senegal'));
+      await tester.pump();
+
+      await _settleAddressDebounce(tester);
+
+      expect(
+        find.text(otherSuggestion),
+        findsNothing,
+        reason: 'the in-flight query was cancelled when the user chose',
+      );
+    });
+
+    testWidgets('using the current position does not let the list reopen', (
+      tester,
+    ) async {
+      GeolocatorPlatform.instance = _FakeGeolocatorPlatform(
+        position: _positionFixture(lat: 14.6928, lng: -17.4467),
+      );
+      final geocoding = stubbedGeocoding();
+      when(
+        () => geocoding.reverseGeocode(any(), any()),
+      ).thenAnswer((_) async => null);
+
+      await _pumpSheet(
+        tester,
+        overrides: _baseOverrides(
+          useCase: _MockCreateBookingUseCase(),
+          geocoding: geocoding,
+        ),
+      );
+      await _goToAddressStep(tester);
+
+      await tester.enterText(field, 'Saint');
+      await _settleAddressDebounce(tester);
+      expect(find.text(otherSuggestion), findsOneWidget);
+
+      await tester.enterText(field, 'Saint-L');
+      await tester.tap(find.text('Utiliser ma position'));
+      await tester.pumpAndSettle();
+
+      await _settleAddressDebounce(tester);
+
+      expect(
+        find.text(otherSuggestion),
+        findsNothing,
+        reason: 'the shortcut is a choice too: drop the pending query',
+      );
+    });
+
+    testWidgets('tapping a saved address does not let the list reopen', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'saved_locations': jsonEncode([
+          {
+            'label': 'Maison',
+            'address': 'Ouakam, Dakar',
+            'lat': 14.73,
+            'lng': -17.49,
+            'radiusKm': 30.0,
+          },
+        ]),
+      });
+      final geocoding = stubbedGeocoding();
+
+      await _pumpSheet(
+        tester,
+        overrides: _baseOverrides(
+          useCase: _MockCreateBookingUseCase(),
+          geocoding: geocoding,
+        ),
+      );
+      await _goToAddressStep(tester);
+      await tester.pump(); // the saved-locations notifier loads async
+
+      await tester.enterText(field, 'Saint');
+      await _settleAddressDebounce(tester);
+      expect(find.text(otherSuggestion), findsOneWidget);
+
+      await tester.enterText(field, 'Saint-L');
+      await tester.tap(find.text('Maison'));
+      await tester.pump();
+
+      await _settleAddressDebounce(tester);
+
+      expect(
+        find.text(otherSuggestion),
+        findsNothing,
+        reason: 'a saved address is a choice too: drop the pending query',
+      );
+    });
+
+    testWidgets('closing the sheet drops the pending query', (tester) async {
+      final geocoding = stubbedGeocoding();
+      await _pumpSheet(
+        tester,
+        overrides: _baseOverrides(
+          useCase: _MockCreateBookingUseCase(),
+          geocoding: geocoding,
+        ),
+      );
+      await _goToAddressStep(tester);
+
+      await tester.enterText(field, 'Saint');
+      // Tear the tree down BEFORE the delay elapses, then let it elapse: the
+      // order is the point, a dispose() that does not cancel would fire on an
+      // unmounted State.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await _settleAddressDebounce(tester);
+
+      verifyNever(() => geocoding.autocomplete(any()));
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
