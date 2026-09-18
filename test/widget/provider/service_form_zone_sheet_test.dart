@@ -303,13 +303,15 @@ void main() {
       final field = await openZoneSheet(tester, geocoding);
 
       await tester.enterText(field, 'Dakar');
-      // Tear the tree down BEFORE the delay elapses, then let it elapse: the
-      // order is the point, a dispose() that does not cancel would fire on an
-      // unmounted State.
+      // Tear the tree down with the delay still pending, and do NOT advance
+      // the clock: the binding's own end-of-test check ("A Timer is still
+      // pending even after the widget tree was disposed") IS the assertion.
+      //
+      // Advancing the clock here instead would prove nothing on this screen:
+      // _fetchSuggestions reads the provider off a disposed ConsumerState,
+      // which throws, and the catch swallows it, so a verifyNever would stay
+      // true whether dispose() cancelled or not. Verified by mutation.
       await tester.pumpWidget(const SizedBox.shrink());
-      await _settleAddressDebounce(tester);
-
-      verifyNever(() => geocoding.autocomplete(any()));
     });
   });
 }

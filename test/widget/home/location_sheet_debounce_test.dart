@@ -248,11 +248,7 @@ void main() {
     final field = await _openSheet(tester);
 
     await tester.enterText(field, 'Dakar');
-    // Tear the tree down BEFORE the delay elapses, then let it elapse: the
-    // order is the whole point, a dispose() that does not cancel would fire on
-    // an unmounted State.
     await tester.pumpWidget(const SizedBox.shrink());
-    await _settleDebounce(tester);
 
     verifyNever(() => geocoding.autocomplete(any()));
   });
