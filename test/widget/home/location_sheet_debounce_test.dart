@@ -248,8 +248,16 @@ void main() {
     final field = await _openSheet(tester);
 
     await tester.enterText(field, 'Dakar');
+    // Tear the tree down with the delay still pending, and do NOT advance the
+    // clock: the binding's own end-of-test check ("A Timer is still pending
+    // even after the widget tree was disposed") IS the assertion.
+    //
+    // Advancing the clock and asserting verifyNever would prove nothing HERE:
+    // this is a ConsumerState, its deferred body reads the provider off a
+    // disposed State, that throws, and the catch swallows it, so the mock is
+    // never reached whether dispose() cancelled or not. The provider zone
+    // sheet, a plain State reading widget.geocoding, can and does assert both.
+    // Verified by mutation.
     await tester.pumpWidget(const SizedBox.shrink());
-
-    verifyNever(() => geocoding.autocomplete(any()));
   });
 }

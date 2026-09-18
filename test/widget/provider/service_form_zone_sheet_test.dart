@@ -10,11 +10,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:outalma_app/src/core/utils/debouncer.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:outalma_app/l10n/app_localizations.dart';
 import 'package:outalma_app/src/app/app_theme.dart';
 import 'package:outalma_app/src/application/pricing/pricing_providers.dart';
+import 'package:outalma_app/src/core/utils/debouncer.dart';
 import 'package:outalma_app/src/data/services/geocoding_service.dart';
 import 'package:outalma_app/src/domain/enums/category_id.dart';
 import 'package:outalma_app/src/domain/enums/price_type.dart';
@@ -303,15 +303,19 @@ void main() {
       final field = await openZoneSheet(tester, geocoding);
 
       await tester.enterText(field, 'Dakar');
-      // Tear the tree down with the delay still pending, and do NOT advance
-      // the clock: the binding's own end-of-test check ("A Timer is still
-      // pending even after the widget tree was disposed") IS the assertion.
+      // Tear the tree down with the delay still pending, then let it elapse.
       //
-      // Advancing the clock here instead would prove nothing on this screen:
-      // _fetchSuggestions reads the provider off a disposed ConsumerState,
-      // which throws, and the catch swallows it, so a verifyNever would stay
-      // true whether dispose() cancelled or not. Verified by mutation.
+      // BOTH assertions hold on this screen, and that is specific to it:
+      // _AddZoneSheetState is a plain State reading widget.geocoding, which
+      // survives disposal, so an uncancelled timer really does reach the
+      // service. The home sheet and the booking step are ConsumerStates whose
+      // deferred body reads a provider off a disposed State: that throws, the
+      // catch swallows it, and a verifyNever there is true either way, so they
+      // rely on the binding's pending-timer check alone. Verified by mutation.
       await tester.pumpWidget(const SizedBox.shrink());
+      await _settleAddressDebounce(tester);
+
+      verifyNever(() => geocoding.autocomplete(any()));
     });
   });
 }
