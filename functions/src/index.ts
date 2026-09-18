@@ -3300,5 +3300,6 @@ export {
   approveIdentityVerification,
   rejectIdentityVerification,
   revokeIdentityVerification,
+  reextractIdentityVerification,
   getIdentityVerificationImages,
 } from './identity_verification';
