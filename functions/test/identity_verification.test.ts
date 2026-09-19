@@ -432,7 +432,10 @@ describe('the extraction step never breaks a submission', () => {
     });
 
     await expect(
-      identity.runExtraction('orphan', OWNER, `private/identity/${OWNER}/${BATCH}/recto.jpg`)
+      identity.runExtraction('orphan', OWNER, {
+        recto: `private/identity/${OWNER}/${BATCH}/recto.jpg`,
+        verso: `private/identity/${OWNER}/${BATCH}/verso.jpg`,
+      })
     ).resolves.toBeUndefined();
     // And the file is left decidable rather than half written.
     expect((await verifDoc('orphan').get()).get('status')).toBe('pending');
