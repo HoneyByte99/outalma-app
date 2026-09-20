@@ -533,6 +533,21 @@ export interface IdentityFaces {
 /// which keeps its catch and its warning with the cause. That log is what made
 /// the September outage visible, and swallowing it here would put it back in
 /// the dark.
+/// Whether the text read on the card is kept for a reviewer to copy.
+///
+/// OFF since 2026-09-20. The section shipped, Amath tried it on the real
+/// console, and what the recogniser reads off a CEDEAO card does not help
+/// enough to justify keeping a copy of the document alongside it. Manual entry
+/// until a better engine exists. While this is false, every extraction writes
+/// null into both fields, which also clears whatever an earlier run stored.
+let keepCardText = false;
+
+/// Test seam, same shape as `setTextExtractor`: the behaviour behind the flag
+/// stays covered for the day it comes back on.
+export function setKeepCardText(value: boolean): void {
+  keepCardText = value;
+}
+
 export async function readCard(
   faces: IdentityFaces,
   detect: (objectPath: string) => Promise<string[]>
@@ -633,11 +648,13 @@ export async function extractAndFlag(
       //    earlier successful read on a transient Storage or OCR failure, and
       //    it would do so while consuming one of the five replays. That is the
       //    one thing this increment must never do to a reviewer.
-      ...(ocr === null
-        ? {}
-        : outcome.status === 'ok'
-          ? { ocrVerso: null, ocrRecto: null }
-          : { ocrVerso: ocr.verso, ocrRecto: ocr.recto }),
+      ...(!keepCardText
+        ? { ocrVerso: null, ocrRecto: null }
+        : ocr === null
+          ? {}
+          : outcome.status === 'ok'
+            ? { ocrVerso: null, ocrRecto: null }
+            : { ocrVerso: ocr.verso, ocrRecto: ocr.recto }),
       // Dead field of the September debugging pass, replaced by the two above.
       // Removed here and in `decide`, because this write never reaches a file
       // that is already decided.

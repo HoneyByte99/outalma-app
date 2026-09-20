@@ -251,7 +251,31 @@ describe('what a second read refuses to touch', () => {
   });
 });
 
-describe('the text a reviewer copies from', () => {
+describe('the card text is OFF', () => {
+  it('stores nothing, and clears what an earlier run had stored', async () => {
+    // The flag defaults to off: no test turns it on here, which is the point.
+    await seedFailedFile();
+    await internalDoc().update({ ocrVerso: ['ANCIEN'], ocrRecto: ['ANCIEN'] });
+    identity.setTextExtractor({
+      async detect(): Promise<string[]> {
+        return ['REPUBLIQUE DU SENEGAL'];
+      },
+    });
+
+    await reextract({ verificationId: VERIF }, MOD);
+
+    const internal = (await internalDoc().get()).data() ?? {};
+    expect(internal.ocrVerso).toBeNull();
+    expect(internal.ocrRecto).toBeNull();
+  });
+});
+
+describe('the text a reviewer copies from, once the flag is back on', () => {
+  // Kept covered behind the seam: the day this comes back, the guards that
+  // took a review round and a mutation pass to get right are still proven.
+  beforeEach(() => identity.setKeepCardText(true));
+  afterEach(() => identity.setKeepCardText(false));
+
   // The card prints its zone on the back, so a read that finds nothing there
   // still returns the printed text of both faces.
   const PRINTED = {
