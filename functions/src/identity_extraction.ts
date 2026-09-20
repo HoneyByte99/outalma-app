@@ -222,35 +222,49 @@ export function pickCniNumber(fields: Td1Fields): string {
   return normalizeCniNumber(fields.documentNumber);
 }
 
-/// Describes what the recogniser actually saw, when no MRZ could be isolated.
+/// Marks a line cut at the character cap. Short and unmistakable on purpose:
+/// it travels into the CNI field when a reviewer inserts the line, so it has to
+/// be noticed rather than approved as if it were card text.
+export const OCR_TRUNCATED_SUFFIX = '[coupe]';
+
+/// Normalises the raw OCR output of one face into lines a human can copy.
 ///
-/// Exists because a failed read said nothing at all: front or back, TD1 badly
-/// read or a format this parser does not know, every case looked identical from
-/// the outside and each diagnosis cost a deploy. Each entry is `length:text`,
-/// longest first, which is what tells the three apart at a glance:
-///   - three entries near 30 -> TD1, read imperfectly (a stray character, a
-///     chevron taken for an L), so the fix is reading quality;
-///   - two entries near 36 or 44 -> TD2 or TD3, a format `parseTd1` will never
-///     accept whatever the photo looks like;
-///   - nothing of the sort -> the zone is not in the frame at all.
+/// This is the deliberate OPPOSITE of the MRZ path. `isolateMrzLines` uppercases,
+/// strips every space and keeps only 30-character lines, because a machine zone
+/// is a fixed grid. Here the reader is a person comparing with the image, so the
+/// text must survive as printed: casing kept, inner spaces kept, reading order
+/// kept, and short lines kept. A first name, a date or a sex are the values a
+/// reviewer needs most, and every one of them is shorter than any MRZ line.
 ///
-/// Bounded on both axes: a Firestore document has a size limit, and this is a
-/// diagnostic, not a transcript. It carries card text, so it belongs in the
-/// staff-only internal document alongside `mrzRaw` and never in a log (budget
-/// line S12).
-export function diagnoseMrzFailure(
+/// Bounded on both axes, because a Firestore document is capped at 1 MiB and a
+/// noisy photo produces a lot of lines. When the cap bites, the HEAD and the
+/// TAIL are kept rather than the first N: the machine zone sits at the bottom of
+/// the card, so cutting the end would drop exactly the useful part. A sentinel
+/// marks the gap, otherwise the reviewer compares with the card with no way of
+/// knowing something is missing.
+export function normalizeOcrLines(
   rawLines: string[],
-  maxLines = 6,
-  maxChars = 60
+  maxLines = 200,
+  maxChars = 120
 ): string[] {
-  return rawLines
-    .map((line) => line.replace(/\s+/g, '').toUpperCase())
-    // Below 15 characters nothing can be a machine readable line; keeping the
-    // short ones would bury the useful entries under printed labels.
-    .filter((line) => line.length >= 15)
-    .sort((a, b) => b.length - a.length)
-    .slice(0, maxLines)
-    .map((line) => `${line.length}:${line.slice(0, maxChars)}`);
+  const lines = rawLines
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) =>
+      line.length > maxChars
+        ? `${line.slice(0, maxChars)}${OCR_TRUNCATED_SUFFIX}`
+        : line
+    );
+
+  if (lines.length <= maxLines) return lines;
+
+  const half = Math.floor(maxLines / 2);
+  const omitted = lines.length - half * 2;
+  return [
+    ...lines.slice(0, half),
+    `[... ${omitted} lignes omises ...]`,
+    ...lines.slice(lines.length - half),
+  ];
 }
 
 // ---------------------------------------------------------------------------

@@ -250,3 +250,79 @@ describe('what a second read refuses to touch', () => {
     await expectCode(reextract({ verificationId: VERIF }, ADMIN), 'failed-precondition');
   });
 });
+
+describe('the text a reviewer copies from', () => {
+  // The card prints its zone on the back, so a read that finds nothing there
+  // still returns the printed text of both faces.
+  const PRINTED = {
+    verso: ['REPUBLIQUE DU SENEGAL', 'Nom: Amadou Ba'],
+    recto: ['CARTE NATIONALE', 'Ne le 15/01/1990'],
+  };
+
+  function facedExtractor(lines: { verso: string[]; recto: string[] }) {
+    return {
+      async detect(uri: string): Promise<string[]> {
+        return uri.includes('verso.jpg') ? lines.verso : lines.recto;
+      },
+    };
+  }
+
+  it('keeps the text of both faces when the zone could not be read', async () => {
+    await seedFailedFile();
+    identity.setTextExtractor(facedExtractor(PRINTED));
+
+    await reextract({ verificationId: VERIF }, MOD);
+
+    const internal = (await internalDoc().get()).data() ?? {};
+    expect(internal.extractionStatus).toBeUndefined();
+    // As printed: casing and inner spaces are what makes it copyable.
+    expect(internal.ocrVerso).toEqual(PRINTED.verso);
+    expect(internal.ocrRecto).toEqual(PRINTED.recto);
+  });
+
+  it('drops the dead debugging field of the September pass', async () => {
+    await seedFailedFile();
+    await internalDoc().update({ extractionDiagnostic: { verso: ['VIEUX'] } });
+    identity.setTextExtractor(facedExtractor(PRINTED));
+
+    await reextract({ verificationId: VERIF }, MOD);
+
+    const internal = (await internalDoc().get()).data() ?? {};
+    expect(internal.extractionDiagnostic).toBeUndefined();
+  });
+
+  it('clears the text once a read finally succeeds', async () => {
+    await seedFailedFile();
+    await internalDoc().update({ ocrVerso: ['ANCIEN'], ocrRecto: ['ANCIEN'] });
+    identity.setTextExtractor(countingExtractor(MRZ_OK).double);
+
+    await reextract({ verificationId: VERIF }, ADMIN);
+
+    const internal = (await internalDoc().get()).data() ?? {};
+    // Not left behind: the six fields are filled and verified, so keeping the
+    // text of the previous failure would be retention with no reader.
+    expect(internal.ocrVerso).toBeNull();
+    expect(internal.ocrRecto).toBeNull();
+  });
+
+  it('leaves the stored text UNTOUCHED when the recogniser throws', async () => {
+    // The regression this locks down: an extractor that is momentarily down
+    // would otherwise overwrite the text with two empty lists, and burn one of
+    // the five allowed runs doing it. The reviewer would lose the only thing
+    // this feature gives them.
+    await seedFailedFile();
+    await internalDoc().update({ ocrVerso: ['DEJA LU'], ocrRecto: ['DEJA LU'] });
+    identity.setTextExtractor({
+      async detect(): Promise<string[]> {
+        throw new Error('recogniser down');
+      },
+    });
+
+    const res = await reextract({ verificationId: VERIF }, ADMIN);
+
+    expect(res).toMatchObject({ extractionStatus: 'failed' });
+    const internal = (await internalDoc().get()).data() ?? {};
+    expect(internal.ocrVerso).toEqual(['DEJA LU']);
+    expect(internal.ocrRecto).toEqual(['DEJA LU']);
+  });
+});

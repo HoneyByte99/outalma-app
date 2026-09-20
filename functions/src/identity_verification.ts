@@ -22,7 +22,7 @@ import { writeAdminLog, writeAdminLogTx } from './audit';
 import { createNotification, sendPushToUsers } from './notify';
 import {
   buildObjectPaths,
-  diagnoseMrzFailure,
+  normalizeOcrLines,
   extractionFromLines,
   FAILED_EXTRACTION,
   isValidBatchId,
@@ -327,6 +327,10 @@ export const submitIdentityVerification = onCall(OCR_RUNTIME, async (request) =>
       doublonPotentiel: false,
       doublonReferenceId: null,
       mrzRaw: null,
+      // Same shape from the start, so a reader never has to tell "not read yet"
+      // from "field never existed".
+      ocrVerso: null,
+      ocrRecto: null,
       reviewedBy: null,
     });
 
@@ -505,47 +509,56 @@ export interface IdentityFaces {
   verso: string;
 }
 
-/// Reads the faces in order and returns the first one carrying an MRZ.
+/// Reads the card and returns both the MRZ outcome and the text a human can copy.
 ///
 /// The BACK comes first, and that order is a measured fact rather than a guess:
 /// on the Senegalese CEDEAO card the machine readable zone is printed on the
 /// back (checked against real files on 2026-09-18, after every read of the
-/// front had come back empty). The front is still tried as a fallback, because
-/// other documents put the zone there and a wrong assumption in this file is
-/// exactly what cost the previous attempt.
+/// front had come back empty). The front is still tried, because other
+/// documents put the zone there and a wrong assumption in this file is exactly
+/// what cost the previous attempt.
 ///
-/// `noReadableText` is computed across BOTH faces: it means "this upload
-/// carries no text at all", which is the review aid a human acts on. Deriving
-/// it from one face would flag a perfectly good card as unreadable whenever its
+/// The second face is skipped ONLY when the first one reads perfectly (`ok`):
+/// that text is never stored, so the pass would be CPU spent on a result the
+/// caller throws away one step later. On `partial` the second face IS read,
+/// because a zone with a failed check digit is precisely the case where a
+/// reviewer wants the printed text of both sides to compare against.
+///
+/// `noReadableText` is computed across the faces actually read: it means "this
+/// upload carries no text at all", the review aid a human acts on. Deriving it
+/// from one face would flag a perfectly good card as unreadable whenever its
 /// other side happens to be blank.
-export async function readFirstFaceWithMrz(
+///
+/// It rattrape NOTHING: a throw from `detect` propagates to `extractAndFlag`,
+/// which keeps its catch and its warning with the cause. That log is what made
+/// the September outage visible, and swallowing it here would put it back in
+/// the dark.
+export async function readCard(
   faces: IdentityFaces,
   detect: (objectPath: string) => Promise<string[]>
-): Promise<{ outcome: ExtractionOutcome; diagnostic: string[] }> {
-  let last: ExtractionOutcome = { ...FAILED_EXTRACTION };
+): Promise<{ outcome: ExtractionOutcome; ocr: { verso: string[]; recto: string[] } }> {
+  let found: ExtractionOutcome | null = null;
   let sawText = false;
-  const diagnostic: string[] = [];
+  const ocr = { verso: [] as string[], recto: [] as string[] };
 
-  for (const [label, objectPath] of [
-    ['verso', faces.verso],
-    ['recto', faces.recto],
-  ] as const) {
-    const lines = await detect(objectPath);
+  for (const face of ['verso', 'recto'] as const) {
+    const lines = await detect(faces[face]);
+    ocr[face] = normalizeOcrLines(lines);
+
     const candidate = extractionFromLines(lines);
     sawText = sawText || !candidate.noReadableText;
-    last = candidate;
-    // `partial` counts as found: the zone was read, one check digit failed, and
-    // the reviewer gets the fields flagged as unverified. Reading the other
-    // face would replace them with nothing.
-    if (candidate.status !== 'failed') {
-      return { outcome: { ...candidate, noReadableText: !sawText }, diagnostic: [] };
-    }
-    // Only a failure is described: on success the MRZ itself is already stored,
-    // and a second copy of the card text would be retention with no purpose.
-    diagnostic.push(...diagnoseMrzFailure(lines).map((l) => `${label} ${l}`));
+    // The FIRST face that carried a zone owns the outcome. The other face is
+    // read for its text only, and must never quietly replace fields that a
+    // reviewer may already be comparing against the image.
+    if (found === null && candidate.status !== 'failed') found = candidate;
+
+    // A perfect read ends it: the six fields are filled and verified by their
+    // check digits, so there is nothing for a human to copy.
+    if (candidate.status === 'ok') break;
   }
 
-  return { outcome: { ...last, noReadableText: !sawText }, diagnostic };
+  const outcome = found ?? { ...FAILED_EXTRACTION };
+  return { outcome: { ...outcome, noReadableText: !sawText }, ocr };
 }
 
 export async function extractAndFlag(
@@ -554,14 +567,17 @@ export async function extractAndFlag(
   faces: IdentityFaces
 ): Promise<void> {
   let outcome: ExtractionOutcome = { ...FAILED_EXTRACTION };
-  let diagnostic: string[] = [];
+  let ocr: { verso: string[]; recto: string[] } | null = null;
   try {
     const bucket = admin.storage().bucket().name;
-    const read = await readFirstFaceWithMrz(faces, (path) =>
+    const result = await readCard(faces, (path) =>
       activeExtractor.detect(`gs://${bucket}/${path}`)
     );
-    outcome = read.outcome;
-    diagnostic = read.diagnostic;
+    outcome = result.outcome;
+    // Assigned ONLY here, so `null` means "no face ever answered". The
+    // distinction is what stops an infrastructure failure from erasing text
+    // read on an earlier pass: see the write below.
+    ocr = result.ocr;
   } catch (e) {
     // The CAUSE, never the content. Until 2026-09-18 this catch swallowed
     // everything, and that is exactly how a project-wide outage (the recogniser
@@ -604,12 +620,30 @@ export async function extractAndFlag(
       mrzRaw: outcome.mrzRaw,
       doublonPotentiel: duplicate !== null,
       doublonReferenceId: duplicate,
-      // What the recogniser saw when it found no zone, so the next failure is
-      // diagnosed by reading the file instead of by deploying a probe. Cleared
-      // on success: the MRZ is already stored just above.
-      extractionDiagnostic: diagnostic.length > 0 ? diagnostic : null,
-      // Review aid only (decision D1): neither face carried readable text, so
-      // the upload is likely not a document. The reviewer decides; nothing is
+      // The text a reviewer copies from, when the zone could not be read for
+      // them. Three cases, and the difference between them matters:
+      //
+      //  - a face answered and the read was imperfect: store the text;
+      //  - the read was perfect: store null, because the six fields are filled
+      //    and verified, so a copy of the card text would be retention with no
+      //    reader. Null rather than untouched, otherwise a successful replay
+      //    would leave the text of the failed attempt behind it;
+      //  - nothing answered at all (`ocr === null`, the extractor threw): touch
+      //    NEITHER field. Writing empty lists here would wipe the text of an
+      //    earlier successful read on a transient Storage or OCR failure, and
+      //    it would do so while consuming one of the five replays. That is the
+      //    one thing this increment must never do to a reviewer.
+      ...(ocr === null
+        ? {}
+        : outcome.status === 'ok'
+          ? { ocrVerso: null, ocrRecto: null }
+          : { ocrVerso: ocr.verso, ocrRecto: ocr.recto }),
+      // Dead field of the September debugging pass, replaced by the two above.
+      // Removed here and in `decide`, because this write never reaches a file
+      // that is already decided.
+      extractionDiagnostic: admin.firestore.FieldValue.delete(),
+      // Review aid only (decision D1): no face carried readable text, so the
+      // upload is likely not a document. The reviewer decides; nothing is
       // auto-rejected.
       pasDocumentLisible: outcome.noReadableText,
     });
@@ -832,15 +866,25 @@ async function decide(
       ...(staleExtraction ? { extractionStatus: 'failed' } : {}),
     });
 
+    // Dead field of the September debugging pass. It has no reader left, and
+    // `extractAndFlag` can never clear it on a decided file because its own
+    // guard requires `pending`: this is the only write that still reaches one.
+    // It says nothing about `ocrVerso`/`ocrRecto`, which are kept on purpose
+    // and die with the account.
+    const dropDeadField = {
+      extractionDiagnostic: admin.firestore.FieldValue.delete(),
+    };
+
     if (fields) {
       // The duplicate key must follow a corrected number, otherwise a real
       // duplicate becomes invisible to every later submission.
       tx.update(internalRef, {
         cniNumberKey: normalizeCniNumber(fields.cniNumber) || null,
         reviewedBy: callerUid,
+        ...dropDeadField,
       });
     } else {
-      tx.update(internalRef, { reviewedBy: callerUid });
+      tx.update(internalRef, { reviewedBy: callerUid, ...dropDeadField });
     }
 
     const rejectedCount =

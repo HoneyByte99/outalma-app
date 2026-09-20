@@ -251,6 +251,32 @@ describe('what a decision writes', () => {
     expect(state?.pendingId).toBeNull();
   });
 
+  it('drops the dead debugging field, and keeps the text of the card', async () => {
+    // Two different lifetimes on the same document. `extractionDiagnostic` was
+    // a debugging aid of the September pass and has no reader left, so a
+    // decision is the last chance to clear it. The OCR text stays: Amath's
+    // call, it lives with the file and is purged with the account.
+    await internalDoc().update({
+      extractionDiagnostic: { verso: ['VIEUX'] },
+      ocrVerso: ['REPUBLIQUE DU SENEGAL'],
+      ocrRecto: ['CARTE NATIONALE'],
+    });
+
+    await approve({ verificationId: VERIF }, ADMIN);
+
+    const internal = (await internalDoc().get()).data() ?? {};
+    expect(internal.extractionDiagnostic).toBeUndefined();
+    expect(internal.ocrVerso).toEqual(['REPUBLIQUE DU SENEGAL']);
+  });
+
+  it('drops the dead debugging field on a rejection too', async () => {
+    await internalDoc().update({ extractionDiagnostic: { verso: ['VIEUX'] } });
+
+    await reject({ verificationId: VERIF, reason: 'illisible' }, ADMIN);
+
+    expect((await internalDoc().get()).get('extractionDiagnostic')).toBeUndefined();
+  });
+
   it('projects "verified" publicly on approve, in the decision transaction', async () => {
     // E1: the badge a client reads is provider_trust/{uid}, derived from the
     // guard inside the decision transaction. Before any decision there is no
