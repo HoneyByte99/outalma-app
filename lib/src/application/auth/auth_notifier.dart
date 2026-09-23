@@ -428,8 +428,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
 
     // Explicitly create the Firestore user doc. Read any doc the auth listener
-    // may have created in the meantime so we preserve `createdAt` (Firestore
-    // rule requires it unchanged on update).
+    // may have created in the meantime so we preserve `createdAt`. The rules
+    // do not check it (the Timestamp round trip loses precision), so this is
+    // for data accuracy, not to satisfy a rule.
     final repo = ref.read(userRepositoryProvider);
     final existing = await repo.getById(user.uid);
     final appUser = AppUser(

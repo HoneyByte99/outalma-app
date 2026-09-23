@@ -223,33 +223,32 @@ class FirestoreCollections {
       // ever affects this one racy, not-yet-known case.
       if (user.displayName.isNotEmpty) 'displayName': user.displayName,
       'email': user.email,
-      'photoPath': user.photoPath,
+      // The two profile-image fields (photoPath, avatarId) are NEVER written
+      // from here. This map goes out as a whole-document merge from
+      // switchMode and updateProfile, carrying an in-memory copy that is
+      // routinely stale: writing a null would erase an image set on another
+      // device, and writing a value would bring back one erased there, next
+      // to its replacement. UserRepository.setProfileImage owns both fields
+      // and writes them together, with FieldValue.delete() for a null.
       // Never write phoneE164 as null: the create rule requires the field to
       // be absent for email-only accounts, and the update rule blocks any
       // client-side change to this field (security review C1/C2).
       if (user.phoneE164 != null) 'phoneE164': user.phoneE164,
       'country': user.country,
       'activeMode': user.activeMode.name,
-      // Never write pushToken as null. NotificationService writes the token via
-      // a direct .update() after auth resolves, so the in-memory AppUser carried
-      // by AuthAuthenticated is often stale (null). A merge write that always
-      // included pushToken would clobber the real token on switchMode /
-      // updateProfile and silently kill push delivery.
-      if (user.pushToken != null) 'pushToken': user.pushToken,
+      // pushToken is NEVER written from here, not even when non-null. It is
+      // owned by NotificationService (direct .update()), by signOut (delete)
+      // and by the server, which deletes dead tokens. The in-memory AppUser is
+      // routinely stale, so writing it back on switchMode / updateProfile
+      // would overwrite a newer token or resurrect one the server deleted.
       if (user.termsAcceptedAt != null)
         'termsAcceptedAt': dateTimeToFirestore(user.termsAcceptedAt!),
       // Never written as null. `switchMode` and `updateProfile` both go through
       // a merge write carrying the whole AppUser, and an explicit null there
       // would erase the declared gender of every account whose in-memory copy
-      // predates a reload, exactly like the pushToken case above.
+      // predates a reload. Unlike the image fields it is safe to write when
+      // set: gender is declared once at sign-up and has no other writer.
       if (user.gender != null) 'gender': user.gender!.name,
-      // Conditional for exactly the reason the two comments above give: this
-      // map goes out as a whole-document merge from switchMode and
-      // updateProfile, and an explicit null would erase the avatar of every
-      // account whose in-memory copy predates a reload. Erasing is therefore
-      // NOT done from here: UserRepository.setProfileImage writes the two
-      // image fields on their own, with FieldValue.delete() for a null.
-      if (user.avatarId != null) 'avatarId': user.avatarId,
       'createdAt': dateTimeToFirestore(user.createdAt),
     };
   }

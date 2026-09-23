@@ -59,6 +59,17 @@ void main() {
       );
       final col = FirestoreCollections.users(fakeDb);
       await col.doc(user.id).set(user);
+      // pushToken and photoPath are deliberately NOT serialized (see
+      // _userToFirestore): they have their own writers (NotificationService,
+      // UserRepository.setProfileImage), emulated here, and only the read side
+      // is covered by this roundtrip.
+      final raw = await fakeDb.collection('users').doc(user.id).get();
+      expect(raw.data()!.containsKey('pushToken'), isFalse);
+      expect(raw.data()!.containsKey('photoPath'), isFalse);
+      await fakeDb.collection('users').doc(user.id).update({
+        'pushToken': 'fcm_token_abc',
+        'photoPath': 'gs://bucket/photo.jpg',
+      });
       final result = (await col.doc(user.id).get()).data()!;
 
       expect(result.id, user.id);
@@ -259,13 +270,18 @@ void main() {
   // optional field mirrored into a world-readable projection, absent from every
   // account that exists today.
   group('AppUser serialization - illustrated avatar', () {
-    test('a catalogue id roundtrips', () async {
+    test('a catalogue id is read back, and never written by the map', () async {
+      // Writing is UserRepository.setProfileImage's job (see _userToFirestore),
+      // emulated here by a direct update; the converter only reads it.
       final user = _makeUser(id: 'u_av', avatarId: 'human_afro1_t2');
       final col = FirestoreCollections.users(fakeDb);
       await col.doc(user.id).set(user);
 
       final raw = (await fakeDb.collection('users').doc(user.id).get()).data()!;
-      expect(raw['avatarId'], 'human_afro1_t2');
+      expect(raw.containsKey('avatarId'), isFalse);
+      await fakeDb.collection('users').doc(user.id).update({
+        'avatarId': 'human_afro1_t2',
+      });
 
       final result = (await col.doc(user.id).get()).data()!;
       expect(result.avatarId, 'human_afro1_t2');
@@ -274,9 +290,9 @@ void main() {
     test(
       'a null avatarId is OMITTED from the map, never written as null',
       () async {
-        // Same hazard as pushToken and gender: upsert merge-writes the whole
-        // AppUser, so an explicit null would erase an avatar chosen on another
-        // device. Erasing goes through setProfileImage instead.
+        // Same hazard as gender: upsert merge-writes the whole AppUser, so an
+        // explicit null would erase an avatar chosen on another device. The
+        // map now never carries avatarId at all; setProfileImage owns it.
         final user = _makeUser(id: 'no_avatar');
         final col = FirestoreCollections.users(fakeDb);
         await col.doc(user.id).set(user);

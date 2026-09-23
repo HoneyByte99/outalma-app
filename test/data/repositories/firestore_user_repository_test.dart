@@ -7,16 +7,18 @@ import 'package:outalma_app/src/data/repositories/firestore_user_repository.dart
 import 'package:outalma_app/src/domain/enums/active_mode.dart';
 import 'package:outalma_app/src/domain/models/app_user.dart';
 
-AppUser _user({String? photoPath, String? avatarId}) => AppUser(
-  id: 'u1',
-  displayName: 'Awa Diop',
-  email: 'awa@test.com',
-  country: 'SN',
-  activeMode: ActiveMode.client,
-  createdAt: DateTime(2024, 1, 1),
-  photoPath: photoPath,
-  avatarId: avatarId,
-);
+AppUser _user({String? photoPath, String? avatarId, String? pushToken}) =>
+    AppUser(
+      id: 'u1',
+      displayName: 'Awa Diop',
+      email: 'awa@test.com',
+      country: 'SN',
+      activeMode: ActiveMode.client,
+      createdAt: DateTime(2024, 1, 1),
+      photoPath: photoPath,
+      avatarId: avatarId,
+      pushToken: pushToken,
+    );
 
 void main() {
   late FakeFirebaseFirestore db;
@@ -32,7 +34,11 @@ void main() {
 
   group('setProfileImage', () {
     test('choosing an avatar stores it AND removes the photo key', () async {
-      await repo.upsert(_user(photoPath: 'https://example.test/a.jpg'));
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: 'https://example.test/a.jpg',
+        avatarId: null,
+      );
       expect((await raw())['photoPath'], isNotNull);
 
       await repo.setProfileImage(
@@ -124,6 +130,90 @@ void main() {
         'human_afro1_t2',
         reason: 'a whole-document merge must not have erased the avatar',
       );
+    });
+
+    test('never writes photoPath as null, so it cannot erase one', () async {
+      // Same hazard as the avatar: device B sets a photo, device A still holds
+      // a copy without one and runs switchMode or updateProfile. The merge
+      // must not erase B's photo; erasing goes through setProfileImage.
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: 'users/u1/photo.jpg',
+        avatarId: null,
+      );
+      await repo.upsert(_user());
+
+      expect(
+        (await raw())['photoPath'],
+        'users/u1/photo.jpg',
+        reason: 'a whole-document merge must not have erased the photo',
+      );
+    });
+
+    test('never writes pushToken, so a stale copy cannot clobber it', () async {
+      // The token is owned by NotificationService (direct update) and by the
+      // server, which deletes dead tokens. The in-memory copy is routinely
+      // stale: writing it back would overwrite a newer token, or resurrect
+      // one the server just deleted.
+      await repo.upsert(_user());
+      await db.collection('users').doc('u1').set({
+        'pushToken': 'fresh-token',
+      }, SetOptions(merge: true));
+
+      await repo.upsert(_user(pushToken: 'stale-token'));
+
+      expect((await raw())['pushToken'], 'fresh-token');
+    });
+
+    test('never resurrects a pushToken the server deleted', () async {
+      await repo.upsert(_user());
+
+      await repo.upsert(_user(pushToken: 'dead-token'));
+
+      expect((await raw()).containsKey('pushToken'), isFalse);
+    });
+
+    test('never writes back a photo erased on another device', () async {
+      // The mirror image of the null case: device A still holds the photo,
+      // device B switched to an avatar (photo deleted). A's next switchMode
+      // or updateProfile must not bring the photo back beside the avatar.
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: 'users/u1/photo.jpg',
+        avatarId: null,
+      );
+      final staleOnDeviceA = _user(photoPath: 'users/u1/photo.jpg');
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: null,
+        avatarId: 'human_afro1_t2',
+      );
+
+      await repo.upsert(staleOnDeviceA);
+
+      final after = await raw();
+      expect(after.containsKey('photoPath'), isFalse);
+      expect(after['avatarId'], 'human_afro1_t2');
+    });
+
+    test('never writes back an avatar erased on another device', () async {
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: null,
+        avatarId: 'human_afro1_t2',
+      );
+      final staleOnDeviceA = _user(avatarId: 'human_afro1_t2');
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: 'users/u1/photo.jpg',
+        avatarId: null,
+      );
+
+      await repo.upsert(staleOnDeviceA);
+
+      final after = await raw();
+      expect(after.containsKey('avatarId'), isFalse);
+      expect(after['photoPath'], 'users/u1/photo.jpg');
     });
   });
 }
