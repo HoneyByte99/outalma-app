@@ -202,6 +202,9 @@ function spyLogger() {
   const calls = () => spies.flatMap((spy) => spy.mock.calls as unknown[][]);
   return {
     calls,
+    /// The calls made at one level only.
+    at: (level: (typeof LEVELS)[number]) =>
+      spies[LEVELS.indexOf(level)]!.mock.calls as unknown[][],
     // depth: null, or a nested echo past two levels would print as [Object].
     text: () =>
       calls()
@@ -254,5 +257,31 @@ describe('Twilio refusals are logged without the phone number (S12)', () => {
       { status: 400, twilioCode: 60200 },
     ]);
     expect(log.text()).not.toContain(sentDigits());
+  });
+});
+
+describe('the level of a Twilio refusal line', () => {
+  let log: ReturnType<typeof spyLogger>;
+  beforeEach(() => {
+    log = spyLogger();
+  });
+  afterEach(() => log.restore());
+
+  const line = [expect.any(String), { status: 400, twilioCode: 60200 }];
+
+  it('is a warning when the user caused it, so a bad number raises no alert', async () => {
+    twilio.replies.Verifications = invalidNumber;
+    await expect(requestOtp(SN)).rejects.toMatchObject({ code: 'invalid-argument' });
+    expect(log.at('warn')).toEqual([line]);
+    expect(log.at('error')).toEqual([]);
+  });
+
+  it('is an error when the failure still reads as an outage', async () => {
+    // A 60200 on the CHECK is not one of the codes read as a dead code, so it
+    // stays `unavailable`: something is wrong on our side, and it must alert.
+    twilio.replies.VerificationCheck = checkInvalidNumber;
+    await expect(signIn(SN)).rejects.toMatchObject({ code: 'unavailable' });
+    expect(log.at('error')).toEqual([line]);
+    expect(log.at('warn')).toEqual([]);
   });
 });

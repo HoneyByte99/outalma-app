@@ -116,9 +116,10 @@ export function isAllowedPrefix(phone: string): boolean {
 /// went to Twilio, because only the Start call could have been normalised and
 /// Start and Check must see the same string.
 ///
-/// Idempotent, which the quota relies on: it receives the canonical number. Every leading zero of the national part is dropped,
-/// not just the first, so stacked variants (`+3300612…`) collapse onto the same
-/// key. No real subscriber of these countries has a national number starting
+/// Idempotent, which the quota relies on: it receives the canonical number.
+///
+/// Every leading zero of the national part is dropped, not just the first, so
+/// stacked variants (`+3300612…`) collapse onto the same key. No real subscriber of these countries has a national number starting
 /// with zero, so the mapping never merges two distinct people.
 export function normalisePhone(phone: string): string {
   const prefix = longestPrefixMatch(phone, TRUNK_ZERO_PREFIXES);

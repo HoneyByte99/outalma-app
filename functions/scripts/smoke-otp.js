@@ -232,7 +232,7 @@ async function main() {
   must(channel.code === 'invalid-argument', 'refused with invalid-argument');
   must(twilio.sent.length === 0, 'Twilio NOT called on the dearer channel');
 
-  // --- 7. One subscriber, one quota; and the raw string reaches Twilio -----
+  // --- 7. One subscriber, one quota; the canonical string reaches Twilio ---
   console.log('\n7. Two spellings of one French number');
   await clearAll();
   await request({ phone: FR_TRUNK });

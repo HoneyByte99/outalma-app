@@ -56,7 +56,6 @@ const db = () => admin.firestore();
 // Validation helpers
 // ---------------------------------------------------------------------------
 
-
 function assertCode(value: unknown): string {
   if (typeof value !== 'string') {
     throw new HttpsError('invalid-argument', 'code must be a string');
