@@ -19,32 +19,42 @@ Widget _wrap(Widget child, {ValueNotifier<double>? keyboard}) => MaterialApp(
 
 void main() {
   group('PhoneField.validate()', () {
+    final fr = lookupAppLocalizations(const Locale('fr'));
+    final en = lookupAppLocalizations(const Locale('en'));
+
     test('null value returns null (optional field)', () {
-      expect(PhoneField.validate(null), isNull);
+      expect(PhoneField.validate(fr, null), isNull);
     });
 
     test('empty string returns null (optional field)', () {
-      expect(PhoneField.validate(''), isNull);
+      expect(PhoneField.validate(fr, ''), isNull);
     });
 
     test('valid French number returns null', () {
-      expect(PhoneField.validate('+33612345678'), isNull);
+      expect(PhoneField.validate(fr, '+33612345678'), isNull);
     });
 
-    test('too short number returns non-null error string', () {
-      final result = PhoneField.validate('+33123');
-      expect(result, isNotNull);
-      expect(result, isA<String>());
+    test('too short number is refused in the language of the app', () {
+      expect(PhoneField.validate(fr, '+33123'), 'Numéro trop court');
+      expect(PhoneField.validate(en, '+33123'), 'Number too short');
     });
 
-    test('too long number (>15 digits) returns non-null error string', () {
-      final result = PhoneField.validate('+331234567890123456');
-      expect(result, isNotNull);
-      expect(result, isA<String>());
-    });
+    test(
+      'too long number (>15 digits) is refused in the language of the app',
+      () {
+        expect(
+          PhoneField.validate(fr, '+331234567890123456'),
+          'Numéro trop long',
+        );
+        expect(
+          PhoneField.validate(en, '+331234567890123456'),
+          'Number too long',
+        );
+      },
+    );
 
     test('valid Senegalese number returns null', () {
-      expect(PhoneField.validate('+221701234567'), isNull);
+      expect(PhoneField.validate(fr, '+221701234567'), isNull);
     });
   });
 

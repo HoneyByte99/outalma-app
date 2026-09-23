@@ -4321,6 +4321,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search a country…'**
   String get countryPickerSearchHint;
+
+  /// No description provided for @phoneFieldHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get phoneFieldHint;
+
+  /// No description provided for @phoneFieldTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Number too short'**
+  String get phoneFieldTooShort;
+
+  /// No description provided for @phoneFieldTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Number too long'**
+  String get phoneFieldTooLong;
+
+  /// No description provided for @countryNameFR.
+  ///
+  /// In en, this message translates to:
+  /// **'France'**
+  String get countryNameFR;
+
+  /// No description provided for @countryNameSN.
+  ///
+  /// In en, this message translates to:
+  /// **'Senegal'**
+  String get countryNameSN;
+
+  /// No description provided for @countryNameBE.
+  ///
+  /// In en, this message translates to:
+  /// **'Belgium'**
+  String get countryNameBE;
+
+  /// No description provided for @countryNameCH.
+  ///
+  /// In en, this message translates to:
+  /// **'Switzerland'**
+  String get countryNameCH;
+
+  /// No description provided for @countryNameLU.
+  ///
+  /// In en, this message translates to:
+  /// **'Luxembourg'**
+  String get countryNameLU;
+
+  /// No description provided for @countryNameMA.
+  ///
+  /// In en, this message translates to:
+  /// **'Morocco'**
+  String get countryNameMA;
+
+  /// No description provided for @countryNameDZ.
+  ///
+  /// In en, this message translates to:
+  /// **'Algeria'**
+  String get countryNameDZ;
+
+  /// No description provided for @countryNameTN.
+  ///
+  /// In en, this message translates to:
+  /// **'Tunisia'**
+  String get countryNameTN;
+
+  /// No description provided for @countryNameCI.
+  ///
+  /// In en, this message translates to:
+  /// **'Côte d\'Ivoire'**
+  String get countryNameCI;
+
+  /// No description provided for @countryNameML.
+  ///
+  /// In en, this message translates to:
+  /// **'Mali'**
+  String get countryNameML;
+
+  /// No description provided for @countryNameGN.
+  ///
+  /// In en, this message translates to:
+  /// **'Guinea'**
+  String get countryNameGN;
+
+  /// No description provided for @countryNameBF.
+  ///
+  /// In en, this message translates to:
+  /// **'Burkina Faso'**
+  String get countryNameBF;
+
+  /// No description provided for @countryNameNE.
+  ///
+  /// In en, this message translates to:
+  /// **'Niger'**
+  String get countryNameNE;
+
+  /// No description provided for @countryNameTG.
+  ///
+  /// In en, this message translates to:
+  /// **'Togo'**
+  String get countryNameTG;
+
+  /// No description provided for @countryNameBJ.
+  ///
+  /// In en, this message translates to:
+  /// **'Benin'**
+  String get countryNameBJ;
+
+  /// No description provided for @countryNameCM.
+  ///
+  /// In en, this message translates to:
+  /// **'Cameroon'**
+  String get countryNameCM;
+
+  /// No description provided for @countryNameGB.
+  ///
+  /// In en, this message translates to:
+  /// **'United Kingdom'**
+  String get countryNameGB;
+
+  /// No description provided for @countryNameDE.
+  ///
+  /// In en, this message translates to:
+  /// **'Germany'**
+  String get countryNameDE;
+
+  /// No description provided for @countryNameES.
+  ///
+  /// In en, this message translates to:
+  /// **'Spain'**
+  String get countryNameES;
+
+  /// No description provided for @countryNameIT.
+  ///
+  /// In en, this message translates to:
+  /// **'Italy'**
+  String get countryNameIT;
+
+  /// No description provided for @countryNamePT.
+  ///
+  /// In en, this message translates to:
+  /// **'Portugal'**
+  String get countryNamePT;
+
+  /// No description provided for @countryNameUS.
+  ///
+  /// In en, this message translates to:
+  /// **'United States'**
+  String get countryNameUS;
+
+  /// No description provided for @countryNameCA.
+  ///
+  /// In en, this message translates to:
+  /// **'Canada'**
+  String get countryNameCA;
 }
 
 class _AppLocalizationsDelegate
