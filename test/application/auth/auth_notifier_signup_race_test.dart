@@ -293,4 +293,38 @@ void main() {
       expect(user?.termsAcceptedAt, isNotNull);
     },
   );
+
+  test(
+    'the guard does not swallow a sign-out that arrives after sign-up',
+    () async {
+      // Pins where the epoch is captured: at the event, not earlier. Moving
+      // the capture, or bumping the epoch elsewhere, would make a later
+      // sign-out a silent no-op, and only this test would notice.
+      final container = buildContainer();
+      addTearDown(container.dispose);
+
+      final initialState = container.read(authNotifierProvider.future);
+      authController.add(null);
+      await initialState;
+
+      await container
+          .read(authNotifierProvider.notifier)
+          .signUpWithEmailPassword(
+            displayName: 'Real Name',
+            email: 'signup-race@test.example',
+            password: 'S3cret!!',
+            gender: Gender.female,
+          );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(shownUser(container)?.displayName, 'Real Name');
+
+      authController.add(null);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(
+        container.read(authNotifierProvider).valueOrNull,
+        isA<AuthUnauthenticated>(),
+      );
+    },
+  );
 }

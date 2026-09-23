@@ -58,8 +58,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   // ignore: cancel_subscriptions - cancelled via ref.onDispose(_authSub.cancel) below.
   late StreamSubscription<User?> _authSub;
 
-  /// Bumped whenever a method publishes a user it knows to be fresher than
-  /// anything an in-flight [_resolveState] could return. The auth listener
+  /// Bumped by email sign-up when it publishes the user it just wrote, which
+  /// is fresher than anything an in-flight [_resolveState] could return.
+  /// switchMode, updateProfile and setProfileImage do NOT bump it: they never
+  /// race the listener, because authStateChanges does not fire for them. The auth listener
   /// only applies its result if no such publication happened meanwhile.
   ///
   /// Needed by email sign-up: `createUserWithEmailAndPassword` fires
