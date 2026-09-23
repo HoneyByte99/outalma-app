@@ -26,6 +26,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 Future<void> main() async {
+  final reportCrashes = crashReportingAvailable(isWeb: kIsWeb);
   // Catch all uncaught async errors. runZonedGuarded is intentionally
   // fire-and-forget; errors are forwarded to the second callback.
   // ignore: unawaited_futures
@@ -55,7 +56,7 @@ Future<void> main() async {
 
       final onboardingDone = results[2] as bool;
 
-      if (crashReportingAvailable(isWeb: kIsWeb)) {
+      if (reportCrashes) {
         final crashlytics = FirebaseCrashlytics.instance;
         // Disable Crashlytics collection in debug builds. On the x86_64 (Rosetta)
         // iOS simulator, Crashlytics' on-demand stack unwinding segfaults the
@@ -87,7 +88,7 @@ Future<void> main() async {
       );
     },
     (error, stack) {
-      if (crashReportingAvailable(isWeb: kIsWeb)) {
+      if (reportCrashes) {
         FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       } else {
         debugPrint('[main] uncaught error: $error\n$stack');
