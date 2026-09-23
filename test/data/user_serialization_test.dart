@@ -59,6 +59,14 @@ void main() {
       );
       final col = FirestoreCollections.users(fakeDb);
       await col.doc(user.id).set(user);
+      // pushToken is deliberately NOT serialized (see _userToFirestore): it is
+      // written on its own by NotificationService, as done here, and only the
+      // read side is covered by this roundtrip.
+      final raw = await fakeDb.collection('users').doc(user.id).get();
+      expect(raw.data()!.containsKey('pushToken'), isFalse);
+      await fakeDb.collection('users').doc(user.id).update({
+        'pushToken': 'fcm_token_abc',
+      });
       final result = (await col.doc(user.id).get()).data()!;
 
       expect(result.id, user.id);

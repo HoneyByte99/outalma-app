@@ -150,6 +150,11 @@ void main() {
           pushToken: 'fcm-token-abc',
         );
         await _writeUser(fakeDb, user);
+        // Written on its own, as NotificationService does: the whole-user
+        // serialization never carries pushToken.
+        await fakeDb.collection('users').doc(user.id).update({
+          'pushToken': 'fcm-token-abc',
+        });
 
         final result = await repo.getById(user.id);
         expect(result!.phoneE164, '+33600000000');
