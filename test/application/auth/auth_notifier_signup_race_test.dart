@@ -22,6 +22,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:outalma_app/src/application/auth/auth_providers.dart';
+import 'package:outalma_app/src/application/auth/auth_state.dart';
 import 'package:outalma_app/src/data/firestore/firestore_collections.dart';
 import 'package:outalma_app/src/data/repositories/firestore_user_repository.dart';
 import 'package:outalma_app/src/domain/enums/gender.dart';
@@ -220,6 +221,110 @@ void main() {
       final stored = await FirestoreCollections.users(fakeDb).doc(uid).get();
       expect(stored.data()?.gender, Gender.female);
       expect(stored.data()?.termsAcceptedAt, isNotNull);
+    },
+  );
+
+  // The two tests above check what is STORED. The bug a tester hit on a real
+  // device was in what is SHOWN: the listener's minimal user (empty name, no
+  // gender) stayed in AuthNotifier's state after sign-up, and the profile only
+  // appeared after quitting and reopening the app, when _resolveState re-read
+  // the real document. Both orderings of the race are covered, because a fix
+  // that only sets state at the end of sign-up is undone by a listener that
+  // resolves last.
+  AppUser? shownUser(ProviderContainer container) {
+    final s = container.read(authNotifierProvider).valueOrNull;
+    return s is AuthAuthenticated ? s.user : null;
+  }
+
+  test(
+    'right after sign-up, the state carries the real profile (listener lands last)',
+    () async {
+      final container = buildContainer();
+      addTearDown(container.dispose);
+
+      final initialState = container.read(authNotifierProvider.future);
+      authController.add(null);
+      await initialState;
+
+      gatedRepo.pauseNextEmptyNameUpsert();
+
+      await container
+          .read(authNotifierProvider.notifier)
+          .signUpWithEmailPassword(
+            displayName: 'Real Name',
+            email: 'signup-race@test.example',
+            password: 'S3cret!!',
+            gender: Gender.female,
+          );
+
+      gatedRepo.release();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final user = shownUser(container);
+      expect(user?.displayName, 'Real Name');
+      expect(user?.gender, Gender.female);
+      expect(user?.termsAcceptedAt, isNotNull);
+    },
+  );
+
+  test(
+    'right after sign-up, the state carries the real profile (listener lands first)',
+    () async {
+      final container = buildContainer();
+      addTearDown(container.dispose);
+
+      final initialState = container.read(authNotifierProvider.future);
+      authController.add(null);
+      await initialState;
+
+      await container
+          .read(authNotifierProvider.notifier)
+          .signUpWithEmailPassword(
+            displayName: 'Real Name',
+            email: 'signup-race@test.example',
+            password: 'S3cret!!',
+            gender: Gender.female,
+          );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final user = shownUser(container);
+      expect(user?.displayName, 'Real Name');
+      expect(user?.gender, Gender.female);
+      expect(user?.termsAcceptedAt, isNotNull);
+    },
+  );
+
+  test(
+    'the guard does not swallow a sign-out that arrives after sign-up',
+    () async {
+      // Pins where the epoch is captured: at the event, not earlier. Moving
+      // the capture, or bumping the epoch elsewhere, would make a later
+      // sign-out a silent no-op, and only this test would notice.
+      final container = buildContainer();
+      addTearDown(container.dispose);
+
+      final initialState = container.read(authNotifierProvider.future);
+      authController.add(null);
+      await initialState;
+
+      await container
+          .read(authNotifierProvider.notifier)
+          .signUpWithEmailPassword(
+            displayName: 'Real Name',
+            email: 'signup-race@test.example',
+            password: 'S3cret!!',
+            gender: Gender.female,
+          );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(shownUser(container)?.displayName, 'Real Name');
+
+      authController.add(null);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(
+        container.read(authNotifierProvider).valueOrNull,
+        isA<AuthUnauthenticated>(),
+      );
     },
   );
 }

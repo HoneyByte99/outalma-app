@@ -58,18 +58,34 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   // ignore: cancel_subscriptions - cancelled via ref.onDispose(_authSub.cancel) below.
   late StreamSubscription<User?> _authSub;
 
+  /// Bumped by email sign-up when it publishes the user it just wrote, which
+  /// is fresher than anything an in-flight [_resolveState] could return.
+  /// switchMode, updateProfile and setProfileImage do NOT bump it: they never
+  /// race the listener, because authStateChanges does not fire for them. The auth listener
+  /// only applies its result if no such publication happened meanwhile.
+  ///
+  /// Needed by email sign-up: `createUserWithEmailAndPassword` fires
+  /// `authStateChanges` before the real document is written, so the listener
+  /// resolves a minimal user (empty name, no gender). Without this guard that
+  /// stale user either stays in state, or overwrites the real one if the
+  /// listener resolves last, and the profile only shows after a restart.
+  int _stateEpoch = 0;
+
   @override
   Future<AuthState> build() async {
     final auth = ref.read(firebaseAuthProvider);
     final completer = Completer<AuthState>();
 
     _authSub = auth.authStateChanges().listen((firebaseUser) async {
+      final epoch = _stateEpoch;
       final next = await _resolveState(firebaseUser);
       if (!completer.isCompleted) {
         completer.complete(next);
-      } else {
+      } else if (epoch == _stateEpoch) {
         state = AsyncData(next);
       }
+      // Otherwise an explicit write (sign-up) published a fresher user while
+      // this resolution was in flight: dropping the stale result is the point.
     });
 
     ref.onDispose(_authSub.cancel);
@@ -416,21 +432,26 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     // rule requires it unchanged on update).
     final repo = ref.read(userRepositoryProvider);
     final existing = await repo.getById(user.uid);
-    await repo.upsert(
-      AppUser(
-        id: user.uid,
-        displayName: displayName,
-        email: email,
-        country: existing?.country ?? 'FR',
-        activeMode: existing?.activeMode ?? ActiveMode.client,
-        createdAt: existing?.createdAt ?? DateTime.now(),
-        // Consent proof - the sign-up screen gates submission on acceptance.
-        termsAcceptedAt: existing?.termsAcceptedAt ?? DateTime.now(),
-        // Declared, mandatory, and never re-derived: the sign-up screen gates
-        // submission on it exactly as it does on consent.
-        gender: gender,
-      ),
+    final appUser = AppUser(
+      id: user.uid,
+      displayName: displayName,
+      email: email,
+      country: existing?.country ?? 'FR',
+      activeMode: existing?.activeMode ?? ActiveMode.client,
+      createdAt: existing?.createdAt ?? DateTime.now(),
+      // Consent proof - the sign-up screen gates submission on acceptance.
+      termsAcceptedAt: existing?.termsAcceptedAt ?? DateTime.now(),
+      // Declared, mandatory, and never re-derived: the sign-up screen gates
+      // submission on it exactly as it does on consent.
+      gender: gender,
     );
+    await repo.upsert(appUser);
+
+    // The auth listener already resolved (or is still resolving) the minimal
+    // user it built before this document existed. Publish the real one and
+    // invalidate that in-flight resolution, see [_stateEpoch].
+    _stateEpoch++;
+    state = AsyncData(AuthAuthenticated(appUser));
 
     // Send the verification mail. Failures here do NOT abort sign-up - the
     // user is already in. UI can offer "Resend" via [resendVerificationEmail].
