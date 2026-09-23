@@ -1,7 +1,11 @@
 // Pure mapping of Twilio Verify's error replies. One case per condition: the
 // guards are ORs of redundant conditions (an HTTP status and a Twilio code),
 // and a table that always sent both would let either half be deleted unseen.
-import { checkFailure, INVALID_OR_EXPIRED_CODE } from '../src/twilio_errors';
+import {
+  checkFailure,
+  INVALID_OR_EXPIRED_CODE,
+  startFailure,
+} from '../src/twilio_errors';
 
 describe('checkFailure', () => {
   it.each([
@@ -22,5 +26,22 @@ describe('checkFailure', () => {
     ['a body that is not an object', 400, 'not json'],
   ])('keeps %s an outage', (_label, status, json) => {
     expect(checkFailure(status, json)).toMatchObject({ code: 'unavailable' });
+  });
+});
+
+describe('startFailure', () => {
+  it.each([
+    ['Twilio code 60200, invalid parameter', 400, { code: 60200 }],
+    ['Twilio code 60205, landline', 400, { code: 60205 }],
+  ])('reads %s as an invalid number', (_label, status, json) => {
+    expect(startFailure(status, json)).toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it.each([
+    ['an unknown Twilio code', 400, { code: 99999 }],
+    ['a server error', 500, null],
+    ['a 404, which says nothing about the number', 404, null],
+  ])('keeps %s an outage', (_label, status, json) => {
+    expect(startFailure(status, json)).toMatchObject({ code: 'unavailable' });
   });
 });

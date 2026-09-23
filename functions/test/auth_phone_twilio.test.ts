@@ -152,3 +152,34 @@ describe('verifyPhoneOtpAndSignUp through the live client', () => {
     expect(twilio.calls).toEqual([{ endpoint: 'VerificationCheck', to: SN }]);
   });
 });
+
+/// What Twilio answers a Start for a number it will not text. The real reply
+/// echoes the number back in its message.
+const invalidNumber = (to: string): Reply => ({
+  status: 400,
+  json: {
+    code: 60200,
+    message: `Invalid parameter \`To\`: ${to}`,
+    more_info: 'https://www.twilio.com/docs/errors/60200',
+    status: 400,
+  },
+});
+
+const requestOtp = (phone: string) =>
+  wrap(fns.requestPhoneOtp)({ data: { phone } } as never);
+
+describe('requestPhoneOtp through the live client', () => {
+  it('sends through the live client', async () => {
+    twilio.replies.Verifications = () => ({ status: 201, json: { status: 'pending' } });
+    await expect(requestOtp(SN)).resolves.toMatchObject({ channel: 'sms' });
+    expect(twilio.calls).toEqual([{ endpoint: 'Verifications', to: SN }]);
+  });
+
+  it('refuses a number Twilio will not text as an invalid number, not a network error', async () => {
+    // Seen twice in production on 2026-09-11: the app told the user to check
+    // their connection, when the number itself was malformed.
+    twilio.replies.Verifications = invalidNumber;
+    await expect(requestOtp(SN)).rejects.toMatchObject({ code: 'invalid-argument' });
+    expect(twilio.calls).toEqual([{ endpoint: 'Verifications', to: SN }]);
+  });
+});

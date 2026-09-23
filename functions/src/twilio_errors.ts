@@ -37,3 +37,18 @@ export function checkFailure(status: number, json: unknown): HttpsError {
   }
   return new HttpsError('unavailable', 'OTP verification failed');
 }
+
+/// Start codes meaning the number itself will not receive our SMS: 60200, an
+/// invalid parameter (the channel is forced to `sms` server-side, so `To` is
+/// the only parameter a caller controls); 60205, a landline that cannot take
+/// an SMS. The app shows `invalid-argument` as "this number is not valid".
+const START_BAD_NUMBER_CODES: readonly number[] = [60200, 60205];
+
+/// The error a failed Verifications call (HTTP status >= 400) turns into.
+export function startFailure(status: number, json: unknown): HttpsError {
+  const code = twilioCode(json);
+  if (code !== null && START_BAD_NUMBER_CODES.includes(code)) {
+    return new HttpsError('invalid-argument', 'phone is not a valid number');
+  }
+  return new HttpsError('unavailable', 'Could not send OTP');
+}

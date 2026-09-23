@@ -31,7 +31,11 @@ import { defineSecret } from 'firebase-functions/params';
 import * as logger from 'firebase-functions/logger';
 import { GENDERS, Gender } from './public_profiles';
 import { consumeOtpQuota } from './otp_rate_limit';
-import { checkFailure, INVALID_OR_EXPIRED_CODE } from './twilio_errors';
+import {
+  checkFailure,
+  INVALID_OR_EXPIRED_CODE,
+  startFailure,
+} from './twilio_errors';
 
 const TWILIO_ACCOUNT_SID = defineSecret('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = defineSecret('TWILIO_AUTH_TOKEN');
@@ -193,7 +197,7 @@ async function twilioStartVerification(
   });
   if (status >= 400) {
     logger.error('Twilio Verifications failed', { status, json });
-    throw new HttpsError('unavailable', 'Could not send OTP');
+    throw startFailure(status, json);
   }
 }
 

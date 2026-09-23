@@ -20,7 +20,7 @@ Three callable Cloud Functions form the canonical pipeline:
 ### `requestPhoneOtp({ phone, channel? })`
 - Validates `phone` is in E.164 format.
 - Calls Twilio Verify `Verifications` endpoint on `sms` (default) or `call` channel.
-- Returns `{ sentAt, channel }`. Throws `unavailable` on Twilio failure.
+- Returns `{ sentAt, channel, retryAfterMs }`. Throws `invalid-argument` when Twilio refuses the number itself (60200 invalid parameter, 60205 landline), `unavailable` on any other Twilio failure.
 - **No authentication required** — anyone with a phone number can trigger an OTP.
   Rate limiting and abuse protection rely on Twilio's per-number quotas.
 

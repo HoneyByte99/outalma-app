@@ -353,6 +353,21 @@ async function main() {
     'word for word what a wrong code gets, so a pending verification cannot be probed'
   );
 
+  // --- 12. A number Twilio will not text -----------------------------------
+  console.log('\n12. A number Twilio will not text');
+  await clearAll();
+  transport.calls.length = 0;
+  transport.replies.Verifications = (to) => ({
+    status: 400,
+    json: { code: 60200, message: `Invalid parameter \`To\`: ${to}`, status: 400 },
+  });
+  const badNumber = await refusedBy(fns.requestPhoneOtp, { phone: SN });
+  must(badNumber.code === 'invalid-argument', 'refused as an invalid number, not as a network error');
+  must(
+    transport.calls.length === 1 && transport.calls[0].endpoint === 'Verifications',
+    'the live client did ask Twilio, once'
+  );
+
   console.log(`\n=== SMOKE OK, ${step} checks ===\n`);
 }
 
