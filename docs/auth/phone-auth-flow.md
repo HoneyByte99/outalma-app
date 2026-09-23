@@ -22,7 +22,7 @@ Three callable Cloud Functions form the canonical pipeline:
 - Calls Twilio Verify `Verifications` endpoint on the `sms` channel, forced server-side: any other `channel` is refused with `invalid-argument` (voice costs more per verification, and this endpoint is unauthenticated).
 - Returns `{ sentAt, channel, retryAfterMs }`. Throws `invalid-argument` when Twilio refuses the number itself (60200 invalid parameter, 60205 landline), `unavailable` on any other Twilio failure.
 - **No authentication required** — anyone with a phone number can trigger an OTP.
-  Rate limiting is ours, server-side, and runs BEFORE Twilio is called (`functions/src/otp_rate_limit.ts`): dial codes limited to the selector's allowlist, a backoff of 60 / 120 / 300 s between sends, 6 sends per rolling hour and 15 per rolling 24 h per number, and a global alert at 300 then stop at 600 sends per day. The thresholds can be tuned live through `otp_config/thresholds`. A refusal throws `resource-exhausted` with a stable `code` (`otp/prefix-not-allowed`, `otp/backoff`, `otp/window-cap`, `otp/day-cap`, `otp/global-cap`) and `retryAfterMs` in its details.
+  Rate limiting is ours, server-side, and runs BEFORE Twilio is called (`functions/src/otp_rate_limit.ts`): dial codes limited to the selector's allowlist, a backoff of 60 / 120 / 300 s between sends, 6 sends per rolling hour and 15 per rolling 24 h per number, and a global alert at 300 then stop at 600 sends per day. The hourly and daily caps and the global alert and stop can be tuned live through `otp_config/thresholds`, each bounded by a constant in the code; the backoff and the allowlist cannot. A refusal throws `resource-exhausted` with a stable `code` (`otp/prefix-not-allowed`, `otp/backoff`, `otp/window-cap`, `otp/day-cap`, `otp/global-cap`) and `retryAfterMs` in its details.
 
 ### `verifyPhoneOtpAndSignIn({ phone, code })`
 - Canonicalises `phone` as above; validates `code` (6 digits).
@@ -84,7 +84,7 @@ Best-effort from the E.164 prefix:
 
 Twilio Verify is the production OTP provider. Rationale:
 - Works uniformly on iOS, Android, and Web — no APNs / no reCAPTCHA friction.
-- SMS + Voice fallback ready (just toggle `channel: 'call'`).
+- Twilio can also verify by voice call, but `requestPhoneOtp` refuses it: reopening it means changing the callable and pricing it into the quota.
 - Server-side integration is simple HTTP, well-documented.
 
 The OTP Lab (`/otp-lab` in debug builds) keeps a Firebase Phone Auth path for benchmarking, but Firebase Phone Auth is **not** wired to the production sign-in / sign-up flow.

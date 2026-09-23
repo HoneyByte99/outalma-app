@@ -13,7 +13,8 @@ import 'app_sheet.dart';
 
 /// The selector's countries, in display order. The name is localised
 /// (budget line U4), and the switch in [name] is exhaustive: a country added
-/// here without its two ARB entries does not compile.
+/// here without its entry in the template (app_en.arb) does not compile, and
+/// test/l10n/arb_parity_test.dart catches a missing French one.
 enum _Country {
   france('🇫🇷', '+33'),
   senegal('🇸🇳', '+221'),
