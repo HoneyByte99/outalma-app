@@ -20,10 +20,11 @@ module.exports = {
   coverageReporters: ['text-summary', 'lcov'],
   coverageThreshold: {
     global: { statements: 25, branches: 25, functions: 25, lines: 25 },
-    // Budget line T5b on the module this increment adds. It holds every rule
-    // that guards a billed API, so the floor is on the file that can actually
-    // carry one: auth_phone.ts is excluded on purpose, the two verify*
-    // callables being out of this increment's scope and occupying most of it.
+    // Budget line T5b on the module the otp-rate-limit increment added. It
+    // holds every rule that guards a billed API. auth_phone.ts carries no
+    // per-file floor: most of it is callable wiring whose branches (62 % on
+    // 2026-09-23) predate the increments touching it, so their NEW lines are
+    // measured by patch coverage instead (23/23 for otp-phone-normalisation).
     './src/otp_rate_limit.ts': {
       lines: 80,
       branches: 80,
@@ -45,6 +46,22 @@ module.exports = {
     // Budget line T5b, per-path floor on the file this increment touches. The
     // ratchet, not a target: the file sits well above it.
     './src/public_profiles.ts': {
+      lines: 80,
+      branches: 80,
+      functions: 80,
+      statements: 80,
+    },
+    // Budget line T5b, the module this increment adds: every refusal the app
+    // turns into a sentence, and every field a Twilio log line may carry.
+    './src/twilio_errors.ts': {
+      lines: 80,
+      branches: 80,
+      functions: 80,
+      statements: 80,
+    },
+    // Budget line T5b: the ONE place a typed number becomes the string an
+    // account is keyed on.
+    './src/phone_canonical.ts': {
       lines: 80,
       branches: 80,
       functions: 80,

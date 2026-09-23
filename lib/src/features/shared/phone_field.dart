@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../app/app_theme.dart';
+import '../../domain/auth/phone_number.dart';
 import '../../domain/utils/text_search.dart';
 import 'app_sheet.dart';
 
@@ -55,7 +56,8 @@ final _kDefaultCountry = _kCountries[0];
 // PhoneField
 //
 // Displays [FLAG  +XX ▾ | local number]
-// Calls onChanged with full E.164 (e.g. +33612345678) or null if empty.
+// Calls onChanged with the canonical E.164 (composeE164: "06 12 34 56 78"
+// with France gives +33612345678), or null if no digit was typed.
 // Pass initialValue as E.164 to pre-fill country + number.
 // ---------------------------------------------------------------------------
 
@@ -153,8 +155,9 @@ class _PhoneFieldState extends State<PhoneField> {
   }
 
   void _notify() {
-    final local = _ctrl.text.trim();
-    final e164 = local.isEmpty ? null : '${_country.dialCode}$local';
+    // The canonical string, not the text as typed: "06 39 98 12 34" goes out
+    // as +33639981234. The field itself keeps showing what the user typed.
+    final e164 = composeE164(_country.dialCode, _ctrl.text);
     final err = PhoneField.validate(e164);
     setState(() => _error = err);
     widget.onChanged(e164);

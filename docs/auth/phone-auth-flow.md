@@ -18,22 +18,22 @@ Both paths share the same Firestore `users/{uid}` document and the same `AuthSta
 Three callable Cloud Functions form the canonical pipeline:
 
 ### `requestPhoneOtp({ phone, channel? })`
-- Validates `phone` is in E.164 format.
+- Turns `phone` into its canonical E.164 string (`functions/src/phone_canonical.ts`): spaces and dashes dropped, the national trunk zero dropped for the dial codes that have one (Italy and Côte d'Ivoire keep theirs). Twilio, Firebase Auth, the `users` document and the quota only ever see that string, so Start and Check always match and one subscriber cannot hold two accounts. Refused with `invalid-argument` when it is not E.164.
 - Calls Twilio Verify `Verifications` endpoint on `sms` (default) or `call` channel.
-- Returns `{ sentAt, channel }`. Throws `unavailable` on Twilio failure.
+- Returns `{ sentAt, channel, retryAfterMs }`. Throws `invalid-argument` when Twilio refuses the number itself (60200 invalid parameter, 60205 landline), `unavailable` on any other Twilio failure.
 - **No authentication required** — anyone with a phone number can trigger an OTP.
   Rate limiting and abuse protection rely on Twilio's per-number quotas.
 
 ### `verifyPhoneOtpAndSignIn({ phone, code })`
-- Validates `phone` (E.164) and `code` (4-8 digits).
-- Calls Twilio `VerificationCheck`. Throws `permission-denied` if invalid/expired.
+- Canonicalises `phone` as above; validates `code` (6 digits).
+- Calls Twilio `VerificationCheck`. Throws `permission-denied` if the code is wrong or expired, with one message for both: a verification Twilio no longer knows (404 / 20404, or 60202 once the attempts are spent) reads exactly like a wrong code.
 - Looks up the Outalma user by `phoneE164` in Firestore.
   - **No user found** → returns `{ newUser: true, phoneE164 }`. The client routes to sign-up.
   - **User found** → links phone to Firebase Auth user (idempotent), mints a **custom token**, returns `{ newUser: false, customToken, uid }`. The client signs in via `signInWithCustomToken`.
 
 ### `verifyPhoneOtpAndSignUp({ phone, code, displayName, country })`
-- Validates `phone`, `code`, `displayName`, and `country` (`FR` or `SN`).
-- Calls Twilio `VerificationCheck`. Throws `permission-denied` if invalid.
+- Canonicalises `phone` as above, so the account is created under the canonical number; validates `code`, `displayName`, `country` (`FR` or `SN`) and `gender`.
+- Calls Twilio `VerificationCheck`. Throws `permission-denied` if the code is wrong or expired, with one message for both: a verification Twilio no longer knows (404 / 20404, or 60202 once the attempts are spent) reads exactly like a wrong code.
 - Asserts the phone is **not already taken**. Throws `already-exists` otherwise.
 - Creates the Firebase Auth user via `createUser({ phoneNumber, displayName })` — **no fake email, no password**.
 - Creates the matching Firestore `users/{uid}` doc with:
@@ -91,7 +91,7 @@ The OTP Lab (`/otp-lab` in debug builds) keeps a Firebase Phone Auth path for be
 
 ## Observability
 
-- Cloud Functions log every Twilio failure with `logger.error('Twilio … failed', { status, json })`.
+- Cloud Functions log every Twilio failure as `{ status, twilioCode }` and nothing else: Twilio's reply echoes the phone number in its `message`, so it is never logged (budget line S12). A refusal caused by the user's input (bad number, dead code) is a `warn`, any other failure an `error`.
 - Firebase Auth records account creation; Firestore records the user doc creation timestamp.
 - Twilio console lists every verification attempt (sandbox / production).
 

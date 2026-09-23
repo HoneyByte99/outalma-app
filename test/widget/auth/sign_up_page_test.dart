@@ -28,6 +28,7 @@ class _FakeAuthNotifier extends AuthNotifier {
   final List<Gender?> emailSignUps = [];
   final List<String> otpRequests = [];
   final List<Gender?> phoneSignUps = [];
+  final List<String> phoneSignUpNumbers = [];
 
   @override
   Future<AuthState> build() async => const AuthUnauthenticated();
@@ -66,6 +67,7 @@ class _FakeAuthNotifier extends AuthNotifier {
     required Gender gender,
   }) async {
     phoneSignUps.add(gender);
+    phoneSignUpNumbers.add(phoneE164);
   }
 }
 
@@ -271,6 +273,49 @@ void main() {
       await tester.pump();
 
       expect(auth.phoneSignUps, [Gender.male]);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // The number sent is canonical: typed the French way, with the national zero
+  // and spaces, it used to go out raw and be refused.
+  // ---------------------------------------------------------------------------
+  group('the number sent is canonical', () {
+    Future<void> sendCode(WidgetTester tester) async {
+      await pumpForm(tester);
+      await tester.tap(find.text('Téléphone'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField).at(0), 'Awa Cisse');
+      await tester.enterText(find.byType(TextField).at(1), '06 39 98 12 34');
+      await tester.pump();
+      await acceptTerms(tester);
+      await tester.tap(find.text('Femme'));
+      await tester.pump();
+      await submit(tester);
+    }
+
+    testWidgets('the code and the account both get the E.164 string', (
+      tester,
+    ) async {
+      await sendCode(tester);
+      expect(auth.otpRequests, ['+33639981234']);
+
+      await tester.enterText(find.byType(TextField).first, '123456');
+      await tester.pump();
+      await tester.pump();
+
+      expect(auth.phoneSignUpNumbers, ['+33639981234']);
+    });
+
+    testWidgets('editing the details shows the number in its canonical form', (
+      tester,
+    ) async {
+      await sendCode(tester);
+
+      await tester.tap(find.text('Modifier le numéro'));
+      await tester.pump();
+
+      expect(find.text('639981234'), findsOneWidget);
     });
   });
 

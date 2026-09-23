@@ -23,7 +23,9 @@
 //       Firestore user doc, returns a Firebase custom token.
 //
 // All three are server-authoritative: client cannot bypass uniqueness or
-// claim a phone without a fresh code.
+// claim a phone without a fresh code. All three first turn the number typed
+// into its canonical E.164 string (phone_canonical.ts), the one string that
+// Twilio, Firebase Auth and the quota ever see.
 
 import * as admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
@@ -31,6 +33,13 @@ import { defineSecret } from 'firebase-functions/params';
 import * as logger from 'firebase-functions/logger';
 import { GENDERS, Gender } from './public_profiles';
 import { consumeOtpQuota } from './otp_rate_limit';
+import { canonicalPhone } from './phone_canonical';
+import {
+  checkFailure,
+  INVALID_OR_EXPIRED_CODE,
+  startFailure,
+  twilioLogFields,
+} from './twilio_errors';
 
 const TWILIO_ACCOUNT_SID = defineSecret('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = defineSecret('TWILIO_AUTH_TOKEN');
@@ -46,19 +55,6 @@ const db = () => admin.firestore();
 // ---------------------------------------------------------------------------
 // Validation helpers
 // ---------------------------------------------------------------------------
-
-const E164_REGEX = /^\+[1-9]\d{6,14}$/;
-
-function assertPhone(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new HttpsError('invalid-argument', 'phone must be a string');
-  }
-  const trimmed = value.trim();
-  if (!E164_REGEX.test(trimmed)) {
-    throw new HttpsError('invalid-argument', 'phone must be in E.164 format');
-  }
-  return trimmed;
-}
 
 function assertCode(value: unknown): string {
   if (typeof value !== 'string') {
@@ -154,6 +150,48 @@ async function postForm(
   return { status: res.status, json };
 }
 
+/// The HTTP call to Twilio, behind a swappable function.
+///
+/// `setTwilioClient` below replaces the WHOLE client, so a test that uses it
+/// never runs the code that reads Twilio's answer: the error mapping and the
+/// log line stay untested. This seam sits one level lower. The live client runs
+/// unchanged and only the network call is faked, so a test can hand it the
+/// exact reply Twilio sends in production.
+export type TwilioTransport = (
+  url: string,
+  auth: string,
+  body: Record<string, string>
+) => Promise<{ status: number; json: unknown }>;
+
+let activeTransport: TwilioTransport = postForm;
+
+export function setTwilioTransport(transport: TwilioTransport): void {
+  activeTransport = transport;
+}
+
+export function resetTwilioTransport(): void {
+  activeTransport = postForm;
+}
+
+/// One line per failed Twilio call, with numbers only (see twilioLogFields).
+/// A refusal the user's own input caused (bad number, dead code) is a warning;
+/// anything still read as an outage is an error. Limit accepted: a Check that
+/// fails on a broken Service SID would only warn, but the Start call of the
+/// same flow fails first, as an error.
+function logTwilioFailure(
+  label: string,
+  failure: HttpsError,
+  status: number,
+  json: unknown
+): void {
+  const fields = twilioLogFields(status, json);
+  if (failure.code === 'unavailable') {
+    logger.error(label, fields);
+  } else {
+    logger.warn(label, fields);
+  }
+}
+
 async function twilioStartVerification(
   phone: string,
   channel: 'sms' | 'call'
@@ -163,13 +201,14 @@ async function twilioStartVerification(
     TWILIO_ACCOUNT_SID.value(),
     TWILIO_AUTH_TOKEN.value()
   );
-  const { status, json } = await postForm(url, auth, {
+  const { status, json } = await activeTransport(url, auth, {
     To: phone,
     Channel: channel,
   });
   if (status >= 400) {
-    logger.error('Twilio Verifications failed', { status, json });
-    throw new HttpsError('unavailable', 'Could not send OTP');
+    const failure = startFailure(status, json);
+    logTwilioFailure('Twilio Verifications failed', failure, status, json);
+    throw failure;
   }
 }
 
@@ -182,20 +221,18 @@ async function twilioCheckVerification(
     TWILIO_ACCOUNT_SID.value(),
     TWILIO_AUTH_TOKEN.value()
   );
-  const { status, json } = await postForm(url, auth, {
+  const { status, json } = await activeTransport(url, auth, {
     To: phone,
     Code: code,
   });
   if (status >= 400) {
-    logger.error('Twilio VerificationCheck failed', { status, json });
-    throw new HttpsError('unavailable', 'OTP verification failed');
+    const failure = checkFailure(status, json);
+    logTwilioFailure('Twilio VerificationCheck failed', failure, status, json);
+    throw failure;
   }
   const j = json as { status?: string; valid?: boolean };
   if (j.status !== 'approved' || j.valid !== true) {
-    throw new HttpsError(
-      'permission-denied',
-      'Invalid or expired verification code'
-    );
+    throw new HttpsError('permission-denied', INVALID_OR_EXPIRED_CODE);
   }
 }
 
@@ -267,7 +304,7 @@ export const requestPhoneOtp = onCall(
     region: 'us-central1',
   },
   async (request) => {
-    const phone = assertPhone(request.data?.phone);
+    const phone = canonicalPhone(request.data?.phone);
 
     // The channel is FORCED server-side. No surface of this product asks for
     // the voice channel (the app and the web both send 'sms'), and voice costs
@@ -301,11 +338,10 @@ export const requestPhoneOtp = onCall(
       );
     }
 
-    // The RAW string, deliberately. `verifyPhoneOtpAndSignIn` and
-    // `verifyPhoneOtpAndSignUp` are out of this increment's scope and keep
-    // sending the raw string to the Check call: Start and Check must receive
-    // exactly the same string, or the user gets a billed SMS and a code that
-    // can never be validated. Normalisation is a quota key and nothing else.
+    // The CANONICAL string, which `verifyPhoneOtpAndSignIn` and
+    // `verifyPhoneOtpAndSignUp` also derive through `canonicalPhone`: Start and
+    // Check must receive exactly the same string, or the user gets a billed
+    // SMS and a code that can never be validated.
     await activeTwilioClient.startVerification(phone, channel);
     // `retryAfterMs` on a SUCCESS: how long before a resend would be accepted.
     // The app runs its countdown on this value rather than on a copy of the
@@ -328,7 +364,7 @@ export const verifyPhoneOtpAndSignIn = onCall(
     region: 'us-central1',
   },
   async (request) => {
-    const phone = assertPhone(request.data?.phone);
+    const phone = canonicalPhone(request.data?.phone);
     const code = assertCode(request.data?.code);
 
     await activeTwilioClient.checkVerification(phone, code);
@@ -361,7 +397,7 @@ export const verifyPhoneOtpAndSignUp = onCall(
     region: 'us-central1',
   },
   async (request) => {
-    const phone = assertPhone(request.data?.phone);
+    const phone = canonicalPhone(request.data?.phone);
     const code = assertCode(request.data?.code);
     const displayName = assertDisplayName(request.data?.displayName);
     const country = assertCountry(request.data?.country);

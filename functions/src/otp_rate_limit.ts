@@ -106,19 +106,20 @@ export function isAllowedPrefix(phone: string): boolean {
   return longestPrefixMatch(phone, ALLOWED_PREFIXES) !== null;
 }
 
-/// Quota key normalisation, and NOTHING ELSE.
+/// Drops the trunk zero of the national part, for the dial codes that have one.
 ///
-/// This value never reaches Twilio. `requestPhoneOtp` sends the RAW string,
-/// because `verifyPhoneOtpAndSignIn` / `verifyPhoneOtpAndSignUp` are out of
-/// this increment's scope and keep sending the raw string to the Check call:
-/// normalising only the Start would hand Twilio `+33612345678` at Start and
-/// `+330612345678` at Check, so the user would get a billed SMS and a code
-/// that can never be validated.
+/// Two jobs. It is the last step of `canonicalPhone` (phone_canonical.ts), so
+/// the string Twilio texts, Firebase Auth keys the account on and the users
+/// document stores is normalised. And it keys the quota, so one subscriber
+/// cannot hold two quotas by typing their number two ways. The first job came
+/// second (cycle otp-phone-normalisation, 2026-09-23): until then the raw string
+/// went to Twilio, because only the Start call could have been normalised and
+/// Start and Check must see the same string.
 ///
-/// The only job here is that one subscriber cannot hold two quotas by typing
-/// their number two ways. Every leading zero of the national part is dropped,
-/// not just the first, so stacked variants (`+3300612…`) collapse onto the same
-/// key. No real subscriber of these countries has a national number starting
+/// Idempotent, which the quota relies on: it receives the canonical number.
+///
+/// Every leading zero of the national part is dropped, not just the first, so
+/// stacked variants (`+3300612…`) collapse onto the same key. No real subscriber of these countries has a national number starting
 /// with zero, so the mapping never merges two distinct people.
 export function normalisePhone(phone: string): string {
   const prefix = longestPrefixMatch(phone, TRUNK_ZERO_PREFIXES);

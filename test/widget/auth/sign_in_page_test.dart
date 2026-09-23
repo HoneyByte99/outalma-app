@@ -21,6 +21,10 @@ class _FakeAuthNotifier extends AuthNotifier {
   final otpRequests = <String>[];
   final verifyAttempts = <String>[];
 
+  /// The number each verification was made for, beside its code: Start and
+  /// Check must carry the same string.
+  final verifyPhones = <String>[];
+
   /// What the next send answers. The default is what the real server sends on
   /// a first successful request: the first backoff step, 60 s.
   OtpRequestOutcome outcome = const OtpRequestOutcome(retryAfterMs: 60000);
@@ -51,6 +55,7 @@ class _FakeAuthNotifier extends AuthNotifier {
     String code,
   ) async {
     verifyAttempts.add(code);
+    verifyPhones.add(phoneE164);
     return const PhoneSignInResult(signedIn: true);
   }
 }
@@ -83,7 +88,10 @@ void main() {
   /// Reaches the OTP entry step: switches to the phone tab, types a number,
   /// then taps the CTA that sends the code (still the manual step 1, unlike
   /// step 2 below which auto-submits).
-  Future<void> goToOtpStep(WidgetTester tester) async {
+  Future<void> goToOtpStep(
+    WidgetTester tester, {
+    String typed = '770000001',
+  }) async {
     // A window tall enough to hold the OTP step whole. The screen scrolls, and
     // a control below the fold cannot be tapped, so the default window would
     // make the resend assertions fail on geometry rather than on behaviour.
@@ -94,7 +102,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.byIcon(Icons.phone_outlined).first);
     await tester.pump();
-    await tester.enterText(find.byType(TextField).first, '770000001');
+    await tester.enterText(find.byType(TextField).first, typed);
     await tester.pump();
     await tester.tap(find.byType(ElevatedButton));
     await tester.pump();
@@ -264,6 +272,36 @@ void main() {
           isNotNull,
           reason: 'waiting cannot fix an unserved country',
         );
+      });
+    });
+
+    // A French user types the national zero and spaces, as the number is
+    // printed on every French document. Sent raw, "+3306 39 98 12 34" was
+    // refused by the server and "+330639981234" by Twilio.
+    group('the number sent is canonical', () {
+      testWidgets('typed with its zero and spaces, it goes out as E.164', (
+        tester,
+      ) async {
+        await goToOtpStep(tester, typed: '06 39 98 12 34');
+        expect(auth.otpRequests, ['+33639981234']);
+
+        await tester.enterText(find.byType(TextField).first, '123456');
+        await tester.pump();
+        await tester.pump();
+
+        expect(auth.verifyPhones, ['+33639981234']);
+      });
+
+      testWidgets('editing the number shows it back in its canonical form', (
+        tester,
+      ) async {
+        await goToOtpStep(tester, typed: '06 39 98 12 34');
+
+        await tester.tap(find.text('Modifier le numéro'));
+        await tester.pump();
+
+        // No zero, no spaces: the field is rebuilt from what was sent.
+        expect(find.text('639981234'), findsOneWidget);
       });
     });
 
