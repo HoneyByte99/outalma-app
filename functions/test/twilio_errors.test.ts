@@ -5,6 +5,7 @@ import {
   checkFailure,
   INVALID_OR_EXPIRED_CODE,
   startFailure,
+  twilioLogFields,
 } from '../src/twilio_errors';
 
 describe('checkFailure', () => {
@@ -43,5 +44,22 @@ describe('startFailure', () => {
     ['a 404, which says nothing about the number', 404, null],
   ])('keeps %s an outage', (_label, status, json) => {
     expect(startFailure(status, json)).toMatchObject({ code: 'unavailable' });
+  });
+});
+
+describe('twilioLogFields', () => {
+  it('keeps the status and the numeric code, and drops the echoed message', () => {
+    const reply = { code: 60200, message: 'Invalid parameter `To`: +221771234567' };
+    const fields = twilioLogFields(400, reply);
+    expect(fields).toEqual({ status: 400, twilioCode: 60200 });
+    expect(JSON.stringify(fields)).not.toContain('771234567');
+  });
+
+  it.each([
+    ['no body', null],
+    ['a body that is not an object', 'not json'],
+    ['a code that is not a number', { code: '60200' }],
+  ])('reports %s with a null code', (_label, json) => {
+    expect(twilioLogFields(500, json)).toEqual({ status: 500, twilioCode: null });
   });
 });

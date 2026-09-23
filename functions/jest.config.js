@@ -50,6 +50,14 @@ module.exports = {
       functions: 80,
       statements: 80,
     },
+    // Budget line T5b, the module this increment adds: every refusal the app
+    // turns into a sentence, and every field a Twilio log line may carry.
+    './src/twilio_errors.ts': {
+      lines: 80,
+      branches: 80,
+      functions: 80,
+      statements: 80,
+    },
     './src/identity_extraction.ts': {
       lines: 80,
       branches: 80,

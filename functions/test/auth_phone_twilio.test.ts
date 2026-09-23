@@ -28,6 +28,14 @@ import {
   TwilioTransport,
 } from '../src/auth_phone';
 import { clearFirestore } from './helpers';
+import { inspect } from 'util';
+
+// The RAW logger module, the very instance auth_phone.ts reads through its
+// namespace import. firebase-functions' logger has no __esModule flag, so an
+// `import * as` here would hand back a wrapper of getters that cannot be spied.
+const rawLogger = jest.requireActual<typeof import('firebase-functions/logger')>(
+  'firebase-functions/logger'
+);
 
 const wrap = (fn: unknown) => tf.wrap(fn as never);
 
@@ -181,5 +189,70 @@ describe('requestPhoneOtp through the live client', () => {
     twilio.replies.Verifications = invalidNumber;
     await expect(requestOtp(SN)).rejects.toMatchObject({ code: 'invalid-argument' });
     expect(twilio.calls).toEqual([{ endpoint: 'Verifications', to: SN }]);
+  });
+});
+
+/// Every level, not just `error`: a leak moved to `warn` must still be seen.
+const LEVELS = ['debug', 'info', 'log', 'warn', 'error', 'write'] as const;
+
+function spyLogger() {
+  const spies = LEVELS.map((level) =>
+    jest.spyOn(rawLogger, level).mockImplementation(() => undefined)
+  );
+  const calls = () => spies.flatMap((spy) => spy.mock.calls as unknown[][]);
+  return {
+    calls,
+    // depth: null, or a nested echo past two levels would print as [Object].
+    text: () =>
+      calls()
+        .map((args) => args.map((a) => inspect(a, { depth: null })).join(' '))
+        .join('\n'),
+    restore: () => spies.forEach((spy) => spy.mockRestore()),
+  };
+}
+
+/// A Check refused on its `To`: the real reply echoes the number back, as the
+/// Start one does, so the Check site has something to leak too.
+const checkInvalidNumber = (to: string): Reply => ({
+  status: 400,
+  json: {
+    code: 60200,
+    message: `Invalid parameter \`To\`: ${to}`,
+    status: 400,
+  },
+});
+
+describe('Twilio refusals are logged without the phone number (S12)', () => {
+  let log: ReturnType<typeof spyLogger>;
+  beforeEach(() => {
+    log = spyLogger();
+  });
+  afterEach(() => log.restore());
+
+  /// The digits Twilio actually received, read off the fake transport rather
+  /// than off a constant of this test: what reaches Twilio is what it echoes.
+  const sentDigits = () => {
+    expect(twilio.calls).toHaveLength(1);
+    return twilio.calls[0]!.to.replace(/\D/g, '');
+  };
+
+  it('on the Start call', async () => {
+    twilio.replies.Verifications = invalidNumber;
+    await expect(requestOtp(SN)).rejects.toBeDefined();
+    expect(log.calls()).toContainEqual([
+      expect.any(String),
+      { status: 400, twilioCode: 60200 },
+    ]);
+    expect(log.text()).not.toContain(sentDigits());
+  });
+
+  it('on the Check call', async () => {
+    twilio.replies.VerificationCheck = checkInvalidNumber;
+    await expect(signIn(SN)).rejects.toBeDefined();
+    expect(log.calls()).toContainEqual([
+      expect.any(String),
+      { status: 400, twilioCode: 60200 },
+    ]);
+    expect(log.text()).not.toContain(sentDigits());
   });
 });

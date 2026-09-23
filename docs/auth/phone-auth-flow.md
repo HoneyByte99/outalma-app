@@ -91,7 +91,7 @@ The OTP Lab (`/otp-lab` in debug builds) keeps a Firebase Phone Auth path for be
 
 ## Observability
 
-- Cloud Functions log every Twilio failure with `logger.error('Twilio … failed', { status, json })`.
+- Cloud Functions log every Twilio failure as `{ status, twilioCode }` and nothing else: Twilio's reply echoes the phone number in its `message`, so it is never logged (budget line S12). A refusal caused by the user's input (bad number, dead code) is a `warn`, any other failure an `error`.
 - Firebase Auth records account creation; Firestore records the user doc creation timestamp.
 - Twilio console lists every verification attempt (sandbox / production).
 

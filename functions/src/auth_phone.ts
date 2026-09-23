@@ -35,6 +35,7 @@ import {
   checkFailure,
   INVALID_OR_EXPIRED_CODE,
   startFailure,
+  twilioLogFields,
 } from './twilio_errors';
 
 const TWILIO_ACCOUNT_SID = defineSecret('TWILIO_ACCOUNT_SID');
@@ -182,6 +183,25 @@ export function resetTwilioTransport(): void {
   activeTransport = postForm;
 }
 
+/// One line per failed Twilio call, with numbers only (see twilioLogFields).
+/// A refusal the user's own input caused (bad number, dead code) is a warning;
+/// anything still read as an outage is an error. Limit accepted: a Check that
+/// fails on a broken Service SID would only warn, but the Start call of the
+/// same flow fails first, as an error.
+function logTwilioFailure(
+  label: string,
+  failure: HttpsError,
+  status: number,
+  json: unknown
+): void {
+  const fields = twilioLogFields(status, json);
+  if (failure.code === 'unavailable') {
+    logger.error(label, fields);
+  } else {
+    logger.warn(label, fields);
+  }
+}
+
 async function twilioStartVerification(
   phone: string,
   channel: 'sms' | 'call'
@@ -196,8 +216,9 @@ async function twilioStartVerification(
     Channel: channel,
   });
   if (status >= 400) {
-    logger.error('Twilio Verifications failed', { status, json });
-    throw startFailure(status, json);
+    const failure = startFailure(status, json);
+    logTwilioFailure('Twilio Verifications failed', failure, status, json);
+    throw failure;
   }
 }
 
@@ -215,8 +236,9 @@ async function twilioCheckVerification(
     Code: code,
   });
   if (status >= 400) {
-    logger.error('Twilio VerificationCheck failed', { status, json });
-    throw checkFailure(status, json);
+    const failure = checkFailure(status, json);
+    logTwilioFailure('Twilio VerificationCheck failed', failure, status, json);
+    throw failure;
   }
   const j = json as { status?: string; valid?: boolean };
   if (j.status !== 'approved' || j.valid !== true) {

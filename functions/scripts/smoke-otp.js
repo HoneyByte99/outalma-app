@@ -368,6 +368,40 @@ async function main() {
     'the live client did ask Twilio, once'
   );
 
+  // --- 13. What the log lines carry ----------------------------------------
+  console.log('\n13. Twilio refusals reach the logs without the phone number');
+  // The very module lib/auth_phone.js reads through its namespace import.
+  const rawLogger = require('firebase-functions/logger');
+  const captured = [];
+  const levels = ['debug', 'info', 'log', 'warn', 'error', 'write'];
+  const saved = Object.fromEntries(levels.map((l) => [l, rawLogger[l]]));
+  for (const l of levels) rawLogger[l] = (...args) => captured.push(args);
+  try {
+    await clearAll();
+    transport.calls.length = 0;
+    const echo = (to) => ({
+      status: 400,
+      json: { code: 60200, message: `Invalid parameter \`To\`: ${to}`, status: 400 },
+    });
+    transport.replies.Verifications = echo;
+    transport.replies.VerificationCheck = echo;
+    await refusedBy(fns.requestPhoneOtp, { phone: SN });
+    await refusedBy(fns.verifyPhoneOtpAndSignIn, { phone: SN, code: '123456' });
+  } finally {
+    for (const l of levels) rawLogger[l] = saved[l];
+  }
+  const text = captured
+    .map((args) => args.map((a) => require('util').inspect(a, { depth: null })).join(' '))
+    .join('\n');
+  const digits = transport.calls.map((c) => c.to.replace(/\D/g, ''));
+  must(transport.calls.length === 2, 'both Twilio calls happened, Start and Check');
+  must(captured.length === 2, 'one log line per refusal');
+  must(
+    captured.every((args) => JSON.stringify(args[1]) === '{"status":400,"twilioCode":60200}'),
+    'each line carries the status and the Twilio code, and nothing else'
+  );
+  must(digits.every((d) => !text.includes(d)), 'no digit string of the number Twilio received');
+
   console.log(`\n=== SMOKE OK, ${step} checks ===\n`);
 }
 

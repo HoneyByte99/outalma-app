@@ -3,7 +3,8 @@
 // ---------------------------------------------------------------------------
 //
 // Pure: no network, no Firestore, no logger. auth_phone.ts calls Twilio and
-// hands the reply here; what the caller is told is decided in this file.
+// hands the reply here; what the caller is told, and what the log line may
+// carry, are decided in this file.
 //
 // Before this module every reply >= 400 became `unavailable`, which the app
 // shows as a network or service problem. Two of those replies are not outages
@@ -51,4 +52,15 @@ export function startFailure(status: number, json: unknown): HttpsError {
     return new HttpsError('invalid-argument', 'phone is not a valid number');
   }
   return new HttpsError('unavailable', 'Could not send OTP');
+}
+
+/// What a log line may carry about a failed Twilio call: the HTTP status and
+/// Twilio's numeric code, nothing else. Twilio's `message` echoes the phone
+/// number back ("Invalid parameter `To`: +33..."), so the reply itself is
+/// never logged (budget line S12, no personal data in the logs).
+export function twilioLogFields(
+  status: number,
+  json: unknown
+): { status: number; twilioCode: number | null } {
+  return { status, twilioCode: twilioCode(json) };
 }
