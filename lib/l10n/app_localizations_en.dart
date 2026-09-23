@@ -2336,4 +2336,82 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get countryPickerSearchHint => 'Search a country…';
+
+  @override
+  String get phoneFieldHint => 'Phone number';
+
+  @override
+  String get phoneFieldTooShort => 'Number too short';
+
+  @override
+  String get phoneFieldTooLong => 'Number too long';
+
+  @override
+  String get countryNameFR => 'France';
+
+  @override
+  String get countryNameSN => 'Senegal';
+
+  @override
+  String get countryNameBE => 'Belgium';
+
+  @override
+  String get countryNameCH => 'Switzerland';
+
+  @override
+  String get countryNameLU => 'Luxembourg';
+
+  @override
+  String get countryNameMA => 'Morocco';
+
+  @override
+  String get countryNameDZ => 'Algeria';
+
+  @override
+  String get countryNameTN => 'Tunisia';
+
+  @override
+  String get countryNameCI => 'Côte d\'Ivoire';
+
+  @override
+  String get countryNameML => 'Mali';
+
+  @override
+  String get countryNameGN => 'Guinea';
+
+  @override
+  String get countryNameBF => 'Burkina Faso';
+
+  @override
+  String get countryNameNE => 'Niger';
+
+  @override
+  String get countryNameTG => 'Togo';
+
+  @override
+  String get countryNameBJ => 'Benin';
+
+  @override
+  String get countryNameCM => 'Cameroon';
+
+  @override
+  String get countryNameGB => 'United Kingdom';
+
+  @override
+  String get countryNameDE => 'Germany';
+
+  @override
+  String get countryNameES => 'Spain';
+
+  @override
+  String get countryNameIT => 'Italy';
+
+  @override
+  String get countryNamePT => 'Portugal';
+
+  @override
+  String get countryNameUS => 'United States';
+
+  @override
+  String get countryNameCA => 'Canada';
 }

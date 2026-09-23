@@ -132,7 +132,7 @@ class _SignInPageState extends ConsumerState<SignInPage>
       _showError(l10n.signInErrorEmptyFields);
       return;
     }
-    final phoneError = PhoneField.validate(phone);
+    final phoneError = PhoneField.validate(l10n, phone);
     if (phoneError != null) {
       _showError(phoneError);
       return;

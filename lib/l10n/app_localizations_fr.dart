@@ -2364,4 +2364,82 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get countryPickerSearchHint => 'Rechercher un pays…';
+
+  @override
+  String get phoneFieldHint => 'Numéro';
+
+  @override
+  String get phoneFieldTooShort => 'Numéro trop court';
+
+  @override
+  String get phoneFieldTooLong => 'Numéro trop long';
+
+  @override
+  String get countryNameFR => 'France';
+
+  @override
+  String get countryNameSN => 'Sénégal';
+
+  @override
+  String get countryNameBE => 'Belgique';
+
+  @override
+  String get countryNameCH => 'Suisse';
+
+  @override
+  String get countryNameLU => 'Luxembourg';
+
+  @override
+  String get countryNameMA => 'Maroc';
+
+  @override
+  String get countryNameDZ => 'Algérie';
+
+  @override
+  String get countryNameTN => 'Tunisie';
+
+  @override
+  String get countryNameCI => 'Côte d\'Ivoire';
+
+  @override
+  String get countryNameML => 'Mali';
+
+  @override
+  String get countryNameGN => 'Guinée';
+
+  @override
+  String get countryNameBF => 'Burkina Faso';
+
+  @override
+  String get countryNameNE => 'Niger';
+
+  @override
+  String get countryNameTG => 'Togo';
+
+  @override
+  String get countryNameBJ => 'Bénin';
+
+  @override
+  String get countryNameCM => 'Cameroun';
+
+  @override
+  String get countryNameGB => 'Royaume-Uni';
+
+  @override
+  String get countryNameDE => 'Allemagne';
+
+  @override
+  String get countryNameES => 'Espagne';
+
+  @override
+  String get countryNameIT => 'Italie';
+
+  @override
+  String get countryNamePT => 'Portugal';
+
+  @override
+  String get countryNameUS => 'États-Unis';
+
+  @override
+  String get countryNameCA => 'Canada';
 }

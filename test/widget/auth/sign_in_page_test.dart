@@ -70,7 +70,7 @@ void main() {
 
   setUp(() => auth = _FakeAuthNotifier());
 
-  Widget wrap() => ProviderScope(
+  Widget wrap({Locale locale = const Locale('fr')}) => ProviderScope(
     overrides: [
       authNotifierProvider.overrideWith(() => auth),
       themeModeProvider.overrideWith(_FakeThemeNotifier.new),
@@ -78,7 +78,7 @@ void main() {
     child: MaterialApp(
       theme: AppTheme.light(),
       // Pinned so the countdown assertions below read a known catalogue.
-      locale: const Locale('fr'),
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: const SignInPage(),
@@ -91,6 +91,7 @@ void main() {
   Future<void> goToOtpStep(
     WidgetTester tester, {
     String typed = '770000001',
+    Locale locale = const Locale('fr'),
   }) async {
     // A window tall enough to hold the OTP step whole. The screen scrolls, and
     // a control below the fold cannot be tapped, so the default window would
@@ -98,7 +99,7 @@ void main() {
     tester.view.physicalSize = const Size(1200, 3000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(wrap());
+    await tester.pumpWidget(wrap(locale: locale));
     await tester.pump();
     await tester.tap(find.byIcon(Icons.phone_outlined).first);
     await tester.pump();
@@ -315,6 +316,71 @@ void main() {
       await tester.pump();
 
       expect(auth.verifyAttempts, isEmpty);
+    });
+
+    // Budget line U4: an English-speaking user read the phone field, its
+    // errors and every country name in French.
+    group('the phone field speaks the app language', () {
+      const en = Locale('en');
+
+      Finder inPicker(String label) => find.descendant(
+        of: find.byType(ListView),
+        matching: find.text(label),
+      );
+
+      Future<void> openPhoneTab(WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1200, 3000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(wrap(locale: en));
+        await tester.pump();
+        await tester.tap(find.byIcon(Icons.phone_outlined).first);
+        await tester.pump();
+      }
+
+      testWidgets('a number too short is refused in English', (tester) async {
+        await goToOtpStep(tester, typed: '123', locale: en);
+
+        expect(auth.otpRequests, isEmpty);
+        expect(find.text('Number too short'), findsWidgets);
+        expect(find.text('Numéro trop court'), findsNothing);
+      });
+
+      testWidgets('the empty field hints at the number in English', (
+        tester,
+      ) async {
+        await openPhoneTab(tester);
+
+        expect(find.text('Phone number'), findsOneWidget);
+        expect(find.text('Numéro'), findsNothing);
+      });
+
+      testWidgets('the country picker names countries in English', (
+        tester,
+      ) async {
+        await openPhoneTab(tester);
+        await tester.tap(find.text('+33'));
+        await tester.pumpAndSettle();
+
+        expect(inPicker('Senegal'), findsOneWidget);
+        expect(inPicker('United Kingdom'), findsOneWidget);
+        expect(inPicker('Sénégal'), findsNothing);
+        expect(inPicker('Royaume-Uni'), findsNothing);
+      });
+
+      testWidgets('the country search matches the English names', (
+        tester,
+      ) async {
+        await openPhoneTab(tester);
+        await tester.tap(find.text('+33'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).last, 'united');
+        await tester.pumpAndSettle();
+
+        expect(inPicker('United Kingdom'), findsOneWidget);
+        expect(inPicker('United States'), findsOneWidget);
+        expect(inPicker('France'), findsNothing);
+      });
     });
   });
 }

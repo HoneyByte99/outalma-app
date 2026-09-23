@@ -11,46 +11,71 @@ import 'app_sheet.dart';
 // Country model + curated list (Francophone + major EU countries)
 // ---------------------------------------------------------------------------
 
-class _Country {
-  const _Country({
-    required this.flag,
-    required this.name,
-    required this.dialCode,
-  });
+/// The selector's countries, in display order. The name is localised
+/// (budget line U4), and the switch in [name] is exhaustive: a country added
+/// here without its entry in the template (app_en.arb) does not compile, and
+/// test/l10n/arb_parity_test.dart catches a missing French one.
+enum _Country {
+  france('🇫🇷', '+33'),
+  senegal('🇸🇳', '+221'),
+  belgium('🇧🇪', '+32'),
+  switzerland('🇨🇭', '+41'),
+  luxembourg('🇱🇺', '+352'),
+  morocco('🇲🇦', '+212'),
+  algeria('🇩🇿', '+213'),
+  tunisia('🇹🇳', '+216'),
+  ivoryCoast('🇨🇮', '+225'),
+  mali('🇲🇱', '+223'),
+  guinea('🇬🇳', '+224'),
+  burkinaFaso('🇧🇫', '+226'),
+  niger('🇳🇪', '+227'),
+  togo('🇹🇬', '+228'),
+  benin('🇧🇯', '+229'),
+  cameroon('🇨🇲', '+237'),
+  unitedKingdom('🇬🇧', '+44'),
+  germany('🇩🇪', '+49'),
+  spain('🇪🇸', '+34'),
+  italy('🇮🇹', '+39'),
+  portugal('🇵🇹', '+351'),
+  unitedStates('🇺🇸', '+1'),
+  canada('🇨🇦', '+1');
+
+  const _Country(this.flag, this.dialCode);
 
   final String flag;
-  final String name;
   final String dialCode;
+
+  String name(AppLocalizations l10n) => switch (this) {
+    _Country.france => l10n.countryNameFR,
+    _Country.senegal => l10n.countryNameSN,
+    _Country.belgium => l10n.countryNameBE,
+    _Country.switzerland => l10n.countryNameCH,
+    _Country.luxembourg => l10n.countryNameLU,
+    _Country.morocco => l10n.countryNameMA,
+    _Country.algeria => l10n.countryNameDZ,
+    _Country.tunisia => l10n.countryNameTN,
+    _Country.ivoryCoast => l10n.countryNameCI,
+    _Country.mali => l10n.countryNameML,
+    _Country.guinea => l10n.countryNameGN,
+    _Country.burkinaFaso => l10n.countryNameBF,
+    _Country.niger => l10n.countryNameNE,
+    _Country.togo => l10n.countryNameTG,
+    _Country.benin => l10n.countryNameBJ,
+    _Country.cameroon => l10n.countryNameCM,
+    _Country.unitedKingdom => l10n.countryNameGB,
+    _Country.germany => l10n.countryNameDE,
+    _Country.spain => l10n.countryNameES,
+    _Country.italy => l10n.countryNameIT,
+    _Country.portugal => l10n.countryNamePT,
+    _Country.unitedStates => l10n.countryNameUS,
+    _Country.canada => l10n.countryNameCA,
+  };
 }
 
-const _kCountries = <_Country>[
-  _Country(flag: '🇫🇷', name: 'France', dialCode: '+33'),
-  _Country(flag: '🇸🇳', name: 'Sénégal', dialCode: '+221'),
-  _Country(flag: '🇧🇪', name: 'Belgique', dialCode: '+32'),
-  _Country(flag: '🇨🇭', name: 'Suisse', dialCode: '+41'),
-  _Country(flag: '🇱🇺', name: 'Luxembourg', dialCode: '+352'),
-  _Country(flag: '🇲🇦', name: 'Maroc', dialCode: '+212'),
-  _Country(flag: '🇩🇿', name: 'Algérie', dialCode: '+213'),
-  _Country(flag: '🇹🇳', name: 'Tunisie', dialCode: '+216'),
-  _Country(flag: '🇨🇮', name: "Côte d'Ivoire", dialCode: '+225'),
-  _Country(flag: '🇲🇱', name: 'Mali', dialCode: '+223'),
-  _Country(flag: '🇬🇳', name: 'Guinée', dialCode: '+224'),
-  _Country(flag: '🇧🇫', name: 'Burkina Faso', dialCode: '+226'),
-  _Country(flag: '🇳🇪', name: 'Niger', dialCode: '+227'),
-  _Country(flag: '🇹🇬', name: 'Togo', dialCode: '+228'),
-  _Country(flag: '🇧🇯', name: 'Bénin', dialCode: '+229'),
-  _Country(flag: '🇨🇲', name: 'Cameroun', dialCode: '+237'),
-  _Country(flag: '🇬🇧', name: 'Royaume-Uni', dialCode: '+44'),
-  _Country(flag: '🇩🇪', name: 'Allemagne', dialCode: '+49'),
-  _Country(flag: '🇪🇸', name: 'Espagne', dialCode: '+34'),
-  _Country(flag: '🇮🇹', name: 'Italie', dialCode: '+39'),
-  _Country(flag: '🇵🇹', name: 'Portugal', dialCode: '+351'),
-  _Country(flag: '🇺🇸', name: 'États-Unis', dialCode: '+1'),
-  _Country(flag: '🇨🇦', name: 'Canada', dialCode: '+1'),
-];
+const _kCountries = _Country.values;
 
 // Default to France
-final _kDefaultCountry = _kCountries[0];
+const _kDefaultCountry = _Country.france;
 
 // ---------------------------------------------------------------------------
 // PhoneField
@@ -95,16 +120,17 @@ class PhoneField extends StatefulWidget {
     for (final c in _kCountries) c.dialCode,
   };
 
-  /// Returns `null` when [value] (E.164 string) is valid, or an error message.
-  static String? validate(String? value) {
+  /// Returns `null` when [value] (E.164 string) is valid, or an error message
+  /// in the language of [l10n].
+  static String? validate(AppLocalizations l10n, String? value) {
     if (value == null || value.isEmpty) return null; // optional field
     final digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
     // E.164 total length: country code (1-3) + local (typically 7-12)
     if (digitsOnly.length < _kMinLocalDigits) {
-      return 'Numéro trop court';
+      return l10n.phoneFieldTooShort;
     }
     if (digitsOnly.length > 15) {
-      return 'Numéro trop long';
+      return l10n.phoneFieldTooLong;
     }
     return null;
   }
@@ -158,7 +184,7 @@ class _PhoneFieldState extends State<PhoneField> {
     // The canonical string, not the text as typed: "06 39 98 12 34" goes out
     // as +33639981234. The field itself keeps showing what the user typed.
     final e164 = composeE164(_country.dialCode, _ctrl.text);
-    final err = PhoneField.validate(e164);
+    final err = PhoneField.validate(AppLocalizations.of(context)!, e164);
     setState(() => _error = err);
     widget.onChanged(e164);
   }
@@ -249,7 +275,7 @@ class _PhoneFieldState extends State<PhoneField> {
                       ? (_) => widget.onSubmitted!()
                       : null,
                   decoration: InputDecoration(
-                    hintText: 'Numéro',
+                    hintText: AppLocalizations.of(context)!.phoneFieldHint,
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
@@ -317,6 +343,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
     // Folded on BOTH sides: the country list carries accents ("Sénégal"), and
     // someone signing up on a phone in Dakar types "senegal". Folding only the
     // name would leave the mirror case broken.
+    final l10n = AppLocalizations.of(context)!;
     final q = foldForSearch(_searchCtrl.text);
     setState(() {
       _filtered = q.isEmpty
@@ -324,7 +351,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
           : _kCountries
                 .where(
                   (c) =>
-                      foldForSearch(c.name).contains(q) ||
+                      foldForSearch(c.name(l10n)).contains(q) ||
                       c.dialCode.contains(q),
                 )
                 .toList();
@@ -435,9 +462,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
   }
 
   Widget _countryRow(BuildContext context, _Country c, OutalmaColors oc) {
-    final isSelected =
-        c.dialCode == widget.selected.dialCode &&
-        c.name == widget.selected.name;
+    final isSelected = c == widget.selected;
     return InkWell(
       onTap: () => Navigator.of(context).pop(c),
       child: Container(
@@ -449,7 +474,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
             const SizedBox(width: 14),
             Expanded(
               child: Text(
-                c.name,
+                c.name(AppLocalizations.of(context)!),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   color: isSelected ? oc.primary : oc.primaryText,

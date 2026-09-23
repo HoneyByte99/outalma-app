@@ -156,7 +156,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage>
       _showError(l10n.signUpErrorEmptyFields);
       return;
     }
-    final phoneError = PhoneField.validate(phone);
+    final phoneError = PhoneField.validate(l10n, phone);
     if (phoneError != null) {
       _showError(phoneError);
       return;

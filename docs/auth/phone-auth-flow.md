@@ -19,17 +19,17 @@ Three callable Cloud Functions form the canonical pipeline:
 
 ### `requestPhoneOtp({ phone, channel? })`
 - Turns `phone` into its canonical E.164 string (`functions/src/phone_canonical.ts`): spaces and dashes dropped, the national trunk zero dropped for the dial codes that have one (Italy and Côte d'Ivoire keep theirs). Twilio, Firebase Auth, the `users` document and the quota only ever see that string, so Start and Check always match and one subscriber cannot hold two accounts. Refused with `invalid-argument` when it is not E.164.
-- Calls Twilio Verify `Verifications` endpoint on `sms` (default) or `call` channel.
+- Calls Twilio Verify `Verifications` endpoint on the `sms` channel, forced server-side: any other `channel` is refused with `invalid-argument` (voice costs more per verification, and this endpoint is unauthenticated).
 - Returns `{ sentAt, channel, retryAfterMs }`. Throws `invalid-argument` when Twilio refuses the number itself (60200 invalid parameter, 60205 landline), `unavailable` on any other Twilio failure.
 - **No authentication required** — anyone with a phone number can trigger an OTP.
-  Rate limiting and abuse protection rely on Twilio's per-number quotas.
+  Rate limiting is ours, server-side, and runs BEFORE Twilio is called (`functions/src/otp_rate_limit.ts`): dial codes limited to the selector's allowlist, a backoff of 60 / 120 / 300 s between sends, 6 sends per rolling hour and 15 per rolling 24 h per number, and a global alert at 300 then stop at 600 sends per day. The hourly and daily caps and the global alert and stop can be tuned live through `otp_config/thresholds`, each bounded by a constant in the code; the backoff and the allowlist cannot. A refusal throws `resource-exhausted` with a stable `code` (`otp/prefix-not-allowed`, `otp/backoff`, `otp/window-cap`, `otp/day-cap`, `otp/global-cap`) and `retryAfterMs` in its details.
 
 ### `verifyPhoneOtpAndSignIn({ phone, code })`
 - Canonicalises `phone` as above; validates `code` (6 digits).
 - Calls Twilio `VerificationCheck`. Throws `permission-denied` if the code is wrong or expired, with one message for both: a verification Twilio no longer knows (404 / 20404, or 60202 once the attempts are spent) reads exactly like a wrong code.
-- Looks up the Outalma user by `phoneE164` in Firestore.
+- Looks up the account in Firebase Auth by phone number (`getUserByPhoneNumber`): Auth enforces phone uniqueness, so it is the only trustworthy source. The `users` document is not read for this.
   - **No user found** → returns `{ newUser: true, phoneE164 }`. The client routes to sign-up.
-  - **User found** → links phone to Firebase Auth user (idempotent), mints a **custom token**, returns `{ newUser: false, customToken, uid }`. The client signs in via `signInWithCustomToken`.
+  - **User found** → mints a **custom token**, returns `{ newUser: false, customToken, uid }`. The client signs in via `signInWithCustomToken`.
 
 ### `verifyPhoneOtpAndSignUp({ phone, code, displayName, country })`
 - Canonicalises `phone` as above, so the account is created under the canonical number; validates `code`, `displayName`, `country` (`FR` or `SN`) and `gender`.
@@ -84,7 +84,7 @@ Best-effort from the E.164 prefix:
 
 Twilio Verify is the production OTP provider. Rationale:
 - Works uniformly on iOS, Android, and Web — no APNs / no reCAPTCHA friction.
-- SMS + Voice fallback ready (just toggle `channel: 'call'`).
+- Twilio can also verify by voice call, but `requestPhoneOtp` refuses it: reopening it means changing the callable and pricing it into the quota.
 - Server-side integration is simple HTTP, well-documented.
 
 The OTP Lab (`/otp-lab` in debug builds) keeps a Firebase Phone Auth path for benchmarking, but Firebase Phone Auth is **not** wired to the production sign-in / sign-up flow.
