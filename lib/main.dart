@@ -13,6 +13,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'src/app/app.dart';
 import 'src/application/onboarding/onboarding_provider.dart';
+import 'src/core/utils/crash_reporting.dart';
 
 /// Background / terminated FCM handler. The notification itself is displayed by
 /// the OS (our pushes carry a `notification` block), so this is a no-op beyond
@@ -54,24 +55,26 @@ Future<void> main() async {
 
       final onboardingDone = results[2] as bool;
 
-      final crashlytics = FirebaseCrashlytics.instance;
-      // Disable Crashlytics collection in debug builds. On the x86_64 (Rosetta)
-      // iOS simulator, Crashlytics' on-demand stack unwinding segfaults the
-      // process whenever an error is recorded, so recordError() itself crashes
-      // the app. Off in debug keeps the simulator usable; stays on in release.
-      await crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
+      if (crashReportingAvailable(isWeb: kIsWeb)) {
+        final crashlytics = FirebaseCrashlytics.instance;
+        // Disable Crashlytics collection in debug builds. On the x86_64 (Rosetta)
+        // iOS simulator, Crashlytics' on-demand stack unwinding segfaults the
+        // process whenever an error is recorded, so recordError() itself crashes
+        // the app. Off in debug keeps the simulator usable; stays on in release.
+        await crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
 
-      // Flutter framework errors (widget build failures, layout overflows, etc.)
-      FlutterError.onError = (details) {
-        FlutterError.presentError(details);
-        crashlytics.recordFlutterFatalError(details);
-      };
+        // Flutter framework errors (widget build failures, layout overflows, etc.)
+        FlutterError.onError = (details) {
+          FlutterError.presentError(details);
+          crashlytics.recordFlutterFatalError(details);
+        };
 
-      // Platform-level errors (native crashes, unhandled platform exceptions)
-      PlatformDispatcher.instance.onError = (error, stack) {
-        crashlytics.recordError(error, stack, fatal: true);
-        return true; // prevents app termination
-      };
+        // Platform-level errors (native crashes, unhandled platform exceptions)
+        PlatformDispatcher.instance.onError = (error, stack) {
+          crashlytics.recordError(error, stack, fatal: true);
+          return true; // prevents app termination
+        };
+      }
 
       FlutterNativeSplash.remove();
       runApp(
@@ -84,7 +87,11 @@ Future<void> main() async {
       );
     },
     (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      if (crashReportingAvailable(isWeb: kIsWeb)) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      } else {
+        debugPrint('[main] uncaught error: $error\n$stack');
+      }
     },
   );
 }
