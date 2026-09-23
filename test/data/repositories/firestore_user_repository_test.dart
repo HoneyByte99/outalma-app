@@ -34,7 +34,11 @@ void main() {
 
   group('setProfileImage', () {
     test('choosing an avatar stores it AND removes the photo key', () async {
-      await repo.upsert(_user(photoPath: 'https://example.test/a.jpg'));
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: 'https://example.test/a.jpg',
+        avatarId: null,
+      );
       expect((await raw())['photoPath'], isNotNull);
 
       await repo.setProfileImage(
@@ -167,6 +171,49 @@ void main() {
       await repo.upsert(_user(pushToken: 'dead-token'));
 
       expect((await raw()).containsKey('pushToken'), isFalse);
+    });
+
+    test('never writes back a photo erased on another device', () async {
+      // The mirror image of the null case: device A still holds the photo,
+      // device B switched to an avatar (photo deleted). A's next switchMode
+      // or updateProfile must not bring the photo back beside the avatar.
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: 'users/u1/photo.jpg',
+        avatarId: null,
+      );
+      final staleOnDeviceA = _user(photoPath: 'users/u1/photo.jpg');
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: null,
+        avatarId: 'human_afro1_t2',
+      );
+
+      await repo.upsert(staleOnDeviceA);
+
+      final after = await raw();
+      expect(after.containsKey('photoPath'), isFalse);
+      expect(after['avatarId'], 'human_afro1_t2');
+    });
+
+    test('never writes back an avatar erased on another device', () async {
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: null,
+        avatarId: 'human_afro1_t2',
+      );
+      final staleOnDeviceA = _user(avatarId: 'human_afro1_t2');
+      await repo.setProfileImage(
+        userId: 'u1',
+        photoPath: 'users/u1/photo.jpg',
+        avatarId: null,
+      );
+
+      await repo.upsert(staleOnDeviceA);
+
+      final after = await raw();
+      expect(after.containsKey('avatarId'), isFalse);
+      expect(after['photoPath'], 'users/u1/photo.jpg');
     });
   });
 }
