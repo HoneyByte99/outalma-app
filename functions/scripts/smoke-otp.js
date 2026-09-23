@@ -76,14 +76,17 @@ function must(condition, msg) {
 
 /** Records every call instead of reaching verify.twilio.com. */
 const twilio = { sent: [], checked: [] };
-setTwilioClient({
-  async startVerification(phone, channel) {
-    twilio.sent.push({ phone, channel });
-  },
-  async checkVerification(phone, code) {
-    twilio.checked.push({ phone, code });
-  },
-});
+function useRecordingClient() {
+  setTwilioClient({
+    async startVerification(phone, channel) {
+      twilio.sent.push({ phone, channel });
+    },
+    async checkVerification(phone, code) {
+      twilio.checked.push({ phone, code });
+    },
+  });
+}
+useRecordingClient();
 
 const request = (data) => tf.wrap(fns.requestPhoneOtp)({ data });
 
@@ -159,7 +162,7 @@ async function refusedBy(fn, data) {
 }
 
 async function main() {
-  console.log('\n=== SMOKE otp-rate-limit (real callables, real emulators) ===\n');
+  console.log('\n=== SMOKE otp (rate limit, Twilio replies, canonical number; real callables, real emulators) ===\n');
   await clearAll();
 
   // --- 1. A fresh number goes through ------------------------------------
@@ -240,15 +243,15 @@ async function main() {
   );
   must(twilio.sent.length === 1, 'so the second spelling bills nothing');
   must(
-    twilio.sent[0].phone === FR_TRUNK,
-    'Twilio received the RAW string, not the normalised one'
+    twilio.sent[0].phone === FR_CLEAN,
+    'Twilio received the CANONICAL string, not the one typed'
   );
   await tf.wrap(fns.verifyPhoneOtpAndSignIn)({
-    data: { phone: FR_TRUNK, code: '123456' },
+    data: { phone: '+3306 12 34 56 78', code: '123456' },
   });
   must(
     twilio.checked[0].phone === twilio.sent[0].phone,
-    'Start and Check received exactly the same string'
+    'Start and Check received exactly the same string, however it was typed'
   );
   await clearAll();
   await request({ phone: IT_FIXED });
@@ -257,6 +260,7 @@ async function main() {
     italy.docs[0].id === phoneHash(IT_FIXED, KEY),
     'an Italian number keeps its zero: the quota key is not shared'
   );
+  must(twilio.sent[0].phone === IT_FIXED, 'and reaches Twilio with its zero');
 
   // --- 8. The global alert, then the global stop ---------------------------
   console.log('\n8. The service-wide alert and stop');
@@ -401,6 +405,47 @@ async function main() {
     'each line carries the status and the Twilio code, and nothing else'
   );
   must(digits.every((d) => !text.includes(d)), 'no digit string of the number Twilio received');
+
+  // --- 14. The account behind a number typed another way -------------------
+  console.log('\n14. The account is found, or created, under the canonical number');
+  useRecordingClient();
+  await clearAll();
+  // The Auth emulator keeps its accounts across runs unless emptied.
+  await fetch(
+    `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/emulator/v1/projects/demo-outalma/accounts`,
+    { method: 'DELETE' }
+  );
+  // Fictitious range (ARCEP 06 39 98).
+  const existing = await admin.auth().createUser({ phoneNumber: '+33639981234' });
+  await request({ phone: '+3306 39 98 12 34' });
+  const found = await tf.wrap(fns.verifyPhoneOtpAndSignIn)({
+    data: { phone: '+330639981234', code: '123456' },
+  });
+  must(
+    twilio.sent[0].phone === '+33639981234' && twilio.checked[0].phone === '+33639981234',
+    'typed with spaces, then with the zero: Twilio saw one string at both ends'
+  );
+  must(
+    found.newUser === false && found.uid === existing.uid,
+    'and the EXISTING account signed in, no newcomer'
+  );
+  const created = await tf.wrap(fns.verifyPhoneOtpAndSignUp)({
+    data: {
+      phone: '+3306 39 98 12 35',
+      code: '123456',
+      displayName: 'Smoke User',
+      country: 'FR',
+      gender: 'female',
+    },
+  });
+  must(
+    (await admin.auth().getUser(created.uid)).phoneNumber === '+33639981235',
+    'a new account is keyed on the canonical number in Auth'
+  );
+  must(
+    (await db().collection('users').doc(created.uid).get()).data().phoneE164 === '+33639981235',
+    'and in its users document'
+  );
 
   console.log(`\n=== SMOKE OK, ${step} checks ===\n`);
 }

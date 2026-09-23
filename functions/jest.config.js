@@ -58,6 +58,14 @@ module.exports = {
       functions: 80,
       statements: 80,
     },
+    // Budget line T5b: the ONE place a typed number becomes the string an
+    // account is keyed on.
+    './src/phone_canonical.ts': {
+      lines: 80,
+      branches: 80,
+      functions: 80,
+      statements: 80,
+    },
     './src/identity_extraction.ts': {
       lines: 80,
       branches: 80,

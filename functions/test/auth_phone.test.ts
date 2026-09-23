@@ -5,6 +5,11 @@
 // The assertion that matters in this file is not the error code, it is
 // `twilio.sent.length`: what protects the money is that Twilio is NOT called
 // once the cap is reached.
+//
+// It also holds the canonical number: whatever the caller typed, Twilio sees
+// ONE string at Start and at Check, and the account is found, or created,
+// under that string. The live Twilio client (replies, logs) is covered by
+// auth_phone_twilio.test.ts.
 import functionsTest from 'firebase-functions-test';
 
 const tf = functionsTest({
@@ -61,6 +66,32 @@ let twilio = recordingTwilio();
 const request = (data: Record<string, unknown>) =>
   wrap(fns.requestPhoneOtp)({ data } as never);
 
+const signInWith = (phone: string) =>
+  wrap(fns.verifyPhoneOtpAndSignIn)({
+    data: { phone, code: '123456' },
+  } as never) as Promise<Record<string, unknown>>;
+
+const signUpWith = (phone: string) =>
+  wrap(fns.verifyPhoneOtpAndSignUp)({
+    data: {
+      phone,
+      code: '123456',
+      displayName: 'Test User',
+      country: 'FR',
+      gender: 'female',
+    },
+  } as never) as Promise<Record<string, unknown>>;
+
+/// functions/test/helpers.ts clears Firestore only; the Auth emulator keeps
+/// every account between tests unless it is emptied explicitly.
+async function clearAuthEmulator(): Promise<void> {
+  const host = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  if (!host) throw new Error('FIREBASE_AUTH_EMULATOR_HOST is not set');
+  await fetch(`http://${host}/emulator/v1/projects/demo-outalma/accounts`, {
+    method: 'DELETE',
+  });
+}
+
 /** Rewrites the guard document's timestamps: the emulator has no clock to move. */
 async function ageCredits(phone: string, byMs: number): Promise<void> {
   const ref = db().collection(OTP_STATES).doc(phoneHash(phone, 'test-hmac-key'));
@@ -104,25 +135,35 @@ describe('requestPhoneOtp, happy path', () => {
     expect(res).toMatchObject({ retryAfterMs: DEFAULT_LIMITS.backoffMs[0] });
   });
 
-  it('sends the RAW string to Twilio, never the normalised one', async () => {
+  it('sends the CANONICAL string to Twilio, not the one typed', async () => {
+    // +330612345678 is refused by Twilio (60200): a French user who types the
+    // national zero, as everyone does, used to get no SMS at all.
     await request({ phone: FR_TRUNK });
-    expect(twilio.sent[0]?.phone).toBe(FR_TRUNK);
+    expect(twilio.sent[0]?.phone).toBe(FR_CLEAN);
   });
 
   it('hands Twilio the SAME string at Start and at Check', async () => {
-    // The invariant the whole normalisation rests on. Normalising before the
-    // Start call is the natural temptation, `normalisePhone` being right there,
-    // and it would bill an SMS for a code that can never be validated: Start
-    // would carry +33612345678 while Check still carries +330612345678.
+    // The invariant the canonical form rests on: if Start and Check ever saw
+    // two strings, the user would get a billed SMS for a code that can never
+    // be validated. Both calls go through the same canonicalPhone.
     await request({ phone: FR_TRUNK });
-    await expect(
-      wrap(fns.verifyPhoneOtpAndSignIn)({
-        data: { phone: FR_TRUNK, code: '123456' },
-      } as never)
-    ).resolves.toBeDefined();
+    await expect(signInWith(FR_TRUNK)).resolves.toBeDefined();
 
     expect(twilio.checked[0]?.phone).toBe(twilio.sent[0]?.phone);
-    expect(twilio.checked[0]?.phone).toBe(FR_TRUNK);
+    expect(twilio.checked[0]?.phone).toBe(FR_CLEAN);
+  });
+
+  it.each([
+    ['asked under the trunk zero, checked under spaces', FR_TRUNK, '+3306 12 34 56 78'],
+    ['asked clean, checked under the trunk zero', FR_CLEAN, FR_TRUNK],
+    ['asked under spaces, checked clean', '+33 6 12 34 56 78', FR_CLEAN],
+  ])('lands on one string when %s', async (_label, asked, checked) => {
+    // An app already installed sends whatever the user typed: the server alone
+    // has to make both ends meet.
+    await request({ phone: asked });
+    await expect(signInWith(checked)).resolves.toBeDefined();
+    expect(twilio.sent.map((c) => c.phone)).toEqual([FR_CLEAN]);
+    expect(twilio.checked.map((c) => c.phone)).toEqual([FR_CLEAN]);
   });
 
   it('stores no phone number, in the document id nor in its fields', async () => {
@@ -196,6 +237,31 @@ describe('quota key', () => {
       details: { code: OTP_ERROR.backoff },
     });
     expect(twilio.sent).toHaveLength(1);
+  });
+});
+
+describe('the account is found under the canonical form', () => {
+  // Fictitious range (ARCEP 06 39 98).
+  const CLEAN = '+33639981234';
+
+  beforeEach(clearAuthEmulator);
+
+  it('signs in the EXISTING account when the number is typed another way', async () => {
+    const existing = await admin.auth().createUser({ phoneNumber: CLEAN });
+    const res = await signInWith('+3306 39 98 12 34');
+    expect(res).toMatchObject({ newUser: false, uid: existing.uid });
+  });
+
+  it('creates the account under the canonical number, in Auth and in users', async () => {
+    const res = await signUpWith('+330639981234');
+    const uid = res.uid as string;
+    expect((await admin.auth().getUser(uid)).phoneNumber).toBe(CLEAN);
+    expect((await db().collection('users').doc(uid).get()).data()?.phoneE164).toBe(CLEAN);
+  });
+
+  it('refuses a second account for the same subscriber typed another way', async () => {
+    await signUpWith('+330639981234');
+    await expect(signUpWith(CLEAN)).rejects.toMatchObject({ code: 'already-exists' });
   });
 });
 

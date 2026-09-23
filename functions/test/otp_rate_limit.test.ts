@@ -54,7 +54,7 @@ describe('dial code allowlist', () => {
   });
 });
 
-describe('normalisePhone (quota key only)', () => {
+describe('normalisePhone (quota key, and last step of canonicalPhone)', () => {
   it.each(TRUNK_ZERO_PREFIXES)('strips the trunk zero for %s', (prefix) => {
     const national = '612345678';
     expect(normalisePhone(`${prefix}0${national}`)).toBe(`${prefix}${national}`);

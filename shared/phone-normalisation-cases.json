@@ -1,0 +1,21 @@
+{
+  "//": "Single declaration of how a typed phone number becomes the canonical E.164 string that identifies an account. Read ONLY by tests, on both sides: functions/test/phone_canonical.test.ts pins canonicalPhone and TRUNK_ZERO_PREFIXES to it, test/shared/phone_normalisation_parity_test.dart pins composeE164 and kTrunkZeroDialCodes. Not read at runtime (firebase.json uploads only functions/). Numbers are fictitious: ARCEP 06 39 98 for France, Ofcom 07700 900 for the United Kingdom. `cases` is what both sides produce from a dial code and a national number as typed; `rejected` is what the server refuses although its input regex accepts it.",
+  "trunkZeroPrefixes": ["+212", "+213", "+32", "+33", "+41", "+44", "+49"],
+  "cases": [
+    { "dialCode": "+33", "national": "06 39 98 12 34", "e164": "+33639981234" },
+    { "dialCode": "+33", "national": "06-39-98-12-34", "e164": "+33639981234" },
+    { "dialCode": "+33", "national": "0639981234", "e164": "+33639981234" },
+    { "dialCode": "+33", "national": "639981234", "e164": "+33639981234" },
+    { "dialCode": "+33", "national": "0000000000", "e164": "+330000000000" },
+    { "dialCode": "+221", "national": "77 123 45 67", "e164": "+221771234567" },
+    { "dialCode": "+39", "national": "06 1234 5678", "e164": "+390612345678" },
+    { "dialCode": "+225", "national": "07 07 12 34 56", "e164": "+2250707123456" },
+    { "dialCode": "+32", "national": "0470 12 34 56", "e164": "+32470123456" },
+    { "dialCode": "+41", "national": "079 123 45 67", "e164": "+41791234567" },
+    { "dialCode": "+44", "national": "07700 900123", "e164": "+447700900123" },
+    { "dialCode": "+49", "national": "01512 3456789", "e164": "+4915123456789" },
+    { "dialCode": "+212", "national": "06 12 34 56 78", "e164": "+212612345678" },
+    { "dialCode": "+213", "national": "0551 23 45 67", "e164": "+213551234567" }
+  ],
+  "rejected": ["+33000000061", "+3300000061"]
+}

@@ -23,7 +23,9 @@
 //       Firestore user doc, returns a Firebase custom token.
 //
 // All three are server-authoritative: client cannot bypass uniqueness or
-// claim a phone without a fresh code.
+// claim a phone without a fresh code. All three first turn the number typed
+// into its canonical E.164 string (phone_canonical.ts), the one string that
+// Twilio, Firebase Auth and the quota ever see.
 
 import * as admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
@@ -31,6 +33,7 @@ import { defineSecret } from 'firebase-functions/params';
 import * as logger from 'firebase-functions/logger';
 import { GENDERS, Gender } from './public_profiles';
 import { consumeOtpQuota } from './otp_rate_limit';
+import { canonicalPhone } from './phone_canonical';
 import {
   checkFailure,
   INVALID_OR_EXPIRED_CODE,
@@ -53,18 +56,6 @@ const db = () => admin.firestore();
 // Validation helpers
 // ---------------------------------------------------------------------------
 
-const E164_REGEX = /^\+[1-9]\d{6,14}$/;
-
-function assertPhone(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new HttpsError('invalid-argument', 'phone must be a string');
-  }
-  const trimmed = value.trim();
-  if (!E164_REGEX.test(trimmed)) {
-    throw new HttpsError('invalid-argument', 'phone must be in E.164 format');
-  }
-  return trimmed;
-}
 
 function assertCode(value: unknown): string {
   if (typeof value !== 'string') {
@@ -314,7 +305,7 @@ export const requestPhoneOtp = onCall(
     region: 'us-central1',
   },
   async (request) => {
-    const phone = assertPhone(request.data?.phone);
+    const phone = canonicalPhone(request.data?.phone);
 
     // The channel is FORCED server-side. No surface of this product asks for
     // the voice channel (the app and the web both send 'sms'), and voice costs
@@ -348,11 +339,10 @@ export const requestPhoneOtp = onCall(
       );
     }
 
-    // The RAW string, deliberately. `verifyPhoneOtpAndSignIn` and
-    // `verifyPhoneOtpAndSignUp` are out of this increment's scope and keep
-    // sending the raw string to the Check call: Start and Check must receive
-    // exactly the same string, or the user gets a billed SMS and a code that
-    // can never be validated. Normalisation is a quota key and nothing else.
+    // The CANONICAL string, which `verifyPhoneOtpAndSignIn` and
+    // `verifyPhoneOtpAndSignUp` also derive through `canonicalPhone`: Start and
+    // Check must receive exactly the same string, or the user gets a billed
+    // SMS and a code that can never be validated.
     await activeTwilioClient.startVerification(phone, channel);
     // `retryAfterMs` on a SUCCESS: how long before a resend would be accepted.
     // The app runs its countdown on this value rather than on a copy of the
@@ -375,7 +365,7 @@ export const verifyPhoneOtpAndSignIn = onCall(
     region: 'us-central1',
   },
   async (request) => {
-    const phone = assertPhone(request.data?.phone);
+    const phone = canonicalPhone(request.data?.phone);
     const code = assertCode(request.data?.code);
 
     await activeTwilioClient.checkVerification(phone, code);
@@ -408,7 +398,7 @@ export const verifyPhoneOtpAndSignUp = onCall(
     region: 'us-central1',
   },
   async (request) => {
-    const phone = assertPhone(request.data?.phone);
+    const phone = canonicalPhone(request.data?.phone);
     const code = assertCode(request.data?.code);
     const displayName = assertDisplayName(request.data?.displayName);
     const country = assertCountry(request.data?.country);
