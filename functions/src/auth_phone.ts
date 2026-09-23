@@ -154,6 +154,29 @@ async function postForm(
   return { status: res.status, json };
 }
 
+/// The HTTP call to Twilio, behind a swappable function.
+///
+/// `setTwilioClient` below replaces the WHOLE client, so a test that uses it
+/// never runs the code that reads Twilio's answer: the error mapping and the
+/// log line stay untested. This seam sits one level lower. The live client runs
+/// unchanged and only the network call is faked, so a test can hand it the
+/// exact reply Twilio sends in production.
+export type TwilioTransport = (
+  url: string,
+  auth: string,
+  body: Record<string, string>
+) => Promise<{ status: number; json: unknown }>;
+
+let activeTransport: TwilioTransport = postForm;
+
+export function setTwilioTransport(transport: TwilioTransport): void {
+  activeTransport = transport;
+}
+
+export function resetTwilioTransport(): void {
+  activeTransport = postForm;
+}
+
 async function twilioStartVerification(
   phone: string,
   channel: 'sms' | 'call'
@@ -163,7 +186,7 @@ async function twilioStartVerification(
     TWILIO_ACCOUNT_SID.value(),
     TWILIO_AUTH_TOKEN.value()
   );
-  const { status, json } = await postForm(url, auth, {
+  const { status, json } = await activeTransport(url, auth, {
     To: phone,
     Channel: channel,
   });
@@ -182,7 +205,7 @@ async function twilioCheckVerification(
     TWILIO_ACCOUNT_SID.value(),
     TWILIO_AUTH_TOKEN.value()
   );
-  const { status, json } = await postForm(url, auth, {
+  const { status, json } = await activeTransport(url, auth, {
     To: phone,
     Code: code,
   });

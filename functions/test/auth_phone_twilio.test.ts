@@ -1,0 +1,106 @@
+// The three phone callables against the LIVE Twilio client, with only the HTTP
+// call faked (`setTwilioTransport`). auth_phone.test.ts swaps the whole client
+// out, so nothing there runs the code that reads Twilio's answer: this file is
+// where that code is held.
+//
+// Every reply below is shaped like the one Twilio sends in production. The
+// transport throws on any call a test did not plan, so a forgotten stub fails
+// loudly instead of reaching verify.twilio.com.
+import functionsTest from 'firebase-functions-test';
+
+const tf = functionsTest({
+  projectId: 'demo-outalma',
+  storageBucket: 'demo-outalma.appspot.com',
+});
+
+// Read by SecretParam.value() at call time. Without them the live client would
+// log a warning per call and build an unusable Authorization header.
+process.env.OTP_HASH_KEY = 'test-hmac-key';
+process.env.TWILIO_ACCOUNT_SID = 'ACtest';
+process.env.TWILIO_AUTH_TOKEN = 'test-token';
+process.env.TWILIO_VERIFY_SERVICE_SID = 'VAtest';
+
+import * as fns from '../src/index';
+import {
+  resetTwilioClient,
+  resetTwilioTransport,
+  setTwilioTransport,
+  TwilioTransport,
+} from '../src/auth_phone';
+import { clearFirestore } from './helpers';
+
+const wrap = (fn: unknown) => tf.wrap(fn as never);
+
+// Accepted by today's format check and left unchanged by any normalisation,
+// so every call below does reach the transport.
+const SN = '+221771234567';
+
+type Endpoint = 'Verifications' | 'VerificationCheck';
+type Reply = { status: number; json: unknown };
+
+function fakeTwilio() {
+  const calls: Array<{ endpoint: Endpoint; to: string }> = [];
+  const replies: Partial<Record<Endpoint, (to: string) => Reply>> = {};
+  const transport: TwilioTransport = async (url, _auth, body) => {
+    const endpoint: Endpoint | null = url.endsWith('/VerificationCheck')
+      ? 'VerificationCheck'
+      : url.endsWith('/Verifications')
+        ? 'Verifications'
+        : null;
+    if (endpoint === null) throw new Error(`unexpected Twilio URL: ${url}`);
+    const reply = replies[endpoint];
+    if (!reply) throw new Error(`no reply planned for ${endpoint}`);
+    calls.push({ endpoint, to: body.To ?? '' });
+    return reply(body.To ?? '');
+  };
+  return { calls, replies, transport };
+}
+
+const approved = (): Reply => ({
+  status: 200,
+  json: { status: 'approved', valid: true },
+});
+
+/// What Twilio answers a Check once the verification is gone: expired after
+/// ten minutes, already approved, or deleted after too many attempts.
+const verificationGone = (): Reply => ({
+  status: 404,
+  json: {
+    code: 20404,
+    message:
+      'The requested resource /v2/Services/VAtest/VerificationCheck was not found',
+    more_info: 'https://www.twilio.com/docs/errors/20404',
+    status: 404,
+  },
+});
+
+let twilio = fakeTwilio();
+
+const signIn = (phone: string, code = '123456') =>
+  wrap(fns.verifyPhoneOtpAndSignIn)({ data: { phone, code } } as never);
+
+beforeEach(async () => {
+  await clearFirestore();
+  twilio = fakeTwilio();
+  resetTwilioClient();
+  setTwilioTransport(twilio.transport);
+});
+
+afterAll(() => {
+  resetTwilioTransport();
+  tf.cleanup();
+});
+
+describe('verifyPhoneOtpAndSignIn through the live client', () => {
+  it('lets an approved code through', async () => {
+    twilio.replies.VerificationCheck = approved;
+    await expect(signIn(SN)).resolves.toMatchObject({ newUser: true });
+    expect(twilio.calls).toEqual([{ endpoint: 'VerificationCheck', to: SN }]);
+  });
+
+  it('reads a verification that is gone as an outage (current behaviour)', async () => {
+    twilio.replies.VerificationCheck = verificationGone;
+    await expect(signIn(SN)).rejects.toMatchObject({ code: 'unavailable' });
+    expect(twilio.calls).toEqual([{ endpoint: 'VerificationCheck', to: SN }]);
+  });
+});
