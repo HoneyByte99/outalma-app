@@ -26,14 +26,14 @@ Three callable Cloud Functions form the canonical pipeline:
 
 ### `verifyPhoneOtpAndSignIn({ phone, code })`
 - Validates `phone` (E.164) and `code` (4-8 digits).
-- Calls Twilio `VerificationCheck`. Throws `permission-denied` if invalid/expired.
+- Calls Twilio `VerificationCheck`. Throws `permission-denied` if the code is wrong or expired, with one message for both: a verification Twilio no longer knows (404 / 20404, or 60202 once the attempts are spent) reads exactly like a wrong code.
 - Looks up the Outalma user by `phoneE164` in Firestore.
   - **No user found** → returns `{ newUser: true, phoneE164 }`. The client routes to sign-up.
   - **User found** → links phone to Firebase Auth user (idempotent), mints a **custom token**, returns `{ newUser: false, customToken, uid }`. The client signs in via `signInWithCustomToken`.
 
 ### `verifyPhoneOtpAndSignUp({ phone, code, displayName, country })`
 - Validates `phone`, `code`, `displayName`, and `country` (`FR` or `SN`).
-- Calls Twilio `VerificationCheck`. Throws `permission-denied` if invalid.
+- Calls Twilio `VerificationCheck`. Throws `permission-denied` if the code is wrong or expired, with one message for both: a verification Twilio no longer knows (404 / 20404, or 60202 once the attempts are spent) reads exactly like a wrong code.
 - Asserts the phone is **not already taken**. Throws `already-exists` otherwise.
 - Creates the Firebase Auth user via `createUser({ phoneNumber, displayName })` — **no fake email, no password**.
 - Creates the matching Firestore `users/{uid}` doc with:

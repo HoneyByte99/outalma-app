@@ -91,6 +91,34 @@ afterAll(() => {
   tf.cleanup();
 });
 
+/// A code Twilio still knows but that does not match: HTTP 200, not approved.
+const wrongCode = (): Reply => ({
+  status: 200,
+  json: { status: 'pending', valid: false },
+});
+
+const signUp = (phone: string, code = '123456') =>
+  wrap(fns.verifyPhoneOtpAndSignUp)({
+    data: {
+      phone,
+      code,
+      displayName: 'Test User',
+      country: 'SN',
+      gender: 'male',
+    },
+  } as never);
+
+/// The refusal a caller sees, reduced to what reaches the app.
+async function refusal(call: Promise<unknown>) {
+  try {
+    await call;
+  } catch (e) {
+    const err = e as { code?: string; message?: string };
+    return { code: err.code, message: err.message };
+  }
+  throw new Error('the call was expected to be refused');
+}
+
 describe('verifyPhoneOtpAndSignIn through the live client', () => {
   it('lets an approved code through', async () => {
     twilio.replies.VerificationCheck = approved;
@@ -98,9 +126,29 @@ describe('verifyPhoneOtpAndSignIn through the live client', () => {
     expect(twilio.calls).toEqual([{ endpoint: 'VerificationCheck', to: SN }]);
   });
 
-  it('reads a verification that is gone as an outage (current behaviour)', async () => {
+  it('refuses a verification that is gone as an invalid or expired code', async () => {
+    // Seen three times in production (2026-09-11 twice, 2026-09-21): the user
+    // typed a code older than ten minutes, or one already used, and was told
+    // "an error occurred" instead of being sent back for a new code.
     twilio.replies.VerificationCheck = verificationGone;
-    await expect(signIn(SN)).rejects.toMatchObject({ code: 'unavailable' });
+    await expect(signIn(SN)).rejects.toMatchObject({ code: 'permission-denied' });
+    expect(twilio.calls).toEqual([{ endpoint: 'VerificationCheck', to: SN }]);
+  });
+
+  it('says exactly what it says for a wrong code, so nobody can tell a verification is pending', async () => {
+    twilio.replies.VerificationCheck = verificationGone;
+    const gone = await refusal(signIn(SN));
+    twilio.replies.VerificationCheck = wrongCode;
+    const wrong = await refusal(signIn(SN));
+    expect(gone).toEqual(wrong);
+    expect(wrong.code).toBe('permission-denied');
+  });
+});
+
+describe('verifyPhoneOtpAndSignUp through the live client', () => {
+  it('refuses a verification that is gone as an invalid or expired code', async () => {
+    twilio.replies.VerificationCheck = verificationGone;
+    await expect(signUp(SN)).rejects.toMatchObject({ code: 'permission-denied' });
     expect(twilio.calls).toEqual([{ endpoint: 'VerificationCheck', to: SN }]);
   });
 });

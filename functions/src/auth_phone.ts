@@ -31,6 +31,7 @@ import { defineSecret } from 'firebase-functions/params';
 import * as logger from 'firebase-functions/logger';
 import { GENDERS, Gender } from './public_profiles';
 import { consumeOtpQuota } from './otp_rate_limit';
+import { checkFailure, INVALID_OR_EXPIRED_CODE } from './twilio_errors';
 
 const TWILIO_ACCOUNT_SID = defineSecret('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = defineSecret('TWILIO_AUTH_TOKEN');
@@ -211,14 +212,11 @@ async function twilioCheckVerification(
   });
   if (status >= 400) {
     logger.error('Twilio VerificationCheck failed', { status, json });
-    throw new HttpsError('unavailable', 'OTP verification failed');
+    throw checkFailure(status, json);
   }
   const j = json as { status?: string; valid?: boolean };
   if (j.status !== 'approved' || j.valid !== true) {
-    throw new HttpsError(
-      'permission-denied',
-      'Invalid or expired verification code'
-    );
+    throw new HttpsError('permission-denied', INVALID_OR_EXPIRED_CODE);
   }
 }
 

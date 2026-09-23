@@ -1,0 +1,26 @@
+// Pure mapping of Twilio Verify's error replies. One case per condition: the
+// guards are ORs of redundant conditions (an HTTP status and a Twilio code),
+// and a table that always sent both would let either half be deleted unseen.
+import { checkFailure, INVALID_OR_EXPIRED_CODE } from '../src/twilio_errors';
+
+describe('checkFailure', () => {
+  it.each([
+    ['a 404 with no body', 404, null],
+    ['Twilio code 20404 alone', 400, { code: 20404 }],
+    ['Twilio code 60202, attempts spent', 429, { code: 60202 }],
+  ])('reads %s as an invalid or expired code', (_label, status, json) => {
+    expect(checkFailure(status, json)).toMatchObject({
+      code: 'permission-denied',
+      message: INVALID_OR_EXPIRED_CODE,
+    });
+  });
+
+  it.each([
+    ['an unknown Twilio code', 400, { code: 99999 }],
+    ['a server error', 500, null],
+    ['a code that is not a number', 400, { code: '20404' }],
+    ['a body that is not an object', 400, 'not json'],
+  ])('keeps %s an outage', (_label, status, json) => {
+    expect(checkFailure(status, json)).toMatchObject({ code: 'unavailable' });
+  });
+});

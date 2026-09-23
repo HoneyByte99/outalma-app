@@ -30,9 +30,19 @@ const tf = functionsTest({
 // Read by SecretParam.value() at call time. The guard refuses to serve without
 // it, deliberately, so it has to exist before the module is required.
 process.env.OTP_HASH_KEY = 'smoke-hmac-key';
+// Fake Twilio credentials: the live client sections below build a request with
+// them, and a stray call that escaped the fake transport would fail in 401
+// rather than reach a real account.
+process.env.TWILIO_ACCOUNT_SID = 'ACsmoke';
+process.env.TWILIO_AUTH_TOKEN = 'smoke-token';
+process.env.TWILIO_VERIFY_SERVICE_SID = 'VAsmoke';
 
 const fns = require('../lib/index');
-const { setTwilioClient } = require('../lib/auth_phone');
+const {
+  setTwilioClient,
+  resetTwilioClient,
+  setTwilioTransport,
+} = require('../lib/auth_phone');
 const {
   DEFAULT_LIMITS,
   OTP_ERROR,
@@ -115,6 +125,37 @@ async function clearAll() {
   }
   twilio.sent.length = 0;
   twilio.checked.length = 0;
+}
+
+/**
+ * From section 11 on, the REAL Twilio client runs and only its HTTP call is
+ * faked, with the replies Twilio sends in production. The transport throws on
+ * any call a section did not plan.
+ */
+const transport = { calls: [], replies: {} };
+function useLiveClient() {
+  resetTwilioClient();
+  setTwilioTransport(async (url, _auth, body) => {
+    const endpoint = url.endsWith('/VerificationCheck')
+      ? 'VerificationCheck'
+      : url.endsWith('/Verifications')
+        ? 'Verifications'
+        : null;
+    const reply = endpoint && transport.replies[endpoint];
+    if (!reply) throw new Error(`unplanned Twilio call: ${url}`);
+    transport.calls.push({ endpoint, to: body.To });
+    return reply(body.To);
+  });
+}
+
+/** Calls a callable that must refuse, and returns what the caller is told. */
+async function refusedBy(fn, data) {
+  try {
+    await tf.wrap(fn)({ data });
+  } catch (e) {
+    return { code: e.code, message: e.message };
+  }
+  throw new Error('expected a refusal');
 }
 
 async function main() {
@@ -284,6 +325,33 @@ async function main() {
     'and so is the expired daily counter'
   );
   must(afterPurge.size === 1, 'while the fresh one is untouched');
+
+  // --- 11. A code Twilio no longer knows ----------------------------------
+  console.log('\n11. A code Twilio no longer knows (expired, used, attempts spent)');
+  useLiveClient();
+  transport.replies.VerificationCheck = () => ({
+    status: 404,
+    json: {
+      code: 20404,
+      message: 'The requested resource /v2/Services/VAsmoke/VerificationCheck was not found',
+      status: 404,
+    },
+  });
+  const gone = await refusedBy(fns.verifyPhoneOtpAndSignIn, { phone: SN, code: '123456' });
+  must(gone.code === 'permission-denied', 'refused as a wrong code, not as an outage');
+  must(
+    transport.calls.length === 1 && transport.calls[0].endpoint === 'VerificationCheck',
+    'the live client did ask Twilio, once'
+  );
+  transport.replies.VerificationCheck = () => ({
+    status: 200,
+    json: { status: 'pending', valid: false },
+  });
+  const wrong = await refusedBy(fns.verifyPhoneOtpAndSignIn, { phone: SN, code: '123456' });
+  must(
+    gone.code === wrong.code && gone.message === wrong.message,
+    'word for word what a wrong code gets, so a pending verification cannot be probed'
+  );
 
   console.log(`\n=== SMOKE OK, ${step} checks ===\n`);
 }
